@@ -1,70 +1,134 @@
-# Getting Started with Create React App
+# Classroom Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Tổng quan dự án
+Dự án "Classroom Frontend" là phần giao diện người dùng (frontend) của ứng dụng Quản lý Lớp học. Ứng dụng này được xây dựng bằng React và tương tác với backend Spring Boot thông qua các API RESTful.
 
-## Available Scripts
+## Công nghệ sử dụng
+- **React**: Thư viện JavaScript để xây dựng giao diện người dùng
+- **Axios**: Thư viện HTTP client để thực hiện các yêu cầu API
+- **Create React App**: Công cụ để khởi tạo và cấu hình dự án React
 
-In the project directory, you can run:
+## Cấu trúc dự án
+```
+classroom-frontend/
+├── node_modules/       # Thư viện và dependencies
+├── public/             # Tài nguyên tĩnh
+│   ├── index.html      # File HTML chính
+│   ├── favicon.ico     # Icon trang web
+│   └── ...
+├── src/                # Mã nguồn
+│   ├── App.js          # Component chính của ứng dụng
+│   ├── index.js        # Điểm vào của ứng dụng
+│   ├── App.css         # CSS cho App component
+│   └── ...
+├── package.json        # Cấu hình dự án và dependencies
+└── README.md           # Tài liệu dự án
+```
 
-### `npm start`
+## Phân tích mã nguồn chính
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### App.js
+- **Mục đích**: Component chính của ứng dụng, hiển thị giao diện người dùng và kết nối với backend
+- **Chức năng chính**:
+  - Sử dụng React Hooks (useState, useEffect) để quản lý state và side effects
+  - Gọi API backend thông qua axios để lấy thông điệp chào mừng
+  - Xử lý và hiển thị kết quả hoặc lỗi từ API
+- **Code phân tích**:
+  ```jsx
+  // State management cho thông điệp và lỗi
+  const [backendMessage, setBackendMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+  // API call thông qua useEffect
+  useEffect(() => {
+    const fetchGreeting = async () => {
+      try {
+        // Gọi API backend thông qua proxy
+        const response = await axios.get('/api/v1/greetings/hello');
+        setBackendMessage(response.data);
+      } catch (err) {
+        // Xử lý lỗi chi tiết theo loại
+        // ...
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGreeting();
+  }, []);
+  ```
 
-### `npm test`
+## Cấu hình quan trọng
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Proxy Configuration (package.json)
+```json
+"proxy": "http://localhost:8090"
+```
+- Cấu hình này cho phép gọi API tương đối (ví dụ: `/api/v1/greetings/hello`) từ React app, sẽ được tự động chuyển tiếp đến backend đang chạy trên `http://localhost:8090`
+- Tránh vấn đề CORS trong quá trình phát triển
 
-### `npm run build`
+## Hướng dẫn cài đặt và chạy
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Yêu cầu
+- Node.js và npm đã được cài đặt
+- Backend Spring Boot đã được cài đặt và đang chạy trên cổng 8090
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Các bước cài đặt
+1. Clone repository:
+   ```
+   git clone https://github.com/tu1en/classroom-frontend.git
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Di chuyển vào thư mục dự án:
+   ```
+   cd classroom-frontend
+   ```
 
-### `npm run eject`
+3. Cài đặt các dependencies:
+   ```
+   npm install
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+4. Chạy ứng dụng:
+   ```
+   npm start
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+5. Truy cập ứng dụng tại: http://localhost:3000
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Điều cần chú ý trong dự án
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 1. Kết nối Backend
+- Đảm bảo backend Spring Boot đang chạy trên cổng 8090 trước khi chạy frontend
+- Kiểm tra cấu hình "proxy" trong file package.json phù hợp với cổng backend
+- Nếu thay đổi cấu hình proxy, cần khởi động lại server React
 
-## Learn More
+### 2. API Endpoints
+- API gọi đến `/api/v1/greetings/hello` để lấy thông điệp chào mừng
+- Khi thêm các API mới, cần đảm bảo endpoint đúng với cấu hình của backend
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 3. Xử lý lỗi
+- Ứng dụng có cơ chế xử lý lỗi chi tiết phân loại theo:
+  - Lỗi từ server backend (HTTP status codes)
+  - Lỗi kết nối (không thể liên hệ với backend)
+  - Lỗi khác khi thiết lập request
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 4. State Management
+- Hiện tại sử dụng React Hooks để quản lý state
+- Khi ứng dụng phát triển lớn hơn, có thể cần cân nhắc giải pháp quản lý state phức tạp hơn như Redux hoặc Context API
 
-### Code Splitting
+### 5. Quy trình phát triển
+- Tạo branch mới cho tính năng mới: `git checkout -b feature/ten-tinh-nang`
+- Commit code thường xuyên với thông điệp commit rõ ràng
+- Sử dụng Conventional Commits cho format thông điệp: `feat:`, `fix:`, `docs:`, v.v.
+- Push lên GitHub và tạo Pull Request cho code review
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Kế hoạch phát triển tiếp theo
+- Xây dựng các trang và component cho quản lý lớp học
+- Tích hợp hệ thống xác thực người dùng (authentication)
+- Phát triển giao diện người dùng đáp ứng (responsive)
+- Thêm các chức năng như quản lý bài tập, điểm số, v.v.
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Tài liệu tham khảo
+- [React Documentation](https://reactjs.org/docs/getting-started.html)
+- [Axios Documentation](https://axios-http.com/docs/intro)
