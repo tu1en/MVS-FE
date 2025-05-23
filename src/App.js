@@ -7,6 +7,7 @@ import BlankPage from './pages/BlankPage';
 import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
+import LoginScreen from './loginscreen.jsx';
 
 /**
  * Main App component
@@ -24,6 +25,7 @@ function App() {
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<LoginScreen />} />
         </Routes>
       </Layout>
     </Router>
