@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,11 +40,15 @@ export default function LoginScreen() {
         }
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Login failed');
+        setError('Wrong username or password');
+        setEmail('');
+        setPassword('');
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('An error occurred during login');
+      setError('An error occurred during login');
+      setEmail('');
+      setPassword('');
     }
   };
   
@@ -101,6 +106,7 @@ export default function LoginScreen() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
               />
+              {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
             </div>
           </div>
 
