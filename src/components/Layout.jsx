@@ -1,20 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
 
-/**
- * Layout component that wraps the application with Header and Footer
- * @param {Object} props - Component props
- * @param {React.ReactNode} props.children - Child components to render between header and footer
- * @returns {JSX.Element} Layout with header, content area, and footer
- */
 function Layout({ children }) {
-  // State to track if sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Listen for custom sidebar toggle event
   useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+    console.log(token);
+
     const handleSidebarToggle = (event) => {
       setIsSidebarCollapsed(event.detail.isCollapsed);
     };
@@ -24,6 +22,15 @@ function Layout({ children }) {
       window.removeEventListener('sidebarToggled', handleSidebarToggle);
     };
   }, []);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white">
+      <Header />
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -42,4 +49,4 @@ function Layout({ children }) {
   );
 }
 
-export default Layout; 
+export default Layout;
