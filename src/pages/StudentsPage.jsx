@@ -272,6 +272,15 @@ function StudentsPage() {
                     onClick={() => alert(`Xem chi tiết cho học sinh ${student.name}`)}
                   >
                     Xem
+                  </button>                  {/* Redirect tới trang lịch sử học tập của học sinh với ID tương ứng
+                      URL pattern: /learning-history/:studentId 
+                      Ví dụ: /learning-history/1 cho học sinh có ID = 1
+                      Lưu ý: Cần tạo route và component tương ứng trong App.js */}
+                  <button
+                    className="px-3 py-1 text-green-600 hover:text-green-800 transition-colors mr-2"
+                    onClick={() => window.location.href = `/learning-history/${student.id}`}
+                  >
+                    Lịch sử học tập
                   </button>
                   <button
                     className="px-3 py-1 text-red-600 hover:text-red-800 transition-colors"
@@ -296,4 +305,4 @@ function StudentsPage() {
   );
 }
 
-export default StudentsPage; 
+export default StudentsPage;

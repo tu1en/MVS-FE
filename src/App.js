@@ -7,6 +7,7 @@ import BlankPage from './pages/BlankPage';
 import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
+import LearningHistoryPage from './pages/LearningHistoryPage';
 
 /**
  * Main App component
@@ -23,6 +24,7 @@ function App() {
           <Route path="/assignments" element={<AssignmentsPage />} />
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
+          <Route path="/learning-history/:studentId" element={<LearningHistoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
