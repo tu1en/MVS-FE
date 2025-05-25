@@ -7,6 +7,10 @@ import BlankPage from './pages/BlankPage';
 import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
+import LoginScreen from './pages/loginscreen.jsx';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+import { useEffect } from 'react';
 
 /**
  * Main App component
@@ -14,6 +18,18 @@ import StudentsPage from './pages/StudentsPage';
  * @returns {JSX.Element} The main application
  */
 function App() {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const role = localStorage.getItem('role');
+      switch(role) {
+        case 'ADMIN': window.location.href = '/admin'; break;
+        case 'TEACHER': window.location.href = '/teacher'; break;
+        case 'STUDENT': window.location.href = '/student'; break;
+        default: window.location.href = '/';
+      }
+    }
+  }, []);
   return (
     <Router>
       <Layout>
@@ -24,6 +40,9 @@ function App() {
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<LoginScreen />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </Layout>
     </Router>
