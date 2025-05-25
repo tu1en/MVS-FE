@@ -8,6 +8,8 @@ import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
 import LoginScreen from './loginscreen.jsx';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 
 /**
  * Main App component
@@ -26,6 +28,8 @@ function App() {
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </Layout>
     </Router>
