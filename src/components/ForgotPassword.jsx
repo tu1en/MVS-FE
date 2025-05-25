@@ -1,11 +1,31 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-const ForgotPassword = () => {
+export default function ForgotPassword() {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const validateEmail = (email) => {
+    if (!email.endsWith('@gmail.com')) {
+      setEmailError('Email must be a valid @gmail.com address');
+      return false;
+    }
+    if (email.length > 50) {
+      setEmailError('Email must be 50 characters or less');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      return;
+    }
+    
     try {
       const response = await fetch('http://localhost:8088/api/auth/forgot-password', {
         method: 'POST',
@@ -16,13 +36,16 @@ const ForgotPassword = () => {
       });
 
       if (response.ok) {
-        setMessage('Password reset instructions sent to your email');
+        setSuccess('Password reset instructions sent to your email');
+        setError('');
+        setEmail('');
       } else {
-        setMessage('Error sending password reset email');
+        setError('Email address not found');
+        setSuccess('');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setMessage('An error occurred');
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setSuccess('');
     }
   };
 
@@ -33,6 +56,7 @@ const ForgotPassword = () => {
           Forgot Password
         </h2>
       </div>
+
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -45,12 +69,18 @@ const ForgotPassword = () => {
                 name="email"
                 type="email"
                 required
+                maxLength={50}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  validateEmail(e.target.value);
+                }}
                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
               />
+              {emailError && <p className="text-sm text-red-500 mt-1">{emailError}</p>}
             </div>
           </div>
+
           <div>
             <button
               type="submit"
@@ -59,11 +89,11 @@ const ForgotPassword = () => {
               Reset Password
             </button>
           </div>
-          {message && <p style={{color: 'green'}}>Password reset instructions sent to your email</p>}
         </form>
+
+        {success && <p className="mt-4 text-sm text-green-500">{success}</p>}
+        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
       </div>
     </div>
   );
-};
-
-export default ForgotPassword;
+}
