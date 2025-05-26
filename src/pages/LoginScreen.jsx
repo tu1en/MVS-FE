@@ -1,8 +1,8 @@
-import { message } from 'antd';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
 
 const roleLabels = {
   ADMIN: 'Quản trị viên',
@@ -11,6 +11,7 @@ const roleLabels = {
   STUDENT: 'Học viên',
   GUEST: 'Khách',
 };
+const baseUrl = process.env.REACT_APP_BASE_URL;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,45 +23,113 @@ export default function LoginScreen() {
 
   const roleParam = searchParams.get('role')?.toUpperCase() || 'GUEST';
   const roleLabel = roleLabels[roleParam] || 'Khách';
-
+  const baseUrl = process.env.REACT_APP_BASE_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoi(null);
     setDangDangNhap(true);
     try {
-      const res = await axios.post('http://localhost:8088/api/auth/login', {
-        username: email,
-        password: matKhau,
-        role: roleParam,
+      const res = await fetch(`${baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: email,
+          password: matKhau,
+          role: roleParam,
+        }),
       });
 
-      const data = res.data;
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        toast.success('Đăng nhập thành công!');
 
-      toast.success('Đăng nhập thành công!');
-
-      switch (data.role) {
-        case 'ADMIN':
-          navigate('/admin');
-          break;
-        case 'TEACHER':
-          navigate('/teacher');
-          break;
-        case 'STUDENT':
-          navigate('/student');
-          break;
-        default:
-          navigate('/');
+        switch (data.role) {
+          case 'ADMIN':
+            navigate('/admin');
+            break;
+          case 'TEACHER':
+            navigate('/teacher');
+            break;
+          case 'STUDENT':
+            navigate('/students'); // Changed from '/student' to match route
+            break;
+          default:
+            navigate('/');
+        }
+      } else {
+        setLoi('Tài khoản hoặc mật khẩu không đúng');
+        toast.error('Tài khoản hoặc mật khẩu không đúng!');
+        setEmail('');
+        setMatKhau('');
       }
     } catch (err) {
       console.error('Lỗi đăng nhập:', err);
-      setLoi('Tài khoản hoặc mật khẩu không đúng');
-      toast.error('Tài khoản hoặc mật khẩu không đúng!');
+      setLoi('Đã xảy ra lỗi khi đăng nhập');
+      toast.error('Đã xảy ra lỗi khi đăng nhập!');
       setEmail('');
       setMatKhau('');
     } finally {
       setDangDangNhap(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      console.log('Starting Google sign-in process...');
+      
+      // 1. Sign in with Google
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log('Google sign-in successful, user:', user.email);
+      
+      // 2. Get and verify ID token
+      const idToken = await user.getIdToken();
+      console.log('Obtained Google ID token:', idToken.substring(0, 20) + '...');
+      
+      // 3. Send to backend for verification
+      console.log('Sending token to backend for verification...');
+      const res = await fetch(`${baseUrl}/auth/google-login`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ idToken })
+      });
+  
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Backend response:', data);
+        
+        // 4. Verify token and role in response
+        if (!data.token || !data.role) {
+          throw new Error('Missing token or role in response');
+        }
+        
+        // 5. Store token and role
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        console.log('Token and role stored in localStorage');
+        
+        // 6. Verify navigation
+        console.log(`Navigating to ${data.role} dashboard...`);
+        switch (data.role) {
+          case 'ADMIN': navigate('/admin'); break;
+          case 'TEACHER': navigate('/teacher'); break;
+          case 'STUDENT': navigate('/students'); break;
+          default: navigate('/');
+        }
+      } else {
+        const error = await res.json();
+        console.error('Backend error:', error);
+        throw new Error('Google login failed');
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error('Đăng nhập Google thất bại!');
     }
   };
 
@@ -74,7 +143,7 @@ export default function LoginScreen() {
             className="mx-auto h-12 w-auto"
           />
           <h2 className="mt-6 text-2xl font-bold tracking-tight text-gray-900">
-            Đăng nhập với vai trò: {roleLabel}
+            Chào mừng bạn đến với Minh Việt Education
           </h2>
         </div>
 
@@ -82,7 +151,7 @@ export default function LoginScreen() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-900">
-                Tên đăng nhập / Email
+                Tên đăng nhập
               </label>
               <input
                 id="email"
@@ -99,7 +168,10 @@ export default function LoginScreen() {
                 <label htmlFor="matKhau" className="block text-sm font-medium text-gray-900">
                   Mật khẩu
                 </label>
-                <a href="/quen-mat-khau" className="text-sm text-indigo-600 hover:text-indigo-500">
+                <a 
+                  onClick={() => navigate('/forgot-password')} 
+                  className="text-sm text-indigo-600 hover:text-indigo-500 cursor-pointer"
+                >
                   Quên mật khẩu?
                 </a>
               </div>
@@ -128,6 +200,18 @@ export default function LoginScreen() {
               </button>
             </div>
           </form>
+
+          <button
+            onClick={handleGoogleSignIn}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+              alt="Google logo"
+              className="w-5 h-5"
+            />
+            Đăng nhập với Google
+          </button>
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Chưa có tài khoản?{' '}
