@@ -21,6 +21,8 @@ import { auth } from './config/firebase';
 import { useNavigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+import AcademicPerformance from './pages/AcademicPerformance';
+import AttendanceRecords from './pages/AttendanceRecords';
 /**
  * Main App component
  * Sets up routing for the application
@@ -64,6 +66,8 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/teacher" element={<TeacherDashboard />} />
+          <Route path="/student-academic-performance" element={<AcademicPerformance />} />
+          <Route path="/student-attendance-records" element={<AttendanceRecords />} />
         </Routes>
       </Layout>
     </Router>
