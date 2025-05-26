@@ -1,133 +1,142 @@
-import React, { useState } from 'react';
+import { message } from 'antd';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const roleLabels = {
+  ADMIN: 'Quản trị viên',
+  MANAGER: 'Quản lý',
+  TEACHER: 'Giáo viên',
+  STUDENT: 'Học viên',
+  GUEST: 'Khách',
+};
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [matKhau, setMatKhau] = useState('');
+  const [loi, setLoi] = useState(null);
+  const [dangDangNhap, setDangDangNhap] = useState(false);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const roleParam = searchParams.get('role')?.toUpperCase() || 'GUEST';
+  const roleLabel = roleLabels[roleParam] || 'Khách';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoi(null);
+    setDangDangNhap(true);
     try {
-      const response = await fetch('http://localhost:8088/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password
-        }),
+      const res = await axios.post('http://localhost:8088/api/auth/login', {
+        username: email,
+        password: matKhau,
+        role: roleParam,
       });
-  
-      if (response.ok) {
-        const data = await response.json();
-        // Store token and role in localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
-        // Redirect based on role
-        switch(data.role) {
-          case 'ADMIN':
-            window.location.href = '/admin';
-            break;
-          case 'TEACHER':
-            window.location.href = '/teacher';
-            break;
-          case 'STUDENT':
-            window.location.href = '/student';
-            break;
-          default:
-            window.location.href = '/';
-        }
-      } else {
-        const errorData = await response.json();
-        setError('Wrong username or password');
-        setEmail('');
-        setPassword('');
+
+      const data = res.data;
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+
+      toast.success('Đăng nhập thành công!');
+
+      switch (data.role) {
+        case 'ADMIN':
+          navigate('/admin');
+          break;
+        case 'TEACHER':
+          navigate('/teacher');
+          break;
+        case 'STUDENT':
+          navigate('/student');
+          break;
+        default:
+          navigate('/');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('An error occurred during login');
+    } catch (err) {
+      console.error('Lỗi đăng nhập:', err);
+      setLoi('Tài khoản hoặc mật khẩu không đúng');
+      toast.error('Tài khoản hoặc mật khẩu không đúng!');
       setEmail('');
-      setPassword('');
+      setMatKhau('');
+    } finally {
+      setDangDangNhap(false);
     }
   };
-  
 
   return (
-    <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <img
-          alt="Your Company"
-          src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-          className="mx-auto h-10 w-auto"
-        />
-        <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-          Sign in to your account
-        </h2>
-      </div>
+    <div className="flex min-h-screen bg-gray-50 justify-center items-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <img
+            alt="Logo"
+            src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
+            className="mx-auto h-12 w-auto"
+          />
+          <h2 className="mt-6 text-2xl font-bold tracking-tight text-gray-900">
+            Đăng nhập với vai trò: {roleLabel}
+          </h2>
+        </div>
 
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
-              Email address
-            </label>
-            <div className="mt-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-900">
+                Tên đăng nhập / Email
+              </label>
               <input
                 id="email"
-                name="email"
                 type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm/6 font-medium text-gray-900">
-                Password
-              </label>
-              <div className="text-sm">
-                <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
-                  Forgot password?
+            <div>
+              <div className="flex justify-between">
+                <label htmlFor="matKhau" className="block text-sm font-medium text-gray-900">
+                  Mật khẩu
+                </label>
+                <a href="/quen-mat-khau" className="text-sm text-indigo-600 hover:text-indigo-500">
+                  Quên mật khẩu?
                 </a>
               </div>
-            </div>
-            <div className="mt-2">
               <input
-                id="password"
-                name="password"
+                id="matKhau"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                value={matKhau}
+                onChange={(e) => setMatKhau(e.target.value)}
+                className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
-              {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+              {loi && <p className="text-sm text-red-500 mt-1">{loi}</p>}
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Sign in
-            </button>
-          </div>
-        </form>
+            <div>
+              <button
+                type="submit"
+                disabled={dangDangNhap}
+                className={`w-full flex justify-center rounded-md px-4 py-2 text-sm font-semibold text-white shadow-sm ${
+                  dangDangNhap
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-500'
+                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600`}
+              >
+                {dangDangNhap ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </button>
+            </div>
+          </form>
 
-        <p className="mt-10 text-center text-sm/6 text-gray-500">
-          Not a member?{' '}
-          <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
-            Send registration request
-          </a>
-        </p>
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Chưa có tài khoản?{' '}
+            <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
+              Gửi yêu cầu đăng ký
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-  
