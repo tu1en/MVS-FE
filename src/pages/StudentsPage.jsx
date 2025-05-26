@@ -4,7 +4,22 @@ import React, { useState } from 'react';
  * StudentsPage component for managing students
  * @returns {JSX.Element} StudentsPage component
  */
+// Add these imports at the top of the file
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 function StudentsPage() {
+  // Add navigation hook inside the component
+  const navigate = useNavigate();
+
+  // Move useEffect inside the component
+  useEffect(() => {
+    const role = localStorage.getItem('role');
+    if (role !== 'STUDENT') {
+      navigate('/');
+    }
+  }, [navigate]);
+
   // Sample students data
   const [students, setStudents] = useState([
     { id: 1, name: 'Nguyễn Văn An', email: 'an.nguyen@example.com', grade: 'Lớp 10', classes: ['Toán Học 101', 'Vật Lý Cơ Bản'] },
@@ -296,4 +311,4 @@ function StudentsPage() {
   );
 }
 
-export default StudentsPage; 
+export default StudentsPage;
