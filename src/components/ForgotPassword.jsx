@@ -8,7 +8,7 @@ export default function ForgotPassword() {
 
   const validateEmail = (email) => {
     if (!email.endsWith('@gmail.com')) {
-      setEmailError('Email must be a valid @gmail.com address');
+      setEmailError('Email phải đúng dạng @gmail.com');
       return false;
     }
     if (email.length > 50) {
@@ -36,7 +36,7 @@ export default function ForgotPassword() {
       });
 
       if (response.ok) {
-        setSuccess('Password reset instructions sent to your email');
+        setSuccess('Đường dẫn khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra email của bạn để tiếp tục quá trình khôi phục mật khẩu.');
         setError('');
         setEmail('');
       } else {
@@ -53,7 +53,7 @@ export default function ForgotPassword() {
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-          Forgot Password
+          Quên mật khẩu ?
         </h2>
       </div>
 
@@ -61,7 +61,7 @@ export default function ForgotPassword() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
-              Email address
+              Tài khoản email
             </label>
             <div className="mt-2">
               <input
@@ -86,7 +86,7 @@ export default function ForgotPassword() {
               type="submit"
               className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
-              Reset Password
+              Đặt lại mật khẩu
             </button>
           </div>
         </form>

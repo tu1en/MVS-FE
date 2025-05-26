@@ -1,13 +1,30 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "antd/dist/reset.css";
+import { ConfigProvider } from "antd";
+import { ToastContainer } from 'react-toastify';
+import viVN from "antd/locale/vi_VN"; 
+import 'react-toastify/dist/ReactToastify.css';
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <App />
+    <ConfigProvider
+      locale={viVN}
+      theme={{
+        token: {
+          colorPrimary: "#1677ff",
+          borderRadius: 8, 
+          fontSize: 14, 
+        },
+      }}
+    >
+      <App />
+    <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar theme="light" />
+    </ConfigProvider>
   </React.StrictMode>
 );
 
