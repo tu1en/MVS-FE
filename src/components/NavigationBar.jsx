@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 /**
  * NavigationBar component that provides sidebar navigation
@@ -10,7 +10,8 @@ function NavigationBar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   // State to control sidebar collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
-  
+  const navigate = useNavigate();
+
   // Close sidebar when screen size changes to desktop
   useEffect(() => {
     const handleResize = () => {
@@ -106,6 +107,18 @@ function NavigationBar() {
     isMobileOpen || window.innerWidth >= 768 ? 'translate-x-0' : '-translate-x-full'
   } md:translate-x-0`;
 
+  const handleLogout = () => {
+    // Clear authentication data from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    
+    // Redirect to home page
+    navigate('/');
+    
+    // Optional: Refresh the page to clear any state
+    window.location.reload();
+  };
+
   return (
     <nav className={navClasses}>
       <div className="p-4">
@@ -155,6 +168,13 @@ function NavigationBar() {
               <span className="mr-3 text-xl">⚙️</span>
               <span>Cài Đặt</span>
             </button>
+            <button 
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
+            >
+              <span className="mr-3 text-xl">🚪</span>
+              <span>Đăng Xuất</span>
+            </button>
           </div>
         </div>
       )}
@@ -173,4 +193,4 @@ function NavigationBar() {
   );
 }
 
-export default NavigationBar; 
+export default NavigationBar;
