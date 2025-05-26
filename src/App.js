@@ -1,5 +1,10 @@
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
 import React from 'react';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import './App.css';
 import Layout from './components/Layout';
 import AssignmentsPage from './pages/AssignmentsPage';
@@ -8,10 +13,14 @@ import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
 import LoginScreen from './pages/LoginScreen.jsx';
+import DashboardPage from "./pages/Dashboard";
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import { useEffect } from 'react';
-
+import { auth } from './config/firebase';
+import { useNavigate } from 'react-router-dom';
+import AdminDashboard from './pages/AdminDashboard';
+import TeacherDashboard from './pages/TeacherDashboard';
 /**
  * Main App component
  * Sets up routing for the application
@@ -19,14 +28,21 @@ import { useEffect } from 'react';
  */
 function App() {
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
-      const role = localStorage.getItem('role');
-      switch(role) {
-        case 'ADMIN': window.location.href = '/admin'; break;
-        case 'TEACHER': window.location.href = '/teacher'; break;
-        case 'STUDENT': window.location.href = '/student'; break;
-        default: window.location.href = '/';
+      const role = localStorage.getItem("role");
+      switch (role) {
+        case "ADMIN":
+          window.location.href = "/admin";
+          break;
+        case "TEACHER":
+          window.location.href = "/teacher";
+          break;
+        case "STUDENT":
+          window.location.href = "/student";
+          break;
+        default:
+          window.location.href = "/";
       }
     }
   }, []);
@@ -35,14 +51,19 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<DashboardPage />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
         </Routes>
       </Layout>
     </Router>
