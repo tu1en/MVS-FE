@@ -1,84 +1,109 @@
-import React from 'react';
+import { Carousel, Button, Card, Row, Col } from 'antd';
+import { SmileOutlined, ReadOutlined, TeamOutlined } from '@ant-design/icons';
 
-/**
- * HomePage component displays the dashboard and overview of the classroom application
- * @returns {JSX.Element} HomePage component
- */
-function HomePage() {
+export default function HomePage() {
   return (
-    <div className="space-y-6">
-      {/* Welcome banner */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md">
-        <h2 className="text-xl font-bold text-blue-700 mb-2">Chào mừng đến với Lớp Học Trực Tuyến</h2>
-        <p className="text-blue-600">
-          Quản lý lớp học, bài tập và học sinh của bạn tại một nơi duy nhất.
+    <div className="min-h-screen bg-white text-gray-800">
+      {/* 🔹 Banner / Slide */}
+      <Carousel autoplay className="text-center">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-28 px-6">
+          <h2 className="text-4xl font-bold mb-4">Chào mừng đến với hệ thống học trực tuyến</h2>
+          <p className="text-lg mb-6">Nơi kết nối học sinh, giáo viên và quản lý trên cùng một nền tảng</p>
+          <Button size="large" type="primary" href="/login?role=student">
+            Bắt đầu học ngay
+          </Button>
+        </div>
+        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-28 px-6">
+          <h2 className="text-4xl font-bold mb-4">Quản lý học tập dễ dàng và hiệu quả</h2>
+          <p className="text-lg mb-6">Xem điểm, điểm danh, bài tập và báo cáo một cách trực quan</p>
+          <Button size="large" type="primary" href="/login?role=teacher">
+            Dành cho giáo viên
+          </Button>
+        </div>
+      </Carousel>
+
+      {/* 🔹 Giới thiệu */}
+      <section className="py-20 px-6 text-center bg-gray-50">
+        <h2 className="text-3xl font-bold mb-6">Tại sao chọn chúng tôi?</h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Hệ thống học trực tuyến giúp bạn quản lý điểm, bài tập, điểm danh và báo cáo một cách hiện đại, nhanh chóng và minh bạch.
         </p>
-      </div>
+      </section>
 
-      {/* Stats overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Lớp Học</h3>
-          <div className="flex items-center">
-            <span className="text-3xl font-bold text-blue-600">8</span>
-            <span className="ml-2 text-gray-500">Lớp đang hoạt động</span>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Học Sinh</h3>
-          <div className="flex items-center">
-            <span className="text-3xl font-bold text-green-600">125</span>
-            <span className="ml-2 text-gray-500">Học sinh đã đăng ký</span>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Bài Tập</h3>
-          <div className="flex items-center">
-            <span className="text-3xl font-bold text-purple-600">24</span>
-            <span className="ml-2 text-gray-500">Bài tập đang hoạt động</span>
-          </div>
-        </div>
-      </div>
+      {/* 🔹 Vai trò */}
+      <section className="py-20 px-6 max-w-6xl mx-auto">
+        <Row gutter={[24, 24]} justify="center">
+          <Col xs={24} md={8}>
+            <Card
+              hoverable
+              className="rounded-xl shadow-md text-center"
+              onClick={() => (window.location.href = '/login?role=student')}
+            >
+              <SmileOutlined style={{ fontSize: 40, color: '#1677ff' }} />
+              <h3 className="text-xl font-semibold mt-4">Học viên</h3>
+              <p className="text-gray-500 mt-2">Xem điểm bài kiểm tra, nộp bài, xem lịch học và điểm danh.</p>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card
+              hoverable
+              className="rounded-xl shadow-md text-center"
+              onClick={() => (window.location.href = '/login?role=teacher')}
+            >
+              <ReadOutlined style={{ fontSize: 40, color: '#52c41a' }} />
+              <h3 className="text-xl font-semibold mt-4">Giáo viên</h3>
+              <p className="text-gray-500 mt-2">Quản lý lớp học, giao bài, chấm điểm và theo dõi chuyên cần.</p>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card
+              hoverable
+              className="rounded-xl shadow-md text-center"
+              onClick={() => (window.location.href = '/login?role=admin')}
+            >
+              <TeamOutlined style={{ fontSize: 40, color: '#f5222d' }} />
+              <h3 className="text-xl font-semibold mt-4">Quản trị viên</h3>
+              <p className="text-gray-500 mt-2">Quản lý hệ thống, thống kê và báo cáo toàn trung tâm.</p>
+            </Card>
+          </Col>
+        </Row>
+      </section>
 
-      {/* Recent activity */}
-      <div className="bg-white p-4 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Hoạt Động Gần Đây</h3>
-        <div className="space-y-3">
-          <div className="flex items-start border-b border-gray-100 pb-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
-              <span className="text-sm font-semibold">NT</span>
-            </div>
-            <div>
-              <p className="text-gray-700">Nguyễn Thành đã nộp <span className="font-medium">Bài tập Toán số 3</span></p>
-              <p className="text-sm text-gray-500">2 giờ trước</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start border-b border-gray-100 pb-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-              <span className="text-sm font-semibold">TL</span>
-            </div>
-            <div>
-              <p className="text-gray-700">Trần Lan đã tạo <span className="font-medium">Dự án Khoa học</span></p>
-              <p className="text-sm text-gray-500">5 giờ trước</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-3">
-              <span className="text-sm font-semibold">PH</span>
-            </div>
-            <div>
-              <p className="text-gray-700">Phạm Huy đã tham gia <span className="font-medium">Lịch sử 101</span></p>
-              <p className="text-sm text-gray-500">Hôm qua</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 🔹 Tính năng nổi bật */}
+      <section className="bg-gradient-to-r from-indigo-50 to-white py-20 px-6 text-center">
+        <h2 className="text-3xl font-bold mb-8">Tính năng nổi bật</h2>
+        <Row gutter={[24, 24]} justify="center" className="mx-auto">
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false} className="bg-white rounded-xl shadow-md p-6 h-full">
+              <h3 className="text-lg font-semibold text-indigo-600">📊 Xem học lực</h3>
+              <p className="text-gray-500 mt-2">Thống kê điểm, xếp loại, theo dõi quá trình học.</p>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false} className="bg-white rounded-xl shadow-md p-6 h-full">
+              <h3 className="text-lg font-semibold text-indigo-600">✅ Điểm danh thông minh</h3>
+              <p className="text-gray-500 mt-2">Theo dõi chuyên cần theo buổi, trạng thái rõ ràng.</p>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false} className="bg-white rounded-xl shadow-md p-6 h-full">
+              <h3 className="text-lg font-semibold text-indigo-600">📝 Quản lý bài tập</h3>
+              <p className="text-gray-500 mt-2">Giao, nộp và chấm bài tập nhanh chóng, dễ dàng.</p>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false} className="bg-white rounded-xl shadow-md p-6 h-full">
+              <h3 className="text-lg font-semibold text-indigo-600">🎓 Xem kết quả kiểm tra</h3>
+              <p className="text-gray-500 mt-2">Cho phép theo dõi kết quả của các bài kiểm tra.</p>
+            </Card>
+          </Col>
+        </Row>
+      </section>
+
+      {/* 🔹 Footer */}
+      <footer className="bg-gray-100 text-center py-8 mt-20 text-sm text-gray-500">
+        © {new Date().getFullYear()} Trung tâm học trực tuyến.
+      </footer>
     </div>
   );
 }
-
-export default HomePage; 
