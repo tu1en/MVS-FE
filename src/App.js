@@ -7,7 +7,7 @@ import BlankPage from './pages/BlankPage';
 import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
 import StudentsPage from './pages/StudentsPage';
-import LoginScreen from './pages/loginscreen.jsx';
+import LoginScreen from './pages/LoginScreen.jsx';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import { useEffect } from 'react';
