@@ -21,8 +21,11 @@ import { auth } from './config/firebase';
 import { useNavigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+//student pages
 import AcademicPerformance from './pages/AcademicPerformance';
 import AttendanceRecords from './pages/AttendanceRecords';
+import HomeworkScores from './pages/HomeworkScores';
+import ExamResults from './pages/ExamResults';
 /**
  * Main App component
  * Sets up routing for the application
@@ -68,6 +71,8 @@ function App() {
           <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/student-academic-performance" element={<AcademicPerformance />} />
           <Route path="/student-attendance-records" element={<AttendanceRecords />} />
+          <Route path="/student-homework" element={<HomeworkScores />} />
+          <Route path="/exam-result" element={<ExamResults />} />
         </Routes>
       </Layout>
     </Router>
