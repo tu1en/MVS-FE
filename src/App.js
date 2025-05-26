@@ -4,19 +4,23 @@ import {
   BrowserRouter as Router,
   Routes,
 } from "react-router-dom";
-import "./App.css";
-import Layout from "./components/Layout";
-import AssignmentsPage from "./pages/AssignmentsPage";
-import BlankPage from "./pages/BlankPage";
-import ClassesPage from "./pages/ClassesPage";
-import HomePage from "./pages/HomePage";
-import DashboardPage from "./pages/Dashboard";
-import StudentsPage from "./pages/StudentsPage";
-import LoginScreen from "./pages/LoginScreen";
-import ForgotPassword from "./components/ForgotPassword";
-import ResetPassword from "./components/ResetPassword";
-import { useEffect } from "react";
-
+import React from 'react';
+import './App.css';
+import Layout from './components/Layout';
+import AssignmentsPage from './pages/AssignmentsPage';
+import BlankPage from './pages/BlankPage';
+import ClassesPage from './pages/ClassesPage';
+import HomePage from './pages/HomePage';
+import StudentsPage from './pages/StudentsPage';
+import LoginScreen from './pages/LoginScreen.jsx';
+import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+import { useEffect } from 'react';
+import { auth } from './config/firebase';
+import { useNavigate } from 'react-router-dom';
+import AdminDashboard from './pages/AdminDashboard';
+import TeacherDashboard from './pages/TeacherDashboard';
 /**
  * Main App component
  * Sets up routing for the application
@@ -46,16 +50,20 @@ function App() {
     <Router>
       <Layout>
         <Routes>
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/select-role" element={<SelectRoleLogin />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
         </Routes>
       </Layout>
     </Router>

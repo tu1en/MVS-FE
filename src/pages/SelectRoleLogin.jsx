@@ -1,4 +1,4 @@
-import { Card, Row, Col } from 'antd';
+import { Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   UserOutlined,
@@ -14,6 +14,7 @@ const roles = [
     colorFrom: "#f5222d",
     colorTo: "#ff7875",
     icon: <UserOutlined style={{ fontSize: 48 }} />,
+    emoji: "🛡️",
   },
   {
     title: "Quản lý",
@@ -21,6 +22,7 @@ const roles = [
     colorFrom: "#1890ff",
     colorTo: "#69c0ff",
     icon: <UserSwitchOutlined style={{ fontSize: 48 }} />,
+    emoji: "📊",
   },
   {
     title: "Giáo viên",
@@ -28,6 +30,7 @@ const roles = [
     colorFrom: "#52c41a",
     colorTo: "#95de64",
     icon: <TeamOutlined style={{ fontSize: 48 }} />,
+    emoji: "👨‍🏫",
   },
   {
     title: "Học viên",
@@ -35,6 +38,7 @@ const roles = [
     colorFrom: "#faad14",
     colorTo: "#ffe58f",
     icon: <SmileOutlined style={{ fontSize: 48 }} />,
+    emoji: "🎓",
   },
 ];
 
@@ -51,7 +55,7 @@ export default function Dashboard() {
       </div>
 
       <Row gutter={[24, 24]} justify="center" style={{ maxWidth: 1100, width: '100%' }}>
-        {roles.map(({ title, key, colorFrom, colorTo, icon }) => (
+        {roles.map(({ title, key, colorFrom, colorTo, icon, emoji }) => (
           <Col xs={24} sm={12} md={12} lg={6} key={key}>
             <div
               onClick={() => navigate(`/login?role=${key}`)}
@@ -69,7 +73,8 @@ export default function Dashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <div className="mb-4 group-hover:scale-110 transition-transform">{icon}</div>
+                {/* <div className="mb-4 group-hover:scale-110 transition-transform">{icon}</div> */}
+                <div className="text-5xl mb-3">{emoji}</div>
                 <div className="text-xl font-semibold">{title}</div>
               </div>
             </div>
