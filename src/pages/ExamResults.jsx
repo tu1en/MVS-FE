@@ -87,7 +87,7 @@ export default function ExamResults() {
   ];
 
   return (
-    <div className="min-h-screen px-6 py-10 bg-gradient-to-br mt-20 from-[#e6f7ff] to-[#fafafa]">
+    <div className="min-h-screen px-6 py-10 bg-gradient-to-br from-[#e6f7ff] to-[#fafafa]">
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Tiêu đề */}
         <div className="text-center">

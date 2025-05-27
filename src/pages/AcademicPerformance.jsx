@@ -40,7 +40,7 @@ export default function AcademicPerformance() {
   const avgScore = (data.reduce((acc, cur) => acc + cur.score, 0) / data.length).toFixed(2);
 
   return (
-    <div className="min-h-screen px-6 py-10 mt-20 bg-gradient-to-br from-[#e0f7ff] to-[#f5f7fa]">
+    <div className="min-h-screen px-6 py-10 bg-gradient-to-br from-[#e0f7ff] to-[#f5f7fa]">
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Header */}
         <div className="text-center">

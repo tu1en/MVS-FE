@@ -11,6 +11,7 @@ function NavigationBar() {
   // State to control sidebar collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
+  const role = localStorage.getItem('role');
 
   // Close sidebar when screen size changes to desktop
   useEffect(() => {
@@ -62,23 +63,51 @@ function NavigationBar() {
     { 
       name: 'Lớp Học', 
       path: '/classes', 
-      icon: '📚'
+      icon: '📚',
+      role: "TEACHER"
     },
     { 
       name: 'Bài Tập', 
       path: '/assignments', 
-      icon: '📝'
+      icon: '📝',
+      role: "TEACHER"
     },
     { 
       name: 'Học Sinh', 
       path: '/students', 
-      icon: '👨‍🎓'
+      icon: '👨‍🎓',
+      role: "TEACHER"
     },
     { 
       name: 'Trang Trắng', 
       path: '/blank', 
-      icon: '📄'
-    }
+      icon: '📄',
+      role: "TEACHER"
+    },
+    { 
+      name: 'Tổng quan học lực', 
+      path: '/student-academic-performance', 
+      icon: '📊',
+      role: "STUDENT"
+    },
+    { 
+      name: 'Xem điểm danh', 
+      path: '/student-attendance-records', 
+      icon: '📅',
+      role: "STUDENT"
+    },
+    { 
+      name: 'Xem bài tập', 
+      path: '/student-homework', 
+      icon: '📒',
+      role: "STUDENT"
+    },
+    { 
+      name: 'Xem điểm kiểm tra', 
+      path: '/student-exam-result', 
+      icon: '🎓',
+      role: "STUDENT"
+    },
   ];
 
   // Toggle sidebar collapsed state
@@ -126,7 +155,9 @@ function NavigationBar() {
           <h2 className="text-lg font-semibold text-primary mb-4 border-b border-gray-200 pb-2">Lớp Học Trực Tuyến</h2>
         )}
         <ul className="space-y-2">
-          {navItems.map((item, index) => (
+          {navItems
+          .filter(item => !item.role || item.role === role)
+          .map((item, index) => (
             <li key={index}>
               <NavLink 
                 to={item.path}
