@@ -3,10 +3,18 @@ import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
 
+/**
+ * Layout component that wraps the application with Header and Footer
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to render between header and footer
+ * @returns {JSX.Element} Layout with header, content area, and footer
+ */
 function Layout({ children }) {
+  // State to track if sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Listen for custom sidebar toggle event
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
@@ -26,8 +34,10 @@ function Layout({ children }) {
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col min-h-screen bg-white">
-      <Header />
-        {children}
+        <Header />
+        <div className='mt-20'>
+          {children}
+        </div>
       </div>
     );
   }

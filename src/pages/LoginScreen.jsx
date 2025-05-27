@@ -1,28 +1,16 @@
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
-
-const roleLabels = {
-  ADMIN: 'Quản trị viên',
-  MANAGER: 'Quản lý',
-  TEACHER: 'Giáo viên',
-  STUDENT: 'Học viên',
-  GUEST: 'Khách',
-};
-const baseUrl = process.env.REACT_APP_BASE_URL;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
   const [loi, setLoi] = useState(null);
   const [dangDangNhap, setDangDangNhap] = useState(false);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const roleParam = searchParams.get('role')?.toUpperCase() || 'GUEST';
-  const roleLabel = roleLabels[roleParam] || 'Khách';
   const baseUrl = process.env.REACT_APP_BASE_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +23,6 @@ export default function LoginScreen() {
         body: JSON.stringify({
           username: email,
           password: matKhau,
-          role: roleParam,
         }),
       });
 
@@ -53,7 +40,7 @@ export default function LoginScreen() {
             navigate('/teacher');
             break;
           case 'STUDENT':
-            navigate('/students'); // Changed from '/student' to match route
+            navigate('/student-academic-performance'); // Changed from '/student' to match route
             break;
           default:
             navigate('/');

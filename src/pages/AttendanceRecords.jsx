@@ -67,11 +67,11 @@ export default function AttendanceRecords() {
   ];
 
   return (
-    <div className="min-h-screen px-6 py-10 bg-gradient-to-br mt-20 from-[#fff1f0] to-[#f0f5ff]">
+    <div className="min-h-screen px-6 py-10 bg-gradient-to-br from-[#fff1f0] to-[#f0f5ff]">
       <div className="max-w-5xl mx-auto space-y-10">
         {/* Tiêu đề */}
         <div className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-2">📊 Điểm danh</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-2">📅 Điểm danh</h1>
           <p className="text-gray-600 text-lg">Theo dõi tình hình chuyên cần của bạn</p>
         </div>
 

@@ -10,7 +10,7 @@ function Header() {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    navigate('/select-role');
+    navigate('/login');
   };
   // Toggle sidebar function
   const toggleSidebar = () => {
