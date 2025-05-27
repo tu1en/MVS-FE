@@ -98,7 +98,7 @@ export default function HomeworkScores() {
   ];
 
   return (
-    <div className="min-h-screen mt-20 px-6 py-10 bg-gradient-to-br from-[#fef9e7] to-[#f5f5f5]">
+    <div className="min-h-screen px-6 py-10 bg-gradient-to-br from-[#fef9e7] to-[#f5f5f5]">
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Header */}
         <div className="text-center">
