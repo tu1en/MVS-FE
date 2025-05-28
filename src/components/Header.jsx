@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
  */
 function Header() {
   const navigate = useNavigate();
+  const { isLogin } = useSelector((state) => state.auth);
 
   const handleLogin = () => {
     navigate('/login');
@@ -55,15 +57,20 @@ function Header() {
               <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
             </button>
           </div>
-          <button
-            className="hidden sm:block px-4 py-1 text-white bg-primary rounded hover:bg-primary-dark transition-colors"
-            onClick={handleLogin}
-          >
-            Đăng nhập
-          </button>
-          <button className="hidden sm:block px-4 py-1 border border-primary text-primary rounded hover:bg-primary-light hover:text-primary-dark transition-colors">
-            Đăng Ký
-          </button>
+          {
+            !isLogin &&
+            <>
+              <button
+                className="hidden sm:block px-4 py-1 text-white bg-primary rounded hover:bg-primary-dark transition-colors"
+                onClick={handleLogin}
+              >
+                Đăng nhập
+              </button>
+              <button className="hidden sm:block px-4 py-1 border border-primary text-primary rounded hover:bg-primary-light hover:text-primary-dark transition-colors">
+                Đăng Ký
+              </button>
+            </>
+          }
         </div>
       </div>
     </header>

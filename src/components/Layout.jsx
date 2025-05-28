@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
+import { useSelector } from 'react-redux';
 
 /**
  * Layout component that wraps the application with Header and Footer
@@ -12,14 +13,14 @@ import NavigationBar from './NavigationBar';
 function Layout({ children }) {
   // State to track if sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLogin, role } = useSelector((state) => state.auth);
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // const token = localStorage.getItem('token');
 
   // Listen for custom sidebar toggle event
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    console.log(token);
+    // setIsLoggedIn(!!token);
 
     const handleSidebarToggle = (event) => {
       setIsSidebarCollapsed(event.detail.isCollapsed);
@@ -29,15 +30,13 @@ function Layout({ children }) {
     return () => {
       window.removeEventListener('sidebarToggled', handleSidebarToggle);
     };
-  }, []);
+  }, [isLogin]);
 
-  if (!isLoggedIn) {
+  if (!isLogin) {
     return (
       <div className="flex flex-col min-h-screen bg-white">
         <Header />
-        <div className='mt-20'>
           {children}
-        </div>
       </div>
     );
   }
