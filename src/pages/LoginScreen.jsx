@@ -45,7 +45,10 @@ export default function LoginScreen() {
             navigate('/teacher');
             break;
           case ROLE.STUDENT: //STUDENT
-            navigate('/student-academic-performance');
+            navigate('/student');
+            break;
+          case ROLE.MANAGER: //MANAGER
+            navigate('/manager');
             break;
           default:
             navigate('/');
@@ -119,7 +122,7 @@ export default function LoginScreen() {
             navigate('/teacher');
             break;
           case ROLE.STUDENT: //STUDENT
-            navigate('/student-academic-performance');
+            navigate('/student');
             break;
           default:
             navigate('/');
