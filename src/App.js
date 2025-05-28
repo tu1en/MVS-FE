@@ -11,7 +11,6 @@ import AssignmentsPage from './pages/AssignmentsPage';
 import BlankPage from './pages/BlankPage';
 import ClassesPage from './pages/ClassesPage';
 import HomePage from './pages/HomePage';
-import StudentsPage from './pages/StudentsPage';
 import LoginScreen from './pages/LoginScreen.jsx';
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
 import ForgotPassword from './components/ForgotPassword';
@@ -21,7 +20,9 @@ import { auth } from './config/firebase';
 import { useNavigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
 //student pages
+import StudentsDashboard from './pages/StudentsDashboard';
 import AcademicPerformance from './pages/AcademicPerformance';
 import AttendanceRecords from './pages/AttendanceRecords';
 import HomeworkScores from './pages/HomeworkScores';
@@ -46,7 +47,7 @@ function App() {
   //         window.location.href = "/teacher";
   //         break;
   //       case ROLE.STUDENT:  //STUDENT
-  //         window.location.href = "/student-academic-performance";
+  //         window.location.href = "/student";
   //         break;
   //       default:
   //         window.location.href = "/";
@@ -61,16 +62,19 @@ function App() {
           <Route path="/select-role" element={<SelectRoleLogin />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/teacher" element={<TeacherDashboard />} />
-          <Route path="/students" element={<StudentsPage />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* admin */}
           <Route path="/admin" element={<AdminDashboard />} />
+          {/* teacher */}
           <Route path="/teacher" element={<TeacherDashboard />} />
+          {/* manager */}
+          <Route path="/manager" element={<ManagerDashboard />} />
+          {/* student */}
+          <Route path="/student" element={<StudentsDashboard />} />
           <Route path="/student-academic-performance" element={<AcademicPerformance />} />
           <Route path="/student-attendance-records" element={<AttendanceRecords />} />
           <Route path="/student-homework" element={<HomeworkScores />} />
