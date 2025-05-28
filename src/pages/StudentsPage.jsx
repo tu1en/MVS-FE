@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 // Add these imports at the top of the file
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROLE } from '../constants/constants';
 
 function StudentsPage() {
   // Add navigation hook inside the component
@@ -15,7 +16,7 @@ function StudentsPage() {
   // Move useEffect inside the component
   useEffect(() => {
     const role = localStorage.getItem('role');
-    if (role !== 'STUDENT') {
+    if (role !== ROLE.STUDENT) {
       navigate('/');
     }
   }, [navigate]);

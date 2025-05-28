@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROLE } from '../constants/constants';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
     const role = localStorage.getItem('role');
-    if (role !== 'TEACHER') {
+    if (role !== ROLE.TEACHER) {
       navigate('/');
     }
   }, [navigate]);
