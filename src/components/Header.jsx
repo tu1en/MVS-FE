@@ -51,14 +51,15 @@ function Header() {
 
         {/* User Actions */}
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <button className="p-2 text-primary hover:text-primary-dark">
-              <span className="text-xl">🔔</span>
-              <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-            </button>
-          </div>
-          {
-            !isLogin &&
+          {isLogin && (
+            <div className="relative">
+              <button className="p-2 text-primary hover:text-primary-dark">
+                <span className="text-xl">🔔</span>
+                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
+              </button>
+            </div>
+          )}
+          {!isLogin && (
             <>
               <button
                 className="hidden sm:block px-4 py-1 text-white bg-primary rounded hover:bg-primary-dark transition-colors"
@@ -70,7 +71,7 @@ function Header() {
                 Đăng Ký
               </button>
             </>
-          }
+          )}
         </div>
       </div>
     </header>
