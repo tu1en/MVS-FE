@@ -2,9 +2,10 @@ import HomeBanner from './components/HomeBanner';
 import RoleCards from './components/RoleCards';
 import FeatureSection from './components/FeatureSection';
 import Footer from './components/Footer';
+import { useSelector } from 'react-redux';
 
 export default function HomePage() {
-  const token = localStorage.getItem('token');
+  const { isLogin, role } = useSelector((state) => state.auth);
 
   return (
     <div className="w-full">
@@ -19,7 +20,7 @@ export default function HomePage() {
         <RoleCards />
         <FeatureSection />
       </div>
-      {!token && 
+      {!isLogin && 
         <Footer />
       }
     </div>

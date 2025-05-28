@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-
+import { ROLE } from '../constants/constants';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
 /**
  * NavigationBar component that provides sidebar navigation
  * @returns {JSX.Element} NavigationBar component
  */
 function NavigationBar() {
+  const dispatch = useDispatch();
+  const { isLogin, role } = useSelector((state) => state.auth);
   // State to control mobile sidebar visibility
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   // State to control sidebar collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
-  const role = localStorage.getItem('role');
 
   // Close sidebar when screen size changes to desktop
   useEffect(() => {
@@ -64,49 +67,49 @@ function NavigationBar() {
       name: 'Lớp Học', 
       path: '/classes', 
       icon: '📚',
-      role: "TEACHER"
+      role: ROLE.TEACHER
     },
     { 
       name: 'Bài Tập', 
       path: '/assignments', 
       icon: '📝',
-      role: "TEACHER"
+      role: ROLE.TEACHER
     },
     { 
       name: 'Học Sinh', 
       path: '/students', 
       icon: '👨‍🎓',
-      role: "TEACHER"
+      role: ROLE.TEACHER
     },
     { 
       name: 'Trang Trắng', 
       path: '/blank', 
       icon: '📄',
-      role: "TEACHER"
+      role: ROLE.TEACHER
     },
     { 
       name: 'Tổng quan học lực', 
       path: '/student-academic-performance', 
       icon: '📊',
-      role: "STUDENT"
+      role: ROLE.STUDENT
     },
     { 
       name: 'Xem điểm danh', 
       path: '/student-attendance-records', 
       icon: '📅',
-      role: "STUDENT"
+      role: ROLE.STUDENT
     },
     { 
       name: 'Xem bài tập', 
       path: '/student-homework', 
       icon: '📒',
-      role: "STUDENT"
+      role: ROLE.STUDENT
     },
     { 
       name: 'Xem điểm kiểm tra', 
       path: '/student-exam-result', 
       icon: '🎓',
-      role: "STUDENT"
+      role: ROLE.STUDENT
     },
   ];
 
@@ -140,6 +143,7 @@ function NavigationBar() {
     // Clear authentication data from localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    dispatch(logout());
     
     // Redirect to home page
     navigate('/');
@@ -187,14 +191,19 @@ function NavigationBar() {
             Thao Tác Nhanh
           </h3>
           <div className="space-y-2">
+          {role === ROLE.TEACHER && 
             <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
               <span className="mr-3 text-xl">➕</span>
               <span>Tạo Lớp Mới</span>
             </button>
+          }
+          {
+            role === ROLE.ADMIN && 
             <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
               <span className="mr-3 text-xl">📊</span>
               <span>Báo Cáo</span>
             </button>
+          }
             <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
               <span className="mr-3 text-xl">⚙️</span>
               <span>Cài Đặt</span>

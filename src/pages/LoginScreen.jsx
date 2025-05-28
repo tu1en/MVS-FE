@@ -2,9 +2,13 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useDispatch } from 'react-redux';
 import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
+import { ROLE } from '../constants/constants';
+import { loginSuccess } from '../store/slices/authSlice';
 
 export default function LoginScreen() {
+  const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
   const [loi, setLoi] = useState(null);
@@ -30,17 +34,18 @@ export default function LoginScreen() {
         const data = await res.json();
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
+        dispatch(loginSuccess({ token: data.token, role: data.role }));
         toast.success('Đăng nhập thành công!');
 
         switch (data.role) {
-          case 'ADMIN':
+          case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;
-          case 'TEACHER':
+          case ROLE.TEACHER: //TEACHER
             navigate('/teacher');
             break;
-          case 'STUDENT':
-            navigate('/student-academic-performance'); // Changed from '/student' to match route
+          case ROLE.STUDENT: //STUDENT
+            navigate('/student-academic-performance');
             break;
           default:
             navigate('/');
@@ -96,18 +101,28 @@ export default function LoginScreen() {
           throw new Error('Missing token or role in response');
         }
         
-        // 5. Store token and role
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
+        dispatch(loginSuccess({ token: data.token, role: data.role }));
         console.log('Token and role stored in localStorage');
         
         // 6. Verify navigation
         console.log(`Navigating to ${data.role} dashboard...`);
         switch (data.role) {
-          case 'ADMIN': navigate('/admin'); break;
-          case 'TEACHER': navigate('/teacher'); break;
-          case 'STUDENT': navigate('/students'); break;
-          default: navigate('/');
+          case ROLE.ADMIN: //ADMIN
+            navigate('/admin');
+            break;
+            case ROLE.MANAGER: //MANAGER
+            navigate('/manager');
+            break;
+          case ROLE.TEACHER: //TEACHER
+            navigate('/teacher');
+            break;
+          case ROLE.STUDENT: //STUDENT
+            navigate('/student-academic-performance');
+            break;
+          default:
+            navigate('/');
         }
       } else {
         const error = await res.json();

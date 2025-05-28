@@ -26,31 +26,33 @@ import AcademicPerformance from './pages/AcademicPerformance';
 import AttendanceRecords from './pages/AttendanceRecords';
 import HomeworkScores from './pages/HomeworkScores';
 import ExamResults from './pages/ExamResults';
+import { ROLE } from "./constants/constants.js";
 /**
  * Main App component
  * Sets up routing for the application
  * @returns {JSX.Element} The main application
  */
 function App() {
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const role = localStorage.getItem("role");
-      switch (role) {
-        case "ADMIN":
-          window.location.href = "/admin";
-          break;
-        case "TEACHER":
-          window.location.href = "/teacher";
-          break;
-        case "STUDENT":
-          window.location.href = "/student";
-          break;
-        default:
-          window.location.href = "/";
-      }
-    }
-  }, []);
+  
+  // useEffect(() => {
+  //   const token = localStorage.getItem("token");
+  //   if (token) {
+  //     const role = localStorage.getItem("role");
+  //     switch (role) {
+  //       case ROLE.ADMIN:  //ADMIN
+  //         window.location.href = "/admin";
+  //         break;
+  //       case ROLE.TEACHER:  //TEACHER
+  //         window.location.href = "/teacher";
+  //         break;
+  //       case ROLE.STUDENT:  //STUDENT
+  //         window.location.href = "/student-academic-performance";
+  //         break;
+  //       default:
+  //         window.location.href = "/";
+  //     }
+  //   }
+  // }, []);
   return (
     <Router>
       <Layout>
