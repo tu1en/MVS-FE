@@ -1,47 +1,57 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Modal, message, Badge, Tag, Space, Tooltip, Descriptions } from 'antd';
+import { Table, Button, Modal, message, Badge, Tag, Space, Tooltip, Descriptions, Form, Input } from 'antd';
 import { CheckOutlined, CloseOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
-
-const { confirm } = Modal;
 
 const RequestList = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [approveComment, setApproveComment] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   
-  const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
+  const baseUrl = (process.env.REACT_APP_BASE_URL || 'http://localhost:8088').replace(/\/$/, '');
 
-  const fetchPendingRequests = useCallback(async () => {
+  const getApiUrl = (endpoint) => {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    
+    if (baseUrl.includes('/api')) {
+      return `${baseUrl}/${cleanEndpoint}`;
+    } else {
+      return `${baseUrl}/api/${cleanEndpoint}`;
+    }
+  };
+
+  const fetchAllRequests = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = baseUrl.endsWith('/api') 
-        ? `${baseUrl}/admin/requests/pending` 
-        : `${baseUrl}/api/admin/requests/pending`;
+      if (!token) {
+        message.error('Không tìm thấy token đăng nhập!');
+        return;
+      }
       
-      console.log('Fetching requests from:', apiUrl);
+      const apiUrl = getApiUrl('admin/requests/all');
+      console.log('Fetching all requests from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json; charset=utf-8'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Request data structure:', data[0]); // Debug đối tượng request đầu tiên
+        console.log('Request data structure:', data[0]); 
         setRequests(data);
       } else if (response.status === 401 || response.status === 403) {
-        // Xử lý lỗi JWT không hợp lệ
         console.error('JWT token không hợp lệ hoặc đã hết hạn');
         message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
-        // Chuyển hướng đến trang đăng nhập
         localStorage.removeItem('token');
         window.location.href = '/login';
       } else {
@@ -55,81 +65,101 @@ const RequestList = () => {
     }
   }, [baseUrl]);
 
-  // Fetch requests when component mounts
   useEffect(() => {
-    fetchPendingRequests();
-  }, [fetchPendingRequests]);
+    fetchAllRequests();
+  }, [fetchAllRequests]);
 
-  const handleApprove = (e, requestId) => {
-    e.stopPropagation(); // Ngăn sự kiện click lan sang row
-    
-    confirm({
-      title: 'Bạn có chắc chắn muốn phê duyệt yêu cầu này?',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Sau khi phê duyệt, người dùng sẽ được cấp quyền tương ứng.',
-      okText: 'Phê duyệt',
-      okType: 'primary',
-      cancelText: 'Hủy',
-      async onOk() {
+  const showApproveModal = (e, requestId) => {
+    e.stopPropagation();
+    setSelectedRequestId(requestId);
+    setApproveComment('');
+    setApproveModalVisible(true);
+  };
+
+  const handleApprove = async () => {
+    try {
+      message.loading({ content: 'Đang xử lý...', key: 'approveLoading' });
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        message.error({ content: 'Không tìm thấy token đăng nhập!', key: 'approveLoading' });
+        return;
+      }
+      
+      const approveUrl = getApiUrl(`admin/requests/${selectedRequestId}/approve`);
+      
+      console.log('Sending approval request to:', approveUrl);
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      const response = await fetch(approveUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ comment: approveComment })
+      });
+        
+      console.log("Approve endpoint status:", response.status);
+        
+      if (response.ok) {
+        message.success({ content: 'Phê duyệt yêu cầu thành công', key: 'approveLoading' });
+        setApproveModalVisible(false);
+        fetchAllRequests();
+      } else {
+        let errorText = '';
         try {
-          const token = localStorage.getItem('token');
-          const apiUrl = baseUrl.endsWith('/api') 
-            ? `${baseUrl}/admin/requests/${requestId}/approve` 
-            : `${baseUrl}/api/admin/requests/${requestId}/approve`;
-          
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json; charset=utf-8',
-              'Accept': 'application/json; charset=utf-8'
-            }
-          });
-          
-          if (response.ok) {
-            message.success('Phê duyệt yêu cầu thành công');
-            fetchPendingRequests(); // Refresh the list
-          } else {
-            throw new Error('Failed to approve request');
+          const errorData = await response.json();
+          errorText = errorData.message || errorData.error || 'Unknown error';
+        } catch (e) {
+          try {
+            errorText = await response.text();
+          } catch (e2) {
+            errorText = 'Unknown error';
           }
-        } catch (error) {
-          console.error('Error approving request:', error);
-          message.error('Không thể phê duyệt yêu cầu');
         }
-      },
-    });
+        console.error("Approve endpoint failed:", errorText);
+        message.error({ content: `Không thể phê duyệt: ${errorText}`, key: 'approveLoading' });
+      }
+    } catch (error) {
+      console.error("Approve endpoint error:", error);
+      message.error({ content: `Lỗi: ${error.message}`, key: 'approveLoading' });
+    }
   };
 
   const showRejectModal = (e, requestId) => {
-    e.stopPropagation(); // Ngăn sự kiện click lan sang row
+    e.stopPropagation();
     setSelectedRequestId(requestId);
     setRejectReason('');
     setRejectModalVisible(true);
   };
 
   const showDetailModal = (record) => {
+    console.log("showDetailModal called with record:", record);
     setSelectedRequest(record);
     setDetailModalVisible(true);
     
-    // Fetch thêm chi tiết của request
     fetchRequestDetails(record.id);
   };
 
-  // Hàm fetch chi tiết của request
   const fetchRequestDetails = async (requestId) => {
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = baseUrl.endsWith('/api') 
-        ? `${baseUrl}/admin/requests/${requestId}/details` 
-        : `${baseUrl}/api/admin/requests/${requestId}/details`;
+      if (!token) {
+        message.error('Không tìm thấy token đăng nhập!');
+        return;
+      }
       
+      const apiUrl = getApiUrl(`admin/requests/${requestId}/details`);
       console.log('Fetching request details from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json; charset=utf-8'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
@@ -137,16 +167,13 @@ const RequestList = () => {
         const detailData = await response.json();
         console.log('Request detail data:', detailData);
         
-        // Nếu có formResponses, parse JSON để lấy thông tin chi tiết
         let parsedFormData = {};
         if (detailData.formResponses) {
           try {
             console.log('Raw formResponses:', detailData.formResponses);
-            // Loại bỏ escape characters nếu có
             const cleanedJson = detailData.formResponses.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
             console.log('Cleaned JSON:', cleanedJson);
             
-            // Nếu chuỗi JSON bắt đầu và kết thúc bằng dấu ngoặc kép, loại bỏ chúng
             let jsonToParse = cleanedJson;
             if (cleanedJson.startsWith('"') && cleanedJson.endsWith('"')) {
               jsonToParse = cleanedJson.substring(1, cleanedJson.length - 1);
@@ -160,17 +187,14 @@ const RequestList = () => {
           }
         }
         
-        // Cập nhật selected request với thông tin chi tiết
         setSelectedRequest(prevState => ({
           ...prevState,
           ...detailData,
-          // Thêm các trường từ form responses nếu có
           phoneNumber: parsedFormData.phoneNumber || detailData.phoneNumber,
           qualifications: parsedFormData.qualifications,
           experience: parsedFormData.experience,
           subjects: parsedFormData.subjects,
           additionalInfo: parsedFormData.additionalInfo,
-          // Thêm các trường cho học sinh nếu có
           grade: parsedFormData.grade,
           parentContact: parsedFormData.parentContact
         }));
@@ -190,16 +214,19 @@ const RequestList = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = baseUrl.endsWith('/api') 
-        ? `${baseUrl}/admin/requests/${selectedRequestId}/reject` 
-        : `${baseUrl}/api/admin/requests/${selectedRequestId}/reject`;
+      if (!token) {
+        message.error('Không tìm thấy token đăng nhập!');
+        return;
+      }
+      
+      const apiUrl = getApiUrl(`admin/requests/${selectedRequestId}/reject`);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json; charset=utf-8',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ reason: rejectReason })
       });
@@ -207,7 +234,7 @@ const RequestList = () => {
       if (response.ok) {
         message.success('Từ chối yêu cầu thành công');
         setRejectModalVisible(false);
-        fetchPendingRequests(); // Refresh the list
+        fetchAllRequests();
       } else {
         throw new Error('Failed to reject request');
       }
@@ -220,7 +247,7 @@ const RequestList = () => {
   const getStatusBadge = (status) => {
     switch(status) {
       case 'PENDING':
-        return <Badge status="processing" text="Đang chờ" />;
+        return <Badge status="processing" text="Đang chờ xử lý" />;
       case 'APPROVED':
         return <Badge status="success" text="Đã phê duyệt" />;
       case 'REJECTED':
@@ -232,10 +259,9 @@ const RequestList = () => {
 
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
+      title: 'Họ và tên',
+      dataIndex: 'fullName',
+      key: 'fullName',
     },
     {
       title: 'Email',
@@ -243,54 +269,32 @@ const RequestList = () => {
       key: 'email',
     },
     {
-      title: 'Họ tên',
-      dataIndex: 'fullName',
-      key: 'fullName',
-    },
-    {
-      title: 'Vai trò yêu cầu',
+      title: 'Vai trò đăng ký',
       dataIndex: 'requestedRole',
       key: 'requestedRole',
-      render: role => (
+      render: (role) => (
         <Tag color={role === 'TEACHER' ? 'blue' : 'green'}>
           {role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}
         </Tag>
-      )
+      ),
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: status => getStatusBadge(status)
+      render: (status) => getStatusBadge(status),
     },
     {
-      title: 'Ngày tạo',
+      title: 'Ngày yêu cầu',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: date => new Date(date).toLocaleString('vi-VN')
+      render: (date) => new Date(date).toLocaleString('vi-VN'),
     },
     {
       title: 'Thao tác',
       key: 'action',
-      width: 180,
       render: (_, record) => (
-        <Space onClick={(e) => e.stopPropagation()}>
-          <Tooltip title="Phê duyệt">
-            <Button 
-              type="primary" 
-              icon={<CheckOutlined />} 
-              onClick={(e) => handleApprove(e, record.id)}
-              disabled={record.status !== 'PENDING'}
-            />
-          </Tooltip>
-          <Tooltip title="Từ chối">
-            <Button 
-              danger 
-              icon={<CloseOutlined />} 
-              onClick={(e) => showRejectModal(e, record.id)}
-              disabled={record.status !== 'PENDING'}
-            />
-          </Tooltip>
+        <Space size="small">
           <Tooltip title="Xem chi tiết">
             <Button 
               icon={<InfoCircleOutlined />} 
@@ -298,8 +302,31 @@ const RequestList = () => {
                 e.stopPropagation();
                 showDetailModal(record);
               }}
-            />
+            >
+              Chi tiết
+            </Button>
           </Tooltip>
+          
+          {record.status === 'PENDING' && (
+            <>
+              <Tooltip title="Phê duyệt">
+                <Button 
+                  type="primary" 
+                  icon={<CheckOutlined />} 
+                  onClick={(e) => showApproveModal(e, record.id)}
+                  style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                />
+              </Tooltip>
+              
+              <Tooltip title="Từ chối">
+                <Button 
+                  danger 
+                  icon={<CloseOutlined />} 
+                  onClick={(e) => showRejectModal(e, record.id)}
+                />
+              </Tooltip>
+            </>
+          )}
         </Space>
       ),
     },
@@ -309,7 +336,7 @@ const RequestList = () => {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Quản lý yêu cầu đăng ký</h1>
-        <Button type="primary" onClick={fetchPendingRequests}>Làm mới</Button>
+        <Button type="primary" onClick={fetchAllRequests}>Làm mới</Button>
       </div>
       
       <Table 
@@ -324,7 +351,28 @@ const RequestList = () => {
         })}
       />
 
-      {/* Modal từ chối yêu cầu */}
+      <Modal
+        title="Phê duyệt yêu cầu"
+        open={approveModalVisible}
+        onOk={handleApprove}
+        onCancel={() => setApproveModalVisible(false)}
+        okText="Phê duyệt"
+        cancelText="Hủy"
+      >
+        <p className="mb-2">Bạn có chắc chắn muốn phê duyệt yêu cầu này?</p>
+        <p className="mb-4">Sau khi phê duyệt, người dùng sẽ được cấp quyền tương ứng và nhận được email thông báo.</p>
+        <Form layout="vertical">
+          <Form.Item label="Ghi chú (tùy chọn)">
+            <Input.TextArea
+              rows={4}
+              value={approveComment}
+              onChange={e => setApproveComment(e.target.value)}
+              placeholder="Nhập ghi chú nếu cần..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       <Modal
         title="Từ chối yêu cầu"
         open={rejectModalVisible}
@@ -343,7 +391,6 @@ const RequestList = () => {
         />
       </Modal>
 
-      {/* Modal xem chi tiết yêu cầu */}
       <Modal
         title="Thông tin chi tiết yêu cầu đăng ký"
         open={detailModalVisible}
@@ -351,28 +398,7 @@ const RequestList = () => {
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Đóng
-          </Button>,
-          selectedRequest && selectedRequest.status === 'PENDING' && (
-            <Button 
-              key="approve" 
-              type="primary" 
-              onClick={(e) => handleApprove(e, selectedRequest.id)}
-            >
-              Phê duyệt
-            </Button>
-          ),
-          selectedRequest && selectedRequest.status === 'PENDING' && (
-            <Button 
-              key="reject" 
-              danger 
-              onClick={(e) => {
-                setDetailModalVisible(false);
-                showRejectModal(e, selectedRequest.id);
-              }}
-            >
-              Từ chối
-            </Button>
-          ),
+          </Button>
         ]}
         width={700}
       >
@@ -393,7 +419,6 @@ const RequestList = () => {
               {new Date(selectedRequest.createdAt).toLocaleString('vi-VN')}
             </Descriptions.Item>
             
-            {/* Thông tin bổ sung cho giáo viên */}
             {selectedRequest.requestedRole === 'TEACHER' && (
               <>
                 <Descriptions.Item label="Trình độ chuyên môn">
@@ -417,7 +442,6 @@ const RequestList = () => {
               </>
             )}
             
-            {/* Thông tin bổ sung cho học sinh */}
             {selectedRequest.requestedRole === 'STUDENT' && (
               <>
                 <Descriptions.Item label="Lớp học">
