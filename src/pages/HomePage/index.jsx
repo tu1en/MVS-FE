@@ -5,7 +5,7 @@ import Footer from './components/Footer';
 import { useSelector } from 'react-redux';
 
 export default function HomePage() {
-  const { isLogin, role } = useSelector((state) => state.auth);
+  const { isLogin } = useSelector((state) => state.auth);
 
   return (
     <div className="w-full">

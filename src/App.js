@@ -15,19 +15,17 @@ import LoginScreen from './pages/LoginScreen.jsx';
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-import { useEffect } from 'react';
-import { auth } from './config/firebase';
-import { useNavigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
+import RequestList from './pages/RequestList';
 //student pages
 import StudentsDashboard from './pages/StudentsDashboard';
 import AcademicPerformance from './pages/AcademicPerformance';
 import AttendanceRecords from './pages/AttendanceRecords';
 import HomeworkScores from './pages/HomeworkScores';
 import ExamResults from './pages/ExamResults';
-import { ROLE } from "./constants/constants.js";
+
 /**
  * Main App component
  * Sets up routing for the application
@@ -73,6 +71,7 @@ function App() {
           <Route path="/teacher" element={<TeacherDashboard />} />
           {/* manager */}
           <Route path="/manager" element={<ManagerDashboard />} />
+          <Route path="/request-list" element={<RequestList />} />
           {/* student */}
           <Route path="/student" element={<StudentsDashboard />} />
           <Route path="/student-academic-performance" element={<AcademicPerformance />} />
