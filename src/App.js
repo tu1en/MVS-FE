@@ -21,6 +21,7 @@ import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import RequestList from './pages/RequestList.jsx';
 //student pages
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
+import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 import AcademicPerformance from './pages/AcademicPerformance.jsx';
 import AttendanceRecords from './pages/AttendanceRecords.jsx';
 import HomeworkScores from './pages/HomeworkScores.jsx';
@@ -71,13 +72,14 @@ function App() {
           <Route path="/teacher" element={<TeacherDashboard />} />
           {/* manager */}
           <Route path="/manager" element={<ManagerDashboard />} />
-          <Route path="/request-list" element={<RequestList />} />
-          {/* student */}
+          <Route path="/request-list" element={<RequestList />} />          {/* student */}
           <Route path="/student" element={<StudentsDashboard />} />
+          <Route path="/student/accomplishments" element={<StudentAccomplishments />} />
           <Route path="/student-academic-performance" element={<AcademicPerformance />} />
           <Route path="/student-attendance-records" element={<AttendanceRecords />} />
           <Route path="/student-homework" element={<HomeworkScores />} />
           <Route path="/student-exam-result" element={<ExamResults />} />
+          <Route path="/student-accomplishments" element={<StudentAccomplishments />} />
         </Routes>
       </Layout>
     </Router>
