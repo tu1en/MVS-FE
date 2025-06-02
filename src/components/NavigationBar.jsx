@@ -183,6 +183,12 @@ function NavigationBar() {
       icon: '🎓',
       roles: [ROLE.STUDENT]
     },
+    { 
+      name: 'Thành tựu', 
+      path: '/student/accomplishments', 
+      icon: '🏆',
+      roles: [ROLE.STUDENT]
+    },
   ];
 
   // Toggle sidebar collapsed state
