@@ -129,6 +129,12 @@ function NavigationBar() {
       path: '/', 
       icon: '🏠'
     },
+    {
+      name: 'Quản lý tài khoản',
+      path: '/accounts',
+      icon: '👥',
+      roles: [ROLE.MANAGER, ROLE.ADMIN]
+    },
     { 
       name: 'Lớp Học', 
       path: '/classes', 
@@ -201,9 +207,11 @@ function NavigationBar() {
   // Helper function to check if user has a specific role
   const hasRole = (roleArray) => {
     if (!roleArray || !userRole) return false;
-    // Kiểm tra cả trường hợp userRole là chuỗi hoặc số
+    // Convert userRole to uppercase for comparison
+    const normalizedUserRole = String(userRole).toUpperCase();
     return roleArray.some(role => {
-      return userRole === role || userRole === String(role) || Number(userRole) === Number(role);
+      const normalizedRole = String(role).toUpperCase();
+      return normalizedUserRole === normalizedRole;
     });
   };
 

@@ -17,6 +17,13 @@ const API_CONFIG = {
     USER_REGISTER: "/auth/register",
     USER_LOGIN: "/auth/login",
 
+    // Account management endpoints
+    ACCOUNTS: "/users",
+    DEPARTMENTS: "/departments",
+
+    // Student accomplishments endpoint
+    STUDENT_ACCOMPLISHMENTS: (userId) => `/students/${userId}/accomplishments`,
+
     // Classroom endpoints
     CLASSES: "/classrooms",
     CLASSES_BY_ID: (id) => `/classrooms/${id}`,
