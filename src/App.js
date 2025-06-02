@@ -27,6 +27,7 @@ import AcademicPerformance from './pages/AcademicPerformance';
 import AttendanceRecords from './pages/AttendanceRecords';
 import HomeworkScores from './pages/HomeworkScores';
 import ExamResults from './pages/ExamResults';
+import BlogPages from './pages/BlogPages';
 import { ROLE } from "./constants/constants.js";
 /**
  * Main App component
@@ -62,6 +63,7 @@ function App() {
           <Route path="/select-role" element={<SelectRoleLogin />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
+          <Route path="/blogs" element={<BlogPages />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
