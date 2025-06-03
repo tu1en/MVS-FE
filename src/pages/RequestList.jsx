@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Modal, message, Badge, Tag, Space, Tooltip, Descriptions, Form, Input } from 'antd';
-import { CheckOutlined, CloseOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 const RequestList = () => {
   const [requests, setRequests] = useState([]);
@@ -15,7 +15,7 @@ const RequestList = () => {
   
   const baseUrl = (process.env.REACT_APP_BASE_URL || 'http://localhost:8088').replace(/\/$/, '');
 
-  const getApiUrl = (endpoint) => {
+  const getApiUrl = useCallback((endpoint) => {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
     
     if (baseUrl.includes('/api')) {
@@ -23,7 +23,7 @@ const RequestList = () => {
     } else {
       return `${baseUrl}/api/${cleanEndpoint}`;
     }
-  };
+  }, [baseUrl]);
 
   const fetchAllRequests = useCallback(async () => {
     setLoading(true);
@@ -63,10 +63,16 @@ const RequestList = () => {
     } finally {
       setLoading(false);
     }
-  }, [baseUrl]);
+  }, [getApiUrl]);
 
   useEffect(() => {
     fetchAllRequests();
+    
+    const interval = setInterval(() => {
+      fetchAllRequests();
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, [fetchAllRequests]);
 
   const showApproveModal = (e, requestId) => {
@@ -187,6 +193,11 @@ const RequestList = () => {
           }
         }
         
+        // Trích xuất thông tin CV từ formResponses nếu là yêu cầu giáo viên
+        const cvFileUrl = parsedFormData.cvFileUrl || detailData.cvFileUrl;
+        const cvFileData = parsedFormData.cvFileData || detailData.cvFileData;
+        const cvFileName = parsedFormData.cvFileName || detailData.cvFileName;
+        
         setSelectedRequest(prevState => ({
           ...prevState,
           ...detailData,
@@ -196,7 +207,11 @@ const RequestList = () => {
           subjects: parsedFormData.subjects,
           additionalInfo: parsedFormData.additionalInfo,
           grade: parsedFormData.grade,
-          parentContact: parsedFormData.parentContact
+          parentContact: parsedFormData.parentContact,
+          // Thông tin CV
+          cvFileUrl: cvFileUrl,
+          cvFileData: cvFileData,
+          cvFileName: cvFileName
         }));
       } else {
         console.error('Failed to fetch request details');
@@ -421,23 +436,42 @@ const RequestList = () => {
             
             {selectedRequest.requestedRole === 'TEACHER' && (
               <>
-                <Descriptions.Item label="Trình độ chuyên môn">
-                  {selectedRequest.qualifications || 
-                   selectedRequest.qualification || 
-                   selectedRequest.educationLevel || 
-                   'Không có'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Kinh nghiệm giảng dạy">
-                  {selectedRequest.experience || 
-                   selectedRequest.teachingExperience || 
-                   selectedRequest.yearsOfExperience || 
-                   'Không có'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Môn học dạy">
-                  {selectedRequest.subjects || 
-                   selectedRequest.teachingSubjects || 
-                   selectedRequest.preferredSubjects || 
-                   'Không có'}
+                <Descriptions.Item label="CV / Hồ sơ">
+                  {selectedRequest.cvFileUrl ? (
+                    <div>
+                      <p>Tên file: {selectedRequest.cvFileName || selectedRequest.cvFileUrl.split('/').pop() || 'CV'}</p>
+                      {selectedRequest.cvFileUrl.startsWith('http') && (
+                        <Button 
+                          type="primary" 
+                          href={selectedRequest.cvFileUrl} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Xem / Tải xuống
+                        </Button>
+                      )}
+                      
+                      {selectedRequest.cvFileUrl.startsWith('local://') && (
+                        <div>
+                          <Tag color="orange">File chưa được upload lên cloud</Tag>
+                        </div>
+                      )}
+                      
+                      {selectedRequest.cvFileUrl.startsWith('error://') && (
+                        <div>
+                          <Tag color="red">Lỗi khi xử lý file</Tag>
+                        </div>
+                      )}
+                      
+                      {selectedRequest.cvFileUrl.startsWith('pending://') && (
+                        <div>
+                          <Tag color="blue">File đang chờ xử lý</Tag>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    'Không có file CV'
+                  )}
                 </Descriptions.Item>
               </>
             )}
@@ -454,19 +488,12 @@ const RequestList = () => {
             )}
             
             <Descriptions.Item label="Thông tin thêm">
-              {selectedRequest.additionalInfo || 
-               selectedRequest.additionalInformation || 
-               selectedRequest.notes || 
-               selectedRequest.comments || 
-               'Không có'}
+              {selectedRequest.additionalInfo || 'Không có'}
             </Descriptions.Item>
             
             {selectedRequest.status === 'REJECTED' && (
               <Descriptions.Item label="Lý do từ chối">
-                {selectedRequest.rejectionReason || 
-                 selectedRequest.rejectionNote || 
-                 selectedRequest.rejectReason || 
-                 'Không có'}
+                {selectedRequest.rejectionReason || 'Không có'}
               </Descriptions.Item>
             )}
           </Descriptions>
