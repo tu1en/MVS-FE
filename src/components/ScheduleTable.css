@@ -1,0 +1,108 @@
+.schedule-table-wrapper {
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin: 20px auto;
+  max-width: 1200px;
+}
+
+.schedule-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.schedule-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.schedule-row {
+  display: flex;
+}
+
+.schedule-header {
+  background: #2196f3;
+  color: #fff;
+}
+
+.schedule-header-cell {
+  flex: 1;
+  padding: 12px 0;
+  text-align: center;
+  font-weight: bold;
+  border-right: 1px solid #fff;
+  font-size: 1.1rem;
+}
+.schedule-header-cell:last-child {
+  border-right: none;
+}
+.schedule-label {
+  background: #f2f2f2;
+  font-weight: bold;
+  text-align: center;
+  padding: 12px 0;
+  min-width: 90px;
+}
+.schedule-cell {
+  flex: 1;
+  min-width: 160px;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 4px;
+  background: #fafcff;
+}
+.schedule-cell:last-child {
+  border-right: none;
+}
+.schedule-class-card {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  box-shadow: 0 1px 4px rgba(33,150,243,0.08);
+  font-size: 1rem;
+}
+.schedule-class-card strong {
+  color: #1a237e;
+}
+.schedule-teacher {
+  font-size: 0.95rem;
+  color: #757575;
+  margin-bottom: 4px;
+}
+
+.schedule-room {
+  font-size: 0.9rem;
+  color: #455a64;
+  margin-bottom: 2px;
+}
+
+.schedule-student-count {
+  font-size: 0.85rem;
+  color: #607d8b;
+  margin-bottom: 4px;
+}
+.schedule-materials a {
+  color: #ff9800;
+  font-weight: 500;
+  text-decoration: none;
+}
+.schedule-meet a {
+  color: #43a047;
+  font-weight: 500;
+  text-decoration: none;
+}
+.schedule-notyet {
+  color: #888;
+  font-size: 0.95rem;
+}
+.schedule-empty {
+  min-height: 60px;
+}
