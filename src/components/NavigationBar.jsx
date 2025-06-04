@@ -154,6 +154,11 @@ function NavigationBar() {
       roles: [ROLE.TEACHER, ROLE.ADMIN]
     },
     { 
+      name: 'Blog', 
+      path: '/blogs', 
+      icon: '📰'
+    },
+    { 
       name: 'Trang Trắng', 
       path: '/blank', 
       icon: '📄',
