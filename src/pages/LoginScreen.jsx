@@ -6,6 +6,7 @@ import { useDispatch } from 'react-redux';
 import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
 import { ROLE } from '../constants/constants';
 import { loginSuccess } from '../store/slices/authSlice';
+import RegisterModal from '../components/RegisterModal';
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
@@ -13,13 +14,17 @@ export default function LoginScreen() {
   const [matKhau, setMatKhau] = useState('');
   const [loi, setLoi] = useState(null);
   const [dangDangNhap, setDangDangNhap] = useState(false);
+  const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const navigate = useNavigate();
 
-  const baseUrl = process.env.REACT_APP_BASE_URL;
+  const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoi(null);
     setDangDangNhap(true);
+    console.log('Đang đăng nhập với:', email, 'URL:', `${baseUrl}/auth/login`);
+    
     try {
       const res = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
@@ -29,14 +34,27 @@ export default function LoginScreen() {
           password: matKhau,
         }),
       });
-
+      
+      console.log('Response status:', res.status);
+      
       if (res.ok) {
         const data = await res.json();
+        console.log('Login response data:', data);
+        
+        if (!data.token || !data.role) {
+          console.error('Missing token or role in response:', data);
+          setLoi('Đăng nhập thất bại: Thiếu thông tin từ server');
+          toast.error('Đăng nhập thất bại: Thiếu thông tin từ server');
+          return;
+        }
+        
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
-        dispatch(loginSuccess({ token: data.token, role: data.role }));
+        localStorage.setItem('userId', data.userId);
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         toast.success('Đăng nhập thành công!');
 
+        console.log('Navigating based on role:', data.role);
         switch (data.role) {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
@@ -51,11 +69,21 @@ export default function LoginScreen() {
             navigate('/manager');
             break;
           default:
+            console.warn('Unknown role:', data.role);
             navigate('/');
         }
       } else {
-        setLoi('Tài khoản hoặc mật khẩu không đúng');
-        toast.error('Tài khoản hoặc mật khẩu không đúng!');
+        // Try to parse error response
+        try {
+          const errorData = await res.json();
+          console.error('Error response:', errorData);
+          setLoi(errorData.message || 'Tài khoản hoặc mật khẩu không đúng');
+          toast.error(errorData.message || 'Tài khoản hoặc mật khẩu không đúng!');
+        } catch (e) {
+          console.error('Failed to parse error response', e);
+          setLoi('Tài khoản hoặc mật khẩu không đúng');
+          toast.error('Tài khoản hoặc mật khẩu không đúng!');
+        }
         setEmail('');
         setMatKhau('');
       }
@@ -85,28 +113,39 @@ export default function LoginScreen() {
       console.log('Obtained Google ID token:', idToken.substring(0, 20) + '...');
       
       // 3. Send to backend for verification
-      console.log('Sending token to backend for verification...');
+      console.log('Sending token to backend for verification...', `${baseUrl}/auth/google-login`);
       const res = await fetch(`${baseUrl}/auth/google-login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({ idToken })
+        body: JSON.stringify({ 
+          idToken,
+          email: user.email,
+          name: user.displayName,
+          photoURL: user.photoURL
+        })
       });
   
+      console.log('Google login response status:', res.status);
+      
       if (res.ok) {
         const data = await res.json();
         console.log('Backend response:', data);
         
         // 4. Verify token and role in response
         if (!data.token || !data.role) {
+          console.error('Missing token or role in response:', data);
+          toast.error('Đăng nhập thất bại: Thiếu thông tin từ server');
           throw new Error('Missing token or role in response');
         }
         
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
-        dispatch(loginSuccess({ token: data.token, role: data.role }));
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('email', user.email); // Store email for form autofill
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         console.log('Token and role stored in localStorage');
         
         // 6. Verify navigation
@@ -128,14 +167,28 @@ export default function LoginScreen() {
             navigate('/');
         }
       } else {
-        const error = await res.json();
-        console.error('Backend error:', error);
+        try {
+          const error = await res.json();
+          console.error('Backend error:', error);
+          toast.error(`Đăng nhập Google thất bại: ${error.message || 'Unknown error'}`);
+        } catch (e) {
+          console.error('Failed to parse error response', e);
+          toast.error('Đăng nhập Google thất bại!');
+        }
         throw new Error('Google login failed');
       }
     } catch (error) {
       console.error('Google login error:', error);
       toast.error('Đăng nhập Google thất bại!');
     }
+  };
+
+  const openRegisterModal = () => {
+    setRegisterModalVisible(true);
+  };
+
+  const closeRegisterModal = () => {
+    setRegisterModalVisible(false);
   };
 
   return (
@@ -173,12 +226,13 @@ export default function LoginScreen() {
                 <label htmlFor="matKhau" className="block text-sm font-medium text-gray-900">
                   Mật khẩu
                 </label>
-                <a 
+                <button 
+                  type="button"
                   onClick={() => navigate('/forgot-password')} 
                   className="text-sm text-indigo-600 hover:text-indigo-500 cursor-pointer"
                 >
                   Quên mật khẩu?
-                </a>
+                </button>
               </div>
               <input
                 id="matKhau"
@@ -220,12 +274,19 @@ export default function LoginScreen() {
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Chưa có tài khoản?{' '}
-            <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
+            <button 
+              type="button"
+              onClick={openRegisterModal}
+              className="font-semibold text-indigo-600 hover:text-indigo-500 cursor-pointer"
+            >
               Gửi yêu cầu đăng ký
-            </a>
+            </button>
           </p>
         </div>
       </div>
+      
+      {/* Modal đăng ký */}
+      <RegisterModal open={registerModalVisible} onClose={closeRegisterModal} />
     </div>
   );
 }
