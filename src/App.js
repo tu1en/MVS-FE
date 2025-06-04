@@ -4,15 +4,16 @@ import {
   BrowserRouter as Router,
   Routes,
 } from "react-router-dom";
-import React from 'react';
-import './App.css';
-import Layout from './components/Layout';
-import AssignmentsPage from './pages/AssignmentsPage';
-import BlankPage from './pages/BlankPage';
-import ClassesPage from './pages/ClassesPage';
-import HomePage from './pages/HomePage';
-import LoginScreen from './pages/LoginScreen.jsx';
+import React from "react";
+import "./App.css";
+import Layout from "./components/Layout.jsx";
+import AssignmentsPage from "./pages/AssignmentsPage.jsx";
+import BlankPage from "./pages/BlankPage.jsx";
+import ClassesPage from "./pages/ClassesPage.jsx";
+import HomePage from "./pages/HomePage/index.jsx";
+import LoginScreen from "./pages/LoginScreen.jsx";
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
+
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
@@ -20,12 +21,15 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import RequestList from './pages/RequestList';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+
 //student pages
-import StudentsDashboard from './pages/StudentsDashboard';
-import AcademicPerformance from './pages/AcademicPerformance';
-import AttendanceRecords from './pages/AttendanceRecords';
-import HomeworkScores from './pages/HomeworkScores';
-import ExamResults from './pages/ExamResults';
+import StudentsDashboard from "./pages/StudentsDashboard.jsx";
+import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
+import AcademicPerformance from "./pages/AcademicPerformance.jsx";
+import AttendanceRecords from "./pages/AttendanceRecords.jsx";
+import HomeworkScores from "./pages/HomeworkScores.jsx";
+import ExamResults from "./pages/ExamResults.jsx";
+import { AuthProvider } from './context/AuthContext';
 
 /**
  * Main App component
@@ -33,7 +37,6 @@ import ExamResults from './pages/ExamResults';
  * @returns {JSX.Element} The main application
  */
 function App() {
-  
   // useEffect(() => {
   //   const token = localStorage.getItem("token");
   //   if (token) {
@@ -54,6 +57,7 @@ function App() {
   //   }
   // }, []);
   return (
+
     <Router>
       <Layout>
         <Routes>
@@ -83,6 +87,7 @@ function App() {
         </Routes>
       </Layout>
     </Router>
+
   );
 }
 
