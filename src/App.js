@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import RequestList from './pages/RequestList';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 //student pages
 import StudentsDashboard from './pages/StudentsDashboard';
 import AcademicPerformance from './pages/AcademicPerformance';
@@ -65,6 +66,7 @@ function App() {
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
           {/* admin */}
           <Route path="/admin" element={<AdminDashboard />} />
           {/* teacher */}
