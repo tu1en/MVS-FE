@@ -50,7 +50,8 @@ export default function LoginScreen() {
         
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
-        dispatch(loginSuccess({ token: data.token, role: data.role }));
+        localStorage.setItem('userId', data.userId);
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         toast.success('Đăng nhập thành công!');
 
         console.log('Navigating based on role:', data.role);
@@ -142,8 +143,9 @@ export default function LoginScreen() {
         
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
+        localStorage.setItem('userId', data.userId);
         localStorage.setItem('email', user.email); // Store email for form autofill
-        dispatch(loginSuccess({ token: data.token, role: data.role }));
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         console.log('Token and role stored in localStorage');
         
         // 6. Verify navigation
