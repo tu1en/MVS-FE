@@ -183,6 +183,11 @@ function NavigationBar() {
       icon: '🎓',
       roles: [ROLE.STUDENT]
     },
+    {
+      name: 'Đổi mật khẩu',
+      path: '/change-password',
+      icon: '🔑'
+    },
   ];
 
   // Toggle sidebar collapsed state
