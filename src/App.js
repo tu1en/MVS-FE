@@ -23,6 +23,14 @@ import RequestList from './pages/RequestList';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 
 //student pages
+import StudentsDashboard from './pages/StudentsDashboard';
+import AcademicPerformance from './pages/AcademicPerformance';
+import AttendanceRecords from './pages/AttendanceRecords';
+import HomeworkScores from './pages/HomeworkScores';
+import ExamResults from './pages/ExamResults';
+import BlogPages from './pages/BlogPages';
+import { ROLE } from "./constants/constants.js";
+
 import StudentsDashboard from "./pages/StudentsDashboard.jsx";
 import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
 import AcademicPerformance from "./pages/AcademicPerformance.jsx";
@@ -30,6 +38,7 @@ import AttendanceRecords from "./pages/AttendanceRecords.jsx";
 import HomeworkScores from "./pages/HomeworkScores.jsx";
 import ExamResults from "./pages/ExamResults.jsx";
 import { AuthProvider } from './context/AuthContext';
+
 
 /**
  * Main App component
@@ -65,6 +74,7 @@ function App() {
           <Route path="/select-role" element={<SelectRoleLogin />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
+          <Route path="/blogs" element={<BlogPages />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<LoginScreen />} />
