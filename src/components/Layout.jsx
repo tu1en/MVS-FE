@@ -13,7 +13,7 @@ import { useSelector } from 'react-redux';
 function Layout({ children }) {
   // State to track if sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { isLogin, role } = useSelector((state) => state.auth);
+  const { isLogin } = useSelector((state) => state.auth);
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   // const token = localStorage.getItem('token');
 
