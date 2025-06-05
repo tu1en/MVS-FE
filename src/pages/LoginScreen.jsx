@@ -15,6 +15,7 @@ export default function LoginScreen() {
   const [loi, setLoi] = useState(null);
   const [dangDangNhap, setDangDangNhap] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
@@ -48,10 +49,30 @@ export default function LoginScreen() {
           return;
         }
         
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
-        localStorage.setItem('userId', data.userId);
-        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
+        // Lưu vào localStorage nếu chọn "Ghi nhớ đăng nhập", ngược lại lưu vào sessionStorage
+        if (rememberMe) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.role);
+          localStorage.setItem('userId', data.userId);
+        } else {
+          // Lưu vào sessionStorage để tự động xóa khi đóng trình duyệt
+          sessionStorage.setItem('token', data.token);
+          sessionStorage.setItem('role', data.role);
+          sessionStorage.setItem('userId', data.userId);
+          // Xóa dữ liệu cũ trong localStorage để tránh tự động đăng nhập
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('userId');
+        }
+        
+        // Cập nhật Redux store với thông tin đăng nhập và tùy chọn ghi nhớ
+        dispatch(loginSuccess({
+          token: data.token,
+          role: data.role,
+          userId: data.userId,
+          rememberMe: rememberMe
+        }));
+        
         toast.success('Đăng nhập thành công!');
 
         console.log('Navigating based on role:', data.role);
@@ -141,12 +162,34 @@ export default function LoginScreen() {
           throw new Error('Missing token or role in response');
         }
         
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
-        localStorage.setItem('userId', data.userId);
-        localStorage.setItem('email', user.email); // Store email for form autofill
-        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
-        console.log('Token and role stored in localStorage');
+        // Lưu vào localStorage nếu chọn "Ghi nhớ đăng nhập", ngược lại lưu vào sessionStorage
+        if (rememberMe) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.role);
+          localStorage.setItem('userId', data.userId);
+          localStorage.setItem('email', user.email); // Store email for form autofill
+        } else {
+          // Lưu vào sessionStorage để tự động xóa khi đóng trình duyệt
+          sessionStorage.setItem('token', data.token);
+          sessionStorage.setItem('role', data.role);
+          sessionStorage.setItem('userId', data.userId);
+          sessionStorage.setItem('email', user.email); // Store email for form autofill
+          // Xóa dữ liệu cũ trong localStorage để tránh tự động đăng nhập
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('email');
+        }
+        
+        // Cập nhật Redux store với thông tin đăng nhập và tùy chọn ghi nhớ
+        dispatch(loginSuccess({ 
+          token: data.token, 
+          role: data.role, 
+          userId: data.userId,
+          rememberMe: rememberMe
+        }));
+        
+        console.log('Token and role stored');
         
         // 6. Verify navigation
         console.log(`Navigating to ${data.role} dashboard...`);
@@ -243,6 +286,20 @@ export default function LoginScreen() {
                 className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               {loi && <p className="text-sm text-red-500 mt-1">{loi}</p>}
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                Ghi nhớ đăng nhập
+              </label>
             </div>
 
             <div>
