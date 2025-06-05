@@ -3,12 +3,38 @@ import { Form, Input, Button, message } from 'antd';
 
 const { TextArea } = Input;
 
-const StudentRequestForm = ({ onClose }) => {
+const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [hasActiveRequest, setHasActiveRequest] = useState(false);
   
   const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
+
+  // Hàm validate số điện thoại
+  const validatePhoneNumber = (_, value) => {
+    if (!value) {
+      return Promise.reject('Vui lòng nhập số điện thoại');
+    }
+    
+    // Kiểm tra chỉ chứa số
+    if (!/^\d+$/.test(value)) {
+      return Promise.reject('Số điện thoại chỉ được chứa số');
+    }
+    
+    // Kiểm tra độ dài (10-11 chữ số)
+    if (value.length !== 10 && value.length !== 11) {
+      return Promise.reject('Số điện thoại phải có 10 hoặc 11 chữ số');
+    }
+    
+    // Kiểm tra đầu số (03, 05, 07, 08, 09)
+    const validPrefixes = ['03', '05', '07', '08', '09'];
+    const prefix = value.substring(0, 2);
+    if (!validPrefixes.includes(prefix)) {
+      return Promise.reject('Số điện thoại phải bắt đầu bằng 03, 05, 07, 08, 09');
+    }
+    
+    return Promise.resolve();
+  };
 
   const checkActiveRequest = useCallback(async (email) => {
     try {
@@ -26,12 +52,13 @@ const StudentRequestForm = ({ onClose }) => {
   }, [baseUrl]);
 
   useEffect(() => {
-    const email = localStorage.getItem('email');
-    if (email) {
-      form.setFieldsValue({ email });
-      checkActiveRequest(email);
+    // Ưu tiên sử dụng initialEmail từ prop nếu có
+    const emailToUse = initialEmail || localStorage.getItem('email');
+    if (emailToUse) {
+      form.setFieldsValue({ email: emailToUse });
+      checkActiveRequest(emailToUse);
     }
-  }, [form, checkActiveRequest]);
+  }, [form, checkActiveRequest, initialEmail]);
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -78,7 +105,7 @@ const StudentRequestForm = ({ onClose }) => {
           { type: 'email', message: 'Email không hợp lệ' }
         ]}
       >
-        <Input placeholder="Nhập email của bạn" />
+        <Input placeholder="Nhập email của bạn" disabled={!!initialEmail} />
       </Form.Item>
 
       <Form.Item
@@ -92,9 +119,12 @@ const StudentRequestForm = ({ onClose }) => {
       <Form.Item
         name="phoneNumber"
         label="Số điện thoại"
-        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+        rules={[
+          { required: true, message: 'Vui lòng nhập số điện thoại' },
+          { validator: validatePhoneNumber }
+        ]}
       >
-        <Input placeholder="Nhập số điện thoại liên hệ" />
+        <Input placeholder="Nhập số điện thoại liên hệ" maxLength={11} />
       </Form.Item>
 
       <Form.Item
