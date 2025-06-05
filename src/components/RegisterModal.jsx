@@ -3,7 +3,7 @@ import { Modal, Tabs } from 'antd';
 import TeacherRequestForm from './TeacherRequestForm';
 import StudentRequestForm from './StudentRequestForm';
 
-const RegisterModal = ({ open, onClose }) => {
+const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
   const [activeTab, setActiveTab] = useState('teacher');
 
   const handleTabChange = (key) => {
@@ -20,6 +20,13 @@ const RegisterModal = ({ open, onClose }) => {
       destroyOnClose
     >
       <div className="p-2">
+        {initialEmail && (
+          <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md">
+            <p className="font-medium">Tài khoản Google của bạn chưa được đăng ký trong hệ thống.</p>
+            <p>Vui lòng hoàn thành form đăng ký dưới đây để tiếp tục.</p>
+          </div>
+        )}
+        
         <p className="mb-4 text-gray-600">
           Vui lòng điền thông tin để đăng ký tài khoản. Yêu cầu của bạn sẽ được xem xét và phản hồi qua email.
         </p>
@@ -32,12 +39,12 @@ const RegisterModal = ({ open, onClose }) => {
             {
               key: 'teacher',
               label: 'Đăng ký giáo viên',
-              children: <TeacherRequestForm onClose={onClose} />
+              children: <TeacherRequestForm onClose={onClose} initialEmail={initialEmail} />
             },
             {
               key: 'student',
               label: 'Đăng ký học sinh',
-              children: <StudentRequestForm onClose={onClose} />
+              children: <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />
             }
           ]}
         />

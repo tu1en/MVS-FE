@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -11,10 +11,8 @@ import { auth } from '../config/firebase';
  */
 function NavigationBar() {
   const dispatch = useDispatch();
-  const { role: reduxRole } = useSelector((state) => state.auth);
-  
-  // Sử dụng role từ Redux (đã xử lý ưu tiên sessionStorage)
-  const [userRole, setUserRole] = useState(reduxRole);
+  // Sử dụng role từ localStorage
+  const [userRole, setUserRole] = useState(localStorage.getItem('role') || null);
   
   // State to control mobile sidebar visibility
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -22,22 +20,17 @@ function NavigationBar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
 
-  // Theo dõi thay đổi role từ localStorage và sessionStorage
+  // Theo dõi thay đổi role từ localStorage
   useEffect(() => {
     const handleStorageChange = () => {
-      const sessionRole = sessionStorage.getItem('role');
-      const localRole = localStorage.getItem('role');
-      setUserRole(sessionRole || localRole);
+      setUserRole(localStorage.getItem('role'));
     };
     
     window.addEventListener('storage', handleStorageChange);
     
-    // Thêm interval để kiểm tra localStorage và sessionStorage thường xuyên
-    const checkStorage = setInterval(() => {
-      const sessionRole = sessionStorage.getItem('role');
-      const localRole = localStorage.getItem('role');
-      const currentRole = sessionRole || localRole;
-      
+    // Thêm interval để kiểm tra localStorage thường xuyên
+    const checkLocalStorage = setInterval(() => {
+      const currentRole = localStorage.getItem('role');
       if (currentRole !== userRole) {
         setUserRole(currentRole);
       }
@@ -45,16 +38,9 @@ function NavigationBar() {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(checkStorage);
+      clearInterval(checkLocalStorage);
     };
   }, [userRole]);
-
-  // Cập nhật userRole khi reduxRole thay đổi
-  useEffect(() => {
-    if (reduxRole !== userRole) {
-      setUserRole(reduxRole);
-    }
-  }, [reduxRole]);
 
   // Close sidebar when screen size changes to desktop
   useEffect(() => {
@@ -116,10 +102,13 @@ function NavigationBar() {
   } md:translate-x-0`;
 
   const handleLogout = () => {
-    // Đăng xuất khỏi backend - xóa token và role
+    // 1. Đăng xuất khỏi backend - xóa token và role
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('email');
     dispatch(logout());
     
-    // Đăng xuất khỏi Firebase
+    // 2. Đăng xuất khỏi Firebase
     signOut(auth).then(() => {
       console.log('Đã đăng xuất khỏi Firebase thành công');
     }).catch((error) => {
