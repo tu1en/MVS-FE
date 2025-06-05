@@ -31,12 +31,7 @@ import ExamResults from './pages/ExamResults';
 import BlogPages from './pages/BlogPages';
 import { ROLE } from "./constants/constants.js";
 
-import StudentsDashboard from "./pages/StudentsDashboard.jsx";
 import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
-import AcademicPerformance from "./pages/AcademicPerformance.jsx";
-import AttendanceRecords from "./pages/AttendanceRecords.jsx";
-import HomeworkScores from "./pages/HomeworkScores.jsx";
-import ExamResults from "./pages/ExamResults.jsx";
 import { AuthProvider } from './context/AuthContext';
 
 
@@ -94,6 +89,7 @@ function App() {
           <Route path="/student-attendance-records" element={<AttendanceRecords />} />
           <Route path="/student-homework" element={<HomeworkScores />} />
           <Route path="/student-exam-result" element={<ExamResults />} />
+          <Route path="/student/accomplishments" element={<StudentAccomplishments />} />
         </Routes>
       </Layout>
     </Router>
