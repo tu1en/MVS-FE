@@ -194,19 +194,17 @@ function NavigationBar() {
       icon: '🎓',
       roles: [ROLE.STUDENT]
     },
-
     {
       name: 'Đổi mật khẩu',
       path: '/change-password',
       icon: '🔑'
-
+    },
     { 
       name: 'Thành tựu', 
       path: '/student/accomplishments', 
       icon: '🏆',
       roles: [ROLE.STUDENT]
-
-    },
+    }
   ];
 
   // Toggle sidebar collapsed state
