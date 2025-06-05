@@ -16,6 +16,32 @@ const TeacherRequestForm = ({ onClose, initialEmail = '' }) => {
   
   const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
 
+  // Hàm validate số điện thoại
+  const validatePhoneNumber = (_, value) => {
+    if (!value) {
+      return Promise.reject('Vui lòng nhập số điện thoại');
+    }
+    
+    // Kiểm tra chỉ chứa số
+    if (!/^\d+$/.test(value)) {
+      return Promise.reject('Số điện thoại chỉ được chứa số');
+    }
+    
+    // Kiểm tra độ dài (10-11 chữ số)
+    if (value.length !== 10 && value.length !== 11) {
+      return Promise.reject('Số điện thoại phải có 10 hoặc 11 chữ số');
+    }
+    
+    // Kiểm tra đầu số (03, 05, 07, 08, 09)
+    const validPrefixes = ['03', '05', '07', '08', '09'];
+    const prefix = value.substring(0, 2);
+    if (!validPrefixes.includes(prefix)) {
+      return Promise.reject('Số điện thoại phải bắt đầu bằng 03, 05, 07, 08, 09');
+    }
+    
+    return Promise.resolve();
+  };
+
   const checkActiveRequest = useCallback(async (email) => {
     try {
       console.log(`Checking request status for email: ${email}`);
@@ -217,9 +243,12 @@ const TeacherRequestForm = ({ onClose, initialEmail = '' }) => {
       <Form.Item
         name="phoneNumber"
         label="Số điện thoại"
-        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+        rules={[
+          { required: true, message: 'Vui lòng nhập số điện thoại' },
+          { validator: validatePhoneNumber }
+        ]}
       >
-        <Input placeholder="Nhập số điện thoại liên hệ" />
+        <Input placeholder="Nhập số điện thoại liên hệ" maxLength={11} />
       </Form.Item>
 
       <Form.Item
