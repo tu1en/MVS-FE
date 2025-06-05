@@ -6,7 +6,7 @@ import axios from 'axios';
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const TeacherRequestForm = ({ onClose }) => {
+const TeacherRequestForm = ({ onClose, initialEmail = '' }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [hasActiveRequest, setHasActiveRequest] = useState(false);
@@ -36,12 +36,13 @@ const TeacherRequestForm = ({ onClose }) => {
   }, [baseUrl]);
 
   useEffect(() => {
-    const email = localStorage.getItem('email');
-    if (email) {
-      form.setFieldsValue({ email });
-      checkActiveRequest(email);
+    // Ưu tiên sử dụng initialEmail từ prop nếu có
+    const emailToUse = initialEmail || localStorage.getItem('email');
+    if (emailToUse) {
+      form.setFieldsValue({ email: emailToUse });
+      checkActiveRequest(emailToUse);
     }
-  }, [form, checkActiveRequest]);
+  }, [form, checkActiveRequest, initialEmail]);
 
   // Function to convert file to base64
   const getBase64 = (file) => {
@@ -202,7 +203,7 @@ const TeacherRequestForm = ({ onClose }) => {
           { type: 'email', message: 'Email không hợp lệ' }
         ]}
       >
-        <Input placeholder="Nhập email của bạn" />
+        <Input placeholder="Nhập email của bạn" disabled={!!initialEmail} />
       </Form.Item>
 
       <Form.Item
@@ -256,14 +257,8 @@ const TeacherRequestForm = ({ onClose }) => {
         </div>
       ) : (
         <Form.Item>
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            block 
-            loading={loading || uploading} 
-            disabled={fileList.length === 0}
-          >
-            {uploading ? 'Đang xử lý...' : 'Gửi yêu cầu'}
+          <Button type="primary" htmlType="submit" block loading={loading}>
+            Gửi yêu cầu
           </Button>
         </Form.Item>
       )}

@@ -15,7 +15,7 @@ export default function LoginScreen() {
   const [loi, setLoi] = useState(null);
   const [dangDangNhap, setDangDangNhap] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState(''); // Lưu email Google khi đăng nhập thất bại
   const navigate = useNavigate();
 
   const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
@@ -49,30 +49,10 @@ export default function LoginScreen() {
           return;
         }
         
-        // Lưu vào localStorage nếu chọn "Ghi nhớ đăng nhập", ngược lại lưu vào sessionStorage
-        if (rememberMe) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('role', data.role);
-          localStorage.setItem('userId', data.userId);
-        } else {
-          // Lưu vào sessionStorage để tự động xóa khi đóng trình duyệt
-          sessionStorage.setItem('token', data.token);
-          sessionStorage.setItem('role', data.role);
-          sessionStorage.setItem('userId', data.userId);
-          // Xóa dữ liệu cũ trong localStorage để tránh tự động đăng nhập
-          localStorage.removeItem('token');
-          localStorage.removeItem('role');
-          localStorage.removeItem('userId');
-        }
-        
-        // Cập nhật Redux store với thông tin đăng nhập và tùy chọn ghi nhớ
-        dispatch(loginSuccess({
-          token: data.token,
-          role: data.role,
-          userId: data.userId,
-          rememberMe: rememberMe
-        }));
-        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('userId', data.userId);
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         toast.success('Đăng nhập thành công!');
 
         console.log('Navigating based on role:', data.role);
@@ -122,6 +102,7 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     try {
       console.log('Starting Google sign-in process...');
+      setDangDangNhap(true);
       
       // 1. Sign in with Google
       const provider = new GoogleAuthProvider();
@@ -150,11 +131,10 @@ export default function LoginScreen() {
       });
   
       console.log('Google login response status:', res.status);
+      const data = await res.json();
+      console.log('Backend response:', data);
       
       if (res.ok) {
-        const data = await res.json();
-        console.log('Backend response:', data);
-        
         // 4. Verify token and role in response
         if (!data.token || !data.role) {
           console.error('Missing token or role in response:', data);
@@ -162,34 +142,12 @@ export default function LoginScreen() {
           throw new Error('Missing token or role in response');
         }
         
-        // Lưu vào localStorage nếu chọn "Ghi nhớ đăng nhập", ngược lại lưu vào sessionStorage
-        if (rememberMe) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('role', data.role);
-          localStorage.setItem('userId', data.userId);
-          localStorage.setItem('email', user.email); // Store email for form autofill
-        } else {
-          // Lưu vào sessionStorage để tự động xóa khi đóng trình duyệt
-          sessionStorage.setItem('token', data.token);
-          sessionStorage.setItem('role', data.role);
-          sessionStorage.setItem('userId', data.userId);
-          sessionStorage.setItem('email', user.email); // Store email for form autofill
-          // Xóa dữ liệu cũ trong localStorage để tránh tự động đăng nhập
-          localStorage.removeItem('token');
-          localStorage.removeItem('role');
-          localStorage.removeItem('userId');
-          localStorage.removeItem('email');
-        }
-        
-        // Cập nhật Redux store với thông tin đăng nhập và tùy chọn ghi nhớ
-        dispatch(loginSuccess({ 
-          token: data.token, 
-          role: data.role, 
-          userId: data.userId,
-          rememberMe: rememberMe
-        }));
-        
-        console.log('Token and role stored');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('email', user.email); // Store email for form autofill
+        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
+        console.log('Token and role stored in localStorage');
         
         // 6. Verify navigation
         console.log(`Navigating to ${data.role} dashboard...`);
@@ -210,19 +168,29 @@ export default function LoginScreen() {
             navigate('/');
         }
       } else {
-        try {
-          const error = await res.json();
-          console.error('Backend error:', error);
-          toast.error(`Đăng nhập Google thất bại: ${error.message || 'Unknown error'}`);
-        } catch (e) {
-          console.error('Failed to parse error response', e);
-          toast.error('Đăng nhập Google thất bại!');
+        // Xử lý khi tài khoản không tồn tại
+        if (res.status === 404 && data.message) {
+          console.error('Account not registered:', data.message);
+          toast.error(data.message);
+          
+          // Lưu email Google để có thể sử dụng trong form đăng ký
+          if (data.email) {
+            setGoogleEmail(data.email);
+            setEmail(data.email); // Auto-fill the login form with Google email
+          }
+          
+          // Hiển thị modal đăng ký
+          setRegisterModalVisible(true);
+        } else {
+          console.error('Backend error:', data);
+          toast.error(`Đăng nhập Google thất bại: ${data.message || 'Lỗi không xác định'}`);
         }
-        throw new Error('Google login failed');
       }
     } catch (error) {
       console.error('Google login error:', error);
       toast.error('Đăng nhập Google thất bại!');
+    } finally {
+      setDangDangNhap(false);
     }
   };
 
@@ -288,20 +256,6 @@ export default function LoginScreen() {
               {loi && <p className="text-sm text-red-500 mt-1">{loi}</p>}
             </div>
 
-            <div className="flex items-center">
-              <input
-                id="rememberMe"
-                name="rememberMe"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
-                Ghi nhớ đăng nhập
-              </label>
-            </div>
-
             <div>
               <button
                 type="submit"
@@ -343,7 +297,7 @@ export default function LoginScreen() {
       </div>
       
       {/* Modal đăng ký */}
-      <RegisterModal open={registerModalVisible} onClose={closeRegisterModal} />
+      <RegisterModal open={registerModalVisible} onClose={closeRegisterModal} initialEmail={googleEmail} />
     </div>
   );
 }

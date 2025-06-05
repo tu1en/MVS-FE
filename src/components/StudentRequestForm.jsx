@@ -3,7 +3,7 @@ import { Form, Input, Button, message } from 'antd';
 
 const { TextArea } = Input;
 
-const StudentRequestForm = ({ onClose }) => {
+const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [hasActiveRequest, setHasActiveRequest] = useState(false);
@@ -26,12 +26,12 @@ const StudentRequestForm = ({ onClose }) => {
   }, [baseUrl]);
 
   useEffect(() => {
-    const email = localStorage.getItem('email');
-    if (email) {
-      form.setFieldsValue({ email });
-      checkActiveRequest(email);
+    const emailToUse = initialEmail || localStorage.getItem('email');
+    if (emailToUse) {
+      form.setFieldsValue({ email: emailToUse });
+      checkActiveRequest(emailToUse);
     }
-  }, [form, checkActiveRequest]);
+  }, [form, checkActiveRequest, initialEmail]);
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -78,7 +78,7 @@ const StudentRequestForm = ({ onClose }) => {
           { type: 'email', message: 'Email không hợp lệ' }
         ]}
       >
-        <Input placeholder="Nhập email của bạn" />
+        <Input placeholder="Nhập email của bạn" disabled={!!initialEmail} />
       </Form.Item>
 
       <Form.Item
