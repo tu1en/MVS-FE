@@ -89,6 +89,7 @@ function App() {
           <Route path="/student-attendance-records" element={<AttendanceRecords />} />
           <Route path="/student-homework" element={<HomeworkScores />} />
           <Route path="/student-exam-result" element={<ExamResults />} />
+          <Route path="/student/accomplishments" element={<StudentAccomplishments />} />
         </Routes>
       </Layout>
     </Router>

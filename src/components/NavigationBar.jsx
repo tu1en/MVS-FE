@@ -194,7 +194,6 @@ function NavigationBar() {
       icon: '🎓',
       roles: [ROLE.STUDENT]
     },
-
     {
       name: 'Đổi mật khẩu',
       path: '/change-password',
@@ -206,6 +205,8 @@ function NavigationBar() {
       icon: '🏆',
       roles: [ROLE.STUDENT]
     },
+
+    }
   ];
 
   // Toggle sidebar collapsed state
