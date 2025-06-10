@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Input, Button, message, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
+import { Button, Form, Input, message, Upload } from 'antd';
 import axios from 'axios';
+import { useCallback, useEffect, useState } from 'react';
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
@@ -11,6 +11,7 @@ const TeacherRequestForm = ({ onClose, initialEmail = '' }) => {
   const [loading, setLoading] = useState(false);
   const [hasActiveRequest, setHasActiveRequest] = useState(false);
   const [fileList, setFileList] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   
