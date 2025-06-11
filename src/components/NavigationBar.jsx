@@ -190,6 +190,12 @@ function NavigationBar() {
       roles: [ROLE.STUDENT]
     },
     { 
+      name: 'Lịch Thi', 
+      path: '/exam-schedule', 
+      icon: '📆',
+      roles: [ROLE.STUDENT]
+    },
+    { 
       name: 'Thành tựu', 
       path: '/student/accomplishments', 
       icon: '🏆',

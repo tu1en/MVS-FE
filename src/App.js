@@ -27,6 +27,7 @@ import AcademicPerformance from "./pages/AcademicPerformance.jsx";
 import AttendanceRecords from "./pages/AttendanceRecords.jsx";
 import HomeworkScores from "./pages/HomeworkScores.jsx";
 import ExamResults from "./pages/ExamResults.jsx";
+import ExamSchedule from "./pages/ExamSchedule.jsx";
 import { AuthProvider } from './context/AuthContext';
 
 /**
@@ -92,6 +93,7 @@ function App() {
             />
             <Route path="/student-homework" element={<HomeworkScores />} />
             <Route path="/student-exam-result" element={<ExamResults />} />
+            <Route path="/exam-schedule" element={<ExamSchedule />} />
             <Route
               path="/student-accomplishments"
               element={<StudentAccomplishments />}
