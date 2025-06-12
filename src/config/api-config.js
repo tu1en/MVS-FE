@@ -34,14 +34,27 @@ const API_CONFIG = {
     // Assignment endpoints
     ASSIGNMENTS: "/assignments",
     ASSIGNMENTS_BY_CLASS: (classId) => `/classrooms/${classId}/assignments`,
-    ASSIGNMENTS_BY_ID: (id) => `/assignments/${id}`,
-
-    // Submission endpoints
+    ASSIGNMENTS_BY_ID: (id) => `/assignments/${id}`,    // Submission endpoints
     SUBMISSIONS: "/submissions",
     SUBMISSIONS_BY_ASSIGNMENT: (assignmentId) =>
       `/assignments/${assignmentId}/submissions`,
     SUBMISSIONS_BY_STUDENT: (studentId) => `/users/${studentId}/submissions`,
     GRADE_SUBMISSION: (submissionId) => `/submissions/${submissionId}/grade`,
+
+    // Attendance endpoints
+    ATTENDANCE: "/attendance",
+    ATTENDANCE_SESSIONS: "/attendance/sessions",    ATTENDANCE_SESSIONS_TEACHER: "/attendance/sessions/teacher",
+    ATTENDANCE_TEACHER: "/attendance/teacher",
+    ATTENDANCE_STUDENT: "/attendance/student",
+    ATTENDANCE_SESSION_BY_ID: (sessionId) => `/attendance/sessions/${sessionId}`,
+    ATTENDANCE_SESSION_STATUS: (sessionId) => `/attendance/sessions/${sessionId}/status`,
+    ATTENDANCE_MARK: (sessionId) => `/attendance/sessions/${sessionId}/mark`,
+
+    // Teacher specific endpoints
+    TEACHER_SCHEDULE: "/teacher/schedule",
+    TEACHER_COURSES: "/teacher/courses", 
+    TEACHER_DASHBOARD_STATS: "/teacher/dashboard-stats",
+    TEACHER_PROFILE: "/teacher/profile",
   },
 
   // Pagination defaults

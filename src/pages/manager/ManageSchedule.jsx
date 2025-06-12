@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Button, message, Table, Popconfirm, Card, Collapse } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
+import { Button, Card, Collapse, message, Popconfirm, Table } from 'antd';
+import { useEffect, useState } from 'react';
 
 const ManageSchedule = () => {
   const [schedules, setSchedules] = useState([]);
@@ -85,7 +85,7 @@ const ManageSchedule = () => {
 
   return (
     <div className="p-6">
-      <Card title="Danh sách Lịch học" bordered={false} className="shadow-lg">
+      <Card title="Danh sách Lịch học" variant="borderless" className="shadow-lg">
         <Collapse accordion>
           {Object.entries(subjectGroups).map(([subject, subjectSchedules]) => {
             // Group by teacher within this subject

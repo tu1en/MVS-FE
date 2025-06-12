@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import { Modal, Tabs } from 'antd';
-import TeacherRequestForm from './TeacherRequestForm';
+import React, { useState } from 'react';
 import StudentRequestForm from './StudentRequestForm';
+import TeacherRequestForm from './TeacherRequestForm';
 
 const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
   const [activeTab, setActiveTab] = useState('teacher');
@@ -17,7 +17,7 @@ const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
       onCancel={onClose}
       width={700}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="p-2">
         {initialEmail && (

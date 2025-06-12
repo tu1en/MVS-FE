@@ -1,6 +1,6 @@
-import { Card, Table, Tag, Select, Row, Col } from 'antd';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card, Col, Row, Select, Table, Tag } from 'antd';
 import { useState } from 'react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 const allSubjects = ['Toán', 'Văn', 'Anh', 'Lý', 'Hóa'];
 
@@ -39,9 +39,8 @@ export default function AttendanceRecords() {
     'Vắng có phép': filteredData.filter((d) => d.status === 'Vắng có phép').length,
     'Vắng không phép': filteredData.filter((d) => d.status === 'Vắng không phép').length,
   };
-
   const chartData = Object.entries(summary)
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .map(([status, count]) => ({
       name: status,
       value: count,

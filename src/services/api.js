@@ -47,7 +47,57 @@ apiClient.interceptors.response.use(
 );
 
 /**
- * Lớp ApiService cung cấp các phương thức tương tác với API
+ * Api Service với các phương thức HTTP tiêu chuẩn và các phương thức tiện ích
+ */
+
+// Basic HTTP methods for direct API calls
+const api = {
+  /**
+   * HTTP GET request
+   * @param {String} url - The endpoint URL
+   * @param {Object} config - Additional axios config
+   * @returns {Promise} Axios response promise
+   */
+  get: (url, config = {}) => apiClient.get(url, config),
+  
+  /**
+   * HTTP POST request
+   * @param {String} url - The endpoint URL
+   * @param {Object} data - The data to send
+   * @param {Object} config - Additional axios config
+   * @returns {Promise} Axios response promise
+   */
+  post: (url, data = {}, config = {}) => apiClient.post(url, data, config),
+  
+  /**
+   * HTTP PUT request
+   * @param {String} url - The endpoint URL
+   * @param {Object} data - The data to send
+   * @param {Object} config - Additional axios config
+   * @returns {Promise} Axios response promise
+   */
+  put: (url, data = {}, config = {}) => apiClient.put(url, data, config),
+  
+  /**
+   * HTTP DELETE request
+   * @param {String} url - The endpoint URL
+   * @param {Object} config - Additional axios config
+   * @returns {Promise} Axios response promise
+   */
+  delete: (url, config = {}) => apiClient.delete(url, config),
+  
+  /**
+   * HTTP PATCH request
+   * @param {String} url - The endpoint URL
+   * @param {Object} data - The data to send
+   * @param {Object} config - Additional axios config
+   * @returns {Promise} Axios response promise
+   */
+  patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config)
+};
+
+/**
+ * Lớp ApiService cung cấp các phương thức tương tác với API model-specific
  */
 class ApiService {
   /**
@@ -507,7 +557,6 @@ class ApiService {
       throw error;
     }
   }
-
   /**
    * Xử lý lỗi từ API
    * @param {Error} error Đối tượng lỗi 
@@ -526,4 +575,6 @@ class ApiService {
   }
 }
 
-export default ApiService; 
+// Export both the direct API methods and the ApiService class
+export { ApiService };
+export default api;
