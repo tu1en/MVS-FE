@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Typography, Button, Row, Col, Alert, Spin } from 'antd';
+import { Alert, Button, Card, Col, Row, Spin, Typography } from 'antd';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import CourseService from '../../services/courseService';
 
 const { Title, Text } = Typography;
 
@@ -17,9 +17,19 @@ const EnrolledCourses = () => {
 
   const fetchCourses = async () => {
     try {
+      setLoading(true);
       const currentUser = JSON.parse(localStorage.getItem('user'));
-      const response = await axios.get(`/api/v1/student/courses?studentId=${currentUser.id}`);
-      setCourses(response.data);
+      const userId = currentUser?.id || localStorage.getItem('userId');
+      
+      if (!userId) {
+        setError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+        setLoading(false);
+        return;
+      }
+      
+      // Use the CourseService to get courses
+      const coursesData = await CourseService.getCurrentStudentCourses();
+      setCourses(coursesData || []);
       setError(null);
     } catch (err) {
       setError('Không thể tải danh sách khóa học. Vui lòng thử lại sau.');
@@ -72,7 +82,7 @@ const EnrolledCourses = () => {
               className="h-full"
             >
               <Title level={4}>
-                {course.title}
+                {course.title || course.name}
               </Title>
               
               <Text type="secondary" className="mb-4 block min-h-[60px]">
@@ -81,17 +91,17 @@ const EnrolledCourses = () => {
               
               <div className="mt-auto">
                 <Text type="secondary" className="block mb-2">
-                  Giáo viên: {course.teacherName}
+                  Giáo viên: {course.teacherName || course.instructorName}
                 </Text>
                 
                 <Text type="secondary" className="block mb-4">
-                  Ngày bắt đầu: {new Date(course.startDate).toLocaleDateString('vi-VN')}
+                  Ngày bắt đầu: {course.startDate ? new Date(course.startDate).toLocaleDateString('vi-VN') : 'N/A'}
                 </Text>
                 
                 <Button 
                   type="primary" 
                   block
-                  onClick={() => navigate(`/student/courses/${course.id}`)}
+                  onClick={() => navigate(`/student/course-details?id=${course.id}`)}
                 >
                   Xem Chi Tiết
                 </Button>
