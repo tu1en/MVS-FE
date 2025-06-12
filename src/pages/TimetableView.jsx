@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Calendar, Badge, Modal, Descriptions, Button, Select, message, List, Avatar } from 'antd';
-import { 
-  CalendarOutlined, 
-  ClockCircleOutlined, 
-  BookOutlined, 
-  UserOutlined,
-  EnvironmentOutlined,
-  ExclamationCircleOutlined
+import {
+    BookOutlined,
+    CalendarOutlined,
+    ClockCircleOutlined,
+    EnvironmentOutlined,
+    ExclamationCircleOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import { Avatar, Badge, Button, Calendar, Card, Descriptions, List, Modal, Select, message } from 'antd';
 import moment from 'moment';
 import 'moment/locale/vi';
+import { useEffect, useState } from 'react';
+import TimetableService from '../services/timetableService';
 
 const { Option } = Select;
 
@@ -30,24 +31,18 @@ const TimetableView = () => {
   const fetchSchedule = async () => {
     try {
       setLoading(true);
-      const userId = localStorage.getItem('userId');
       const startDate = selectedDate.clone().startOf(viewMode).format('YYYY-MM-DD');
       const endDate = selectedDate.clone().endOf(viewMode).format('YYYY-MM-DD');
       
-      const response = await fetch(
-        `/api/schedule/personal/${userId}?startDate=${startDate}&endDate=${endDate}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
-      }
+      // Use TimetableService to fetch schedule
+      const data = await TimetableService.getTimetable({
+        startDate,
+        endDate,
+        view: viewMode
+      });
+      setEvents(data);
     } catch (error) {
+      console.error('Error fetching schedule:', error);
       message.error('Không thể tải lịch học');
     } finally {
       setLoading(false);
@@ -296,7 +291,7 @@ const TimetableView = () => {
             <span style={{ marginLeft: '8px' }}>Chi tiết lịch học</span>
           </div>
         }
-        visible={modalVisible}
+        open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={[
           <Button key="close" onClick={() => setModalVisible(false)}>
