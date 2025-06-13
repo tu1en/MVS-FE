@@ -1,14 +1,14 @@
+import { ConfigProvider } from "antd";
+import "antd/dist/reset.css";
+import viVN from "antd/locale/vi_VN";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "antd/dist/reset.css";
-import { ConfigProvider } from "antd";
-import { ToastContainer } from 'react-toastify';
-import viVN from "antd/locale/vi_VN"; 
-import 'react-toastify/dist/ReactToastify.css';
-import "./index.css";
-import App from "./App";
-import reportWebVitals from "./reportWebVitals";
 import { Provider } from 'react-redux';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import App from "./App";
+import "./index.css";
+import reportWebVitals from "./reportWebVitals";
 import { store } from './store';
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -23,11 +23,21 @@ root.render(
           fontSize: 14, 
         },
       }}
-    >
-      <Provider store={store}>
+    >      <Provider store={store}>
         <App />
       </Provider>
-    <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar theme="light" />
+      <ToastContainer 
+        position="bottom-right" 
+        autoClose={2000} 
+        hideProgressBar={true} 
+        theme="light"
+        newestOnTop={false}
+        closeOnClick={true}
+        rtl={false}
+        pauseOnFocusLoss={true}
+        draggable={true}
+        pauseOnHover={true}
+      />
     </ConfigProvider>
   </React.StrictMode>
 );

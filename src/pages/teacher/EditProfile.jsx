@@ -1,9 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Select, message, Card } from 'antd';
+import { Button, Card, Form, Input, Select, message } from 'antd';
 import axios from 'axios';
-import { validatePhoneNumber, validateEmail } from '../../utils/validation';
+import { useEffect, useState } from 'react';
+import { validateEmail, validatePhoneNumber } from '../../utils/validation';
 
 const { Option } = Select;
+
+// Configure axios to use the correct base URL
+const apiClient = axios.create({
+  baseURL: 'http://localhost:8088',
+  timeout: 10000,
+});
+
+// Add auth token to requests
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const EditProfile = () => {
   const [form] = Form.useForm();
@@ -13,10 +28,9 @@ const EditProfile = () => {
   useEffect(() => {
     fetchProfile();
   }, []);
-
   const fetchProfile = async () => {
     try {
-      const response = await axios.get('/api/teacher/profile');
+      const response = await apiClient.get('/api/teacher/profile');
       const data = response.data;
       form.setFieldsValue({ ...data });
     } catch (error) {
@@ -24,11 +38,10 @@ const EditProfile = () => {
       console.error('Error fetching profile:', error);
     }
   };
-
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await axios.put('/api/teacher/profile', values);
+      await apiClient.put('/api/teacher/profile', values);
       message.success('Cập nhật thông tin thành công');
     } catch (error) {
       message.error('Không thể cập nhật thông tin');

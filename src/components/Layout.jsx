@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
-import { useSelector } from 'react-redux';
 
 /**
  * Layout component that wraps the application with Header and Footer
@@ -13,15 +13,23 @@ import { useSelector } from 'react-redux';
 function Layout({ children }) {
   // State to track if sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  
+  // Get authentication state from Redux
   const { isLogin } = useSelector((state) => state.auth);
-  // const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // const token = localStorage.getItem('token');
+
+  // Check login status from both Redux and localStorage for reliability
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsUserLoggedIn(isLogin || !!token);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Layout login status:', { reduxLogin: isLogin, tokenExists: !!token });
+    }
+  }, [isLogin]);
 
   // Listen for custom sidebar toggle event
   useEffect(() => {
-    // Check if user is logged in
-    // setIsLoggedIn(!!token);
-
     const handleSidebarToggle = (event) => {
       setIsSidebarCollapsed(event.detail.isCollapsed);
     };
@@ -30,13 +38,18 @@ function Layout({ children }) {
     return () => {
       window.removeEventListener('sidebarToggled', handleSidebarToggle);
     };
-  }, [isLogin]);
+  }, []);
 
-  if (!isLogin) {
+  if (!isUserLoggedIn) {
     return (
       <div className="flex flex-col min-h-screen bg-white">
         <Header />
-          {children}
+        <div className="flex flex-1 pt-16">
+          <NavigationBar />
+          <main className="flex-grow w-full px-4 md:px-6 py-6">
+            {children}
+          </main>
+        </div>
       </div>
     );
   }
