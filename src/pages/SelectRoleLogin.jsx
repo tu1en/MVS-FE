@@ -1,11 +1,11 @@
-import { Row, Col } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import {
+  SmileOutlined,
+  TeamOutlined,
   UserOutlined,
   UserSwitchOutlined,
-  TeamOutlined,
-  SmileOutlined,
 } from '@ant-design/icons';
+import { Col, Row } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const roles = [
   {
@@ -55,7 +55,7 @@ export default function Dashboard() {
       </div>
 
       <Row gutter={[24, 24]} justify="center" style={{ maxWidth: 1100, width: '100%' }}>
-        {roles.map(({ title, key, colorFrom, colorTo, icon, emoji }) => (
+        {roles.map(({ title, key, colorFrom, colorTo, emoji }) => (
           <Col xs={24} sm={12} md={12} lg={6} key={key}>
             <div
               onClick={() => navigate(`/login?role=${key}`)}

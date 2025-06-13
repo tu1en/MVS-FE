@@ -1,53 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 /**
  * AssignmentsPage component for managing assignments
  * @returns {JSX.Element} AssignmentsPage component
  */
 function AssignmentsPage() {
-  // Sample assignments data
-  const [assignments, setAssignments] = useState([
-    { 
-      id: 1, 
-      title: 'Bài Tập Toán Số 1', 
-      description: 'Hoàn thành các bài toán 1-20 trong Chương 3',
-      class: 'Toán Học 101',
-      dueDate: '2023-06-15',
-      status: 'đang mở'
-    },
-    { 
-      id: 2, 
-      title: 'Báo Cáo Thí Nghiệm Vật Lý', 
-      description: 'Viết báo cáo về thí nghiệm con lắc',
-      class: 'Vật Lý Cơ Bản',
-      dueDate: '2023-06-20',
-      status: 'đang mở'
-    },
-    { 
-      id: 3, 
-      title: 'Bài Luận Văn Học', 
-      description: 'Viết bài luận 5 trang về tác phẩm Hamlet của Shakespeare',
-      class: 'Văn Học Nhập Môn',
-      dueDate: '2023-06-25',
-      status: 'đang mở'
-    },
-    { 
-      id: 4, 
-      title: 'Dự Án Nghiên Cứu Lịch Sử', 
-      description: 'Nghiên cứu và trình bày về một sự kiện lịch sử từ 1900-1950',
-      class: 'Lịch Sử Thế Giới',
-      dueDate: '2023-07-01',
-      status: 'đang mở'
-    },
-  ]);
-
-  // Sample classes for the dropdown
-  const classes = [
-    'Toán Học 101',
-    'Vật Lý Cơ Bản',
-    'Văn Học Nhập Môn',
-    'Lịch Sử Thế Giới'
-  ];
+  // States for the assignment management functionality
+  const [assignments, setAssignments] = useState([]);
+  const [classes] = useState(['Lớp 12A1', 'Lớp 12B2', 'Lớp 12C3']);
 
   // State for new assignment form
   const [newAssignment, setNewAssignment] = useState({ 
@@ -260,4 +220,4 @@ function AssignmentsPage() {
   );
 }
 
-export default AssignmentsPage; 
+export default AssignmentsPage;

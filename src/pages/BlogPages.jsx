@@ -1,34 +1,32 @@
-import React, { useState, useEffect } from "react";
-import { 
-  Row, 
-  Col, 
-  Card, 
-  Typography, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  Tag, 
-  Space, 
-  Divider, 
-  Tooltip,
-  message,
-  Spin,
-  Image,
-  Tabs
-} from "antd";
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
-  EyeOutlined, 
-  PlusOutlined, 
-  SearchOutlined,
-  TagOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  VideoCameraOutlined,
-  FilterOutlined
+import {
+    CalendarOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    EyeOutlined,
+    PlusOutlined,
+    SearchOutlined, TagOutlined,
+    UserOutlined,
+    VideoCameraOutlined
 } from "@ant-design/icons";
+import {
+    Button,
+    Card,
+    Col,
+    Divider,
+    Form,
+    Image,
+    Input,
+    message,
+    Modal,
+    Row,
+    Space,
+    Spin,
+    Tabs,
+    Tag,
+    Tooltip,
+    Typography
+} from "antd";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import * as blogService from "../services/blogService";
 
