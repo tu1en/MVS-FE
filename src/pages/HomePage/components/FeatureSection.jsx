@@ -26,7 +26,7 @@ export default function FeatureSection() {
       <Row gutter={[24, 24]} justify="center" className="mx-auto">
         {features.map((f, i) => (
           <Col xs={24} sm={12} md={6} key={i}>
-            <Card bordered={false} className="bg-white rounded-xl shadow-md p-6 h-full">
+            <Card variant="borderless" className="bg-white rounded-xl shadow-md p-6 h-full">
               <h3 className="text-lg font-semibold text-indigo-600">{f.title}</h3>
               <p className="text-gray-500 mt-2">{f.desc}</p>
             </Card>

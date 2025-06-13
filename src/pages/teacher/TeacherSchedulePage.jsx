@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { message } from "antd";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import ScheduleTable from "../../components/ScheduleTable";
 import { getTeacherSchedule } from "../../services/scheduleService";
 import "../student/SchedulePage.css";
@@ -15,7 +17,7 @@ const transformScheduleData = (apiData) => {
     materialsUrl: item.materialsUrl,
     meetUrl: item.meetUrl,
     room: item.room,
-    studentCount: item.studentIds.length // Thêm thông tin số lượng học sinh
+    studentCount: item.studentCount || (item.studentIds ? item.studentIds.length : 0)
   }));
 };
 
@@ -27,19 +29,51 @@ const TeacherSchedulePage = () => {
     const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Điều chỉnh khi là Chủ nhật
     return new Date(date.setDate(diff));
   };
-
   const [currentWeekStart, setCurrentWeekStart] = useState(getMonday(new Date()));
   const [scheduleItems, setScheduleItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Giả lập ID của giáo viên đang đăng nhập
-  const teacherId = 1; // Trong thực tế, lấy từ context hoặc redux store
+  // Lấy thông tin teacher từ localStorage
+  const teacherId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Lấy dữ liệu lịch dạy cho giáo viên theo tuần hiện tại
-    const rawData = getTeacherSchedule(teacherId, currentWeekStart);
-    const formattedData = transformScheduleData(rawData);
-    setScheduleItems(formattedData);
+    fetchTeacherSchedule();
   }, [currentWeekStart, teacherId]);
+
+  const fetchTeacherSchedule = async () => {
+    if (!token) {
+      message.error('Vui lòng đăng nhập lại');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Thử gọi API thật trước
+      const response = await axios.get('/api/teacher/schedule', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log('Teacher schedule API response:', response.data);
+      const formattedData = transformScheduleData(response.data);
+      setScheduleItems(formattedData);
+      
+    } catch (error) {
+      console.warn('API không khả dụng, sử dụng mock data:', error.message);
+      
+      // Fallback to mock data nếu API lỗi
+      try {
+        const rawData = getTeacherSchedule(parseInt(teacherId) || 1, currentWeekStart);
+        const formattedData = transformScheduleData(rawData);
+        setScheduleItems(formattedData);
+      } catch (mockError) {
+        console.error('Lỗi lấy mock data:', mockError);
+        message.error('Không thể tải lịch dạy');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const goToPreviousWeek = () => {
     const prevWeek = new Date(currentWeekStart);

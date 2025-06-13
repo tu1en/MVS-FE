@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, DatePicker, Select, Card, message, TimePicker } from 'antd';
-import dayjs from 'dayjs';
+import { Button, Card, DatePicker, Form, Input, message, Select, TimePicker } from 'antd';
+import { useEffect, useState } from 'react';
 
 const { Option } = Select;
 
@@ -86,7 +85,7 @@ function CreateSchedulePage() {
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', background: '#f5f5f5', padding: '32px 0' }}>
       <Card
         title={<span style={{ fontSize: 22, fontWeight: 600 }}>Tạo lịch học mới</span>}
-        bordered={false}
+        variant="borderless"
         style={{ maxWidth: 700, width: '100%', boxShadow: '0 2px 12px #00000014', borderRadius: 12 }}
         bodyStyle={{ padding: 32 }}
       >

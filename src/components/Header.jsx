@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import { syncFromLocalStorage } from '../store/slices/authSlice';
 import RegisterModal from './RegisterModal';
 
 /**
@@ -10,8 +10,14 @@ import RegisterModal from './RegisterModal';
  */
 function Header() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { isLogin } = useSelector((state) => state.auth);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
+
+  // Sync Redux state with localStorage on component mount
+  useEffect(() => {
+    dispatch(syncFromLocalStorage());
+  }, [dispatch]);
 
   const handleLogin = () => {
     navigate('/login');
