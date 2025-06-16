@@ -76,8 +76,7 @@ const api = {
    * @param {Object} config - Additional axios config
    * @returns {Promise} Axios response promise
    */
-  put: (url, data = {}, config = {}) => apiClient.put(url, data, config),
-  
+  put: (url, data = {}, config = {}) => apiClient.put(url, data, config),  
   /**
    * HTTP DELETE request
    * @param {String} url - The endpoint URL
@@ -93,7 +92,10 @@ const api = {
    * @param {Object} config - Additional axios config
    * @returns {Promise} Axios response promise
    */
-  patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config)
+  patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
+
+  // High-level API methods
+  getTeacherCourses: () => ApiService.GetTeacherCourses()
 };
 
 /**
@@ -114,7 +116,7 @@ class ApiService {
     }
   }
 
-  // ======= USER SERVICES =======
+  //  USER SERVICES 
 
   /**
    * Lấy danh sách người dùng
@@ -266,7 +268,7 @@ class ApiService {
     }
   }
 
-  // ======= CLASSROOM SERVICES =======
+  //  CLASSROOM SERVICES 
 
   /**
    * Lấy danh sách lớp học
@@ -406,7 +408,7 @@ class ApiService {
     }
   }
 
-  // ======= ASSIGNMENT SERVICES =======
+  //  ASSIGNMENT SERVICES 
 
   /**
    * Lấy danh sách bài tập
@@ -495,7 +497,7 @@ class ApiService {
     }
   }
 
-  // ======= SUBMISSION SERVICES =======
+  //  SUBMISSION SERVICES 
 
   /**
    * Lấy danh sách bài nộp theo bài tập
@@ -571,6 +573,34 @@ class ApiService {
     } else {
       // Lỗi khi thiết lập request
       console.error('Lỗi:', error.message);
+    }
+  }
+
+  /**
+   * Lấy danh sách khóa học của giảng viên hiện tại
+   * @returns {Promise<Array<ClassroomModel>>} Danh sách khóa học
+   */
+  static async GetTeacherCourses() {
+    try {
+      const response = await apiClient.get('/classrooms/current-teacher');
+      
+      // Log để debug
+      console.log('GetTeacherCourses response:', response.data);
+      
+      let courses = [];
+      if (Array.isArray(response.data)) {
+        courses = response.data;
+      } else if (response.data && response.data.content) {
+        courses = response.data.content;
+      } else if (response.data && response.data.data) {
+        courses = response.data.data;
+      }
+      
+      return ClassroomModel.fromApiArray(courses);
+    } catch (error) {
+      console.error('Error in GetTeacherCourses:', error);
+      this.HandleError(error);
+      throw error;
     }
   }
 }
