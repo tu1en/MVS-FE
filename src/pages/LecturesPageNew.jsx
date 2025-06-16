@@ -36,6 +36,7 @@ import {
     Upload
 } from 'antd';
 import { useEffect, useState } from 'react';
+import CreateLectureModal from '../components/teacher/CreateLectureModal';
 
 const { Title, Text, Paragraph } = Typography;
 // const { TabPane } = Tabs; // Unused
@@ -119,6 +120,7 @@ function LecturesPageNew() {
   const [materialForm] = Form.useForm();
   const [viewMaterialVisible, setViewMaterialVisible] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   
   // Get user info from localStorage
   const userId = localStorage.getItem('userId');
@@ -232,17 +234,12 @@ function LecturesPageNew() {
   // ===== Lecture Management Functions =====
   const handleAddLecture = () => {
     setEditingLecture(null);
-    setLectureModalVisible(true);
-    form.resetFields();
+    setShowAdvancedModal(true); // Use advanced modal instead
   };
 
   const handleEditLecture = (lecture) => {
     setEditingLecture(lecture);
-    setLectureModalVisible(true);
-    form.setFieldsValue({
-      title: lecture.title,
-      description: lecture.description
-    });
+    setShowAdvancedModal(true); // Use advanced modal for editing too
   };
 
   const handleDeleteLecture = (lecture) => {
@@ -283,6 +280,39 @@ function LecturesPageNew() {
       message.success('Đã thêm bài giảng mới thành công');
     }
     setLectureModalVisible(false);
+  };
+
+  // Handle advanced lecture creation
+  const handleAdvancedLectureCreated = (lectureData) => {
+    if (editingLecture) {
+      // Update existing lecture
+      const updatedLectures = lectures.map(lecture => 
+        lecture.id === editingLecture.id ? 
+          { 
+            ...lecture, 
+            title: lectureData.title,
+            description: lectureData.description || lectureData.content,
+            materials: lectureData.materials || lecture.materials
+          } : 
+          lecture
+      );
+      setLectures(updatedLectures);
+      message.success('Đã cập nhật bài giảng nâng cao thành công!');
+    } else {
+      // Create new lecture
+      const newLecture = {
+        id: Math.max(...lectures.map(l => l.id), 0) + 1,
+        title: lectureData.title,
+        description: lectureData.description || lectureData.content,
+        courseId: selectedCourse.id,
+        order: lectures.filter(l => l.courseId === selectedCourse.id).length + 1,
+        materials: lectureData.materials || []
+      };
+      setLectures([...lectures, newLecture]);
+      message.success('Đã tạo bài giảng nâng cao thành công!');
+    }
+    setShowAdvancedModal(false);
+    setEditingLecture(null);
   };
 
   // ===== Material Management Functions =====
@@ -439,13 +469,23 @@ function LecturesPageNew() {
       <div className="teacher-lectures-view">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={4} style={{ margin: 0 }}>Quản lý bài giảng</Title>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={handleAddLecture}
-          >
-            Thêm bài giảng mới
-          </Button>
+          <Space>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleAddLecture}
+            >
+              Thêm bài giảng đơn giản
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => setShowAdvancedModal(true)}
+              style={{ background: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Tạo bài giảng nâng cao
+            </Button>
+          </Space>
         </div>
         
         <Card title={selectedCourse?.name} style={{ marginBottom: 16 }}>
@@ -904,8 +944,20 @@ function LecturesPageNew() {
       {renderLectureModal()}
       {renderMaterialModal()}
       {renderViewMaterialModal()}
+      
+      {/* Advanced Lecture Creation Modal */}
+      <CreateLectureModal
+        visible={showAdvancedModal}
+        onCancel={() => {
+          setShowAdvancedModal(false);
+          setEditingLecture(null);
+        }}
+        onSuccess={handleAdvancedLectureCreated}
+        courseId={selectedCourse?.id}
+        editingLecture={editingLecture}
+      />
     </div>
   );
 }
 
-export default LecturesPageNew; 
+export default LecturesPageNew;

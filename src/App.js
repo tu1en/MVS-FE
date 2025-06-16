@@ -53,6 +53,8 @@ import EnrolledCourses from "./pages/student/EnrolledCourses.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import StudentEditProfile from "./pages/student/EditProfile.jsx";
 import TeacherEditProfile from "./pages/teacher/EditProfile.jsx";
+import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
+import CourseDetail from "./pages/teacher/CourseDetail.jsx";
 
 // Placeholder components for missing routes
 const StudentRegistration = () => <div className="p-8"><h1>Đăng ký học viên</h1><p>Trang đăng ký dành cho học viên sẽ được triển khai.</p></div>;
@@ -61,7 +63,7 @@ const TeacherRegistration = () => <div className="p-8"><h1>Đăng ký giảng vi
 // StudentMessages component is now using CommunicationPage
 // const StudentMessages = () => <div className="p-8"><h1>Tin nhắn học viên</h1><p>Trang tin nhắn dành cho học viên sẽ được triển khai.</p></div>;
 
-const TeacherCourses = () => <div className="p-8"><h1>Quản lý khóa học</h1><p>Trang quản lý khóa học dành cho giảng viên sẽ được triển khai.</p></div>;
+// const TeacherCourses = () => <div className="p-8"><h1>Quản lý khóa học</h1><p>Trang quản lý khóa học dành cho giảng viên sẽ được triển khai.</p></div>;
 const TeacherSchedule = () => <div className="p-8"><h1>Lịch dạy</h1><p>Trang lịch dạy dành cho giảng viên sẽ được triển khai.</p></div>;
 const TeacherMessages = () => <div className="p-8"><h1>Tin nhắn giảng viên</h1><p>Trang tin nhắn dành cho giảng viên sẽ được triển khai.</p></div>;
 const TeacherAnnouncements = () => <div className="p-8"><h1>Thông báo giảng viên</h1><p>Trang thông báo dành cho giảng viên sẽ được triển khai.</p></div>;
@@ -322,7 +324,11 @@ function App() {
           />
           <Route 
             path="/teacher/courses" 
-            element={<ProtectedRoute element={<TeacherCourses />} allowedRoles={["2", "TEACHER"]} />} 
+            element={<ProtectedRoute element={<TeacherCoursesSimple />} allowedRoles={["2", "TEACHER"]} />} 
+          />
+          <Route 
+            path="/teacher/courses/:courseId" 
+            element={<ProtectedRoute element={<CourseDetail />} allowedRoles={["2", "TEACHER"]} />} 
           />
           <Route 
             path="/teacher/schedule" 
