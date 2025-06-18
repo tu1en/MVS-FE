@@ -255,6 +255,7 @@ function App() {
           <Route path="/messaging" element={<Navigate to="/student/messages" replace />} />
           <Route path="/communication" element={<Navigate to="/student/messages" replace />} />
           <Route path="/feedback" element={<Navigate to="/student/feedback" replace />} />
+          <Route path="/blog" element={<Navigate to="/blogs" replace />} />
           <Route path="/blogs" element={<BlogPages />} />
           <Route path="/blank" element={<BlankPage />} />
           <Route path="/login" element={<LoginScreen />} />
