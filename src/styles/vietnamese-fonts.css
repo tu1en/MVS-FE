@@ -1,0 +1,102 @@
+/* Vietnamese Font Utilities */
+/* File này cung cấp các tiện ích CSS cho phông chữ tiếng Việt */
+
+/* Đảm bảo phông chữ hiển thị đẹp cho tiếng Việt */
+.vietnamese-text {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: "kern" 1;
+  font-variant-ligatures: common-ligatures;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tiêu đề lớn cho tiếng Việt */
+.vietnamese-heading {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 600;
+  font-feature-settings: "kern" 1;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+/* Văn bản nội dung cho tiếng Việt */
+.vietnamese-body {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  font-feature-settings: "kern" 1;
+}
+
+/* Sửa lỗi hiển thị dấu thanh tiếng Việt */
+.fix-vietnamese-diacritics {
+  font-variant-ligatures: none;
+  font-feature-settings: "kern" 1, "liga" 0;
+}
+
+/* Cải thiện độ rõ nét của chữ */
+.crisp-text {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-smooth: always;
+}
+
+/* Utilities cho các kích cỡ text khác nhau */
+.text-vietnamese-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.text-vietnamese-base {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.text-vietnamese-lg {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.text-vietnamese-xl {
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.text-vietnamese-2xl {
+  font-size: 1.5rem;
+  line-height: 1.4;
+}
+
+/* Đặc biệt cho các nút và form */
+.button-vietnamese {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-feature-settings: "kern" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.form-vietnamese {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-feature-settings: "kern" 1;
+}
+
+/* Sửa lỗi spacing cho các ký tự đặc biệt tiếng Việt */
+.vietnamese-spacing {
+  word-spacing: 0.05em;
+  letter-spacing: 0.01em;
+}
+
+/* Anti-alias cho màn hình retina */
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+       only screen and (min--moz-device-pixel-ratio: 2),
+       only screen and (-o-min-device-pixel-ratio: 2/1),
+       only screen and (min-device-pixel-ratio: 2),
+       only screen and (min-resolution: 192dpi),
+       only screen and (min-resolution: 2dppx) {
+  .vietnamese-text,
+  .vietnamese-heading,
+  .vietnamese-body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+}

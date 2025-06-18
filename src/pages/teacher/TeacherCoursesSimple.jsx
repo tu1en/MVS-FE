@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { message } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import CourseCreationModal from '../../components/teacher/CourseCreationModal';
 import CreateLectureModal from '../../components/teacher/CreateLectureModal';
 
 const TeacherCoursesSimple = () => {
@@ -9,6 +10,7 @@ const TeacherCoursesSimple = () => {
   const [courses, setCourses] = useState([]);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   useEffect(() => {
@@ -21,18 +23,28 @@ const TeacherCoursesSimple = () => {
       setError(null);
       
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8088/api/classrooms/current-teacher', {
+      
+      // Using fetch instead of axios for better error handling
+      const response = await fetch('http://localhost:8088/api/classrooms/current-teacher', {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
-      console.log('Teacher courses response:', response.data);
-      setCourses(response.data || []);
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('API Error:', response.status, errorData);
+        throw new Error(`Không thể kết nối đến server (${response.status})`);
+      }
+      
+      const data = await response.json();
+      console.log('Teacher courses response:', data);
+      setCourses(data || []);
     } catch (error) {
       console.error('Error loading teacher courses:', error);
-      setError('Không thể tải danh sách khóa học. Vui lòng thử lại.');
+      setError('Không thể tải danh sách khóa học. Vui lòng thử lại: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -48,6 +60,20 @@ const TeacherCoursesSimple = () => {
     setSelectedCourseId(null);
     // Reload courses to get updated data
     loadTeacherCourses();
+  };
+  
+  const handleCourseCreated = (newCourse) => {
+    setShowCreateCourseModal(false);
+    // Add the new course to the courses list and show a success message
+    setCourses(prevCourses => [newCourse, ...prevCourses]);
+    
+    // Update UI to reflect the new course
+    message.success(`Khóa học "${newCourse.name}" đã được tạo thành công!`);
+    
+    // Optional: Reload all courses to ensure data consistency
+    setTimeout(() => {
+      loadTeacherCourses();
+    }, 500);
   };
 
   const handleViewDetail = (courseId) => {
@@ -84,13 +110,39 @@ const TeacherCoursesSimple = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Quản lý khóa học</h1>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
-        >
-          <span className="text-sm">📚</span>
-          Tạo bài giảng mới
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowCreateCourseModal(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
+          >
+            <span className="text-sm">📋</span>
+            Tạo khóa học mới
+          </button>
+          <button 
+            onClick={() => {
+              if (courses.length === 0) {
+                message.warning("Bạn cần tạo khóa học trước khi tạo bài giảng!");
+              } else if (courses.length === 1) {
+                // If there's only one course, select it automatically
+                setSelectedCourseId(courses[0].id);
+                setShowCreateModal(true);
+              } else {
+                // If multiple courses, require selection
+                setSelectedCourseId(null); // Clear any previous selection
+                setShowCreateModal(true);
+              }
+            }}
+            className={`${
+              courses.length === 0 
+                ? "bg-gray-400 cursor-not-allowed" 
+                : "bg-green-500 hover:bg-green-600"
+            } text-white px-4 py-2 rounded flex items-center gap-2`}
+            disabled={courses.length === 0}
+          >
+            <span className="text-sm">📚</span>
+            Tạo bài giảng mới
+          </button>
+        </div>
       </div>
       
       {courses.length === 0 ? (
@@ -126,10 +178,16 @@ const TeacherCoursesSimple = () => {
                 >
                   Xem chi tiết
                 </button>
-                <button className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600">
+                <button 
+                  onClick={() => navigate(`/teacher/courses/${course.id}/edit`)}
+                  className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                >
                   Chỉnh sửa
                 </button>
-                <button className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600">
+                <button 
+                  onClick={() => navigate(`/teacher/courses/${course.id}/assignments`)}
+                  className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+                >
                   Bài tập
                 </button>
                 <button 
@@ -177,6 +235,13 @@ const TeacherCoursesSimple = () => {
         }}
         onSuccess={handleLectureCreated}
         courseId={selectedCourseId}
+      />
+      
+      {/* Create Course Modal */}
+      <CourseCreationModal
+        visible={showCreateCourseModal}
+        onCancel={() => setShowCreateCourseModal(false)}
+        onSuccess={handleCourseCreated}
       />
     </div>
   );

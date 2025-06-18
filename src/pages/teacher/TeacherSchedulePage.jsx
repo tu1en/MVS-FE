@@ -1,24 +1,14 @@
-import { message } from "antd";
+import { message, Spin } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import ScheduleTable from "../../components/ScheduleTable";
 import { getTeacherSchedule } from "../../services/scheduleService";
 import "../student/SchedulePage.css";
 
-// Chuyển đổi dữ liệu từ API sang định dạng hiển thị
+// Chuyển đổi dữ liệu từ API sang định dạng hiển thị (nếu cần)
 const transformScheduleData = (apiData) => {
-  return apiData.map(item => ({
-    day: item.day,
-    className: item.className,
-    subject: item.subject,
-    start: item.start,
-    end: item.end,
-    teacher: item.teacherName,
-    materialsUrl: item.materialsUrl,
-    meetUrl: item.meetUrl,
-    room: item.room,
-    studentCount: item.studentCount || (item.studentIds ? item.studentIds.length : 0)
-  }));
+  // API đã trả về đúng định dạng, không cần biến đổi
+  return apiData;
 };
 
 const TeacherSchedulePage = () => {
@@ -49,19 +39,20 @@ const TeacherSchedulePage = () => {
 
     setLoading(true);
     try {
-      // Thử gọi API thật trước
+      // Gọi API thực tế
       const response = await axios.get('/api/teacher/schedule', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       console.log('Teacher schedule API response:', response.data);
-      const formattedData = transformScheduleData(response.data);
-      setScheduleItems(formattedData);
+      
+      // Dữ liệu đã có định dạng chuẩn, không cần chuyển đổi nhiều
+      setScheduleItems(response.data || []);
       
     } catch (error) {
       console.warn('API không khả dụng, sử dụng mock data:', error.message);
       
-      // Fallback to mock data nếu API lỗi
+      // Sử dụng dữ liệu giả lập trong trường hợp API lỗi
       try {
         const rawData = getTeacherSchedule(parseInt(teacherId) || 1, currentWeekStart);
         const formattedData = transformScheduleData(rawData);
@@ -107,7 +98,9 @@ const TeacherSchedulePage = () => {
         </button>
       </div>
       
-      <ScheduleTable scheduleData={scheduleItems} startDate={currentWeekStart} />
+      <Spin spinning={loading} tip="Đang tải lịch dạy...">
+        <ScheduleTable scheduleData={scheduleItems} startDate={currentWeekStart} />
+      </Spin>
       
       <div className="schedule-actions">
         <button className="action-button print-button" onClick={() => window.print()}>
