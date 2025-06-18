@@ -3,15 +3,13 @@ import { Empty, Spin, Tag, message } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 // StudentAttendance Component để sinh viên điểm danh
-const StudentAttendance = ({ userId, onLogout, showMessageBox }) => {
+const StudentAttendance = ({ onLogout, showMessageBox }) => {
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
   const [myAttendance, setMyAttendance] = useState([]);
   const [locationStatus, setLocationStatus] = useState('pending'); // 'pending', 'checking', 'passed', 'failed'
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
-  const [coordinates, setCoordinates] = useState({ latitude: null, longitude: null });
   
   // --- Mock Data ---
   const mockUserInfo = {
@@ -171,11 +169,6 @@ const StudentAttendance = ({ userId, onLogout, showMessageBox }) => {
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCoordinates({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          
           // Tìm phiên học và kiểm tra vị trí
           const session = sessions.find(s => s.id === sessionId);
           

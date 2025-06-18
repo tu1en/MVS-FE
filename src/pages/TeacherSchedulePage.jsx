@@ -5,7 +5,6 @@ const TeacherSchedulePage = () => {
   const [schedule, setSchedule] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(new Date());
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Mock schedule data - replace with actual API call later
   const mockScheduleData = [

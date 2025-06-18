@@ -509,7 +509,7 @@ const LectureCreator = () => {
                     />
                     {lecture.slides.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        {lecture.slides.map((file, index) => (
+                        {lecture.slides.map((file) => (
                           <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-blue-500" />
@@ -547,7 +547,7 @@ const LectureCreator = () => {
                     />
                     {lecture.materials.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        {lecture.materials.map((file, index) => (
+                        {lecture.materials.map((file) => (
                           <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                             <div className="flex items-center gap-2">
                               {file.type.startsWith('image/') ? (

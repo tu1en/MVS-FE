@@ -32,7 +32,6 @@ import { useEffect, useState } from 'react';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 const { Option } = Select;
 
 /**
@@ -155,18 +154,6 @@ function FeedbackPage() {
   }, [userId, token, userRole]);
 
   const handleSubmitFeedback = (values) => {
-    const newFeedback = {
-      id: Math.floor(Math.random() * 1000) + 100,
-      courseId: values.courseId,
-      rating: values.rating,
-      contentQuality: values.contentQuality,
-      teachingSpeed: values.teachingSpeed,
-      materialQuality: values.materialQuality,
-      comment: values.comment,
-      createdAt: new Date().toISOString(),
-      anonymous: values.anonymous
-    };
-    
     // In a real app, would save to API
     // For now, just show success message
     message.success('Cảm ơn bạn đã gửi phản hồi về khóa học!');
@@ -327,22 +314,6 @@ function FeedbackPage() {
     const course = courses.find(c => c.id === courseId);
     
     if (!course) return null;
-    
-    // Prepare data for charts
-    const contentQualityData = Object.entries(stats.contentQualityStats).map(([name, value]) => ({
-      type: name,
-      value
-    }));
-    
-    const teachingSpeedData = Object.entries(stats.teachingSpeedStats).map(([name, value]) => ({
-      type: name,
-      value
-    }));
-    
-    const materialQualityData = Object.entries(stats.materialQualityStats).map(([name, value]) => ({
-      type: name,
-      value
-    }));
     
     return (
       <div className="course-statistics" style={{ marginBottom: 24 }}>
