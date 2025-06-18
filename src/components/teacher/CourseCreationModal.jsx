@@ -32,7 +32,6 @@ const CourseCreationModal = ({ visible, onCancel, onSuccess }) => {
     try {
       setLoadingClassrooms(true);
       const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
 
       const response = await axios.get('http://localhost:8088/api/classrooms', {
         headers: {

@@ -35,13 +35,10 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [courses, setCourses] = useState([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
 
   // Load available courses for the teacher
   const loadCourses = async () => {
     try {
-      setLoadingCourses(true);
       const token = localStorage.getItem('token');
       
       // Using fetch instead of axios for better error handling
@@ -61,12 +58,9 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
       
       const data = await response.json();
       console.log('Available courses for lecture creation:', data);
-      setCourses(data || []);
     } catch (error) {
       console.error('Error loading courses:', error);
       message.error('Không thể tải danh sách khóa học: ' + error.message);
-    } finally {
-      setLoadingCourses(false);
     }
   };
 

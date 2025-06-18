@@ -25,6 +25,74 @@ Module not found: Error: Can't resolve './pages/AdminDashboard'
 
 **Status**: File exists and is properly structured. This appears to be a build cache issue.
 
+### 3. Missing Dependencies
+**Problem**: Several required dependencies were missing from `package.json`, causing import errors:
+- `chart.js` - Required for AdvancedGrading.jsx
+- `react-chartjs-2` - Required for AdvancedGrading.jsx  
+- `moment` - Required for multiple components
+- `lucide-react` - Required for multiple components
+
+**Solution**: Added the missing dependencies to `package.json`:
+```json
+{
+  "chart.js": "^4.4.0",
+  "react-chartjs-2": "^5.2.0", 
+  "moment": "^2.29.4",
+  "lucide-react": "^0.294.0"
+}
+```
+
+### 4. Unused Variables Warnings
+Fixed unused variables across multiple components:
+
+#### AttendanceModule.jsx
+- Removed unused `showMessageBox` function
+- Removed unused `showMessageBox` parameter from LoginScreen component
+
+#### StudentAttendance.jsx
+- Removed unused `userId` parameter
+- Removed unused `detailModalVisible` state
+- Removed unused `coordinates` state
+
+#### TeacherAttendance.jsx
+- Removed unused `userId` parameter
+- Removed unused `setLocationNetworkPassed` setter
+- Removed unused `studentList` state
+
+#### CourseCreationModal.jsx
+- Removed unused `userId` variable
+
+#### CreateLectureModal.jsx
+- Removed unused `courses` state
+- Removed unused `loadingCourses` state
+
+#### AttendanceMarking.jsx
+- Removed unused `response` variable by not assigning axios response
+
+#### AttendancePageNew.jsx
+- Removed unused `navigate` variable
+- Removed unused `getStudentAttendanceStatus` function
+
+#### CommunicationPage.jsx
+- Removed unused `setRecipientOptions` setter
+- Removed unused `error` state
+- Removed unused `userName` variable
+
+#### FeedbackPage.jsx
+- Removed unused `TabPane` import
+- Removed unused `newFeedback` variable
+- Removed unused chart data variables: `contentQualityData`, `teachingSpeedData`, `materialQualityData`
+
+#### LectureCreator.jsx
+- Removed unused `index` parameters from map functions in slides and materials rendering
+
+#### OnlineClassesPage.jsx
+- Removed unused `RangePicker` import
+- Removed unused `timeColor` variable and its assignments
+
+#### TeacherSchedulePage.jsx
+- Removed unused `error` state and `setError` setter
+
 ## 📁 Files Created/Modified
 
 ### New Files:
@@ -33,6 +101,7 @@ Module not found: Error: Can't resolve './pages/AdminDashboard'
 
 ### Modified Files:
 - ✅ `src/store/index.js` - Added teachers reducer
+- ✅ `package.json` - Added missing dependencies
 
 ## 🚀 How to Fix
 

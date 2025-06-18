@@ -65,8 +65,6 @@ function AttendancePageNew() {
     totalClasses: 0
   });
   
-  const navigate = useNavigate();
-
   // Get user info from localStorage
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
@@ -344,19 +342,8 @@ function AttendancePageNew() {
 
   const isStudentAttended = (sessionId) => {
     return attendanceRecords.some(
-      record => record.sessionId === sessionId && 
-                record.studentId === (parseInt(userId) || 1) && 
-                (record.status === 'PRESENT' || record.status === 'LATE')
-    );
-  };
-
-  const getStudentAttendanceStatus = (sessionId) => {
-    const record = attendanceRecords.find(
       record => record.sessionId === sessionId && record.studentId === (parseInt(userId) || 1)
     );
-    
-    if (!record) return null;
-    return record.status;
   };
 
   // RENDER FUNCTIONS BASED ON USER ROLE

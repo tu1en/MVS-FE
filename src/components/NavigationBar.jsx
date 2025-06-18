@@ -201,26 +201,6 @@ function NavigationBar() {
           icon: '📚'
         }
       ]
-    },
-    {
-      category: "Tài khoản",
-      items: [
-        { 
-          name: 'Đăng Ký Học Viên',
-          path: '/register/student',
-          icon: '👨‍🎓'
-        },
-        { 
-          name: 'Đăng Ký Giảng Viên',
-          path: '/register/teacher',
-          icon: '👨‍🏫'
-        },
-        { 
-          name: 'Đăng Nhập',
-          path: '/login',
-          icon: '🔑'
-        }
-      ]
     }
   ];
 

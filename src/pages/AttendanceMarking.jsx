@@ -132,7 +132,7 @@ function AttendanceMarking() {
       }
 
       // Mark attendance
-      const response = await axios.post('/api/attendance/mark', null, {
+      await axios.post('/api/attendance/mark', null, {
         params: {
           sessionId: session.id,
           userId: userId,

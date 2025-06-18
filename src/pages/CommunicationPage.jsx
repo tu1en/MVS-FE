@@ -58,7 +58,7 @@ function CommunicationPage() {
   const [messages, setMessages] = useState({});
   const [newMessage, setNewMessage] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
-  const [recipientOptions, setRecipientOptions] = useState([]);
+  const [recipientOptions] = useState([]);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [newMessageSubject, setNewMessageSubject] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +68,6 @@ function CommunicationPage() {
   const [classrooms, setClassrooms] = useState([]);
   const [selectedClassroom, setSelectedClassroom] = useState(null);
   const [users, setUsers] = useState([]);
-  const [error, setError] = useState(null);
   
   const messagesEndRef = useRef(null);
 
@@ -76,7 +75,6 @@ function CommunicationPage() {
   const userId = parseInt(localStorage.getItem('userId')) || 101;
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('role') || '1';
-  const userName = localStorage.getItem('userName') || 'Tài khoản học sinh';
 
   // Debug logging for role detection
   console.log('CommunicationPage - Role Debug:', { 
@@ -204,7 +202,6 @@ function CommunicationPage() {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching initial data:', error);
-        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
         setLoading(false);
       }
     };

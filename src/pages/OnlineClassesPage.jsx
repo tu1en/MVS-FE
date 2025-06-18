@@ -42,7 +42,6 @@ const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 /**
  * OnlineClassesPage component for managing online class sessions with separate teacher and student views
@@ -382,6 +381,23 @@ function OnlineClassesPage() {
           // Calculate if session is starting soon (within 15 minutes)
           const startingSoon = isUpcoming && now.isAfter(startTime.clone().subtract(15, 'minutes'));
           
+          // Calculate countdown or elapsed time
+          let timeDisplay = '';
+          
+          if (isActive) {
+            const elapsed = moment.duration(now.diff(startTime));
+            timeDisplay = `Đang diễn ra (${elapsed.hours()}h ${elapsed.minutes()}m)`;
+          } else if (isUpcoming) {
+            const remaining = moment.duration(startTime.diff(now));
+            if (startingSoon) {
+              timeDisplay = `Bắt đầu sau ${remaining.minutes()}m`;
+            } else {
+              timeDisplay = `Diễn ra sau ${remaining.days() > 0 ? `${remaining.days()} ngày ` : ''}${remaining.hours()}h ${remaining.minutes()}m`;
+            }
+          } else {
+            timeDisplay = 'Đã kết thúc';
+          }
+          
           return (
             <Card 
               style={{ marginBottom: 16 }}
@@ -394,10 +410,13 @@ function OnlineClassesPage() {
               extra={
                 <Space>
                   <Tag color="blue">{session.courseName}</Tag>
-                  {isActive && <Tag color="green">Đang diễn ra</Tag>}
-                  {startingSoon && <Tag color="orange">Sắp bắt đầu</Tag>}
-                  {isUpcoming && !startingSoon && <Tag color="orange">Sắp diễn ra</Tag>}
-                  {isEnded && <Tag color="red">Đã kết thúc</Tag>}
+                  <Tag color={
+                    isActive ? 'green' : 
+                    startingSoon ? 'orange' : 
+                    isUpcoming ? 'blue' : 'red'
+                  }>
+                    {timeDisplay}
+                  </Tag>
                 </Space>
               }
               actions={[
@@ -629,24 +648,19 @@ function OnlineClassesPage() {
           
           // Calculate countdown or elapsed time
           let timeDisplay = '';
-          let timeColor = '';
           
           if (isActive) {
             const elapsed = moment.duration(now.diff(startTime));
             timeDisplay = `Đang diễn ra (${elapsed.hours()}h ${elapsed.minutes()}m)`;
-            timeColor = 'green';
           } else if (isUpcoming) {
             const remaining = moment.duration(startTime.diff(now));
             if (startingSoon) {
               timeDisplay = `Bắt đầu sau ${remaining.minutes()}m`;
-              timeColor = 'orange';
             } else {
               timeDisplay = `Diễn ra sau ${remaining.days() > 0 ? `${remaining.days()} ngày ` : ''}${remaining.hours()}h ${remaining.minutes()}m`;
-              timeColor = 'blue';
             }
           } else {
             timeDisplay = 'Đã kết thúc';
-            timeColor = 'gray';
           }
           
           return (
