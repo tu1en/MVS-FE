@@ -1,8 +1,11 @@
 import React from "react";
 import "./ScheduleTable.css";
 
-// scheduleData: Array of { day: 0-6, className, subject, start, end, teacher, materialsUrl, meetUrl }
+// scheduleData: Array of { day: 0-6, className, subject, start, end, teacher/teacherName, materialsUrl, meetUrl }
 const ScheduleTable = ({ scheduleData, startDate }) => {
+  // Tạo mảng chứa dữ liệu lịch
+  const schedules = Array.isArray(scheduleData) ? scheduleData : [];
+  
   // Calculate days of the week based on startDate
   const generateDaysOfWeek = (startDate) => {
     const days = [];
@@ -51,8 +54,13 @@ const ScheduleTable = ({ scheduleData, startDate }) => {
   const grouped = Array(7)
     .fill()
     .map(() => []);
-  scheduleData.forEach((item) => {
-    grouped[item.day].push(item);
+    
+  schedules.forEach((item) => {
+    // Đảm bảo day có giá trị từ 0-6
+    const day = parseInt(item.day);
+    if (!isNaN(day) && day >= 0 && day < 7) {
+      grouped[day].push(item);
+    }
   });
 
   return (
@@ -81,19 +89,19 @@ const ScheduleTable = ({ scheduleData, startDate }) => {
                       <strong>{c.className} - {c.subject}</strong>
                     </div>
                     <div>{c.start} - {c.end}</div>
-                    <div className="schedule-teacher">{c.teacher}</div>
+                    <div className="schedule-teacher">{c.teacherName || c.teacher}</div>
                     {c.room && <div className="schedule-room">Phòng: {c.room}</div>}
-                    {c.studentCount && <div className="schedule-student-count">Số học sinh: {c.studentCount}</div>}
+                    {c.studentCount > 0 && <div className="schedule-student-count">Số học sinh: {c.studentCount}</div>}
                     {c.materialsUrl ? (
                       <div className="schedule-materials">
-                        <a href={c.materialsUrl} target="_blank" rel="noopener noreferrer">View Materials</a>
+                        <a href={c.materialsUrl} target="_blank" rel="noopener noreferrer">Tài liệu</a>
                       </div>
                     ) : c.meetUrl ? (
                       <div className="schedule-meet">
-                        <a href={c.meetUrl} target="_blank" rel="noopener noreferrer">Meet URL</a>
+                        <a href={c.meetUrl} target="_blank" rel="noopener noreferrer">Link họp</a>
                       </div>
                     ) : (
-                      <div className="schedule-notyet">Not yet</div>
+                      <div className="schedule-notyet">Chưa có tài liệu</div>
                     )}
                   </div>
                 ))

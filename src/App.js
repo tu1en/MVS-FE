@@ -22,6 +22,7 @@ import SubmitHomework from "./pages/SubmitHomework.jsx";
 
 import ForgotPassword from './components/ForgotPassword.jsx';
 import ResetPassword from './components/ResetPassword.jsx';
+import { AttendanceModule } from './components/attendance';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
@@ -39,6 +40,11 @@ import StudentsDashboard from './pages/StudentsDashboard.jsx';
 
 import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
 
+// Teacher specific pages
+import TeacherSchedulePage from "./pages/TeacherSchedulePage.jsx";
+import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
+import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
+
 // New Priority 1 Pages
 import AdvancedGrading from "./pages/AdvancedGrading.jsx";
 import AnnouncementCenter from "./pages/AnnouncementCenter.jsx";
@@ -52,19 +58,13 @@ import EnrolledCourses from "./pages/student/EnrolledCourses.jsx";
 // Account/Profile pages
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import StudentEditProfile from "./pages/student/EditProfile.jsx";
+import CourseDetail from "./pages/teacher/CourseDetail.jsx";
 import TeacherEditProfile from "./pages/teacher/EditProfile.jsx";
+import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 
 // Placeholder components for missing routes
 const StudentRegistration = () => <div className="p-8"><h1>Đăng ký học viên</h1><p>Trang đăng ký dành cho học viên sẽ được triển khai.</p></div>;
 const TeacherRegistration = () => <div className="p-8"><h1>Đăng ký giảng viên</h1><p>Trang đăng ký dành cho giảng viên sẽ được triển khai.</p></div>;
-
-// StudentMessages component is now using CommunicationPage
-// const StudentMessages = () => <div className="p-8"><h1>Tin nhắn học viên</h1><p>Trang tin nhắn dành cho học viên sẽ được triển khai.</p></div>;
-
-const TeacherCourses = () => <div className="p-8"><h1>Quản lý khóa học</h1><p>Trang quản lý khóa học dành cho giảng viên sẽ được triển khai.</p></div>;
-const TeacherSchedule = () => <div className="p-8"><h1>Lịch dạy</h1><p>Trang lịch dạy dành cho giảng viên sẽ được triển khai.</p></div>;
-const TeacherMessages = () => <div className="p-8"><h1>Tin nhắn giảng viên</h1><p>Trang tin nhắn dành cho giảng viên sẽ được triển khai.</p></div>;
-const TeacherAnnouncements = () => <div className="p-8"><h1>Thông báo giảng viên</h1><p>Trang thông báo dành cho giảng viên sẽ được triển khai.</p></div>;
 
 const ManagerCommunications = () => <div className="p-8"><h1>Quản lý giao tiếp</h1><p>Trang quản lý giao tiếp dành cho quản lý sẽ được triển khai.</p></div>;
 const ManagerUsers = () => <div className="p-8"><h1>Quản lý người dùng</h1><p>Trang quản lý người dùng dành cho quản lý sẽ được triển khai.</p></div>;
@@ -240,7 +240,18 @@ function App() {
             path="/attendance-new" 
             element={<ProtectedRoute element={<AttendancePageNew />} allowedRoles={["2", "0", "TEACHER", "ADMIN"]} />} 
           />
-          
+          <Route 
+            path="/attendance" 
+            element={<ProtectedRoute element={<AttendanceModule />} allowedRoles={["1", "2", "STUDENT", "TEACHER"]} />} 
+          />
+          <Route 
+            path="/student/attendance" 
+            element={<ProtectedRoute element={<AttendanceModule />} allowedRoles={["1", "STUDENT"]} />} 
+          />
+          <Route 
+            path="/teacher/attendance-new" 
+            element={<ProtectedRoute element={<AttendanceModule />} allowedRoles={["2", "TEACHER"]} />} 
+          />
           <Route path="/messaging" element={<Navigate to="/student/messages" replace />} />
           <Route path="/communication" element={<Navigate to="/student/messages" replace />} />
           <Route path="/feedback" element={<Navigate to="/student/feedback" replace />} />
@@ -322,19 +333,27 @@ function App() {
           />
           <Route 
             path="/teacher/courses" 
-            element={<ProtectedRoute element={<TeacherCourses />} allowedRoles={["2", "TEACHER"]} />} 
+            element={<ProtectedRoute element={<TeacherCoursesSimple />} allowedRoles={["2", "TEACHER"]} />} 
+          />
+          <Route 
+            path="/teacher/courses/:courseId" 
+            element={<ProtectedRoute element={<CourseDetail />} allowedRoles={["2", "TEACHER"]} />} 
+          />
+          <Route 
+            path="/teacher/courses/:courseId/assignments" 
+            element={<ProtectedRoute element={<AssignmentsPageNew />} allowedRoles={["2", "TEACHER"]} />} 
           />
           <Route 
             path="/teacher/schedule" 
-            element={<ProtectedRoute element={<TeacherSchedule />} allowedRoles={["2", "TEACHER"]} />} 
+            element={<ProtectedRoute element={<TeacherSchedulePage />} allowedRoles={["2", "TEACHER"]} />} 
           />
           <Route 
             path="/teacher/messages" 
-            element={<ProtectedRoute element={<TeacherMessages />} allowedRoles={["2", "TEACHER"]} />} 
+            element={<ProtectedRoute element={<TeacherMessagesPage />} allowedRoles={["2", "TEACHER"]} />} 
           />
           <Route 
             path="/teacher/announcements" 
-            element={<ProtectedRoute element={<TeacherAnnouncements />} allowedRoles={["2", "TEACHER"]} />} 
+            element={<ProtectedRoute element={<TeacherAnnouncementsPage />} allowedRoles={["2", "TEACHER"]} />} 
           />
           
           {/* manager */}
