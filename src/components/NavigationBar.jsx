@@ -256,6 +256,11 @@ function NavigationBar() {
           name: 'Hỏi Đáp & Tin Nhắn', 
           path: '/student/messages', 
           icon: '💬'
+        },
+        { 
+          name: 'Blog', 
+          path: '/blog', 
+          icon: '📝'
         }
       ]
     },
@@ -329,6 +334,11 @@ function NavigationBar() {
           name: 'Thông Báo', 
           path: '/teacher/announcements', 
           icon: '📢'
+        },
+        { 
+          name: 'Blog', 
+          path: '/blog', 
+          icon: '📝'
         }
       ]
     },
