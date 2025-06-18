@@ -95,7 +95,146 @@ const api = {
   patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
 
   // High-level API methods
-  getTeacherCourses: () => ApiService.GetTeacherCourses()
+  getTeacherCourses: () => ApiService.GetTeacherCourses(),
+  
+  /**
+   * Get users by role ID
+   * @param {number} roleId - The role ID to filter by (3 for students)
+   * @returns {Promise} Users with the specified role
+   */
+  GetUsersByRole: async (roleId) => {
+    try {
+      console.log(`GetUsersByRole: Attempting to fetch users with role ID ${roleId}`);
+      
+      // Try the direct role endpoint if it exists
+      try {
+        console.log(`GetUsersByRole: Trying direct endpoint: /v1/users/role/${roleId}`);
+        const response = await apiClient.get(`/v1/users/role/${roleId}`);
+        console.log(`GetUsersByRole: Direct endpoint success. Found ${response.data.length} users`);
+        return response.data;
+      } catch (endpointError) {
+        console.log(`GetUsersByRole: Direct role endpoint failed: ${endpointError.message}`);
+        
+        // Fallback: get all users and filter by role
+        console.log('GetUsersByRole: Trying fallback to get all users');
+        const response = await apiClient.get('/v1/users');
+        let allUsers = [];
+        
+        if (Array.isArray(response.data)) {
+          allUsers = response.data;
+        } else if (response.data && response.data.content) {
+          allUsers = response.data.content;
+        } else if (response.data && response.data.data) {
+          allUsers = response.data.data;
+        }
+        
+        const filteredUsers = allUsers.filter(user => user.roleId === roleId || 
+          (user.role && (
+            (roleId === 3 && (user.role === 'STUDENT' || user.role.toLowerCase() === 'student')) || 
+            (roleId === 2 && (user.role === 'TEACHER' || user.role.toLowerCase() === 'teacher')) || 
+            (roleId === 1 && (user.role === 'ADMIN' || user.role.toLowerCase() === 'admin'))
+          ))
+        );
+        
+        console.log(`GetUsersByRole: Fallback found ${filteredUsers.length} users with role ${roleId}`);
+        return filteredUsers;
+      }
+    } catch (error) {
+      console.error('GetUsersByRole: Error in final catch block:', error);
+      throw new Error(`Failed to fetch users by role: ${error.message}`);
+    }
+  },
+  
+  /**
+   * Get students in a classroom
+   * @param {number} classroomId - The ID of the classroom
+   * @returns {Promise} Students in the classroom
+   */
+  GetClassStudents: async (classroomId) => {
+    try {
+      console.log(`GetClassStudents: Fetching students for classroom ${classroomId}`);
+      const response = await apiClient.get(`/classrooms/${classroomId}/students`);
+      console.log(`GetClassStudents: Found ${response.data.length} students in classroom ${classroomId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`GetClassStudents: Error fetching students for classroom ${classroomId}:`, error);
+      throw new Error(`Failed to fetch students for classroom ${classroomId}: ${error.message}`);
+    }
+  },
+  
+  /**
+   * Get received messages for a user
+   * @param {number} recipientId - The ID of the message recipient
+   * @returns {Promise} Messages data
+   */
+  GetReceivedMessages: async (recipientId) => {
+    try {
+      const response = await apiClient.get(`/messages/received/${recipientId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching received messages:', error);
+      throw error;
+    }
+  },
+    /**
+   * Get classrooms by teacher ID
+   * @param {number} teacherId - The ID of the teacher
+   * @returns {Promise} Classrooms data
+   */
+  GetClassroomsByTeacher: async (teacherId) => {
+    try {
+      const response = await apiClient.get(`/classrooms/teacher/${teacherId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching classrooms by teacher:', error);
+      throw error;
+    }
+  },
+  /**
+   * Get conversation between two users
+   * @param {number} userId1 - First user ID
+   * @param {number} userId2 - Second user ID
+   * @returns {Promise} Conversation data
+   */
+  GetConversation: async (userId1, userId2) => {
+    try {
+      const response = await apiClient.get(`/messages/conversation/${userId1}/${userId2}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send a message
+   * @param {Object} messageData - Message data to send
+   * @returns {Promise} Send result
+   */
+  SendMessage: async (messageData) => {
+    try {
+      const response = await apiClient.post('/api/messages/send', messageData);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark a message as read
+   * @param {number} messageId - The message ID to mark as read
+   * @returns {Promise} Update result
+   */
+  MarkMessageAsRead: async (messageId) => {
+    try {
+      const response = await apiClient.patch(`/api/messages/${messageId}/read`);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      throw error;
+    }
+  }
 };
 
 /**
@@ -265,10 +404,111 @@ class ApiService {
     } catch (error) {
       this.HandleError(error);
       throw error;
+    }  }
+
+  //  MESSAGE SERVICES 
+
+  /**
+   * Get received messages for a user
+   * @param {Number} recipientId - ID of the message recipient
+   * @returns {Promise<Array>} List of received messages
+   */
+  static async GetReceivedMessages(recipientId) {
+    try {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_RECEIVED(recipientId));
+      return response.data;
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
     }
   }
 
-  //  CLASSROOM SERVICES 
+  /**
+   * Get sent messages for a user
+   * @param {Number} senderId - ID of the message sender
+   * @returns {Promise<Array>} List of sent messages
+   */
+  static async GetSentMessages(senderId) {
+    try {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_SENT(senderId));
+      return response.data;
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get conversation between two users
+   * @param {Number} userId1 - First user ID
+   * @param {Number} userId2 - Second user ID
+   * @returns {Promise<Array>} List of messages in the conversation
+   */
+  static async GetConversation(userId1, userId2) {
+    try {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_CONVERSATION(userId1, userId2));
+      return response.data;
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
+    }
+  }
+  /**
+   * Send a new message
+   * @param {Object} messageData - Message data
+   * @returns {Promise<Object>} Sent message
+   */
+  static async SendMessage(messageData) {
+    try {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.MESSAGES_SEND, messageData);
+      return response.data;
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a message as read
+   * @param {Number} messageId - ID of the message to mark as read
+   * @returns {Promise<Object>} Response data
+   */
+  static async MarkMessageAsRead(messageId) {
+    try {
+      const response = await apiClient.put(API_CONFIG.ENDPOINTS.MESSAGES_MARK_READ(messageId));
+      return response.data;
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get classrooms by teacher ID
+   * @param {Number} teacherId - ID of the teacher
+   * @returns {Promise<Array<ClassroomModel>>} List of teacher's classrooms
+   */
+  static async GetClassroomsByTeacher(teacherId) {
+    try {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.CLASSROOMS_BY_TEACHER(teacherId));
+      
+      let classrooms = [];
+      if (Array.isArray(response.data)) {
+        classrooms = response.data;
+      } else if (response.data && response.data.content) {
+        classrooms = response.data.content;
+      } else if (response.data && response.data.data) {
+        classrooms = response.data.data;
+      }
+      
+      return ClassroomModel.fromApiArray(classrooms);
+    } catch (error) {
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  //  CLASSROOM SERVICES
 
   /**
    * Lấy danh sách lớp học
@@ -599,6 +839,36 @@ class ApiService {
       return ClassroomModel.fromApiArray(courses);
     } catch (error) {
       console.error('Error in GetTeacherCourses:', error);
+      this.HandleError(error);
+      throw error;
+    }
+  }
+  /**
+   * Lấy danh sách tin nhắn đã nhận cho người dùng
+   * @param {number} recipientId - ID của người nhận tin nhắn
+   * @returns {Promise} Dữ liệu tin nhắn
+   */
+  static async GetReceivedMessages(recipientId) {
+    try {
+      const response = await apiClient.get(`/messages/received/${recipientId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching received messages:', error);
+      this.HandleError(error);
+      throw error;
+    }
+  }
+  /**
+   * Lấy danh sách lớp học theo giảng viên
+   * @param {number} teacherId - ID của giảng viên
+   * @returns {Promise} Dữ liệu lớp học
+   */
+  static async GetClassroomsByTeacher(teacherId) {
+    try {
+      const response = await apiClient.get(`/classrooms/teacher/${teacherId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching classrooms by teacher:', error);
       this.HandleError(error);
       throw error;
     }
