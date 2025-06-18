@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Modal, 
-  Form, 
-  Input, 
-  Button, 
-  Upload, 
-  message, 
-  Select, 
-  Tabs,
-  Row,
-  Col,
-  Card,
-  Space,
-  Typography
-} from 'antd';
-import { 
-  UploadOutlined, 
-  FileTextOutlined, 
-  VideoCameraOutlined,
-  LinkOutlined,
-  CloudUploadOutlined
+import {
+    CloudUploadOutlined,
+    FileTextOutlined,
+    LinkOutlined,
+    UploadOutlined,
+    VideoCameraOutlined
 } from '@ant-design/icons';
+import {
+    Button,
+    Card,
+    Col,
+    Form,
+    Input,
+    message,
+    Modal,
+    Row,
+    Select,
+    Space,
+    Tabs,
+    Typography,
+    Upload
+} from 'antd';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { useEffect, useState } from 'react';
 import { storage } from '../../config/firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -35,6 +35,47 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+
+  // Load available courses for the teacher
+  const loadCourses = async () => {
+    try {
+      setLoadingCourses(true);
+      const token = localStorage.getItem('token');
+      
+      // Using fetch instead of axios for better error handling
+      const response = await fetch('http://localhost:8088/api/classrooms/current-teacher', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`Không thể kết nối đến server (${response.status})`);
+      }
+      
+      const data = await response.json();
+      console.log('Available courses for lecture creation:', data);
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      message.error('Không thể tải danh sách khóa học: ' + error.message);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  // Load courses when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadCourses();
+    }
+  }, [visible]);
 
   // Reset form when modal opens/closes or editingLecture changes
   useEffect(() => {
@@ -152,6 +193,14 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
         message.error('URL YouTube không hợp lệ');
         return;
       }
+      
+      // Check if we have a course ID either from props or from form selection
+      const selectedCourseId = courseId || values.courseId;
+      if (!selectedCourseId) {
+        message.error('Vui lòng chọn khóa học');
+        setLoading(false);
+        return;
+      }
 
       // Create lecture data matching backend LectureDto structure
       const lectureData = {
@@ -186,11 +235,18 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
       const isEditing = editingLecture && editingLecture.id;
       const method = isEditing ? 'PUT' : 'POST';
       const url = isEditing 
-        ? `http://localhost:8088/api/courses/${courseId}/lectures/${editingLecture.id}`
-        : `http://localhost:8088/api/courses/${courseId}/lectures`;
+        ? `http://localhost:8088/api/courses/${selectedCourseId}/lectures/${editingLecture.id}`
+        : `http://localhost:8088/api/courses/${selectedCourseId}/lectures`;
 
       // Call API to create or update lecture
       const token = localStorage.getItem('token');
+      console.log('Creating lecture with request:', {
+        url,
+        method,
+        token: token ? `Bearer ${token.substring(0, 10)}...` : 'No token',
+        data: JSON.stringify(lectureData)
+      });
+      
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -200,8 +256,12 @@ const CreateLectureModal = ({ visible, onCancel, onSuccess, courseId, editingLec
         body: JSON.stringify(lectureData)
       });
 
+      console.log('Server response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} lecture: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} lecture: ${response.status} - ${errorText}`);
       }
 
       const resultLecture = await response.json();
