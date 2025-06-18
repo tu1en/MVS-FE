@@ -3,14 +3,13 @@ import { Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 // TeacherAttendance Component
-const TeacherAttendance = ({ userId, onLogout, showMessageBox }) => {
+const TeacherAttendance = ({ onLogout, showMessageBox }) => {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [locationNetworkPassed, setLocationNetworkPassed] = useState(true);
+  const [locationNetworkPassed] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
-  const [studentList, setStudentList] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   
@@ -114,8 +113,6 @@ const TeacherAttendance = ({ userId, onLogout, showMessageBox }) => {
         
         const className = session.class;
         const students = mockStudentsByClass[className] || [];
-        
-        setStudentList(students);
         
         // Khởi tạo dữ liệu điểm danh
         const initialAttendance = students.map(student => ({

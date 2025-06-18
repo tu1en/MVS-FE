@@ -37,16 +37,12 @@ const AttendanceModule = () => {
   // State for message box
   const [messageBox, setMessageBox] = useState({ visible: false, title: '', message: '' });
 
-  const showMessageBox = (title, message) => {
-    setMessageBox({ visible: true, title, message });
-  };
-
   const closeMessageBox = () => {
     setMessageBox({ visible: false, title: '', message: '' });
   };
 
   // Login Component
-  const LoginScreen = ({ onLogin, showMessageBox }) => {
+  const LoginScreen = ({ onLogin }) => {
     const [form] = Form.useForm();
 
     const handleFormSubmit = (values) => {
@@ -189,7 +185,7 @@ const AttendanceModule = () => {
   }
 
   if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} showMessageBox={showMessageBox} />;
+    return <LoginScreen onLogin={handleLogin} />;
   }
 
   return (
@@ -198,14 +194,12 @@ const AttendanceModule = () => {
         {userRole === '2' || userRole === 'TEACHER' ? (
           <TeacherAttendance 
             userId={userId} 
-            onLogout={handleLogout} 
-            showMessageBox={showMessageBox}
+            onLogout={handleLogout}
           />
         ) : (
           <StudentAttendance 
             userId={userId} 
-            onLogout={handleLogout} 
-            showMessageBox={showMessageBox}
+            onLogout={handleLogout}
           />
         )}
         
