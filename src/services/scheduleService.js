@@ -1,4 +1,42 @@
 // scheduleService.js - Dịch vụ quản lý lịch học/dạy
+import axios from 'axios';
+
+// API Service cho lịch học/giảng dạy khi API thực sự sẵn sàng
+export const fetchTeacherSchedule = async (token) => {
+  try {
+    const response = await axios.get('/api/teacher/schedule', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching teacher schedule:', error);
+    throw error;
+  }
+};
+
+export const fetchTeacherScheduleByDay = async (token, dayOfWeek) => {
+  try {
+    const response = await axios.get(`/api/teacher/schedule/day/${dayOfWeek}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching teacher schedule by day:', error);
+    throw error;
+  }
+};
+
+export const createScheduleEntry = async (token, scheduleData) => {
+  try {
+    const response = await axios.post('/api/teacher/schedule', scheduleData, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating schedule entry:', error);
+    throw error;
+  }
+};
 
 // Dữ liệu mẫu cho lịch học/dạy (trong thực tế, dữ liệu này sẽ được lấy từ API)
 const scheduleDatabase = [
@@ -154,6 +192,11 @@ const scheduleDatabase = [
   }
 ];
 
+// Hàm lấy tất cả lịch học
+export const getSchedules = () => {
+  return scheduleDatabase;
+};
+
 // Hàm lấy lịch học cho học sinh theo ID và tuần
 export const getStudentSchedule = (studentId, weekStart) => {
   console.log(`Fetching schedule for student ${studentId} for week starting: ${weekStart}`);
@@ -175,11 +218,6 @@ export const getScheduleDetail = (scheduleId) => {
   return scheduleDatabase.find(schedule => schedule.id === scheduleId);
 };
 
-// Hàm lấy tất cả lịch học (dành cho quản lý)
-export const getSchedules = () => {
-  return scheduleDatabase;
-};
-
 // Hàm thêm lịch học mới (dành cho quản lý)
 export const addSchedule = (scheduleData) => {
   const newSchedule = {
@@ -191,21 +229,22 @@ export const addSchedule = (scheduleData) => {
 };
 
 // Hàm cập nhật lịch học (dành cho quản lý)
-export const updateSchedule = (id, scheduleData) => {
-  const index = scheduleDatabase.findIndex(schedule => schedule.id === id);
+export const updateSchedule = (scheduleId, scheduleData) => {
+  const index = scheduleDatabase.findIndex(s => s.id === scheduleId);
   if (index !== -1) {
-    scheduleDatabase[index] = { ...scheduleData, id };
+    scheduleDatabase[index] = { ...scheduleDatabase[index], ...scheduleData };
     return scheduleDatabase[index];
   }
   return null;
 };
 
 // Hàm xóa lịch học (dành cho quản lý)
-export const deleteSchedule = (id) => {
-  const index = scheduleDatabase.findIndex(schedule => schedule.id === id);
+export const deleteSchedule = (scheduleId) => {
+  const index = scheduleDatabase.findIndex(s => s.id === scheduleId);
   if (index !== -1) {
-    const deleted = scheduleDatabase.splice(index, 1)[0];
-    return deleted;
+    const deletedSchedule = scheduleDatabase[index];
+    scheduleDatabase.splice(index, 1);
+    return deletedSchedule;
   }
   return null;
 };
@@ -217,5 +256,8 @@ export default {
   getSchedules,
   addSchedule,
   updateSchedule,
-  deleteSchedule
+  deleteSchedule,
+  fetchTeacherSchedule,
+  fetchTeacherScheduleByDay,
+  createScheduleEntry
 };
