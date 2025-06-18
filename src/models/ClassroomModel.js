@@ -9,15 +9,18 @@ class ClassroomModel {
   constructor(classroomData = {}) {
     this.id = classroomData.id || null;
     this.name = classroomData.name || '';
-    this.teacherId = classroomData.teacherId || null;
+    this.teacherId = classroomData.teacherId || classroomData.teacher_id || null;
     this.description = classroomData.description || '';
     this.code = classroomData.code || '';
+    this.section = classroomData.section || '';
+    this.subject = classroomData.subject || '';
     this.students = classroomData.students || [];
+    this.enrolledStudents = classroomData.enrolledStudents || [];
     this.assignments = classroomData.assignments || [];
+    this.syllabus = classroomData.syllabus || null;
     this.createdAt = classroomData.createdAt ? new Date(classroomData.createdAt) : new Date();
     this.updatedAt = classroomData.updatedAt ? new Date(classroomData.updatedAt) : new Date();
   }
-
   /**
    * Chuyển đổi đối tượng ClassroomModel thành đối tượng để gửi lên API
    * @returns {Object} Đối tượng để gửi lên API
@@ -28,7 +31,9 @@ class ClassroomModel {
       name: this.name,
       teacherId: this.teacherId,
       description: this.description,
-      code: this.code
+      code: this.code,
+      section: this.section,
+      subject: this.subject
     };
   }
 

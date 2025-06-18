@@ -12,6 +12,32 @@ module.exports = {
           text: '#1E3A8A',    // Dark blue for text
         },
       },
+      fontFamily: {
+        sans: [
+          'Inter',
+          'Roboto', 
+          'Noto Sans', // Noto Sans có hỗ trợ Tiếng Việt tốt
+          'Roboto Condensed', // Tốt cho hiển thị trong UI
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          '"Helvetica Neue"',
+          'Arial',
+          'sans-serif',
+          '"Apple Color Emoji"',
+          '"Segoe UI Emoji"',
+          '"Segoe UI Symbol"',
+        ],
+        mono: [
+          'Fira Code',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Consolas',
+          'Liberation Mono',
+          'Menlo',
+          'monospace',
+        ],
+      },
     },
   },
   plugins: [],
