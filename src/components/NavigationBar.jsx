@@ -553,6 +553,13 @@ function NavigationBar() {
                 <span>Báo Cáo</span>
               </button>
             )}
+            <button 
+              className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
+              onClick={() => navigate('/change-password')}
+            >
+              <span className="mr-3 text-xl">🔑</span>
+              <span>Đổi Mật Khẩu</span>
+            </button>
             <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
               <span className="mr-3 text-xl">⚙️</span>
               <span>Cài Đặt</span>
