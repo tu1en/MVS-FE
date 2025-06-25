@@ -46,7 +46,7 @@ const API_CONFIG = {
     ATTENDANCE: "/attendance",
     ATTENDANCE_SESSIONS: "/attendance/sessions",    ATTENDANCE_SESSIONS_TEACHER: "/attendance/sessions/teacher",
     ATTENDANCE_TEACHER: "/attendance/teacher",
-    ATTENDANCE_STUDENT: "/attendance/student",
+    ATTENDANCE_STUDENT: "/attendance/student/view",
     ATTENDANCE_SESSION_BY_ID: (sessionId) => `/attendance/sessions/${sessionId}`,
     ATTENDANCE_SESSION_STATUS: (sessionId) => `/attendance/sessions/${sessionId}/status`,
     ATTENDANCE_MARK: (sessionId) => `/attendance/sessions/${sessionId}/mark`,    // Teacher specific endpoints
@@ -56,8 +56,8 @@ const API_CONFIG = {
     TEACHER_PROFILE: "/teacher/profile",    // Message endpoints
     MESSAGES_RECEIVED: (recipientId) => `/messages/received/${recipientId}`,
     MESSAGES_SENT: (senderId) => `/messages/sent/${senderId}`,
-    MESSAGES_CONVERSATION: (userId1, userId2) => `/messages/conversation/${userId1}/${userId2}`,
-    MESSAGES_SEND: "/messages",
+    MESSAGES_CONVERSATION: (userId1, userId2) => `/student-messages/conversation/${userId1}/${userId2}`,
+    MESSAGES_SEND: "/student-messages/send",
     MESSAGES_MARK_READ: (messageId) => `/messages/${messageId}/read`,
 
     // Classroom by teacher endpoints

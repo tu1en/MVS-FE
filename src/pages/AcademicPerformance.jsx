@@ -1,13 +1,7 @@
-import { Card, Table, Statistic, Row, Col } from 'antd';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
-const data = [
-  { subject: 'Toán', score: 8.2 },
-  { subject: 'Văn', score: 7.5 },
-  { subject: 'Lý', score: 9.0 },
-  { subject: 'Hóa', score: 6.8 },
-  { subject: 'Anh', score: 8.9 },
-];
+import { Card, Col, Empty, message, Row, Spin, Statistic, Table } from 'antd';
+import { useEffect, useState } from 'react';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import academicPerformanceService from '../services/academicPerformanceService';
 
 const columns = [
   {
@@ -25,10 +19,10 @@ const columns = [
   {
     title: '🏅 Xếp loại',
     key: 'rank',
-    render: (_, record) => {
-      const s = record.score;
-      if (s >= 8.5) return <span className="text-green-600 font-semibold">Giỏi</span>;
-      if (s >= 6.5) return <span className="text-yellow-600 font-semibold">Khá</span>;
+    dataIndex: 'rank',
+    render: (rank) => {
+      if (rank === 'Giỏi') return <span className="text-green-600 font-semibold">Giỏi</span>;
+      if (rank === 'Khá') return <span className="text-yellow-600 font-semibold">Khá</span>;
       return <span className="text-red-500 font-semibold">Trung bình</span>;
     },
   },
@@ -37,7 +31,44 @@ const columns = [
 const colors = ['#1677ff', '#52c41a', '#faad14', '#722ed1', '#eb2f96'];
 
 export default function AcademicPerformance() {
-  const avgScore = (data.reduce((acc, cur) => acc + cur.score, 0) / data.length).toFixed(2);
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState([]);
+  const [avgScore, setAvgScore] = useState(0);
+
+  useEffect(() => {
+    const fetchAcademicPerformance = async () => {
+      try {
+        setLoading(true);
+        const response = await academicPerformanceService.getAcademicPerformance();
+        
+        if (response && response.subjects) {
+          setData(response.subjects);
+          setAvgScore(response.averageScore);
+        } else {
+          message.error('Không thể tải dữ liệu học tập');
+          setData([]);
+          setAvgScore(0);
+        }
+      } catch (error) {
+        console.error('Error fetching academic performance:', error);
+        message.error('Đã xảy ra lỗi khi tải dữ liệu học tập');
+        setData([]);
+        setAvgScore(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAcademicPerformance();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <Spin size="large" tip="Đang tải dữ liệu học tập..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-6 py-10 bg-gradient-to-br from-[#e0f7ff] to-[#f5f7fa]">
@@ -97,38 +128,46 @@ export default function AcademicPerformance() {
           </Col>
         </Row>
 
-        {/* Chart */}
-        <Card
-          title="🔍 Biểu đồ điểm theo môn học"
-          className="rounded-xl shadow-sm border border-gray-100"
-        >
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={data}>
-              <XAxis dataKey="subject" />
-              <YAxis domain={[0, 10]} />
-              <Tooltip />
-              <Bar dataKey="score" barSize={40}>
-                {data.map((_, index) => (
-                  <Cell key={index} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+        {data.length > 0 ? (
+          <>
+            {/* Chart */}
+            <Card
+              title="🔍 Biểu đồ điểm theo môn học"
+              className="rounded-xl shadow-sm border border-gray-100"
+            >
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={data}>
+                  <XAxis dataKey="subject" />
+                  <YAxis domain={[0, 10]} />
+                  <Tooltip />
+                  <Bar dataKey="score" barSize={40}>
+                    {data.map((_, index) => (
+                      <Cell key={index} fill={colors[index % colors.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
 
-        {/* Table */}
-        <Card
-          title="📋 Bảng chi tiết điểm từng môn"
-          className="rounded-xl shadow-sm border border-gray-100"
-        >
-          <Table
-            columns={columns}
-            dataSource={data}
-            rowKey="subject"
-            pagination={false}
-            className="text-base"
-          />
-        </Card>
+            {/* Table */}
+            <Card
+              title="📋 Bảng chi tiết điểm từng môn"
+              className="rounded-xl shadow-sm border border-gray-100"
+            >
+              <Table
+                columns={columns}
+                dataSource={data}
+                rowKey="subject"
+                pagination={false}
+                className="text-base"
+              />
+            </Card>
+          </>
+        ) : (
+          <Card className="rounded-xl shadow-sm border border-gray-100">
+            <Empty description="Không có dữ liệu học tập" />
+          </Card>
+        )}
       </div>
     </div>
   );

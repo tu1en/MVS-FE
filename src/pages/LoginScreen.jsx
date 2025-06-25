@@ -1,33 +1,32 @@
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useDispatch } from 'react-redux';
+import RegisterModal from '../components/RegisterModal';
 import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
 import { ROLE } from '../constants/constants';
 import { loginSuccess } from '../store/slices/authSlice';
-import RegisterModal from '../components/RegisterModal';
+import { getNormalizedRole } from '../utils/authUtils';
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
-  const [loi, setLoi] = useState(null);
-  const [dangDangNhap, setDangDangNhap] = useState(false);
+  const [loi, setLoi] = useState(null);  const [dangDangNhap, setDangDangNhap] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [googleEmail, setGoogleEmail] = useState(''); // Lưu email Google khi đăng nhập thất bại
   const navigate = useNavigate();
 
-  const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
-  
-  const handleSubmit = async (e) => {
+  // Use relative path for proxy to work correctly
+    const handleSubmit = async (e) => {
     e.preventDefault();
     setLoi(null);
     setDangDangNhap(true);
-    console.log('Đang đăng nhập với:', email, 'URL:', `${baseUrl}/auth/login`);
+    console.log('Đang đăng nhập với:', email, 'URL:', 'http://localhost:8088/api/auth/login');
     
     try {
-      const res = await fetch(`${baseUrl}/auth/login`, {
+      const res = await fetch('http://localhost:8088/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -49,14 +48,28 @@ export default function LoginScreen() {
           return;
         }
         
+        // Normalize role for consistency
+        const normalizedRole = getNormalizedRole(data.role);
+        
         localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
+        localStorage.setItem('role', normalizedRole);
         localStorage.setItem('userId', data.userId);
-        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
+        if (data.email || email) {
+          localStorage.setItem('email', data.email || email);
+        }
+        
+        // Dispatch to Redux with all available data
+        dispatch(loginSuccess({ 
+          token: data.token, 
+          role: normalizedRole, 
+          userId: data.userId,
+          email: data.email || email 
+        }));
+        
         toast.success('Đăng nhập thành công!');
 
-        console.log('Navigating based on role:', data.role);
-        switch (data.role) {
+        console.log('Navigating based on role:', normalizedRole);
+        switch (normalizedRole) {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;
@@ -70,7 +83,7 @@ export default function LoginScreen() {
             navigate('/manager');
             break;
           default:
-            console.warn('Unknown role:', data.role);
+            console.warn('Unknown role:', normalizedRole);
             navigate('/');
         }
       } else {
@@ -87,13 +100,20 @@ export default function LoginScreen() {
         }
         setEmail('');
         setMatKhau('');
-      }
-    } catch (err) {
+      }    } catch (err) {
       console.error('Lỗi đăng nhập:', err);
-      setLoi('Đã xảy ra lỗi khi đăng nhập');
-      toast.error('Đã xảy ra lỗi khi đăng nhập!');
-      setEmail('');
-      setMatKhau('');
+      
+      // Handle different types of errors
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setLoi('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+        toast.error('Lỗi kết nối mạng. Vui lòng thử lại sau.');
+      } else if (err.name === 'AbortError') {
+        setLoi('Yêu cầu đăng nhập bị hủy. Vui lòng thử lại.');
+        toast.error('Yêu cầu bị hủy. Vui lòng thử lại.');
+      } else {
+        setLoi('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
+        toast.error('Đã xảy ra lỗi khi đăng nhập!');
+      }
     } finally {
       setDangDangNhap(false);
     }
@@ -115,8 +135,8 @@ export default function LoginScreen() {
       console.log('Obtained Google ID token:', idToken.substring(0, 20) + '...');
       
       // 3. Send to backend for verification
-      console.log('Sending token to backend for verification...', `${baseUrl}/auth/google-login`);
-      const res = await fetch(`${baseUrl}/auth/google-login`, {
+      console.log('Sending token to backend for verification...', 'http://localhost:8088/api/auth/google-login');
+      const res = await fetch('http://localhost:8088/api/auth/google-login', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -142,20 +162,23 @@ export default function LoginScreen() {
           throw new Error('Missing token or role in response');
         }
         
+        // Normalize role for consistency
+        const normalizedRole = getNormalizedRole(data.role);
+        
         localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
+        localStorage.setItem('role', normalizedRole);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('email', user.email); // Store email for form autofill
-        dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
+        dispatch(loginSuccess({ token: data.token, role: normalizedRole, userId: data.userId }));
         console.log('Token and role stored in localStorage');
         
         // 6. Verify navigation
-        console.log(`Navigating to ${data.role} dashboard...`);
-        switch (data.role) {
+        console.log(`Navigating to ${normalizedRole} dashboard...`);
+        switch (normalizedRole) {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;
-            case ROLE.MANAGER: //MANAGER
+          case ROLE.MANAGER: //MANAGER
             navigate('/manager');
             break;
           case ROLE.TEACHER: //TEACHER

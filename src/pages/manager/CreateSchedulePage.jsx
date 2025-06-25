@@ -82,12 +82,11 @@ function CreateSchedulePage() {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', background: '#f5f5f5', padding: '32px 0' }}>
-      <Card
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', background: '#f5f5f5', padding: '32px 0' }}>      <Card
         title={<span style={{ fontSize: 22, fontWeight: 600 }}>Tạo lịch học mới</span>}
         variant="borderless"
         style={{ maxWidth: 700, width: '100%', boxShadow: '0 2px 12px #00000014', borderRadius: 12 }}
-        bodyStyle={{ padding: 32 }}
+        styles={{ body: { padding: 32 } }}
       >
         <Form
           form={form}

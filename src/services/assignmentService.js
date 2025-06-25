@@ -1,11 +1,7 @@
 import axios from 'axios';
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:8088/api';
-
-// Create axios instance with base configuration
+// Use relative paths for API calls to work with proxy
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
   timeout: 10000, // 10 seconds timeout
 });
 
@@ -42,7 +38,7 @@ class AssignmentService {
    */
   static async getAllAssignments() {
     try {
-      const response = await apiClient.get('/assignments');
+      const response = await apiClient.get('/api/assignments');
       // Handle different response structures
       let data = response.data;
       if (data && data.data) {
@@ -67,7 +63,7 @@ class AssignmentService {
       if (!classroomId) {
         throw new Error('Classroom ID is required');
       }
-      const response = await apiClient.get(`/assignments/classroom/${classroomId}`);
+      const response = await apiClient.get(`/api/assignments/classroom/${classroomId}`);
       // Handle different response structures
       let data = response.data;
       if (data && data.data) {
@@ -91,7 +87,8 @@ class AssignmentService {
       if (!studentId) {
         throw new Error('Student ID is required');
       }
-      const response = await apiClient.get(`/assignments/student/${studentId}`);
+      // Use the working endpoint from dashboard
+      const response = await apiClient.get(`/api/v1/assignments/student`);
       return response.data || [];
     } catch (error) {
       console.error(`Error fetching assignments for student ${studentId}:`, error);
@@ -109,7 +106,7 @@ class AssignmentService {
       if (!assignmentData || !assignmentData.title || !assignmentData.dueDate) {
         throw new Error('Invalid assignment data. Title and due date are required.');
       }
-      const response = await apiClient.post('/assignments', assignmentData);
+      const response = await apiClient.post('/api/assignments', assignmentData);
       return response.data;
     } catch (error) {
       console.error('Error creating assignment:', error);
@@ -128,7 +125,7 @@ class AssignmentService {
       if (!assignmentId || !assignmentData) {
         throw new Error('Assignment ID and data are required');
       }
-      const response = await apiClient.put(`/assignments/${assignmentId}`, assignmentData);
+      const response = await apiClient.put(`/api/assignments/${assignmentId}`, assignmentData);
       return response.data;
     } catch (error) {
       console.error(`Error updating assignment ${assignmentId}:`, error);
@@ -146,7 +143,7 @@ class AssignmentService {
       if (!assignmentId) {
         throw new Error('Assignment ID is required');
       }
-      await apiClient.delete(`/assignments/${assignmentId}`);
+      await apiClient.delete(`/api/assignments/${assignmentId}`);
       return true;
     } catch (error) {
       console.error(`Error deleting assignment ${assignmentId}:`, error);
@@ -164,7 +161,7 @@ class AssignmentService {
       if (!assignmentId) {
         throw new Error('Assignment ID is required');
       }
-      const response = await apiClient.get(`/assignments/${assignmentId}/submissions`);
+      const response = await apiClient.get(`/api/assignments/${assignmentId}/submissions`);
       return response.data || [];
     } catch (error) {
       console.error(`Error fetching submissions for assignment ${assignmentId}:`, error);
@@ -182,7 +179,7 @@ class AssignmentService {
       if (!studentId) {
         throw new Error('Student ID is required');
       }
-      const response = await apiClient.get(`/submissions/student/${studentId}`);
+      const response = await apiClient.get(`/api/submissions/student/${studentId}`);
       return response.data || [];
     } catch (error) {
       console.error(`Error fetching submissions for student ${studentId}:`, error);
@@ -200,7 +197,7 @@ class AssignmentService {
       if (!submissionData || !submissionData.assignmentId || !submissionData.studentId) {
         throw new Error('Invalid submission data. Assignment ID and student ID are required.');
       }
-      const response = await apiClient.post('/submissions', submissionData);
+      const response = await apiClient.post('/api/submissions', submissionData);
       return response.data;
     } catch (error) {
       console.error('Error submitting assignment:', error);
@@ -219,7 +216,7 @@ class AssignmentService {
       if (!assignmentId || !gradeData) {
         throw new Error('Assignment ID and grade data are required');
       }
-      const response = await apiClient.post(`/assignments/${assignmentId}/grade`, gradeData);
+      const response = await apiClient.post(`/api/assignments/${assignmentId}/grade`, gradeData);
       return response.data;
     } catch (error) {
       console.error('Error grading submission:', error);
@@ -237,7 +234,7 @@ class AssignmentService {
       if (!formData) {
         throw new Error('Form data is required');
       }
-      const response = await apiClient.post('/files/upload', formData, {
+      const response = await apiClient.post('/api/files/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -255,7 +252,7 @@ class AssignmentService {
    */
   static async seedAssignmentData(mockData) {
     try {
-      const response = await apiClient.post('/assignments/seed', mockData || {});
+      const response = await apiClient.post('/api/assignments/seed', mockData || {});
       return response.data;
     } catch (error) {
       console.error('Error seeding assignment data:', error);
@@ -274,7 +271,7 @@ class AssignmentService {
         throw new Error('Teacher ID is required');
       }
       // Use the backend endpoint that expects teacher ID in the path
-      const response = await apiClient.get(`/assignments/teacher/${teacherId}`);
+      const response = await apiClient.get(`/api/assignments/teacher/${teacherId}`);
       return response.data || [];
     } catch (error) {
       console.error(`Error fetching assignments for teacher ${teacherId}:`, error);
@@ -289,13 +286,85 @@ class AssignmentService {
   static async getCurrentTeacherAssignments() {
     try {
       // Use the bridge endpoint that extracts teacher ID from JWT token
-      const response = await apiClient.get('/assignments/current-teacher');
+      const response = await apiClient.get('/api/assignments/current-teacher');
       return response.data || [];
     } catch (error) {
       console.error('Error fetching current teacher assignments:', error);
       return [];
     }
   }
+
+  /**
+   * Get upcoming assignments for a student
+   * @param {number} studentId - Student ID
+   * @returns {Promise<Array>} Upcoming assignments list
+   */
+  static async getUpcomingAssignments(studentId) {
+    try {
+      if (!studentId) {
+        throw new Error('Student ID is required');
+      }
+      // Get all assignments for student and filter upcoming ones on frontend
+      const allAssignments = await this.getAssignmentsByStudent(studentId);
+      
+      // Ensure we have an array to work with
+      if (!Array.isArray(allAssignments)) {
+        console.warn('getAssignmentsByStudent did not return an array:', allAssignments);
+        return [];
+      }
+      
+      const now = new Date();
+      
+      // Filter for upcoming assignments (due date is in the future)
+      const upcomingAssignments = allAssignments.filter(assignment => {
+        if (!assignment.dueDate) return false;
+        const dueDate = new Date(assignment.dueDate);
+        return dueDate > now;
+      });
+      
+      // Sort by due date ascending (earliest first)
+      return upcomingAssignments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    } catch (error) {
+      console.error(`Error fetching upcoming assignments for student ${studentId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get past assignments for a student
+   * @param {number} studentId - Student ID
+   * @returns {Promise<Array>} Past assignments list
+   */
+  static async getPastAssignments(studentId) {
+    try {
+      if (!studentId) {
+        throw new Error('Student ID is required');
+      }
+      // Get all assignments for student and filter past ones on frontend
+      const allAssignments = await this.getAssignmentsByStudent(studentId);
+      
+      // Ensure we have an array to work with
+      if (!Array.isArray(allAssignments)) {
+        console.warn('getAssignmentsByStudent did not return an array:', allAssignments);
+        return [];
+      }
+      
+      const now = new Date();
+      
+      // Filter for past assignments (due date is in the past)
+      const pastAssignments = allAssignments.filter(assignment => {
+        if (!assignment.dueDate) return false;
+        const dueDate = new Date(assignment.dueDate);
+        return dueDate <= now;
+      });
+      
+      // Sort by due date descending (most recent first)
+      return pastAssignments.sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
+    } catch (error) {
+      console.error(`Error fetching past assignments for student ${studentId}:`, error);
+      return [];
+    }
+  }
 }
 
-export default AssignmentService; 
+export default AssignmentService;
