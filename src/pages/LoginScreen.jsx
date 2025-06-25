@@ -51,7 +51,7 @@ export default function LoginScreen() {
         // Normalize role for consistency
         const normalizedRole = getNormalizedRole(data.role);
         
-        localStorage.setItem('token', data.token);
+          localStorage.setItem('token', data.token);
         localStorage.setItem('role', normalizedRole);
         localStorage.setItem('userId', data.userId);
         if (data.email || email) {
@@ -178,7 +178,7 @@ export default function LoginScreen() {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;
-          case ROLE.MANAGER: //MANAGER
+            case ROLE.MANAGER: //MANAGER
             navigate('/manager');
             break;
           case ROLE.TEACHER: //TEACHER
