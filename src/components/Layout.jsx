@@ -21,10 +21,19 @@ function Layout({ children }) {
   // Check login status from both Redux and localStorage for reliability
   useEffect(() => {
     const token = localStorage.getItem('token');
-    setIsUserLoggedIn(isLogin || !!token);
+    const hasValidToken = !!token;
+    const reduxLoginIsTrue = isLogin === true;
+    
+    // User is logged in if either redux state is true OR valid token exists
+    const userLoggedIn = reduxLoginIsTrue || hasValidToken;
+    setIsUserLoggedIn(userLoggedIn);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('Layout login status:', { reduxLogin: isLogin, tokenExists: !!token });
+      console.log('Layout login status:', { 
+        reduxLogin: isLogin, 
+        tokenExists: hasValidToken, 
+        finalStatus: userLoggedIn 
+      });
     }
   }, [isLogin]);
 

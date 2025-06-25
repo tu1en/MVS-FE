@@ -33,7 +33,6 @@ import {
 } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -412,25 +411,26 @@ function AttendancePageNew() {
               />
             </Card>
           </Col>
-        </Row>
-        
-        <Tabs defaultActiveKey="active" items={[
-          {
-            key: "active",
-            label: "Đang diễn ra",
-            children: renderTeacherSessionsList(sessions.filter(session => session.status === 'ACTIVE'))
-          },
-          {
-            key: "upcoming",
-            label: "Sắp tới",
-            children: renderTeacherSessionsList(sessions.filter(session => session.status === 'PENDING'))
-          },
-          {
-            key: "ended",
-            label: "Đã kết thúc",
-            children: renderTeacherSessionsList(sessions.filter(session => session.status === 'ENDED'))
-          }
-        ]} />
+        </Row>          <Tabs 
+            defaultActiveKey="active"
+            items={[
+              {
+                key: 'active',
+                label: 'Đang diễn ra',
+                children: renderTeacherSessionsList(sessions.filter(session => session?.status === 'ACTIVE'))
+              },
+              {
+                key: 'upcoming',
+                label: 'Sắp tới',
+                children: renderTeacherSessionsList(sessions.filter(session => session?.status === 'PENDING'))
+              },
+              {
+                key: 'ended',
+                label: 'Đã kết thúc',
+                children: renderTeacherSessionsList(sessions.filter(session => session?.status === 'ENDED'))
+              }
+            ]}
+          />
       </div>
     );
   };
@@ -548,25 +548,26 @@ function AttendancePageNew() {
             <Tag color="blue" style={{ marginRight: 8, fontSize: '14px' }}>HỌC SINH</Tag>
             Điểm danh
           </Title>
-        </div>
-        
-        <Tabs defaultActiveKey="active" items={[
-          {
-            key: "active",
-            label: "Đang diễn ra",
-            children: renderStudentSessionsList(sessions.filter(session => session.status === 'ACTIVE'))
-          },
-          {
-            key: "upcoming",
-            label: "Sắp tới",
-            children: renderStudentSessionsList(sessions.filter(session => session.status === 'PENDING'))
-          },
-          {
-            key: "history",
-            label: "Lịch sử điểm danh",
-            children: renderStudentAttendanceHistory()
-          }
-        ]} />
+        </div>          <Tabs 
+            defaultActiveKey="active"
+            items={[
+              {
+                key: 'active',
+                label: 'Đang diễn ra',
+                children: renderStudentSessionsList(sessions.filter(session => session?.status === 'ACTIVE'))
+              },
+              {
+                key: 'upcoming',
+                label: 'Sắp tới',
+                children: renderStudentSessionsList(sessions.filter(session => session?.status === 'PENDING'))
+              },
+              {
+                key: 'history',
+                label: 'Lịch sử điểm danh',
+                children: renderStudentAttendanceHistory()
+              }
+            ]}
+          />
       </div>
     );
   };

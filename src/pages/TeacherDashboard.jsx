@@ -8,13 +8,14 @@ import {
     TeamOutlined,
     VideoCameraOutlined
 } from '@ant-design/icons';
-import { Card, Col, Row, Spin, Statistic, message } from 'antd';
+import { App, Card, Col, Row, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
 import api from '../services/api';
 
 export default function TeacherDashboard() {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({

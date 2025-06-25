@@ -62,13 +62,11 @@ const TeacherCoursesSimple = () => {
     loadTeacherCourses();
   };
   
-  const handleCourseCreated = (newCourse) => {
+  const handleCourseSuggested = (newCourse) => {
     setShowCreateCourseModal(false);
-    // Add the new course to the courses list and show a success message
-    setCourses(prevCourses => [newCourse, ...prevCourses]);
     
-    // Update UI to reflect the new course
-    message.success(`Khóa học "${newCourse.name}" đã được tạo thành công!`);
+    // Show a success message
+    message.success(`Đề xuất khóa học "${newCourse.name}" đã được gửi thành công!`);
     
     // Optional: Reload all courses to ensure data consistency
     setTimeout(() => {
@@ -115,13 +113,13 @@ const TeacherCoursesSimple = () => {
             onClick={() => setShowCreateCourseModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
           >
-            <span className="text-sm">📋</span>
-            Tạo khóa học mới
+            <span className="text-sm">📝</span>
+            Đề xuất khóa học mới
           </button>
           <button 
             onClick={() => {
               if (courses.length === 0) {
-                message.warning("Bạn cần tạo khóa học trước khi tạo bài giảng!");
+                message.warning("Bạn cần có khóa học trước khi tạo bài giảng!");
               } else if (courses.length === 1) {
                 // If there's only one course, select it automatically
                 setSelectedCourseId(courses[0].id);
@@ -148,6 +146,18 @@ const TeacherCoursesSimple = () => {
       {courses.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500 mb-4">Chưa có khóa học nào được phân công.</p>
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg max-w-lg mx-auto">
+            <h3 className="text-lg font-semibold text-yellow-700 mb-2">Thông báo</h3>
+            <p className="text-yellow-600">
+              Giáo viên không thể trực tiếp tạo khóa học. Bạn có thể gửi đề xuất khóa học mới kèm theo thời gian không thể dạy để nhà trường xem xét và sắp xếp lịch phù hợp.
+            </p>
+            <button 
+              onClick={() => setShowCreateCourseModal(true)}
+              className="mt-3 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+            >
+              Đề xuất khóa học mới
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -226,9 +236,16 @@ const TeacherCoursesSimple = () => {
         </div>
       )}
 
+      <div className="mt-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-blue-700 mb-2">Lưu ý về đề xuất khóa học</h3>
+        <p className="text-blue-600">
+          Giáo viên không thể trực tiếp tạo khóa học. Khi bạn đề xuất khóa học mới, vui lòng cung cấp thông tin về thời gian không thể dạy để nhà trường xem xét và sắp xếp lịch phù hợp.
+        </p>
+      </div>
+
       {/* Create Lecture Modal */}
       <CreateLectureModal
-        visible={showCreateModal}
+        open={showCreateModal}
         onCancel={() => {
           setShowCreateModal(false);
           setSelectedCourseId(null);
@@ -237,11 +254,11 @@ const TeacherCoursesSimple = () => {
         courseId={selectedCourseId}
       />
       
-      {/* Create Course Modal */}
+      {/* Suggest Course Modal */}
       <CourseCreationModal
         visible={showCreateCourseModal}
         onCancel={() => setShowCreateCourseModal(false)}
-        onSuccess={handleCourseCreated}
+        onSuccess={handleCourseSuggested}
       />
     </div>
   );

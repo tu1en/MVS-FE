@@ -136,11 +136,33 @@ export const unpublishBlog = async (id) => {
  */
 export const searchBlogs = async (keyword) => {
   try {
-    const response = await apiClient.get(`${API_URL}/search?keyword=${keyword}`);
+    // Handle empty search
+    if (!keyword || keyword.trim() === '') {
+      // Return published blogs instead
+      return await getPublishedBlogs();
+    }
+    
+    // Properly encode the keyword for URL to handle Vietnamese characters
+    const encodedKeyword = encodeURIComponent(keyword.trim());
+    console.log(`Searching with encoded keyword: ${encodedKeyword}`);
+    
+    const response = await apiClient.get(`${API_URL}/search?keyword=${encodedKeyword}`, {
+      // Increase timeout for search queries that might take longer
+      timeout: 15000,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json; charset=utf-8',
+      }
+    });
+    
+    // Validate response data
+    if (!response.data) return [];
+    console.log(`Search complete, found ${response.data.length} results`);
     return response.data;
   } catch (error) {
     console.error(`Error searching blogs with keyword "${keyword}":`, error);
-    throw error;
+    // Return empty array instead of throwing error to prevent UI crashes
+    return [];
   }
 };
 

@@ -1,5 +1,5 @@
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
+import { Button, Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 // TeacherAttendance Component
@@ -14,31 +14,24 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   
   // --- Mock Data ---
-  // Mock students per class for demonstration
+  // Mock students by class
   const mockStudentsByClass = {
     'KTPM1': [
-      { id: 'SV001', userId: 'SV001', name: 'Nguyễn Văn A', studentCode: 'SV001', class: 'KTPM1' },
-      { id: 'SV002', userId: 'SV002', name: 'Trần Thị B', studentCode: 'SV002', class: 'KTPM1' },
-      { id: 'SV003', userId: 'SV003', name: 'Lê Hữu C', studentCode: 'SV003', class: 'KTPM1' },
-      { id: 'SV004', userId: 'SV004', name: 'Phạm Thị D', studentCode: 'SV004', class: 'KTPM1' },
-      { id: 'SV005', userId: 'SV005', name: 'Hoàng Minh E', studentCode: 'SV005', class: 'KTPM1' },
+      { id: '1', userId: '101', name: 'Nguyễn Văn A', studentCode: 'SV001' },
+      { id: '2', userId: '102', name: 'Trần Thị B', studentCode: 'SV002' },
+      { id: '3', userId: '103', name: 'Lê Văn C', studentCode: 'SV003' },
     ],
     'CNTT2': [
-      { id: 'SV006', userId: 'SV006', name: 'Vũ Thị F', studentCode: 'SV006', class: 'CNTT2' },
-      { id: 'SV007', userId: 'SV007', name: 'Đặng Văn G', studentCode: 'SV007', class: 'CNTT2' },
-      { id: 'SV008', userId: 'SV008', name: 'Phan Thị H', studentCode: 'SV008', class: 'CNTT2' },
+      { id: '4', userId: '104', name: 'Phạm Thị D', studentCode: 'SV004' },
+      { id: '5', userId: '105', name: 'Hoàng Văn E', studentCode: 'SV005' },
     ],
     'QTKD3': [
-      { id: 'SV009', userId: 'SV009', name: 'Ngô Minh I', studentCode: 'SV009', class: 'QTKD3' },
-      { id: 'SV010', userId: 'SV010', name: 'Bùi Thị K', studentCode: 'SV010', class: 'QTKD3' },
-      { id: 'SV011', userId: 'SV011', name: 'Trịnh Văn L', studentCode: 'SV011', class: 'QTKD3' },
-      { id: 'SV012', userId: 'SV012', name: 'Đỗ Thị M', studentCode: 'SV012', class: 'QTKD3' },
-      { id: 'SV013', userId: 'SV013', name: 'Cao Văn N', studentCode: 'SV013', class: 'QTKD3' },
-      { id: 'SV014', userId: 'SV014', name: 'Dương Thị O', studentCode: 'SV014', class: 'QTKD3' },
-      { id: 'SV015', userId: 'SV015', name: 'Nguyễn Văn P', studentCode: 'SV015', class: 'QTKD3' },
-    ],
+      { id: '6', userId: '106', name: 'Ngô Thị F', studentCode: 'SV006' },
+      { id: '7', userId: '107', name: 'Đặng Văn G', studentCode: 'SV007' },
+      { id: '8', userId: '108', name: 'Vũ Thị H', studentCode: 'SV008' },
+    ]
   };
-
+  
   // Mock timetable data
   const mockTimetable = [
     {

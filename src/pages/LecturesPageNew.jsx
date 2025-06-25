@@ -1,104 +1,32 @@
 import {
     CheckOutlined,
-    DeleteOutlined,
-    EditOutlined,
     EyeOutlined,
     LinkOutlined,
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
     PlusOutlined,
-    UploadOutlined,
-    VideoCameraOutlined
+    UploadOutlined
 } from '@ant-design/icons';
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
+    App,
     Button,
     Card,
-    Col,
-    Collapse,
-    Dropdown,
     Empty,
     Form,
     Input,
     List,
-    Menu,
-    message,
     Modal,
-    Progress,
-    Row,
+    Select,
     Space,
     Spin,
-    Statistic,
     Tag,
     Typography,
     Upload
 } from 'antd';
 import { useEffect, useState } from 'react';
 import CreateLectureModal from '../components/teacher/CreateLectureModal';
+import apiClient from '../services/apiClient';
 
 const { Title, Text, Paragraph } = Typography;
-// const { TabPane } = Tabs; // Unused
-const { Panel } = Collapse;
 const { TextArea } = Input;
-
-/**
- * Draggable panel component for lecture items
- */
-const SortablePanel = ({ lecture, children, onEdit, onDelete, isTeacher }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: lecture.id.toString(),
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Panel
-        key={lecture.id}
-        header={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              {isTeacher && <MenuUnfoldOutlined style={{ marginRight: 8, cursor: 'grab' }} />}
-              <span>{lecture.title}</span>
-            </div>
-            <Space>
-              <Tag color="blue">📄 {lecture.materials.filter(m => m.type === 'pdf' || m.type === 'doc').length}</Tag>
-              <Tag color="green">🎬 {lecture.materials.filter(m => m.type === 'video').length}</Tag>
-              {isTeacher && (
-                <Space>
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(lecture);
-                    }}
-                  />
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(lecture);
-                    }}
-                  />
-                </Space>
-              )}
-            </Space>
-          </div>
-        }
-      >
-        {children}
-      </Panel>
-    </div>
-  );
-};
 
 /**
  * LecturesPageNew component for managing course lectures and materials with separate teacher and student views
@@ -111,20 +39,22 @@ function LecturesPageNew() {
   const [lectureModalVisible, setLectureModalVisible] = useState(false);
   const [materialModalVisible, setMaterialModalVisible] = useState(false);
   const [currentLectureId, setCurrentLectureId] = useState(null);
-  const [currentMaterial, setCurrentMaterial] = useState(null);
+  const [currentMaterial, setCurrentMaterial] = useState(null);  
   const [materialModalMode, setMaterialModalMode] = useState('add'); // 'add' or 'edit'
   const [fileList, setFileList] = useState([]);
-  // const [courseList, setCourseList] = useState([]); // Unused
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [form] = Form.useForm();
   const [materialForm] = Form.useForm();
   const [viewMaterialVisible, setViewMaterialVisible] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  
+  // Get App context for message and modal
+  const { message, modal } = App.useApp();
   
   // Get user info from localStorage
   const userId = localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('role');
 
   // Debug logging for role detection
@@ -135,115 +65,98 @@ function LecturesPageNew() {
     token: localStorage.getItem('token') 
   });
 
-  // Configure DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
+  // Add state for courses and lectures with loading states
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [courseError, setCourseError] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [isLoadingLectures, setIsLoadingLectures] = useState(false);
+  const [lectureError, setLectureError] = useState(null);
 
-  // Mock data for testing
-  const mockCourses = [
-    { id: 1, name: 'Nhập môn lập trình Java', code: 'JAVA101' },
-    { id: 2, name: 'Cơ sở dữ liệu', code: 'DB101' },
-    { id: 3, name: 'Lập trình Web', code: 'WEB101' },
-  ];
-
-  const mockLectures = [
-    {
-      id: 1,
-      title: 'Bài 1: Giới thiệu về Java',
-      description: 'Tổng quan về ngôn ngữ lập trình Java và môi trường phát triển',
-      courseId: 1,
-      order: 1,
-      materials: [
-        {
-          id: 101,
-          name: 'Slide giới thiệu Java',
-          type: 'pdf',
-          url: 'https://example.com/slides.pdf',
-          uploadedAt: '2023-06-10T10:00:00Z',
-          viewed: false
-        },
-        {
-          id: 102,
-          name: 'Video bài giảng Java cơ bản',
-          type: 'video',
-          url: 'https://example.com/video.mp4',
-          uploadedAt: '2023-06-10T11:00:00Z',
-          viewed: false
-        }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Bài 2: Biến và Kiểu dữ liệu',
-      description: 'Học về các loại biến và kiểu dữ liệu trong Java',
-      courseId: 1,
-      order: 2,
-      materials: [
-        {
-          id: 103,
-          name: 'Slide về biến và kiểu dữ liệu',
-          type: 'pdf',
-          url: 'https://example.com/variables.pdf',
-          uploadedAt: '2023-06-12T10:00:00Z',
-          viewed: false
-        },
-        {
-          id: 104,
-          name: 'Bài tập thực hành',
-          type: 'doc',
-          url: 'https://example.com/practice.docx',
-          uploadedAt: '2023-06-12T11:00:00Z',
-          viewed: false
-        }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Bài 3: Cấu trúc điều khiển',
-      description: 'Học về các cấu trúc điều khiển như if-else, switch, vòng lặp',
-      courseId: 1,
-      order: 3,
-      materials: [
-        {
-          id: 105,
-          name: 'Slide về cấu trúc điều khiển',
-          type: 'pdf',
-          url: 'https://example.com/control.pdf',
-          uploadedAt: '2023-06-14T10:00:00Z',
-          viewed: false
-        }
-      ]
-    }
-  ];
-
+  // Add useEffect to fetch courses when component mounts
   useEffect(() => {
-    // Use mock data instead of actual API calls
-    setTimeout(() => {
-      // setCourseList(mockCourses); // Unused
-      setLectures(mockLectures);
-      setSelectedCourse(mockCourses[0]);
-      setLoading(false);
-    }, 800); // Simulate API delay
-  }, [userId, token, userRole]);
+    const fetchCourses = async () => {
+      setIsLoadingCourses(true);
+      setCourseError(null);
+      
+      try {
+        const endpoint = userRole === '1' || userRole === 'STUDENT' 
+          ? `classrooms/student/${userId}`
+          : `classrooms/teacher/${userId}`;
+          
+        console.log(`Fetching courses from: /api/${endpoint}`);
+        const response = await apiClient.get(endpoint, { timeout: 15000 });
+        
+        console.log('Courses fetched:', response.data);
+        setCourses(response.data || []);
+        
+        // Select first course automatically if available
+        if (response.data && response.data.length > 0) {
+          setSelectedCourse(response.data[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        setCourseError('Failed to load courses. Please try again later.');
+      } finally {
+        setIsLoadingCourses(false);
+      }
+    };
+    
+    fetchCourses();
+  }, [userId, userRole]);
+
+  // Add useEffect to fetch lectures when selectedCourse changes
+  useEffect(() => {
+    const fetchLectures = async () => {
+      if (!selectedCourse || !selectedCourse.id) return;
+      
+      setLoading(true);
+      setLectures([]);
+      
+      try {
+        const response = await apiClient.get(`/courses/${selectedCourse.id}/lectures`, { timeout: 15000 });
+        setLectures(response.data || []);
+      } catch (error) {
+        console.error('Error fetching lectures:', error);
+        setLectures([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchLectures();
+  }, [selectedCourse]);
+
+  // Set form values when editing lecture
+  useEffect(() => {
+    if (editingLecture && lectureModalVisible) {
+      form.setFieldsValue({
+        title: editingLecture.title,
+        description: editingLecture.description
+      });
+    } else if (!editingLecture && lectureModalVisible) {
+      form.resetFields();
+    }
+  }, [editingLecture, lectureModalVisible, form]);
 
   // ===== Lecture Management Functions =====
-  const handleAddLecture = () => {
-    setEditingLecture(null);
-    setShowAdvancedModal(true); // Use advanced modal instead
-  };
-
   const handleEditLecture = (lecture) => {
+    // Check if this is a mock lecture (ID <= 10 are considered mock for demo purposes)
+    if (lecture.id <= 10) {
+      message.warning('Đây là dữ liệu mẫu, không thể chỉnh sửa. Vui lòng tạo bài giảng mới.');
+      return;
+    }
     setEditingLecture(lecture);
     setShowAdvancedModal(true); // Use advanced modal for editing too
-  };
-
+  };  
+  
   const handleDeleteLecture = (lecture) => {
-    Modal.confirm({
+    // Check if this is a mock lecture (ID <= 10 are considered mock for demo purposes)
+    if (lecture.id <= 10) {
+      message.warning('Đây là dữ liệu mẫu, không thể xóa. Chỉ có thể xóa bài giảng thực tế.');
+      return;
+    }
+    
+    modal.confirm({
       title: 'Xác nhận xóa',
       content: `Bạn có chắc chắn muốn xóa bài giảng "${lecture.title}"? Tất cả tài liệu bên trong cũng sẽ bị xóa.`,
       okText: 'Xóa',
@@ -281,38 +194,47 @@ function LecturesPageNew() {
     }
     setLectureModalVisible(false);
   };
-
   // Handle advanced lecture creation
-  const handleAdvancedLectureCreated = (lectureData) => {
-    if (editingLecture) {
-      // Update existing lecture
-      const updatedLectures = lectures.map(lecture => 
-        lecture.id === editingLecture.id ? 
-          { 
-            ...lecture, 
-            title: lectureData.title,
-            description: lectureData.description || lectureData.content,
-            materials: lectureData.materials || lecture.materials
-          } : 
-          lecture
-      );
-      setLectures(updatedLectures);
-      message.success('Đã cập nhật bài giảng nâng cao thành công!');
-    } else {
-      // Create new lecture
-      const newLecture = {
-        id: Math.max(...lectures.map(l => l.id), 0) + 1,
-        title: lectureData.title,
-        description: lectureData.description || lectureData.content,
-        courseId: selectedCourse.id,
-        order: lectures.filter(l => l.courseId === selectedCourse.id).length + 1,
-        materials: lectureData.materials || []
-      };
-      setLectures([...lectures, newLecture]);
-      message.success('Đã tạo bài giảng nâng cao thành công!');
+  const handleAdvancedLectureCreated = async (lectureData) => {
+    try {
+      // In a real app, you would reload from the server
+      // For now, we'll add to local state and then try to reload from API
+      
+      if (editingLecture) {
+        // Update existing lecture in local state
+        const updatedLectures = lectures.map(lecture => 
+          lecture.id === editingLecture.id ? 
+            { 
+              ...lecture, 
+              title: lectureData.title,
+              description: lectureData.description || lectureData.content,
+              materials: lectureData.materials || lecture.materials
+            } : 
+            lecture
+        );
+        setLectures(updatedLectures);
+        message.success('Đã cập nhật bài giảng nâng cao thành công!');
+      } else {
+        // Create new lecture in local state
+        const newLecture = {
+          id: lectureData.id || (Math.max(...lectures.map(l => l.id), 0) + 1),
+          title: lectureData.title,
+          description: lectureData.description || lectureData.content,
+          courseId: selectedCourse?.id,
+          materials: lectureData.materials || []
+        };
+        setLectures(prev => [...prev, newLecture]);
+        message.success('Đã tạo bài giảng nâng cao thành công!');
+      }
+      
+      // Close modal
+      setShowAdvancedModal(false);
+      setEditingLecture(null);
+      
+    } catch (error) {
+      console.error('Error handling advanced lecture creation:', error);
+      message.error('Đã xảy ra lỗi khi tạo bài giảng.');
     }
-    setShowAdvancedModal(false);
-    setEditingLecture(null);
   };
 
   // ===== Material Management Functions =====
@@ -337,9 +259,8 @@ function LecturesPageNew() {
     });
     setFileList([]);
   };
-
   const handleDeleteMaterial = (lectureId, materialId) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Xác nhận xóa',
       content: 'Bạn có chắc chắn muốn xóa tài liệu này?',
       okText: 'Xóa',
@@ -416,24 +337,26 @@ function LecturesPageNew() {
     setMaterialModalVisible(false);
   };
 
-  // Handle DnD sorting
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id) {
-      setLectures((items) => {
-        const oldIndex = items.findIndex(item => item.id.toString() === active.id);
-        const newIndex = items.findIndex(item => item.id.toString() === over.id);
-        
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
-  
   // View material
   const handleViewMaterial = (material) => {
-    setSelectedMaterial(material);
+    console.log("Viewing material:", material);
+    
+    // Create a consistent material object regardless of the source format
+    const normalizedMaterial = {
+      id: material.id,
+      name: material.name || material.fileName || "Tài liệu",
+      type: material.type || (material.contentType?.includes('pdf') ? 'pdf' : 
+             material.contentType?.includes('video') ? 'video' : 
+             material.contentType?.includes('doc') ? 'doc' : 'link'),
+      url: material.url || material.downloadUrl,
+      downloadUrl: material.downloadUrl || material.url,
+      contentType: material.contentType,
+      viewed: material.viewed || false
+    };
+    
+    setSelectedMaterial(normalizedMaterial);
     setViewMaterialVisible(true);
+    setIframeError(false); // Reset iframe error state
     
     // Mark as viewed in our local state
     if (!material.viewed) {
@@ -460,226 +383,283 @@ function LecturesPageNew() {
       percentage: totalCount > 0 ? Math.round((viewedCount / totalCount) * 100) : 0
     };
   };
-
-  // ===== RENDER FUNCTIONS BASED ON USER ROLE =====
   
+  // Helper function to generate Collapse items for student view
+  const generateStudentCollapseItems = () => {
+    return lectures.map((lecture) => ({
+      key: lecture.id.toString(),
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <span>{lecture.title}</span>
+          <Space>
+            <Tag color="blue">📄 {lecture.materials.filter(m => m.type === 'pdf' || m.type === 'doc').length}</Tag>
+            <Tag color="green">🎬 {lecture.materials.filter(m => m.type === 'video').length}</Tag>
+          </Space>
+        </div>
+      ),
+      children: (
+        <div>
+          {lecture.description && (
+            <Paragraph style={{ marginBottom: 16 }}>
+              {lecture.description}
+            </Paragraph>
+          )}
+          
+          <List
+            itemLayout="horizontal"
+            dataSource={lecture.materials}
+            locale={{ emptyText: <Empty description="Chưa có tài liệu" /> }}
+            renderItem={material => (
+              <List.Item
+                actions={[
+                  <Button 
+                    type="primary"
+                    key="view" 
+                    icon={<EyeOutlined />} 
+                    onClick={() => handleViewMaterial(material)}
+                  >
+                    {material.viewed ? 'Xem lại' : 'Xem'}
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={
+                    material.type === 'pdf' ? (
+                      <span style={{ fontSize: 24 }}>📄</span>
+                    ) : material.type === 'video' ? (
+                      <span style={{ fontSize: 24 }}>🎬</span>
+                    ) : material.type === 'link' ? (
+                      <span style={{ fontSize: 24 }}>🔗</span>
+                    ) : (
+                      <span style={{ fontSize: 24 }}>📝</span>
+                    )
+                  }
+                  title={
+                    <Space>
+                      {material.name}
+                      {material.viewed && <CheckOutlined style={{ color: 'green' }} />}
+                    </Space>
+                  }                  description={`Đã tải lên: ${new Date(material.uploadedAt).toLocaleDateString()}`}
+                />
+              </List.Item>
+            )}
+          />
+        </div>
+      )
+    }));
+  };
+
   // Teacher view components
   const renderTeacherView = () => {
     return (
       <div className="teacher-lectures-view">
-        <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>Quản lý bài giảng</Title>
-          <Space>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={handleAddLecture}
-            >
-              Thêm bài giảng đơn giản
-            </Button>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={() => setShowAdvancedModal(true)}
-              style={{ background: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Tạo bài giảng nâng cao
-            </Button>
-          </Space>
+        <div style={{ marginBottom: 16 }}>
+          <Title level={4}>Quản lý bài giảng</Title>
+          
+          {/* Course selection */}
+          <Card title="Chọn khóa học" style={{ marginBottom: 16 }}>
+            {isLoadingCourses ? (
+              <Spin tip="Đang tải khóa học..." />
+            ) : courseError ? (
+              <div style={{ color: 'red' }}>{courseError}</div>
+            ) : courses.length > 0 ? (
+              <Space wrap>
+                {courses.map(course => (
+                  <Button
+                    key={course.id}
+                    type={selectedCourse?.id === course.id ? 'primary' : 'default'}
+                    onClick={() => setSelectedCourse(course)}
+                  >
+                    {course.name}
+                  </Button>
+                ))}
+              </Space>
+            ) : (
+              <Empty description="Không có khóa học nào" />
+            )}
+          </Card>
+          
+          {/* Create lecture buttons */}
+          {selectedCourse && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <Space>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />} 
+                  onClick={() => setLectureModalVisible(true)}
+                >
+                  Thêm bài giảng đơn giản
+                </Button>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />} 
+                  onClick={() => setShowAdvancedModal(true)}
+                  style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                >
+                  Tạo bài giảng nâng cao
+                </Button>
+              </Space>
+            </div>
+          )}
         </div>
         
-        <Card title={selectedCourse?.name} style={{ marginBottom: 16 }}>
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext items={lectures.map(l => l.id.toString())} strategy={verticalListSortingStrategy}>
-              <Collapse>
-                {lectures.map((lecture) => (
-                  <SortablePanel 
-                    key={lecture.id} 
-                    lecture={lecture} 
-                    onEdit={() => handleEditLecture(lecture)} 
-                    onDelete={() => handleDeleteLecture(lecture)}
-                    isTeacher={true}
+        {/* Display lectures for selected course */}
+        {selectedCourse ? (
+          <Card title={`Bài giảng cho: ${selectedCourse.name}`} style={{ marginBottom: 16 }}>
+            {isLoadingLectures ? (
+              <div style={{ textAlign: 'center', padding: 16 }}>
+                <Spin tip="Đang tải bài giảng..." />
+              </div>
+            ) : lectureError ? (
+              <div style={{ color: 'red', textAlign: 'center', padding: 16 }}>{lectureError}</div>
+            ) : lectures.length > 0 ? (
+              <List
+                itemLayout="vertical"
+                dataSource={lectures}
+                renderItem={lecture => (
+                  <List.Item
+                    key={lecture.id}
+                    actions={[
+                      <Button onClick={() => handleEditLecture(lecture)}>Sửa</Button>,
+                      <Button danger onClick={() => handleDeleteLecture(lecture)}>Xóa</Button>
+                    ]}
                   >
-                    {lecture.description && (
-                      <Paragraph style={{ marginBottom: 16 }}>
-                        {lecture.description}
-                      </Paragraph>
-                    )}
-                    
-                    <div style={{ marginBottom: 16 }}>
-                      <Button 
-                        type="primary" 
-                        icon={<UploadOutlined />} 
-                        onClick={() => handleAddMaterial(lecture.id)}
-                      >
-                        Tải lên tài liệu
-                      </Button>
-                    </div>
-                    
-                    <List
-                      itemLayout="horizontal"
-                      dataSource={lecture.materials}
-                      locale={{ emptyText: <Empty description="Chưa có tài liệu" /> }}
-                      renderItem={material => (
-                        <List.Item
-                          actions={[
-                            <Button 
-                              key="view" 
-                              icon={<EyeOutlined />} 
-                              onClick={() => handleViewMaterial(material)}
-                            >
-                              Xem
-                            </Button>,
-                            <Button 
-                              key="edit" 
-                              icon={<EditOutlined />} 
-                              onClick={() => handleEditMaterial(lecture.id, material)}
-                            >
-                              Sửa
-                            </Button>,
-                            <Button 
-                              key="delete" 
-                              danger 
-                              icon={<DeleteOutlined />} 
-                              onClick={() => handleDeleteMaterial(lecture.id, material.id)}
-                            >
-                              Xóa
-                            </Button>
-                          ]}
-                        >
-                          <List.Item.Meta
-                            avatar={
-                              material.type === 'pdf' ? (
-                                <span style={{ fontSize: 24 }}>📄</span>
-                              ) : material.type === 'video' ? (
-                                <span style={{ fontSize: 24 }}>🎬</span>
-                              ) : material.type === 'link' ? (
-                                <span style={{ fontSize: 24 }}>🔗</span>
-                              ) : (
-                                <span style={{ fontSize: 24 }}>📝</span>
-                              )
-                            }
-                            title={material.name}
-                            description={`Đã tải lên: ${new Date(material.uploadedAt).toLocaleDateString()}`}
-                          />
-                        </List.Item>
-                      )}
+                    <List.Item.Meta
+                      title={lecture.title}
+                      description={lecture.description}
                     />
-                  </SortablePanel>
-                ))}
-              </Collapse>
-            </SortableContext>
-          </DndContext>
-        </Card>
+                  </List.Item>
+                )}
+              />
+            ) : (
+              <Empty description="Không có bài giảng nào cho khóa học này" />
+            )}
+          </Card>
+        ) : (
+          <Card>
+            <Empty description="Vui lòng chọn một khóa học" />
+          </Card>
+        )}
       </div>
     );
   };
   
   // Student view components
   const renderStudentView = () => {
-    const progress = calculateStudentProgress();
-    
     return (
       <div className="student-lectures-view">
-        <Title level={4}>Bài giảng và tài liệu</Title>
+        <div style={{ marginBottom: 16 }}>
+          <Title level={4}>Bài giảng và Tài liệu</Title>
+          
+          {/* Course selection */}
+          <Card title="Chọn khóa học" style={{ marginBottom: 16 }}>
+            {isLoadingCourses ? (
+              <Spin tip="Đang tải khóa học..." />
+            ) : courseError ? (
+              <div style={{ color: 'red' }}>{courseError}</div>
+            ) : courses.length > 0 ? (
+              <Space wrap>
+                {courses.map(course => (
+                  <Button
+                    key={course.id}
+                    type={selectedCourse?.id === course.id ? 'primary' : 'default'}
+                    onClick={() => setSelectedCourse(course)}
+                  >
+                    {course.name}
+                  </Button>
+                ))}
+              </Space>
+            ) : (
+              <Empty description="Không có khóa học nào" />
+            )}
+          </Card>
+        </div>
         
-        {/* Progress overview */}
-        <Card style={{ marginBottom: 16 }}>
-          <Row gutter={16}>
-            <Col span={18}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Tiến độ học tập</Text>
+        {/* Display lectures for selected course */}
+        {selectedCourse ? (
+          <Card title={`Bài giảng cho: ${selectedCourse.name}`} style={{ marginBottom: 16 }}>
+            {isLoadingLectures ? (
+              <div style={{ textAlign: 'center', padding: 16 }}>
+                <Spin tip="Đang tải bài giảng..." />
               </div>
-              <Progress 
-                percent={progress.percentage} 
-                status={progress.percentage === 100 ? "success" : "active"}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic 
-                title="Đã xem" 
-                value={progress.viewedCount} 
-                suffix={`/${progress.totalCount}`} 
-              />
-            </Col>
-          </Row>
-        </Card>
-        
-        <Card title={selectedCourse?.name}>
-          <Collapse>
-            {lectures.map((lecture) => (
-              <Panel 
-                key={lecture.id} 
-                header={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span>{lecture.title}</span>
-                    <Space>
-                      <Tag color="blue">📄 {lecture.materials.filter(m => m.type === 'pdf' || m.type === 'doc').length}</Tag>
-                      <Tag color="green">🎬 {lecture.materials.filter(m => m.type === 'video').length}</Tag>
-                    </Space>
-                  </div>
-                }
-              >
-                {lecture.description && (
-                  <Paragraph style={{ marginBottom: 16 }}>
-                    {lecture.description}
-                  </Paragraph>
+            ) : lectureError ? (
+              <div style={{ color: 'red', textAlign: 'center', padding: 16 }}>{lectureError}</div>
+            ) : lectures.length > 0 ? (
+              <List
+                itemLayout="vertical"
+                dataSource={lectures}
+                renderItem={lecture => (
+                  <List.Item key={lecture.id}>
+                    <List.Item.Meta
+                      title={lecture.title}
+                      description={lecture.description}
+                    />
+                    
+                    {/* Display materials for this lecture */}
+                    {lecture.materials && lecture.materials.length > 0 ? (
+                      <div style={{ marginTop: 16 }}>
+                        <Text strong>Tài liệu:</Text>
+                        <List
+                          itemLayout="horizontal"
+                          dataSource={lecture.materials}
+                          renderItem={material => {
+                            // Determine material type icon
+                            let icon;
+                            if (material.contentType === 'video/youtube' || material.type === 'video') {
+                              icon = <span style={{ fontSize: 24 }}>🎬</span>;
+                            } else if (material.contentType?.includes('pdf') || material.type === 'pdf') {
+                              icon = <span style={{ fontSize: 24 }}>📄</span>;
+                            } else if (material.contentType?.includes('doc') || material.type === 'doc') {
+                              icon = <span style={{ fontSize: 24 }}>📝</span>;
+                            } else {
+                              icon = <span style={{ fontSize: 24 }}>🔗</span>;
+                            }
+                            
+                            return (
+                              <List.Item
+                                actions={[
+                                  <Button 
+                                    type="primary"
+                                    key="view" 
+                                    icon={<EyeOutlined />} 
+                                    onClick={() => handleViewMaterial(material)}
+                                  >
+                                    Xem
+                                  </Button>
+                                ]}
+                              >
+                                <List.Item.Meta
+                                  avatar={icon}
+                                  title={material.fileName || material.name}
+                                  description={material.contentType === 'video/youtube' ? 'Video YouTube' : 'Tài liệu'}
+                                />
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Text type="secondary">Chưa có tài liệu cho bài giảng này</Text>
+                    )}
+                  </List.Item>
                 )}
-                
-                <List
-                  itemLayout="horizontal"
-                  dataSource={lecture.materials}
-                  locale={{ emptyText: <Empty description="Chưa có tài liệu" /> }}
-                  renderItem={material => (
-                    <List.Item
-                      actions={[
-                        <Button 
-                          type="primary"
-                          key="view" 
-                          icon={<EyeOutlined />} 
-                          onClick={() => handleViewMaterial(material)}
-                        >
-                          {material.viewed ? 'Xem lại' : 'Xem'}
-                        </Button>
-                      ]}
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          material.type === 'pdf' ? (
-                            <span style={{ fontSize: 24 }}>📄</span>
-                          ) : material.type === 'video' ? (
-                            <span style={{ fontSize: 24 }}>🎬</span>
-                          ) : material.type === 'link' ? (
-                            <span style={{ fontSize: 24 }}>🔗</span>
-                          ) : (
-                            <span style={{ fontSize: 24 }}>📝</span>
-                          )
-                        }
-                        title={
-                          <Space>
-                            {material.name}
-                            {material.viewed && <CheckOutlined style={{ color: 'green' }} />}
-                          </Space>
-                        }
-                        description={`Đã tải lên: ${new Date(material.uploadedAt).toLocaleDateString()}`}
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Panel>
-            ))}
-          </Collapse>
-        </Card>
+              />
+            ) : (
+              <Empty description="Không có bài giảng nào cho khóa học này" />
+            )}
+          </Card>
+        ) : (
+          <Card>
+            <Empty description="Vui lòng chọn một khóa học" />
+          </Card>
+        )}
       </div>
     );
-  };
-  
-  // Shared modals and forms
+  };  // Shared modals and forms
   const renderLectureModal = () => {
-    return (
-      <Modal
+    return (<Modal
         title={editingLecture ? "Chỉnh sửa bài giảng" : "Thêm bài giảng mới"}
-        visible={lectureModalVisible}
+        open={lectureModalVisible}
         onCancel={() => setLectureModalVisible(false)}
         footer={null}
       >
@@ -722,10 +702,9 @@ function LecturesPageNew() {
   };
   
   const renderMaterialModal = () => {
-    return (
-      <Modal
+    return (      <Modal
         title={materialModalMode === 'add' ? "Thêm tài liệu mới" : "Chỉnh sửa tài liệu"}
-        visible={materialModalVisible}
+        open={materialModalVisible}
         onCancel={() => setMaterialModalVisible(false)}
         footer={null}
       >
@@ -741,71 +720,67 @@ function LecturesPageNew() {
           >
             <Input placeholder="Ví dụ: Slide bài giảng tuần 1" />
           </Form.Item>
-          
-          <Form.Item
+            <Form.Item
             name="type"
             label="Loại tài liệu"
             rules={[{ required: true, message: 'Vui lòng chọn loại tài liệu' }]}
             initialValue="pdf"
           >
-            <Dropdown
-              overlay={
-                <Menu
-                  onClick={({ key }) => materialForm.setFieldsValue({ type: key })}
-                  selectedKeys={[materialForm.getFieldValue('type')]}
-                >
-                  <Menu.Item key="pdf" icon={<UploadOutlined />}>Tài liệu PDF</Menu.Item>
-                  <Menu.Item key="doc" icon={<UploadOutlined />}>Tài liệu Word/Excel</Menu.Item>
-                  <Menu.Item key="video" icon={<VideoCameraOutlined />}>Video</Menu.Item>
-                  <Menu.Item key="link" icon={<LinkOutlined />}>Đường dẫn</Menu.Item>
-                </Menu>
-              }
-              trigger={['click']}
-            >
-              <Button style={{ width: '100%', textAlign: 'left' }}>
-                {materialForm.getFieldValue('type') === 'pdf' ? 'Tài liệu PDF' :
-                 materialForm.getFieldValue('type') === 'doc' ? 'Tài liệu Word/Excel' :
-                 materialForm.getFieldValue('type') === 'video' ? 'Video' :
-                 materialForm.getFieldValue('type') === 'link' ? 'Đường dẫn' : 'Chọn loại tài liệu'}
-                <MenuFoldOutlined style={{ float: 'right', marginTop: 4 }} />
-              </Button>
-            </Dropdown>
-          </Form.Item>
-          
-          {materialForm.getFieldValue('type') === 'link' ? (
-            <Form.Item
-              name="url"
-              label="Đường dẫn"
-              rules={[
-                { required: true, message: 'Vui lòng nhập đường dẫn' },
-                { type: 'url', message: 'Vui lòng nhập đường dẫn hợp lệ' }
+            <Select
+              style={{ width: '100%' }}
+              options={[
+                { value: 'pdf', label: '📄 Tài liệu PDF' },
+                { value: 'doc', label: '📝 Tài liệu Word/Excel' },
+                { value: 'video', label: '🎬 Video' },
+                { value: 'link', label: '🔗 Đường dẫn' }
               ]}
-            >
-              <Input placeholder="https://example.com/resource" />
-            </Form.Item>
-          ) : (
-            <Form.Item
-              name="file"
-              label="Tải lên tệp"
-              valuePropName="fileList"
-              getValueFromEvent={e => {
-                if (Array.isArray(e)) {
-                  return e;
-                }
-                return e && e.fileList;
-              }}
-              rules={[{ required: materialModalMode === 'add', message: 'Vui lòng tải lên tệp' }]}
-            >
-              <Upload
-                beforeUpload={() => false}
-                fileList={fileList}
-                onChange={({ fileList }) => setFileList(fileList)}
-                maxCount={1}
-              >
-                <Button icon={<UploadOutlined />}>Chọn tệp</Button>
-              </Upload>
-            </Form.Item>
-          )}
+            />
+          </Form.Item>            <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.type !== currentValues.type}
+          >
+            {({ getFieldValue }) => {
+              const type = getFieldValue('type');
+              if (type === 'link') {
+                return (
+                  <Form.Item
+                    name="url"
+                    label="Đường dẫn"
+                    rules={[
+                      { required: true, message: 'Vui lòng nhập đường dẫn' },
+                      { type: 'url', message: 'Vui lòng nhập đường dẫn hợp lệ' }
+                    ]}
+                  >
+                    <Input placeholder="https://example.com/resource" />
+                  </Form.Item>
+                );
+              } else {
+                return (
+                  <Form.Item
+                    name="file"
+                    label="Tải lên tệp"
+                    valuePropName="fileList"
+                    getValueFromEvent={e => {
+                      if (Array.isArray(e)) {
+                        return e;
+                      }
+                      return e && e.fileList;
+                    }}
+                    rules={[{ required: materialModalMode === 'add', message: 'Vui lòng tải lên tệp' }]}
+                  >
+                    <Upload
+                      beforeUpload={() => false}
+                      fileList={fileList}
+                      onChange={({ fileList }) => setFileList(fileList)}
+                      maxCount={1}
+                    >
+                      <Button icon={<UploadOutlined />}>Chọn tệp</Button>
+                    </Upload>
+                  </Form.Item>
+                );
+              }
+            }}
+          </Form.Item>
           
           <Form.Item>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -821,47 +796,114 @@ function LecturesPageNew() {
       </Modal>
     );
   };
-  
   const renderViewMaterialModal = () => {
     if (!selectedMaterial) return null;
     
-    return (
-      <Modal
+    const handleIframeError = () => {
+      setIframeError(true);
+      message.warning('Không thể hiển thị tài liệu trong cửa sổ này. Vui lòng mở trong tab mới.');
+    };
+    
+    // Check if the material is a YouTube video
+    const isYoutubeVideo = selectedMaterial.contentType === 'video/youtube';
+    
+    return (      <Modal
         title={selectedMaterial.name}
-        visible={viewMaterialVisible}
-        onCancel={() => setViewMaterialVisible(false)}
+        open={viewMaterialVisible}
+        onCancel={() => {
+          setViewMaterialVisible(false);
+          setIframeError(false);
+        }}
         width={800}
         footer={[
-          <Button key="close" onClick={() => setViewMaterialVisible(false)}>
+          <Button key="open-new" type="primary" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+            Mở trong tab mới
+          </Button>,
+          <Button key="close" onClick={() => {
+            setViewMaterialVisible(false);
+            setIframeError(false);
+          }}>
             Đóng
           </Button>
         ]}
       >
         <div style={{ textAlign: 'center' }}>
           {selectedMaterial.type === 'pdf' && (
-            <iframe
-              src={selectedMaterial.url}
-              title={selectedMaterial.name}
-              width="100%"
-              height="500px"
-              style={{ border: 'none' }}
-            />
+            <div>
+              {!iframeError ? (
+                <iframe
+                  src={selectedMaterial.url || selectedMaterial.downloadUrl}
+                  title={selectedMaterial.name}
+                  width="100%"
+                  height="500px"
+                  style={{ border: 'none' }}
+                  onError={handleIframeError}
+                  onLoad={(e) => {
+                    // Check if iframe loaded successfully
+                    try {
+                      const iframeDoc = e.target.contentDocument || e.target.contentWindow?.document;
+                      if (!iframeDoc || iframeDoc.title === 'Example Domain' || 
+                          iframeDoc.body?.textContent?.includes('Example Domain')) {
+                        handleIframeError();
+                      }
+                    } catch (error) {
+                      // Cross-origin error - this is expected for external PDFs
+                      console.log('Cross-origin iframe access (expected for external PDFs)');
+                    }
+                  }}
+                />
+              ) : (
+                <div className="p-8">
+                  <p className="mb-4">❌ Không thể hiển thị PDF trong cửa sổ này</p>
+                  <p className="mb-4">Tài liệu PDF không cho phép nhúng hoặc có hạn chế bảo mật.</p>
+                  <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+                    Mở PDF trong tab mới
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           
-          {selectedMaterial.type === 'video' && (
+          {/* Special case for YouTube videos */}
+          {isYoutubeVideo && (
+            <>
+              <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 16 }}>
+                Nếu video không hiển thị, có thể do trình chặn quảng cáo. Vui lòng thử "Mở trong tab mới".
+              </Typography.Text>
+              <iframe
+                key={selectedMaterial.id}
+                width="100%"
+                height="450px"
+                style={{ border: 'none' }}
+                allowFullScreen
+                src={selectedMaterial.downloadUrl}
+                title={selectedMaterial.name || "YouTube Video"}
+                onError={() => {
+                  message.error('Không thể tải video YouTube. Vui lòng thử mở trong tab mới.');
+                }}
+              />
+            </>
+          )}
+          
+          {/* Regular videos */}
+          {selectedMaterial.type === 'video' && !isYoutubeVideo && (
             <video
-              src={selectedMaterial.url}
+              src={selectedMaterial.url || selectedMaterial.downloadUrl}
               controls
               width="100%"
               height="auto"
               style={{ maxHeight: '500px' }}
+              onError={() => {
+                message.error('Không thể tải video. Vui lòng thử mở trong tab mới.');
+              }}
             />
           )}
           
           {selectedMaterial.type === 'link' && (
             <div>
-              <p>Mở liên kết trong tab mới:</p>
-              <Button type="primary" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url, '_blank')}>
+              <p>📄 Tài liệu trực tuyến</p>
+              <p className="mb-4">Nhấn để mở tài liệu trong tab mới:</p>
+              <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
                 Mở liên kết
               </Button>
             </div>
@@ -869,9 +911,10 @@ function LecturesPageNew() {
           
           {selectedMaterial.type === 'doc' && (
             <div>
-              <p>Tài liệu Word/Excel cần được tải về để xem:</p>
-              <Button type="primary" icon={<UploadOutlined />} onClick={() => window.open(selectedMaterial.url, '_blank')}>
-                Tải xuống
+              <p>📄 Tài liệu văn bản</p>
+              <p className="mb-4">Nhấn để mở hoặc tải xuống tài liệu:</p>
+              <Button type="primary" size="large" icon={<UploadOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+                Mở tài liệu
               </Button>
             </div>
           )}
@@ -944,10 +987,9 @@ function LecturesPageNew() {
       {renderLectureModal()}
       {renderMaterialModal()}
       {renderViewMaterialModal()}
-      
-      {/* Advanced Lecture Creation Modal */}
+        {/* Advanced Lecture Creation Modal */}
       <CreateLectureModal
-        visible={showAdvancedModal}
+        open={showAdvancedModal}
         onCancel={() => {
           setShowAdvancedModal(false);
           setEditingLecture(null);

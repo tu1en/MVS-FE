@@ -6,15 +6,15 @@ import {
     NotificationOutlined,
     SearchOutlined
 } from '@ant-design/icons';
-import { Avatar, Badge, Button, Card, Input, List, message, Select, Tabs, Tag } from 'antd';
+import { App, Avatar, Badge, Button, Card, Input, List, Select, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import AnnouncementService from '../services/announcementService';
 
-const { TabPane } = Tabs;
 const { Search } = Input;
 const { Option } = Select;
 
 const AnnouncementCenter = () => {
+  const { message } = App.useApp();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -163,169 +163,185 @@ const AnnouncementCenter = () => {
           </Select>
         </div>
 
-        <Tabs defaultActiveKey="all">
-          <TabPane tab="Tất cả" key="all">
-            <List
-              loading={loading}
-              dataSource={filteredAnnouncements}
-              renderItem={item => (
-                <List.Item
-                  style={{
-                    backgroundColor: item.isRead ? '#fff' : '#f6ffed',
-                    border: item.isRead ? '1px solid #d9d9d9' : '1px solid #b7eb8f',
-                    borderRadius: '6px',
-                    marginBottom: '8px',
-                    padding: '16px'
-                  }}
-                  actions={[
-                    !item.isRead && (
-                      <Button 
-                        type="link" 
-                        size="small"
-                        onClick={() => markAsRead(item.id)}
-                        icon={<CheckOutlined />}
-                      >
-                        Đánh dấu đã đọc
-                      </Button>
-                    )
-                  ].filter(Boolean)}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Badge dot={!item.isRead}>
-                        <Avatar icon={getAnnouncementIcon(item.type)} />
-                      </Badge>
-                    }
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: item.isRead ? 'normal' : 'bold' }}>
-                          {item.title}
-                        </span>
-                        {getAnnouncementTag(item.type, item.priority)}
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <p style={{ marginBottom: '8px' }}>{item.content}</p>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          <span>Từ: {item.senderName}</span>
-                          <span style={{ marginLeft: '16px' }}>
-                            Thời gian: {new Date(item.createdAt).toLocaleString('vi-VN')}
-                          </span>
-                          {item.courseName && (
-                            <span style={{ marginLeft: '16px' }}>
-                              Khóa học: {item.courseName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </TabPane>
-
-          <TabPane tab={`Chưa đọc (${unreadCount})`} key="unread">
-            <List
-              loading={loading}
-              dataSource={filteredAnnouncements.filter(item => !item.isRead)}
-              renderItem={item => (
-                <List.Item
-                  style={{
-                    backgroundColor: '#f6ffed',
-                    border: '1px solid #b7eb8f',
-                    borderRadius: '6px',
-                    marginBottom: '8px',
-                    padding: '16px'
-                  }}
-                  actions={[
-                    <Button 
-                      type="link" 
-                      size="small"
-                      onClick={() => markAsRead(item.id)}
-                      icon={<CheckOutlined />}
+        <Tabs 
+          defaultActiveKey="all"
+          items={[
+            {
+              key: 'all',
+              label: 'Tất cả',
+              children: (
+                <List
+                  loading={loading}
+                  dataSource={filteredAnnouncements}
+                  renderItem={item => (
+                    <List.Item
+                      style={{
+                        backgroundColor: item.isRead ? '#fff' : '#f6ffed',
+                        border: item.isRead ? '1px solid #d9d9d9' : '1px solid #b7eb8f',
+                        borderRadius: '6px',
+                        marginBottom: '8px',
+                        padding: '16px'
+                      }}
+                      actions={[
+                        !item.isRead && (
+                          <Button 
+                            type="link" 
+                            size="small"
+                            onClick={() => markAsRead(item.id)}
+                            icon={<CheckOutlined />}
+                          >
+                            Đánh dấu đã đọc
+                          </Button>
+                        )
+                      ].filter(Boolean)}
                     >
-                      Đánh dấu đã đọc
-                    </Button>
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Badge dot>
-                        <Avatar icon={getAnnouncementIcon(item.type)} />
-                      </Badge>
-                    }
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 'bold' }}>{item.title}</span>
-                        {getAnnouncementTag(item.type, item.priority)}
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <p style={{ marginBottom: '8px' }}>{item.content}</p>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          <span>Từ: {item.senderName}</span>
-                          <span style={{ marginLeft: '16px' }}>
-                            Thời gian: {new Date(item.createdAt).toLocaleString('vi-VN')}
-                          </span>
-                        </div>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </TabPane>
-
-          <TabPane tab="Hệ thống" key="system">
-            <List
-              loading={loading}
-              dataSource={filteredAnnouncements.filter(item => item.type === 'SYSTEM')}
-              renderItem={item => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<NotificationOutlined />} style={{ backgroundColor: '#1890ff' }} />}
-                    title={item.title}
-                    description={
-                      <div>
-                        <p>{item.content}</p>
-                        <small>{new Date(item.createdAt).toLocaleString('vi-VN')}</small>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </TabPane>
-
-          <TabPane tab="Khóa học" key="course">
-            <List
-              loading={loading}
-              dataSource={filteredAnnouncements.filter(item => item.type === 'COURSE')}
-              renderItem={item => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<BellOutlined />} style={{ backgroundColor: '#52c41a' }} />}
-                    title={item.title}
-                    description={
-                      <div>
-                        <p>{item.content}</p>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          <span>Khóa học: {item.courseName}</span>
-                          <span style={{ marginLeft: '16px' }}>
-                            {new Date(item.createdAt).toLocaleString('vi-VN')}
-                          </span>
-                        </div>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </TabPane>
-        </Tabs>
+                      <List.Item.Meta
+                        avatar={
+                          <Badge dot={!item.isRead}>
+                            <Avatar icon={getAnnouncementIcon(item.type)} />
+                          </Badge>
+                        }
+                        title={
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: item.isRead ? 'normal' : 'bold' }}>
+                              {item.title}
+                            </span>
+                            {getAnnouncementTag(item.type, item.priority)}
+                          </div>
+                        }
+                        description={
+                          <div>
+                            <p style={{ marginBottom: '8px' }}>{item.content}</p>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              <span>Từ: {item.senderName}</span>
+                              <span style={{ marginLeft: '16px' }}>
+                                Thời gian: {new Date(item.createdAt).toLocaleString('vi-VN')}
+                              </span>
+                              {item.courseName && (
+                                <span style={{ marginLeft: '16px' }}>
+                                  Khóa học: {item.courseName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              )
+            },
+            {
+              key: 'unread',
+              label: `Chưa đọc (${unreadCount})`,
+              children: (
+                <List
+                  loading={loading}
+                  dataSource={filteredAnnouncements.filter(item => !item.isRead)}
+                  renderItem={item => (
+                    <List.Item
+                      style={{
+                        backgroundColor: '#f6ffed',
+                        border: '1px solid #b7eb8f',
+                        borderRadius: '6px',
+                        marginBottom: '8px',
+                        padding: '16px'
+                      }}
+                      actions={[
+                        <Button 
+                          type="link" 
+                          size="small"
+                          onClick={() => markAsRead(item.id)}
+                          icon={<CheckOutlined />}
+                        >
+                          Đánh dấu đã đọc
+                        </Button>
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <Badge dot>
+                            <Avatar icon={getAnnouncementIcon(item.type)} />
+                          </Badge>
+                        }
+                        title={
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 'bold' }}>{item.title}</span>
+                            {getAnnouncementTag(item.type, item.priority)}
+                          </div>
+                        }
+                        description={
+                          <div>
+                            <p style={{ marginBottom: '8px' }}>{item.content}</p>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              <span>Từ: {item.senderName}</span>
+                              <span style={{ marginLeft: '16px' }}>
+                                Thời gian: {new Date(item.createdAt).toLocaleString('vi-VN')}
+                              </span>
+                            </div>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              )
+            },
+            {
+              key: 'system',
+              label: 'Hệ thống',
+              children: (
+                <List
+                  loading={loading}
+                  dataSource={filteredAnnouncements.filter(item => item.type === 'SYSTEM')}
+                  renderItem={item => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={<Avatar icon={<NotificationOutlined />} style={{ backgroundColor: '#1890ff' }} />}
+                        title={item.title}
+                        description={
+                          <div>
+                            <p>{item.content}</p>
+                            <small>{new Date(item.createdAt).toLocaleString('vi-VN')}</small>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              )
+            },
+            {
+              key: 'course',
+              label: 'Khóa học',
+              children: (
+                <List
+                  loading={loading}
+                  dataSource={filteredAnnouncements.filter(item => item.type === 'COURSE')}
+                  renderItem={item => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={<Avatar icon={<BellOutlined />} style={{ backgroundColor: '#52c41a' }} />}
+                        title={item.title}
+                        description={
+                          <div>
+                            <p>{item.content}</p>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              <span>Khóa học: {item.courseName}</span>
+                              <span style={{ marginLeft: '16px' }}>
+                                {new Date(item.createdAt).toLocaleString('vi-VN')}
+                              </span>
+                            </div>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              )
+            }
+          ]}
+        />
       </Card>
     </div>
   );
