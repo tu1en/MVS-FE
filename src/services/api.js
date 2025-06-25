@@ -93,9 +93,10 @@ const api = {
    * @returns {Promise} Axios response promise
    */
   patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
-
   // High-level API methods
   getTeacherCourses: () => ApiService.GetTeacherCourses(),
+  getStudentAttendance: () => ApiService.GetStudentAttendance(),
+  getAttendanceByUser: (userId) => ApiService.GetAttendanceByUser(userId),
   
   /**
    * Get users by role ID
@@ -169,7 +170,7 @@ const api = {
    */
   GetReceivedMessages: async (recipientId) => {
     try {
-      const response = await apiClient.get(`/messages/received/${recipientId}`);
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_RECEIVED(recipientId));
       return response.data;
     } catch (error) {
       console.error('Error fetching received messages:', error);
@@ -189,8 +190,7 @@ const api = {
       console.error('Error fetching classrooms by teacher:', error);
       throw error;
     }
-  },
-  /**
+  },  /**
    * Get conversation between two users
    * @param {number} userId1 - First user ID
    * @param {number} userId2 - Second user ID
@@ -198,14 +198,24 @@ const api = {
    */
   GetConversation: async (userId1, userId2) => {
     try {
-      const response = await apiClient.get(`/messages/conversation/${userId1}/${userId2}`);
+      console.log(`API GetConversation: Requesting conversation between ${userId1} and ${userId2}`);
+      console.log(`Using endpoint: ${API_CONFIG.ENDPOINTS.MESSAGES_CONVERSATION(userId1, userId2)}`);
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_CONVERSATION(userId1, userId2));
+      console.log('API GetConversation: Response received:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching conversation:', error);
+      console.error('Full error details:', JSON.stringify({
+        message: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : 'No response'
+      }));
       throw error;
     }
   },
-
   /**
    * Send a message
    * @param {Object} messageData - Message data to send
@@ -213,10 +223,21 @@ const api = {
    */
   SendMessage: async (messageData) => {
     try {
-      const response = await apiClient.post('/api/messages/send', messageData);
+      console.log('API SendMessage: Sending message with data:', messageData);
+      console.log(`Using endpoint: ${API_CONFIG.ENDPOINTS.MESSAGES_SEND}`);
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.MESSAGES_SEND, messageData);
+      console.log('API SendMessage: Response received:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
+      console.error('Full error details:', JSON.stringify({
+        message: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : 'No response'
+      }));
       throw error;
     }
   },
@@ -228,7 +249,7 @@ const api = {
    */
   MarkMessageAsRead: async (messageId) => {
     try {
-      const response = await apiClient.patch(`/api/messages/${messageId}/read`);
+      const response = await apiClient.patch(API_CONFIG.ENDPOINTS.MESSAGES_MARK_READ(messageId));
       return response.data;
     } catch (error) {
       console.error('Error marking message as read:', error);
@@ -475,7 +496,7 @@ class ApiService {
    */
   static async MarkMessageAsRead(messageId) {
     try {
-      const response = await apiClient.put(API_CONFIG.ENDPOINTS.MESSAGES_MARK_READ(messageId));
+      const response = await apiClient.patch(API_CONFIG.ENDPOINTS.MESSAGES_MARK_READ(messageId));
       return response.data;
     } catch (error) {
       this.HandleError(error);
@@ -847,8 +868,7 @@ class ApiService {
    * Lấy danh sách tin nhắn đã nhận cho người dùng
    * @param {number} recipientId - ID của người nhận tin nhắn
    * @returns {Promise} Dữ liệu tin nhắn
-   */
-  static async GetReceivedMessages(recipientId) {
+   */  static async GetReceivedMessages(recipientId) {
     try {
       const response = await apiClient.get(`/messages/received/${recipientId}`);
       return response.data;
@@ -857,8 +877,7 @@ class ApiService {
       this.HandleError(error);
       throw error;
     }
-  }
-  /**
+  }  /**
    * Lấy danh sách lớp học theo giảng viên
    * @param {number} teacherId - ID của giảng viên
    * @returns {Promise} Dữ liệu lớp học
@@ -869,6 +888,46 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy dữ liệu điểm danh của học sinh
+   * @returns {Promise} Dữ liệu điểm danh
+   */
+  static async GetStudentAttendance() {
+    try {
+      const userId = localStorage.getItem('userId');
+      const config = {
+        headers: {}
+      };
+      
+      if (userId) {
+        config.headers['X-User-Id'] = userId;
+      }
+      
+      const response = await apiClient.get('/attendance/student/view', config);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching student attendance:', error);
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy dữ liệu điểm danh theo user ID
+   * @param {number} userId - ID của người dùng
+   * @returns {Promise} Dữ liệu điểm danh
+   */
+  static async GetAttendanceByUser(userId) {
+    try {
+      const response = await apiClient.get(`/attendance/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching attendance by user:', error);
       this.HandleError(error);
       throw error;
     }

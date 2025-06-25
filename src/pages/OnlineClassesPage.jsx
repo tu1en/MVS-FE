@@ -39,7 +39,6 @@ import moment from 'moment';
 import { useEffect, useState } from 'react';
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -287,9 +286,10 @@ function OnlineClassesPage() {
       moment(session.startTime).format('YYYY-MM-DD') === sessionDate
     );
   };
-
-  const dateCellRender = (value) => {
-    const listData = getSessionListData(value);
+  const cellRender = (current, info) => {
+    if (info.type !== 'date') return info.originNode;
+    
+    const listData = getSessionListData(current);
     return (
       <ul className="events" style={{ listStyle: 'none', padding: 0 }}>
         {listData.map(item => (
@@ -334,27 +334,36 @@ function OnlineClassesPage() {
               Lên lịch buổi học mới
             </Button>
           </Space>
-        </div>
-        
+        </div>        
         {calendarView ? (
           <Card>
-            <Calendar dateCellRender={dateCellRender} />
-          </Card>
-        ) : (
-          <Tabs defaultActiveKey="upcoming">
-            <TabPane tab="Sắp diễn ra" key="upcoming">
-              {renderSessionsList(classSessions.filter(session => session.status === 'UPCOMING'))}
-            </TabPane>
-            <TabPane tab="Đang diễn ra" key="active">
-              {renderSessionsList(classSessions.filter(session => session.status === 'ACTIVE'))}
-            </TabPane>
-            <TabPane tab="Đã kết thúc" key="ended">
-              {renderSessionsList(classSessions.filter(session => session.status === 'ENDED'))}
-            </TabPane>
-            <TabPane tab="Tất cả buổi học" key="all">
-              {renderSessionsList(classSessions)}
-            </TabPane>
-          </Tabs>
+            <Calendar cellRender={cellRender} />
+          </Card>        ) : (
+          <Tabs 
+            defaultActiveKey="upcoming"
+            items={[
+              {
+                key: 'upcoming',
+                label: 'Sắp diễn ra',
+                children: renderSessionsList(classSessions.filter(session => session.status === 'UPCOMING'))
+              },
+              {
+                key: 'active',
+                label: 'Đang diễn ra',
+                children: renderSessionsList(classSessions.filter(session => session.status === 'ACTIVE'))
+              },
+              {
+                key: 'ended',
+                label: 'Đã kết thúc',
+                children: renderSessionsList(classSessions.filter(session => session.status === 'ENDED'))
+              },
+              {
+                key: 'all',
+                label: 'Tất cả buổi học',
+                children: renderSessionsList(classSessions)
+              }
+            ]}
+          />
         )}
       </div>
     );
@@ -602,24 +611,31 @@ function OnlineClassesPage() {
           >
             {calendarView ? 'Xem dạng danh sách' : 'Xem lịch'}
           </Button>
-        </div>
-        
+        </div>        
         {calendarView ? (
           <Card>
-            <Calendar dateCellRender={dateCellRender} />
-          </Card>
-        ) : (
-          <Tabs defaultActiveKey="active">
-            <TabPane tab="Đang diễn ra" key="active">
-              {renderStudentSessionsList(classSessions.filter(session => session.status === 'ACTIVE'))}
-            </TabPane>
-            <TabPane tab="Sắp diễn ra" key="upcoming">
-              {renderStudentSessionsList(classSessions.filter(session => session.status === 'UPCOMING'))}
-            </TabPane>
-            <TabPane tab="Đã kết thúc" key="ended">
-              {renderStudentSessionsList(classSessions.filter(session => session.status === 'ENDED'))}
-            </TabPane>
-          </Tabs>
+            <Calendar cellRender={cellRender} />
+          </Card>        ) : (
+          <Tabs 
+            defaultActiveKey="active"
+            items={[
+              {
+                key: 'active',
+                label: 'Đang diễn ra',
+                children: renderStudentSessionsList(classSessions.filter(session => session.status === 'ACTIVE'))
+              },
+              {
+                key: 'upcoming',
+                label: 'Sắp diễn ra',
+                children: renderStudentSessionsList(classSessions.filter(session => session.status === 'UPCOMING'))
+              },
+              {
+                key: 'ended',
+                label: 'Đã kết thúc',
+                children: renderStudentSessionsList(classSessions.filter(session => session.status === 'ENDED'))
+              }
+            ]}
+          />
         )}
       </div>
     );

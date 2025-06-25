@@ -1,31 +1,102 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Select, message, Card } from 'antd';
-import axios from 'axios';
-import { validatePhoneNumber, validateEmail } from '../../utils/validation';
+import { App, Button, Card, Form, Input, Select, Spin } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
+import ProfileDataService from '../../services/profileDataService';
+import { validateEmail, validatePhoneNumber } from '../../utils/validation';
 
 const { Option } = Select;
 
 const EditProfile = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [invalidPrefix, setInvalidPrefix] = useState(false);
+  const [formReady, setFormReady] = useState(false);
+
+  // Initialize form with default values to prevent React warnings
+  const defaultValues = {
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    studentId: localStorage.getItem('userId') || '',
+    gender: '',
+    address: '',
+    school: 'Trường Đại học ABC',
+    class: 'Lớp 12A1'
+  };  const fetchProfile = useCallback(async () => {
+    try {
+      setInitialLoading(true);
+      const result = await ProfileDataService.fetchProfileWithFallback('student');
+      
+      if (result.success) {
+        const profileData = { 
+          ...defaultValues, 
+          ...result.data,
+          class: result.data.className || result.data.class // map className to class for form
+        };
+        
+        // Set form ready first, then set field values after form is rendered
+        setFormReady(true);
+        
+        // Use setTimeout to ensure form is rendered before setting values
+        setTimeout(() => {
+          form.setFieldsValue(profileData);
+        }, 0);
+        
+        if (result.source === 'localStorage') {
+          message.warning({
+            content: 'Đang sử dụng dữ liệu đã lưu (không có kết nối mạng)',
+            duration: 4
+          });
+        } else {
+          message.success({
+            content: 'Đã tải thông tin từ server thành công',
+            duration: 2
+          });
+        }
+      } else {
+        // If profile fetch fails, still set default values and allow form usage
+        const fallbackData = { 
+          ...defaultValues, 
+          ...result.data,
+          class: result.data?.className || result.data?.class || defaultValues.class
+        };
+        
+        // Set form ready first, then set field values after form is rendered
+        setFormReady(true);
+        
+        // Use setTimeout to ensure form is rendered before setting values
+        setTimeout(() => {
+          form.setFieldsValue(fallbackData);
+        }, 0);
+        
+        message.warning({
+          content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
+          duration: 4
+        });
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      // Ensure form is still usable even on error
+      setFormReady(true);
+      
+      // Use setTimeout to ensure form is rendered before setting values
+      setTimeout(() => {
+        form.setFieldsValue(defaultValues);
+      }, 0);
+      
+      message.error({
+        content: 'Lỗi không mong muốn khi tải hồ sơ',
+        duration: 4
+      });
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [form, message]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const response = await axios.get('/api/v1/student/profile');
-      form.setFieldsValue({
-        ...response.data,
-        class: response.data.className // map className to class for form
-      });
-    } catch (error) {
-      message.error('Không thể tải thông tin cá nhân');
-      console.error('Error fetching profile:', error);
-    }
-  };
+  }, [fetchProfile]);
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -36,25 +107,30 @@ const EditProfile = () => {
       };
       delete profileData.class;
 
-      await axios.put('/api/v1/student/profile', profileData);
-      message.success('Cập nhật thông tin thành công');
+      const result = await ProfileDataService.updateProfileWithFallback(profileData);
+      
+      if (result.success) {
+        message.success(result.message);      } else {
+        message.warning(result.message);
+      }
     } catch (error) {
-      message.error('Không thể cập nhật thông tin');
-      console.error('Error updating profile:', error);
+      console.error('Error in onFinish:', error);
+      message.error('Có lỗi xảy ra khi cập nhật thông tin');
     } finally {
       setLoading(false);
     }
   };
-
-  return (
+    return (
     <div className="container mx-auto px-4 py-8">
-      <Card title="Chỉnh Sửa Thông Tin Cá Nhân" className="max-w-2xl mx-auto">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          className="max-w-xl mx-auto"
-        >
+      <Card title="Chỉnh Sửa Thông Tin Cá Nhân" className="max-w-2xl mx-auto" loading={initialLoading}>
+        {formReady ? (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            className="max-w-xl mx-auto"
+            initialValues={defaultValues}
+          >
           <Form.Item
             name="fullName"
             label="Họ và Tên"
@@ -134,14 +210,18 @@ const EditProfile = () => {
             rules={[{ required: true, message: 'Vui lòng nhập tên lớp' }]}
           >
             <Input />
-          </Form.Item>
-
-          <Form.Item>
+          </Form.Item>          <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
               Cập Nhật Thông Tin
             </Button>
           </Form.Item>
         </Form>
+        ) : (
+          <div className="text-center p-4">
+            <Spin size="large" />
+            <p className="mt-2 text-gray-500">Đang tải thông tin...</p>
+          </div>
+        )}
       </Card>
     </div>
   );

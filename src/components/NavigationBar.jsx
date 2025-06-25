@@ -27,22 +27,21 @@ function NavigationBar() {
   useEffect(() => {
     // First sync Redux state with localStorage
     dispatch(syncFromLocalStorage());
-    
-    // Use utility function to check if user is actually logged in
+      // Use utility function to check if user is actually logged in
     const actuallyLoggedIn = isUserLoggedIn();
     
     // Check if user is actually logged in before using any role
-    if (!actuallyLoggedIn || !isLogin) {
+    // Handle null/undefined states more gracefully
+    if (!actuallyLoggedIn || isLogin === false || isLogin === null) {
       // If not logged in, always set to GUEST regardless of stored role
       setUserRole(ROLE.GUEST);
       if (process.env.NODE_ENV === 'development') {
         console.log('User not logged in (actuallyLoggedIn:', actuallyLoggedIn, 'isLogin:', isLogin, '), setting role to GUEST');
       }
-      return;
-    }
+      return;    }
     
-    // Only process role if user is logged in
-    if (reduxRole && isLogin && actuallyLoggedIn) {
+    // Only process role if user is definitively logged in
+    if (reduxRole && isLogin === true && actuallyLoggedIn) {
       // Direct role mapping - if role is already the correct constant, use it
       if (Object.values(ROLE).includes(reduxRole)) {
         setUserRole(reduxRole);
@@ -381,6 +380,11 @@ function NavigationBar() {
           name: 'Quản Lý Người Dùng', 
           path: '/manager/users', 
           icon: '👥'
+        },
+        { 
+          name: 'Báo cáo', 
+          path: '/manager/reports', 
+          icon: '📊'
         }
       ]
     },
@@ -454,6 +458,11 @@ function NavigationBar() {
           name: 'Quản Lý Báo Cáo', 
           path: '/admin/reports', 
           icon: '📊'
+        },
+        {
+          name: 'Quản Lý Blog',
+          path: '/admin/blogs',
+          icon: '📝'
         }
       ]
     },
@@ -547,8 +556,7 @@ function NavigationBar() {
                 <span>Tạo Lớp Mới</span>
               </button>
             )}
-            {userRole === ROLE.ADMIN && (
-              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
+            {userRole === ROLE.ADMIN && (              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
                 <span className="mr-3 text-xl">📊</span>
                 <span>Báo Cáo</span>
               </button>

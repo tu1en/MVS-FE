@@ -1,33 +1,23 @@
 import {
-    LoadingOutlined,
-    MessageOutlined,
-    PlusOutlined,
-    ReloadOutlined,
-    SearchOutlined,
     SendOutlined,
     UserOutlined
 } from '@ant-design/icons';
 import {
-    Alert,
+    App,
     Avatar,
-    Badge,
     Button,
     Card,
     Col,
-    Divider,
     Form,
     Input,
     List,
-    message,
     Modal,
     Row,
     Select,
-    Space,
     Spin,
-    Tag,
     Typography
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../../services/api';
 
 // Utility function to fix Vietnamese encoding issues
@@ -145,603 +135,296 @@ const normalizeStudentData = (student) => {
   };
 };
 
+// Helper to safely format date
+const formatDate = (dateString) => {
+  if (!dateString) return 'Không xác định';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN');
+  } catch (error) {
+    return 'Không xác định';
+  }
+};
+
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const TeacherMessagesPage = () => {
-  // State management
-  const [messages, setMessages] = useState([]);
+  const { message } = App.useApp();
   const [students, setStudents] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [conversationMessages, setConversationMessages] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [loadingStudents, setLoadingStudents] = useState(true); // Separate loading state for students
-  const [studentFetchError, setStudentFetchError] = useState(null);
-  
-  // Form for new message
   const [form] = Form.useForm();
   
-  // Get teacher info from localStorage
   const teacherId = localStorage.getItem('userId');
 
-  useEffect(() => {
-    if (teacherId) {
-      fetchMessages();
-      fetchStudents();
-    }
-  }, [teacherId]);
-
-  const fetchMessages = async () => {
-    try {
-      setLoading(true);
-      const messagesData = await api.GetReceivedMessages(teacherId);
-      setMessages(messagesData);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      message.error('Không thể tải tin nhắn');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoadingStudents(true);
-      setStudentFetchError(null);
-      console.log('Fetching students from database...');
-      
-      // STRATEGY 1: Directly get all students by role (most efficient if it works)
-      try {
-        console.log('STRATEGY 1: Fetching all students via users API');
-        // Role ID 1 is used for students (corrected from 3)
-        const studentsByRole = await api.GetUsersByRole(1);
-        
-        if (studentsByRole && studentsByRole.length > 0) {
-          // Normalize student data
-          const normalizedStudents = studentsByRole
-            .map(normalizeStudentData)
-            .filter(student => student !== null);
-            
-          console.log(`Successfully found ${normalizedStudents.length} students by role`);
-          setStudents(normalizedStudents);
-          message.success(`Lấy thành công ${normalizedStudents.length} học sinh từ hệ thống`);
-          setLoadingStudents(false);
-          return;
-        } else {
-          console.log('No students found by role, trying alternative methods');
-        }
-      } catch (roleError) {
-        console.error('Error fetching students via users API:', roleError);
-      }
-      
-      // STRATEGY 2: Get students from each classroom the teacher has access to
-      console.log('STRATEGY 2: Fetching classroom enrollments for each classroom');
-      let classroomData = [];
-      try {
-        classroomData = await api.GetClassroomsByTeacher(teacherId);
-      } catch (error) {
-        console.error('Error fetching classrooms:', error);
-      }
-      
-      if (classroomData && classroomData.length > 0) {
-        console.log('Detailed classroom structure:', JSON.stringify(classroomData[0], null, 2));
-        console.log('Available properties:', Object.keys(classroomData[0]));
-        
-        const allStudents = [];
-        let fetchSuccessCount = 0;
-        
-        // Try to get students from each classroom
-        for (const classroom of classroomData) {
-          try {
-            console.log(`Attempting to fetch students for classroom ID ${classroom.id}: ${classroom.name}`);
-            const classStudents = await api.GetClassStudents(classroom.id);
-            
-            if (classStudents && classStudents.length > 0) {
-              // Add classroom info to each student and normalize
-              const studentsWithClassInfo = classStudents.map(student => normalizeStudentData({
-                ...student,
-                classroomId: classroom.id,
-                classroomName: fixEncoding(classroom.name || `Lớp ${classroom.id}`)
-              })).filter(student => student !== null);
-              
-              allStudents.push(...studentsWithClassInfo);
-              fetchSuccessCount++;
-              console.log(`Successfully fetched ${studentsWithClassInfo.length} students for classroom ${classroom.id}`);
-            } else {
-              console.log(`No students found in classroom ${classroom.id}: ${classroom.name}`);
-            }
-          } catch (error) {
-            console.error(`Error fetching enrollments for classroom ${classroom.id}:`, error);
-          }
-        }
-        
-        // Remove duplicates (students might be in multiple classrooms)
-        const uniqueStudents = [];
-        const studentIds = new Set();
-        
-        allStudents.forEach(student => {
-          if (!studentIds.has(student.id)) {
-            studentIds.add(student.id);
-            uniqueStudents.push(student);
-          }
-        });
-        
-        if (uniqueStudents.length > 0) {
-          // Sort students alphabetically by name
-          uniqueStudents.sort((a, b) => 
-            (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')
-          );
-          
-          console.log(`Total unique students found: ${uniqueStudents.length} from ${fetchSuccessCount} classrooms`);
-          setStudents(uniqueStudents);
-          message.success(`Lấy thành công ${uniqueStudents.length} học sinh từ ${fetchSuccessCount} lớp học`);
-          setLoadingStudents(false);
-          return;
-        }
-
-        // STRATEGY 3: Extract student IDs from classroom objects if available
-        console.log('STRATEGY 3: Extracting student IDs from classroom properties');
-        const extractedStudents = [];
-        
-        for (const classroom of classroomData) {
-          // Check if classroom contains student information
-          for (const [key, value] of Object.entries(classroom)) {
-            if ((key.includes('student') || key.includes('Student')) && value) {
-              console.log(`Found potential student data in property "${key}":`, value);
-              
-              if (Array.isArray(value)) {
-                // If it's an array of students
-                extractedStudents.push(...value);
-              } else if (typeof value === 'object' && value !== null) {
-                // If it's a nested object containing students
-                extractedStudents.push(value);
-              } else if (typeof value === 'number' && key === 'studentCount') {
-                console.log(`Class ${classroom.id} has ${value} students but no student data`);
-              }
-            }
-          }
-        }
-        
-        if (extractedStudents.length > 0) {
-          // Normalize the extracted students data
-          const normalizedExtractedStudents = extractedStudents
-            .map(normalizeStudentData)
-            .filter(student => student !== null);
-            
-          setStudents(normalizedExtractedStudents);
-          message.success(`Lấy thành công ${normalizedExtractedStudents.length} học sinh từ dữ liệu lớp học`);
-          setLoadingStudents(false);
-          return;
-        }
-      }
-
-      // STRATEGY 4: Direct API calls to get user data for default student IDs
-      console.log('STRATEGY 4: Trying direct database query for students');
-      // Attempt to find users with these common student IDs
-      const defaultStudentIds = [4, 5, 6, 7, 8];
-      const foundStudents = [];
-      
-      for (const studentId of defaultStudentIds) {
-        try {
-          const student = await api.GetUserById(studentId);
-          if (student) {
-            const normalizedStudent = normalizeStudentData(student);
-            if (normalizedStudent) {
-              foundStudents.push(normalizedStudent);
-            }
-          }
-        } catch (error) {
-          console.log(`Could not fetch details for default student ID ${studentId}:`, error);
-        }
-      }
-      
-      console.log('Final students array:', foundStudents);
-      
-      if (foundStudents.length > 0) {
-        setStudents(foundStudents);
-        message.success(`Lấy thành công ${foundStudents.length} học sinh từ database`);
+      const studentsByRole = await api.GetUsersByRole(1); // Role ID 1 for students
+      if (studentsByRole && Array.isArray(studentsByRole)) {
+        const normalizedStudents = studentsByRole.map(student => ({
+          id: student.id,
+          fullName: student.fullName,
+        })).filter(Boolean);
+        setStudents(normalizedStudents);
       } else {
-        console.log('No students found using any strategy.');
-        setStudentFetchError('Không tìm thấy học sinh nào trong hệ thống.');
-        message.warning('Không tìm thấy học sinh nào trong hệ thống. Vui lòng liên hệ quản trị viên.');
+        setStudents([]);
       }
     } catch (error) {
+      message.error('Không thể tải danh sách học sinh.');
       console.error('Error fetching students:', error);
-      setStudentFetchError(`Không thể tải danh sách học sinh: ${error.message}`);
-      message.error('Không thể tải danh sách học sinh từ cơ sở dữ liệu');
     } finally {
       setLoadingStudents(false);
+      setLoading(false);
     }
-  };
+  }, [message]);
 
-  const fetchConversation = async (studentId) => {
+  const fetchConversation = useCallback(async (student) => {
+    if (!teacherId || !student || !student.id) return;
+
+    console.log(`Attempting to fetch conversation between teacher ${teacherId} and student ${student.id}`);
+    setLoadingConversation(true);
+    setSelectedStudent(student);
+    
     try {
-      const conversationData = await api.GetConversation(teacherId, studentId);
-      setConversationMessages(conversationData);
-      setSelectedConversation(studentId);
+      const conversationData = await api.GetConversation(teacherId, student.id);
+      setConversation(conversationData || []);
     } catch (error) {
       console.error('Error fetching conversation:', error);
-      message.error('Không thể tải cuộc trò chuyện');
+      message.error('Không thể tải cuộc trò chuyện.');
+      setConversation([]); // Reset on error
+    } finally {
+      setLoadingConversation(false);
+    }
+  }, [teacherId, message]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  const handleStudentSelect = (studentId) => {
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      fetchConversation(student);
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) {
-      message.warning('Vui lòng nhập nội dung tin nhắn');
-      return;
-    }
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedStudent || !selectedStudent.id) return;
+    
+    setSending(true);
+    const tempId = Date.now();
+    const sentMessage = {
+      id: tempId,
+      content: newMessage,
+      createdAt: new Date().toISOString(),
+      senderId: parseInt(teacherId),
+      recipientId: selectedStudent.id,
+      sender: { id: parseInt(teacherId) }
+    };
+    setConversation(prev => [...prev, sentMessage]);
+    setNewMessage('');
 
     try {
-      setSending(true);
       const messageData = {
-        senderId: parseInt(teacherId),
-        recipientId: selectedConversation,
+        senderId: teacherId,
+        recipientId: selectedStudent.id,
         content: newMessage,
-        subject: 'Tin nhắn từ giảng viên'
+        subject: `Tin nhắn từ giảng viên`,
       };
-
-      await api.SendMessage(messageData);
-
-      setNewMessage('');
-      message.success('Đã gửi tin nhắn thành công');
       
-      // Refresh conversation
-      fetchConversation(selectedConversation);
-      fetchMessages(); // Refresh message list
+      const response = await api.SendMessage(messageData);
+      
+      // Replace temporary message with the real one from the server
+      setConversation(prev => prev.map(msg => (msg.id === tempId ? response : msg)));
     } catch (error) {
+      message.error('Không thể gửi tin nhắn.');
       console.error('Error sending message:', error);
-      message.error('Không thể gửi tin nhắn');
+      // Remove the optimistic message if sending failed
+      setConversation(prev => prev.filter(msg => msg.id !== tempId));
     } finally {
       setSending(false);
     }
   };
 
-  const sendNewMessage = async (values) => {
+  const handleSendNewMessage = async (values) => {
+    const { studentId, subject, content } = values;
+    if (!studentId || !content.trim()) return;
+
+    setSending(true);
     try {
-      setSending(true);
       const messageData = {
-        senderId: parseInt(teacherId),
-        recipientId: values.recipientId,
-        content: values.content,
-        subject: values.subject || 'Tin nhắn từ giảng viên'
+        senderId: teacherId,
+        recipientId: studentId,
+        subject: subject || `Tin nhắn từ giảng viên`,
+        content: content,
       };
 
       await api.SendMessage(messageData);
-
-      message.success('Đã gửi tin nhắn thành công');
+      
+      message.success('Tin nhắn đã được gửi thành công!');
       setIsModalVisible(false);
       form.resetFields();
-      fetchMessages(); // Refresh message list
+      
+      // If the new message is to the selected student, refresh conversation
+      if (selectedStudent && selectedStudent.id === studentId) {
+        const student = students.find(s => s.id === studentId);
+        fetchConversation(student);
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
-      message.error('Không thể gửi tin nhắn');
+      message.error('Gửi tin nhắn thất bại.');
+      console.error('Error sending new message:', error);
     } finally {
       setSending(false);
     }
   };
 
-  const markAsRead = async (messageId) => {
-    try {
-      await api.MarkMessageAsRead(messageId);
-      fetchMessages(); // Refresh to update read status
-    } catch (error) {
-      console.error('Error marking message as read:', error);
+  const renderConversation = () => {
+    if (loadingConversation) {
+      return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
     }
+    if (!selectedStudent) {
+      return (
+        <div style={{ textAlign: 'center', padding: '50px', color: '#888' }}>
+          <UserOutlined style={{ fontSize: '48px' }} />
+          <p>Vui lòng chọn một học sinh để xem cuộc trò chuyện</p>
+        </div>
+      );
+    }
+    if (conversation.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '50px', color: '#888' }}>
+          <p>Chưa có tin nhắn nào trong cuộc trò chuyện này.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <List
+        dataSource={conversation}
+        renderItem={(item) => {
+          const isTeacher = item.senderId?.toString() === teacherId;
+          return (
+            <List.Item style={{ justifyContent: isTeacher ? 'flex-end' : 'flex-start' }}>
+              <Card
+                style={{
+                  maxWidth: '70%',
+                  backgroundColor: isTeacher ? '#e6f7ff' : '#fff',
+                }}
+              >
+                <p>{item.content}</p>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {formatDate(item.createdAt)}
+                </Text>
+              </Card>
+            </List.Item>
+          );
+        }}
+      />
+    );
   };
 
-  // Filter messages based on search text
-  const filteredMessages = messages.filter(msg => 
-    msg.senderName?.toLowerCase().includes(searchText.toLowerCase()) ||
-    msg.content?.toLowerCase().includes(searchText.toLowerCase()) ||
-    msg.subject?.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  // Group messages by sender
-  const groupedMessages = filteredMessages.reduce((acc, msg) => {
-    const senderId = msg.senderId;
-    if (!acc[senderId]) {
-      acc[senderId] = {
-        sender: msg.senderName,
-        senderId: senderId,
-        messages: [],
-        unreadCount: 0
-      };
-    }
-    acc[senderId].messages.push(msg);
-    if (!msg.isRead) {
-      acc[senderId].unreadCount++;
-    }
-    return acc;
-  }, {});
-
-  const conversationsList = Object.values(groupedMessages);
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <div className="flex justify-between items-center mb-6">
-            <Title level={2}>
-              <MessageOutlined className="mr-2" />
-              Quản lý tin nhắn
-            </Title>
-            <Space>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={() => setIsModalVisible(true)}
-              >
-                Soạn tin nhắn mới
-              </Button>
-              <Button 
-                icon={<ReloadOutlined />}
-                onClick={fetchMessages}
-                loading={loading}
-              >
-                Làm mới
-              </Button>
-            </Space>
-          </div>
-        </Col>
-
-        {/* Messages List */}
-        <Col span={8}>
-          <Card title="Danh sách tin nhắn" size="small">
-            <Input
-              prefix={<SearchOutlined />}
-              placeholder="Tìm kiếm tin nhắn..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="mb-4"
+    <Row gutter={16} style={{ height: 'calc(100vh - 120px)' }}>
+      <Col span={6}>
+        <Card title="Danh sách học sinh" style={{ height: '100%', overflowY: 'auto' }}>
+          {loadingStudents ? (
+            <Spin />
+          ) : (
+            <List
+              dataSource={students}
+              renderItem={(student) => (
+                <List.Item
+                  onClick={() => handleStudentSelect(student.id)}
+                  style={{
+                    cursor: 'pointer',
+                    backgroundColor: selectedStudent && selectedStudent.id === student.id ? '#f0faff' : 'transparent',
+                  }}
+                >
+                  <List.Item.Meta
+                    avatar={<Avatar icon={<UserOutlined />} />}
+                    title={student.fullName}
+                    description={`ID: ${student.id}`}
+                  />
+                </List.Item>
+              )}
             />
-            
-            <Spin spinning={loading}>
-              <List
-                dataSource={conversationsList}
-                renderItem={(conversation) => (
-                  <List.Item
-                    className={`cursor-pointer hover:bg-gray-50 ${
-                      selectedConversation === conversation.senderId ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                    }`}
-                    onClick={() => fetchConversation(conversation.senderId)}
-                  >
-                    <List.Item.Meta
-                      avatar={<Avatar icon={<UserOutlined />} />}
-                      title={
-                        <div className="flex justify-between items-center">
-                          <Text strong>{fixEncoding(conversation.sender)}</Text>
-                          {conversation.unreadCount > 0 && (
-                            <Badge count={conversation.unreadCount} />
-                          )}
-                        </div>
-                      }
-                      description={
-                        <div>
-                          <Text ellipsis>{fixEncoding(conversation.messages[0]?.content)}</Text>
-                          <br />
-                          <Text type="secondary" className="text-xs">
-                            {new Date(conversation.messages[0]?.sentAt).toLocaleString('vi-VN')}
-                          </Text>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            </Spin>
-          </Card>
-        </Col>
-
-        {/* Conversation View */}
-        <Col span={16}>
-          <Card 
-            title={
-              selectedConversation ? 
-                `Cuộc trò chuyện với ${fixEncoding(conversationMessages[0]?.senderName || 'Sinh viên')}` : 
-                'Chọn một cuộc trò chuyện'
-            }
-            size="small"
-          >
-            {selectedConversation ? (
-              <>
-                {/* Messages */}
-                <div style={{ height: '400px', overflowY: 'auto', marginBottom: '16px' }}>
-                  {conversationMessages.map((msg) => (
-                    <div 
-                      key={msg.id} 
-                      className={`mb-4 ${msg.senderId === parseInt(teacherId) ? 'text-right' : 'text-left'}`}
-                    >
-                      <div 
-                        className={`inline-block max-w-xs p-3 rounded-lg ${
-                          msg.senderId === parseInt(teacherId) 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-200 text-black'
-                        }`}
-                      >
-                        <div className="font-medium text-sm mb-1">{fixEncoding(msg.subject)}</div>
-                        <div>{fixEncoding(msg.content)}</div>
-                        <div className="text-xs mt-1 opacity-75">
-                          {new Date(msg.sentAt).toLocaleString('vi-VN')}
-                        </div>
-                      </div>
-                      {msg.senderId !== parseInt(teacherId) && !msg.isRead && (
-                        <Tag color="orange" className="ml-2" onClick={() => markAsRead(msg.id)}>
-                          Chưa đọc
-                        </Tag>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <Divider />
-
-                {/* Reply Input */}
-                <div className="flex gap-2">
+          )}
+        </Card>
+      </Col>
+      <Col span={18}>
+        <Card
+          title={selectedStudent ? `Trò chuyện với ${selectedStudent.fullName}` : 'Chọn một cuộc trò chuyện'}
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          styles={{ body: { flex: 1, overflowY: 'auto' } }}
+          actions={[
+            selectedStudent && (
+              <div style={{ padding: '0 24px' }}>
+                <Input.Group compact>
                   <TextArea
+                    rows={1}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Nhập tin nhắn..."
-                    rows={3}
-                    style={{ flex: 1 }}
+                    disabled={sending}
                   />
                   <Button
                     type="primary"
                     icon={<SendOutlined />}
-                    onClick={sendMessage}
+                    onClick={handleSendMessage}
                     loading={sending}
-                  >
-                    Gửi
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center text-gray-500 py-20">
-                <MessageOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                <div>Chọn một cuộc trò chuyện để bắt đầu</div>
+                    disabled={!newMessage.trim()}
+                  />
+                </Input.Group>
               </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* New Message Modal */}
+            )
+          ]}
+        >
+          {renderConversation()}
+        </Card>
+      </Col>
       <Modal
         title="Soạn tin nhắn mới"
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
       >
-        <Form form={form} onFinish={sendNewMessage} layout="vertical">
+        <Form form={form} layout="vertical" onFinish={handleSendNewMessage}>
           <Form.Item
-            name="recipientId"
-            label="Gửi đến sinh viên"
-            rules={[{ required: true, message: 'Vui lòng chọn sinh viên' }]}
+            name="studentId"
+            label="Gửi đến"
+            rules={[{ required: true, message: 'Vui lòng chọn học sinh' }]}
           >
-            {studentFetchError && (
-              <Alert
-                message="Lỗi tải danh sách học sinh"
-                description={studentFetchError}
-                type="error"
-                showIcon
-                style={{ marginBottom: 16 }}
-                action={
-                  <Button size="small" onClick={fetchStudents}>
-                    Thử lại
-                  </Button>
-                }
-              />
-            )}
-            <Select
-              placeholder="Chọn sinh viên"
-              showSearch
-              optionFilterProp="label"
-              optionLabelProp="label"
-              loading={loadingStudents}
-              notFoundContent={loadingStudents ? <Spin size="small" /> : 'Không tìm thấy học sinh nào'}
-            >
-              {loadingStudents ? (
-                <Option value="" disabled>
-                  <LoadingOutlined spin /> Đang tải danh sách học sinh...
+            <Select placeholder="Chọn học sinh">
+              {students.map((student) => (
+                <Option key={student.id} value={student.id}>
+                  {student.fullName} (ID: {student.id})
                 </Option>
-              ) : students && students.length > 0 ? (
-                (() => {
-                  // Group students by classroom
-                  const classroomGroups = {};
-                  const noClassStudents = [];
-                  
-                  students.forEach(student => {
-                    // Handle different data structures that might come from API
-                    const fullName = fixEncoding(student.fullName || student.name || student.username || `Học sinh ${student.id}`);
-                    const username = student.username || student.email || `student${student.id}`;
-                    const studentCode = student.studentCode || student.code || `SV${student.id}`;
-                    
-                    if (student.classroomId && student.classroomName) {
-                      if (!classroomGroups[student.classroomId]) {
-                        classroomGroups[student.classroomId] = {
-                          name: fixEncoding(student.classroomName),
-                          students: []
-                        };
-                      }
-                      classroomGroups[student.classroomId].students.push({
-                        ...student,
-                        fullName,
-                        username,
-                        studentCode
-                      });
-                    } else {
-                      noClassStudents.push({
-                        ...student,
-                        fullName,
-                        username,
-                        studentCode
-                      });
-                    }
-                  });
-                  
-                  // Render grouped options
-                  const options = [];
-                  
-                  // First add students from classrooms
-                  Object.values(classroomGroups).forEach(group => {
-                    options.push(
-                      <Select.OptGroup key={`group-${group.name}`} label={`${group.name} (${group.students.length})`}>
-                        {group.students.map(student => (
-                          <Option 
-                            key={student.id} 
-                            value={student.id}
-                            label={student.fullName}
-                          >
-                            <div className="flex flex-col">
-                              <span>{student.fullName}</span>
-                              <span className="text-xs text-gray-500">{student.studentCode || student.username}</span>
-                            </div>
-                          </Option>
-                        ))}
-                      </Select.OptGroup>
-                    );
-                  });
-                  
-                  // Then add students without a class
-                  if (noClassStudents.length > 0) {
-                    options.push(
-                      <Select.OptGroup key="no-class" label="Sinh viên khác">
-                        {noClassStudents.map(student => (
-                          <Option 
-                            key={student.id} 
-                            value={student.id}
-                            label={student.fullName}
-                          >
-                            <div className="flex flex-col">
-                              <span>{student.fullName}</span>
-                              <span className="text-xs text-gray-500">{student.studentCode || student.username}</span>
-                            </div>
-                          </Option>
-                        ))}
-                      </Select.OptGroup>
-                    );
-                  }
-                  
-                  return options;
-                })()
-              ) : (
-                <Option value="" disabled>DATA TRỐNG KHÔNG CÓ NGƯỜI NHẬN</Option>
-              )}
+              ))}
             </Select>
           </Form.Item>
-
           <Form.Item
             name="subject"
-            label="Tiêu đề"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+            label="Chủ đề"
           >
-            <Input placeholder="Nhập tiêu đề tin nhắn" />
+            <Input placeholder="Nhập chủ đề" />
           </Form.Item>
-
           <Form.Item
             name="content"
             label="Nội dung"
@@ -749,21 +432,21 @@ const TeacherMessagesPage = () => {
           >
             <TextArea rows={4} placeholder="Nhập nội dung tin nhắn" />
           </Form.Item>
-
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={sending}>
-                Gửi tin nhắn
-              </Button>
-            </Space>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={sending}>
+              Gửi tin nhắn
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </Row>
   );
 };
 
-export default TeacherMessagesPage;
+const TeacherMessagesPageWithApp = () => (
+  <App>
+    <TeacherMessagesPage />
+  </App>
+);
+
+export default TeacherMessagesPageWithApp;
