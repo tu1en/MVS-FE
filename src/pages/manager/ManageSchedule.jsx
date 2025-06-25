@@ -2,7 +2,7 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { Button, Card, Collapse, message, Popconfirm, Table } from 'antd';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../../config/api-config';
+import API_CONFIG from '../../config/api-config';
 
 const ManageSchedule = () => {
   const [schedules, setSchedules] = useState([]);
@@ -25,7 +25,7 @@ const ManageSchedule = () => {
       }
       
       // In a real app, this would be an API call
-      const response = await axios.get(`${API_BASE_URL}/api/schedules`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/schedules`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -68,7 +68,7 @@ const ManageSchedule = () => {
       const token = localStorage.getItem('token');
       
       // Delete in the backend
-      await axios.delete(`${API_BASE_URL}/api/schedules/${id}`, {
+      await axios.delete(`${API_CONFIG.BASE_URL}/api/schedules/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

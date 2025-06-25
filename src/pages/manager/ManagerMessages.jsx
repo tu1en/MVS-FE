@@ -2,7 +2,7 @@ import { DeleteOutlined, EyeOutlined, SendOutlined, UserOutlined } from '@ant-de
 import { Button, Card, Empty, Input, List, Modal, Tabs, Tag, message } from 'antd';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../../config/api-config';
+import API_CONFIG from '../../config/api-config';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;
@@ -29,7 +29,7 @@ const ManagerMessages = () => {
           return;
         }
         
-        const response = await axios.get(`${API_BASE_URL}/api/student-messages/messages/received/${userId}`, {
+        const response = await axios.get(`${API_CONFIG.BASE_URL}/api/student-messages/messages/received/${userId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -116,7 +116,7 @@ const ManagerMessages = () => {
         const token = localStorage.getItem('token');
         
         // Update in the backend
-        await axios.put(`${API_BASE_URL}/api/student-messages/messages/${msg.id}/read`, {}, {
+        await axios.put(`${API_CONFIG.BASE_URL}/api/student-messages/messages/${msg.id}/read`, {}, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -144,7 +144,7 @@ const ManagerMessages = () => {
           const token = localStorage.getItem('token');
           
           // Delete in the backend
-          await axios.delete(`${API_BASE_URL}/api/student-messages/messages/${id}`, {
+          await axios.delete(`${API_CONFIG.BASE_URL}/api/student-messages/messages/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -191,7 +191,7 @@ const ManagerMessages = () => {
       };
       
       // Send to backend
-      await axios.post(`${API_BASE_URL}/api/student-messages/messages`, replyMessage, {
+      await axios.post(`${API_CONFIG.BASE_URL}/api/student-messages/messages`, replyMessage, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
