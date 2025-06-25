@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { getNormalizedRole } from '../../utils/authUtils';
 
 const initialState = {
   token: (() => {
@@ -28,24 +29,24 @@ const authSlice = createSlice({
     loginSuccess: (state, action) => {
       const { token, role, userId } = action.payload;
       state.token = token;
-      state.role = role;
+      
+      // Normalize role before setting
+      const normalizedRole = getNormalizedRole(role);
+      state.role = normalizedRole;
+      
       state.userId = userId;
       state.isLogin = true;
 
       localStorage.setItem('token', token);
-      localStorage.setItem('role', role);
+      localStorage.setItem('role', normalizedRole);
       localStorage.setItem('userId', userId);
-    },    logout: (state) => {
+    },
+    logout: (state) => {
       state.token = null;
       state.role = null;
       state.userId = null;
       state.isLogin = false;
-
-      // Clean up all authentication-related localStorage items
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('email');      localStorage.removeItem('user');
+      localStorage.clear();
     },
     syncFromLocalStorage: (state) => {
       const token = localStorage.getItem('token');

@@ -6,6 +6,7 @@ import {
     MoreOutlined
 } from '@ant-design/icons';
 import {
+    App,
     Button,
     Card,
     Col,
@@ -14,7 +15,6 @@ import {
     Input,
     InputNumber,
     Menu,
-    message,
     Modal,
     Progress,
     Row,
@@ -33,11 +33,11 @@ import GradingService from '../services/gradingService';
 
 ChartJS.register(ArcElement, ChartTooltip, Legend, CategoryScale, LinearScale);
 
-const { TabPane } = Tabs;
 const { Option } = Select;
 const { TextArea } = Input;
 
 const AdvancedGrading = () => {
+  const { message } = App.useApp();
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -464,40 +464,51 @@ const AdvancedGrading = () => {
           </Button>
         </Space>
       }>
-        <Tabs defaultActiveKey="submissions">
-          <TabPane tab="Danh sách bài nộp" key="submissions">
-            <Table
-              columns={submissionColumns}
-              dataSource={submissions}
-              loading={loading}
-              rowKey="id"
-              rowSelection={{
-                selectedRowKeys: selectedSubmissions,
-                onChange: setSelectedSubmissions,
-                checkStrictly: false
-              }}
-            />
-            {selectedSubmissions.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <Button
-                  type="primary"
-                  onClick={() => setBulkGrading(true)}
-                >
-                  Chấm điểm hàng loạt ({selectedSubmissions.length} bài)
-                </Button>
-              </div>
-            )}
-          </TabPane>
-          
-          <TabPane tab="Thống kê" key="analytics">
-            {renderAnalytics()}
-          </TabPane>
-          
-          <TabPane tab="Rubric chấm điểm" key="rubrics">
-            <div>
-              <Button type="primary" style={{ marginBottom: 16 }}>
-                Thêm tiêu chí mới
-              </Button>
+        <Tabs 
+          defaultActiveKey="submissions"
+          items={[
+            {
+              key: 'submissions',
+              label: 'Danh sách bài nộp',
+              children: (
+                <>
+                  <Table
+                    columns={submissionColumns}
+                    dataSource={submissions}
+                    loading={loading}
+                    rowKey="id"
+                    rowSelection={{
+                      selectedRowKeys: selectedSubmissions,
+                      onChange: setSelectedSubmissions,
+                      checkStrictly: false
+                    }}
+                  />
+                  {selectedSubmissions.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <Button
+                        type="primary"
+                        onClick={() => setBulkGrading(true)}
+                      >
+                        Chấm điểm hàng loạt ({selectedSubmissions.length} bài)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )
+            },
+            {
+              key: 'analytics',
+              label: 'Thống kê',
+              children: renderAnalytics()
+            },
+            {
+              key: 'rubrics',
+              label: 'Rubric chấm điểm',
+              children: (
+                <div>
+                  <Button type="primary" style={{ marginBottom: 16 }}>
+                    Thêm tiêu chí mới
+                  </Button>
               {rubrics.map(rubric => (
                 <Card key={rubric.id} style={{ marginBottom: 16 }}>
                   <h4>{rubric.criteria} ({rubric.maxPoints} điểm)</h4>
@@ -521,15 +532,17 @@ const AdvancedGrading = () => {
                   </Row>
                 </Card>
               ))}
-            </div>
-          </TabPane>
-        </Tabs>
+                </div>
+              )
+            }
+          ]}
+        />
       </Card>
 
       {/* Grade Modal */}
       <Modal
         title={`Chấm điểm - ${selectedSubmission?.studentName}`}
-        visible={gradeModalVisible}
+        open={gradeModalVisible}
         onCancel={() => setGradeModalVisible(false)}
         footer={null}
         width={800}

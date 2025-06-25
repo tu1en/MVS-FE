@@ -1,123 +1,100 @@
 import { CheckCircleOutlined, CloseCircleOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import { Empty, Spin, Tag, message } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { App, Empty, Spin, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import attendanceService from '../../services/attendanceService';
 
 // StudentAttendance Component để sinh viên điểm danh
 const StudentAttendance = ({ onLogout, showMessageBox }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
   const [myAttendance, setMyAttendance] = useState([]);
   const [locationStatus, setLocationStatus] = useState('pending'); // 'pending', 'checking', 'passed', 'failed'
-  const [selectedSession, setSelectedSession] = useState(null);
-  
-  // --- Mock Data ---
-  const mockUserInfo = {
-    id: 'SV001',
-    name: 'Nguyễn Văn A',
-    studentCode: 'SV001',
-    class: 'KTPM1',
-  };
-  
-  const mockTimetable = [
-    {
-      id: 'session-001',
-      name: 'Buổi học Lập trình Web',
-      class: 'KTPM1',
-      classroomName: 'KTPM1',
-      time: '18/06/2025 08:00 - 11:00',
-      status: 'Đang hoạt động',
-      location: { latitude: 21.028511, longitude: 105.804817, radius: 200 }, // 200 meters
-    },
-    {
-      id: 'session-002',
-      name: 'Buổi học Cơ sở dữ liệu',
-      class: 'KTPM1',
-      classroomName: 'KTPM1',
-      time: '19/06/2025 13:00 - 16:00',
-      status: 'Sắp tới',
-    },
-    {
-      id: 'session-003',
-      name: 'Buổi học Thiết kế phần mềm',
-      class: 'KTPM1',
-      classroomName: 'KTPM1',
-      time: '20/06/2025 09:00 - 12:00',
-      status: 'Sắp tới',
-    },
-    {
-      id: 'session-004',
-      name: 'Buổi học Cấu trúc dữ liệu',
-      class: 'KTPM1',
-      classroomName: 'KTPM1',
-      time: '15/06/2025 10:00 - 13:00',
-      status: 'Đã kết thúc',
-    },
-  ];
-  
-  const mockAttendanceHistory = [
-    {
-      id: 'att-001',
-      sessionId: 'session-004',
-      sessionName: 'Buổi học Cấu trúc dữ liệu',
-      date: '15/06/2025',
-      time: '10:15',
-      status: 'present',
-    },
-    {
-      id: 'att-002',
-      sessionId: 'past-session-001',
-      sessionName: 'Buổi học Lập trình hướng đối tượng',
-      date: '10/06/2025',
-      time: '09:30',
-      status: 'present',
-    },
-    {
-      id: 'att-003',
-      sessionId: 'past-session-002',
-      sessionName: 'Buổi học Mạng máy tính',
-      date: '08/06/2025',
-      time: '14:00',
-      status: 'absent',
-    },
-  ];
-
-  // --- API Mock Functions ---
-  
-  // Lấy danh sách phiên điểm danh
+  const [selectedSession, setSelectedSession] = useState(null);  const [apiCallsInProgress, setApiCallsInProgress] = useState({ sessions: false, attendance: false });
+  const [errorShown, setErrorShown] = useState({ sessions: false, attendance: false });
+  const [hasApiError, setHasApiError] = useState({ sessions: false, attendance: false });
+  // --- API Functions ---  // Lấy danh sách phiên điểm danh
   const fetchSessions = async () => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        setSessions(mockTimetable);
-        
-        // Lọc ra các phiên đang hoạt động
-        const active = mockTimetable.filter(s => s.status === 'ACTIVE' || s.status === 'Đang hoạt động');
-        setActiveSessions(active);
-        
-        setLoading(false);
-      }, 600);
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách phiên điểm danh:', error);
-      showMessageBox('Lỗi', 'Không thể lấy danh sách phiên điểm danh. Vui lòng thử lại sau.');
-      setLoading(false);
+    if (apiCallsInProgress.sessions) {
+      return; // Prevent duplicate calls silently
     }
-  };
-  
-  // Lấy lịch sử điểm danh
-  const fetchMyAttendance = async () => {
+    
+    setApiCallsInProgress(prev => ({ ...prev, sessions: true }));
     setLoading(true);
     try {
-      // Simulate API call
-      setTimeout(() => {
-        setMyAttendance(mockAttendanceHistory);
-        setLoading(false);
-      }, 500);
+      const response = await attendanceService.getAttendanceSessions();
+      setSessions(response || []);
+      
+      // Lọc ra các phiên đang hoạt động
+      const active = response ? response.filter(s => s.status === 'ACTIVE') : [];
+      setActiveSessions(active);
+      
+      // Clear any previous errors
+      setHasApiError(prev => ({ ...prev, sessions: false }));
     } catch (error) {
-      console.error('Lỗi khi lấy lịch sử điểm danh:', error);
-      showMessageBox('Lỗi', 'Không thể lấy lịch sử điểm danh. Vui lòng thử lại sau.');
+      // This block should never be reached now that the service returns empty arrays instead of throwing
+      console.error('Unexpected error in fetchSessions:', error);
+      setSessions([]);
+      setActiveSessions([]);
+      setHasApiError(prev => ({ ...prev, sessions: true }));
+      
+      if (!errorShown.sessions) {
+        setErrorShown(prev => ({ ...prev, sessions: true }));
+        if (typeof showMessageBox === 'function') {
+          showMessageBox('Lỗi', 'Không thể lấy danh sách phiên điểm danh. Vui lòng thử lại sau.');
+        } else {
+          message.error('Không thể lấy danh sách phiên điểm danh. Vui lòng thử lại sau.');
+        }
+      }
+    } finally {
       setLoading(false);
+      setApiCallsInProgress(prev => ({ ...prev, sessions: false }));
+    }
+  };    // Lấy lịch sử điểm danh
+  const fetchMyAttendance = async () => {
+    if (apiCallsInProgress.attendance) {
+      return; // Prevent duplicate calls silently
+    }
+    
+    setApiCallsInProgress(prev => ({ ...prev, attendance: true }));
+    setLoading(true);
+    try {
+      const response = await attendanceService.getStudentAttendanceView();
+      const records = response?.records || [];
+      
+      // Transform API response to match component's expected format
+      const formattedRecords = records.map(record => ({
+        id: record.id || `att-${Date.now()}`,
+        sessionId: record.sessionId,
+        sessionName: record.classroomName || 'Không có tên',
+        date: record.sessionDate || new Date().toLocaleDateString(),
+        time: record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        status: record.status === 'PRESENT' ? 'present' : 
+                record.status === 'LATE' ? 'present' : 'absent'
+      }));
+      
+      setMyAttendance(formattedRecords);
+      
+      // Clear any previous errors
+      setHasApiError(prev => ({ ...prev, attendance: false }));
+    } catch (error) {
+      // This block should never be reached now that the service returns empty arrays instead of throwing
+      console.error('Unexpected error in fetchMyAttendance:', error);
+      setMyAttendance([]);
+      setHasApiError(prev => ({ ...prev, attendance: true }));
+      
+      if (!errorShown.attendance) {
+        setErrorShown(prev => ({ ...prev, attendance: true }));
+        if (typeof showMessageBox === 'function') {
+          showMessageBox('Lỗi', 'Không thể lấy lịch sử điểm danh. Vui lòng thử lại sau.');
+        } else {
+          message.error('Không thể lấy lịch sử điểm danh. Vui lòng thử lại sau.');
+        }
+      }
+    } finally {
+      setLoading(false);
+      setApiCallsInProgress(prev => ({ ...prev, attendance: false }));
     }
   };
   
@@ -125,53 +102,69 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
   const markAttendance = async (sessionId) => {
     setLoading(true);
     try {
-      // Simulate API call
-      setTimeout(() => {
-        console.log('Đã điểm danh cho phiên:', sessionId);
-        
-        // Cập nhật lịch sử điểm danh
-        const session = sessions.find(s => s.id === sessionId);
-        const now = new Date();
-        const newAttendance = {
-          id: `att-${Date.now()}`,
-          sessionId: sessionId,
-          sessionName: session.name,
-          date: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`,
-          time: `${now.getHours()}:${now.getMinutes()}`,
-          status: 'present',
-        };
-        
-        setMyAttendance([newAttendance, ...myAttendance]);
-        
-        // Cập nhật danh sách phiên điểm danh
-        setActiveSessions(activeSessions.filter(s => s.id !== sessionId));
-        
-        message.success('Điểm danh thành công!');
-        setLoading(false);
-      }, 800);
-    } catch (error) {
+      // Get current location for attendance
+      const position = await getCurrentPositionPromise();
+      
+      // Send attendance data to API
+      await attendanceService.markAttendance(sessionId, {
+        sessionId,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      });
+      
+      // Update attendance history
+      await fetchMyAttendance();
+      
+      // Update active sessions
+      setActiveSessions(activeSessions.filter(s => s.id !== sessionId));
+      
+      message.success('Điểm danh thành công!');
+      setLoading(false);    } catch (error) {
       console.error('Lỗi khi điểm danh:', error);
-      showMessageBox('Lỗi', 'Không thể điểm danh. Vui lòng thử lại sau.');
+      if (typeof showMessageBox === 'function') {
+        showMessageBox('Lỗi', 'Không thể điểm danh. Vui lòng thử lại sau.');
+      } else {
+        message.error('Không thể điểm danh. Vui lòng thử lại sau.');
+      }
       setLoading(false);
     }
+  };
+  
+  // Promise wrapper for getCurrentPosition
+  const getCurrentPositionPromise = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Trình duyệt của bạn không hỗ trợ định vị vị trí.'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        position => resolve(position),
+        error => reject(error),
+        { enableHighAccuracy: true }
+      );
+    });
   };
 
   // Kiểm tra vị trí
   const checkLocation = async (sessionId) => {
     setLocationStatus('checking');
     
-    try {
-      if (!navigator.geolocation) {
-        showMessageBox('Lỗi', 'Trình duyệt của bạn không hỗ trợ định vị vị trí.');
+    try {      if (!navigator.geolocation) {
+        if (typeof showMessageBox === 'function') {
+          showMessageBox('Lỗi', 'Trình duyệt của bạn không hỗ trợ định vị vị trí.');
+        } else {
+          message.error('Trình duyệt của bạn không hỗ trợ định vị vị trí.');
+        }
         setLocationStatus('failed');
         return;
       }
 
+      // Get session location data from API or sessions state
+      const session = sessions.find(s => s.id === sessionId);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Tìm phiên học và kiểm tra vị trí
-          const session = sessions.find(s => s.id === sessionId);
-          
           if (!session || !session.location) {
             // Nếu phiên không có thông tin vị trí, coi như đã vượt qua
             setLocationStatus('passed');
@@ -188,23 +181,33 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
           
           if (distance <= session.location.radius) {
             setLocationStatus('passed');
-            console.log('Vị trí hợp lệ, khoảng cách:', distance, 'm');
-          } else {
+            console.log('Vị trí hợp lệ, khoảng cách:', distance, 'm');          } else {
             setLocationStatus('failed');
             console.log('Vị trí không hợp lệ, khoảng cách:', distance, 'm');
-            showMessageBox('Thông báo', `Bạn cách lớp học ${Math.round(distance)} mét. Vui lòng đến gần hơn để điểm danh.`);
+            if (typeof showMessageBox === 'function') {
+              showMessageBox('Thông báo', `Bạn cách lớp học ${Math.round(distance)} mét. Vui lòng đến gần hơn để điểm danh.`);
+            } else {
+              message.warning(`Bạn cách lớp học ${Math.round(distance)} mét. Vui lòng đến gần hơn để điểm danh.`);
+            }
           }
         },
         (error) => {
           console.error('Lỗi khi xác định vị trí:', error);
-          showMessageBox('Lỗi', 'Không thể xác định vị trí của bạn. Vui lòng cho phép truy cập vị trí và thử lại.');
+          if (typeof showMessageBox === 'function') {
+            showMessageBox('Lỗi', 'Không thể xác định vị trí của bạn. Vui lòng cho phép truy cập vị trí và thử lại.');
+          } else {
+            message.error('Không thể xác định vị trí của bạn. Vui lòng cho phép truy cập vị trí và thử lại.');
+          }
           setLocationStatus('failed');
         },
         { enableHighAccuracy: true }
-      );
-    } catch (error) {
+      );    } catch (error) {
       console.error('Lỗi khi kiểm tra vị trí:', error);
-      showMessageBox('Lỗi', 'Xảy ra lỗi khi kiểm tra vị trí. Vui lòng thử lại sau.');
+      if (typeof showMessageBox === 'function') {
+        showMessageBox('Lỗi', 'Xảy ra lỗi khi kiểm tra vị trí. Vui lòng thử lại sau.');
+      } else {
+        message.error('Xảy ra lỗi khi kiểm tra vị trí. Vui lòng thử lại sau.');
+      }
       setLocationStatus('failed');
     }
   };
@@ -224,24 +227,46 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
 
     return R * c; // in meters
   };
-  
-  // Load dữ liệu khi component được mount
+    // Load dữ liệu khi component được mount
   useEffect(() => {
-    fetchSessions();
-    fetchMyAttendance();
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchSessions();
+        await fetchMyAttendance();
+      }
+    };
+    
+    loadData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, []);
   
   const handleAttendSession = (session) => {
     setSelectedSession(session);
     checkLocation(session.id);
   };
-  
-  const handleConfirmAttendance = () => {
+    const handleConfirmAttendance = () => {
     if (selectedSession && locationStatus === 'passed') {
       markAttendance(selectedSession.id);
       setSelectedSession(null);
       setLocationStatus('pending');
     }
+  };
+  
+  // Retry function to reload data
+  const handleRetry = () => {
+    // Reset error states
+    setErrorShown({ sessions: false, attendance: false });
+    setHasApiError({ sessions: false, attendance: false });
+    
+    // Reload data
+    fetchSessions();
+    fetchMyAttendance();
   };
   
   // --- Component UI ---
@@ -256,8 +281,7 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
           <div className="py-6 text-center">
             <Spin size="default" />
             <p className="mt-2 text-gray-500">Đang tải dữ liệu...</p>
-          </div>
-        ) : activeSessions.length > 0 ? (
+          </div>        ) : activeSessions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeSessions.map((session) => (
               <div key={session.id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
@@ -302,6 +326,19 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
               </div>
             ))}
           </div>
+        ) : hasApiError.sessions ? (
+          <div className="text-center py-8">
+            <div className="mb-4">
+              <p className="text-red-500 mb-2">Không thể tải danh sách phiên điểm danh</p>
+              <p className="text-gray-500 text-sm">Vui lòng kiểm tra kết nối mạng và thử lại</p>
+            </div>
+            <button
+              onClick={handleRetry}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-200"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : (
           <Empty description="Không có phiên điểm danh nào đang diễn ra" />
         )}
@@ -321,8 +358,7 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
           <div className="py-6 text-center">
             <Spin size="default" />
             <p className="mt-2 text-gray-500">Đang tải dữ liệu...</p>
-          </div>
-        ) : upcomingSessions.length > 0 ? (
+          </div>        ) : upcomingSessions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white border border-gray-200 rounded-lg">
               <thead className="bg-gray-50">
@@ -343,6 +379,19 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
               </tbody>
             </table>
           </div>
+        ) : hasApiError.sessions ? (
+          <div className="text-center py-8">
+            <div className="mb-4">
+              <p className="text-red-500 mb-2">Không thể tải danh sách phiên sắp tới</p>
+              <p className="text-gray-500 text-sm">Vui lòng kiểm tra kết nối mạng và thử lại</p>
+            </div>
+            <button
+              onClick={handleRetry}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-200"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : (
           <Empty description="Không có phiên điểm danh sắp tới" />
         )}
@@ -360,8 +409,7 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
           <div className="py-6 text-center">
             <Spin size="default" />
             <p className="mt-2 text-gray-500">Đang tải dữ liệu...</p>
-          </div>
-        ) : myAttendance.length > 0 ? (
+          </div>        ) : myAttendance.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white border border-gray-200 rounded-lg">
               <thead className="bg-gray-50">
@@ -390,13 +438,32 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
               </tbody>
             </table>
           </div>
+        ) : hasApiError.attendance ? (
+          <div className="text-center py-8">
+            <div className="mb-4">
+              <p className="text-red-500 mb-2">Không thể tải lịch sử điểm danh</p>
+              <p className="text-gray-500 text-sm">Vui lòng kiểm tra kết nối mạng và thử lại</p>
+            </div>
+            <button
+              onClick={handleRetry}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-200"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : (
           <Empty description="Không có lịch sử điểm danh" />
         )}
       </div>
     );
   };
-  
+    // Get user info from localStorage
+  const userInfo = {
+    name: localStorage.getItem('fullName') || 'Sinh viên',
+    studentCode: localStorage.getItem('studentId') || 'SV001',
+    userId: localStorage.getItem('userId') || '1'
+  };
+
   // Main Dashboard Component
   const StudentDashboard = () => {
     return (
@@ -406,13 +473,13 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
             <h2 className="text-2xl font-bold text-gray-800">Điểm danh sinh viên</h2>
             <div className="flex items-center">
               <img
-                src={`https://placehold.co/40x40/ADD8E6/000000?text=${mockUserInfo.name.charAt(0)}`}
-                alt={`Ảnh của ${mockUserInfo.name}`}
+                src={`https://placehold.co/40x40/ADD8E6/000000?text=${userInfo.name.charAt(0)}`}
+                alt={`Ảnh của ${userInfo.name}`}
                 className="w-10 h-10 rounded-full mr-3"
               />
               <div>
-                <p className="font-medium">{mockUserInfo.name}</p>
-                <p className="text-sm text-gray-600">{mockUserInfo.studentCode}</p>
+                <p className="font-medium">{userInfo.name}</p>
+                <p className="text-sm text-gray-600">{userInfo.studentCode}</p>
               </div>
             </div>
           </div>
@@ -452,4 +519,4 @@ const StudentAttendance = ({ onLogout, showMessageBox }) => {
   return <StudentDashboard />;
 };
 
-export default StudentAttendance; 
+export default StudentAttendance;

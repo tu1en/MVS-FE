@@ -1,65 +1,129 @@
-import { Button, Card, Form, Input, Select, message } from 'antd';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { App, Button, Card, Form, Input, Select, Spin } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
+import ProfileDataService from '../../services/profileDataService';
 import { validateEmail, validatePhoneNumber } from '../../utils/validation';
 
 const { Option } = Select;
 
-// Configure axios to use the correct base URL
-const apiClient = axios.create({
-  baseURL: 'http://localhost:8088',
-  timeout: 10000,
-});
-
-// Add auth token to requests
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 const EditProfile = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [invalidPrefix, setInvalidPrefix] = useState(false);
+  const [formReady, setFormReady] = useState(false);
+
+  // Initialize form with default values to prevent React warnings
+  const defaultValues = {
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    teacherId: localStorage.getItem('userId') || '',
+    gender: '',
+    address: '',
+    school: 'Trường Đại học ABC',
+    department: 'Khoa Công nghệ thông tin',
+    specialization: '',
+    experience: ''  };  const fetchProfile = useCallback(async () => {
+    try {
+      setInitialLoading(true);      const result = await ProfileDataService.fetchProfileWithFallback('teacher');
+      
+      if (result.success) {
+        const profileData = { ...defaultValues, ...result.data };
+        
+        // Set form ready first, then set field values after form is rendered
+        setFormReady(true);
+        
+        // Use setTimeout to ensure form is rendered before setting values
+        setTimeout(() => {
+          form.setFieldsValue(profileData);
+        }, 0);
+        
+        if (result.source === 'localStorage') {
+          message.warning({
+            content: 'Đang sử dụng dữ liệu đã lưu (không có kết nối mạng)',
+            duration: 4
+          });
+        } else {
+          message.success({
+            content: 'Đã tải thông tin từ server thành công',
+            duration: 2
+          });
+        }
+      } else {
+        // If profile fetch fails, still set default values and allow form usage
+        const fallbackData = { ...defaultValues, ...result.data };
+        
+        // Set form ready first, then set field values after form is rendered
+        setFormReady(true);
+        
+        // Use setTimeout to ensure form is rendered before setting values
+        setTimeout(() => {
+          form.setFieldsValue(fallbackData);
+        }, 0);
+        
+        message.warning({
+          content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
+          duration: 4
+        });
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      // Ensure form is still usable even on error
+      setFormReady(true);
+      
+      // Use setTimeout to ensure form is rendered before setting values
+      setTimeout(() => {
+        form.setFieldsValue(defaultValues);
+      }, 0);
+      
+      message.error({
+        content: 'Lỗi không mong muốn khi tải hồ sơ',
+        duration: 4
+      });
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [form, message]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
-  const fetchProfile = async () => {
-    try {
-      const response = await apiClient.get('/api/teacher/profile');
-      const data = response.data;
-      form.setFieldsValue({ ...data });
-    } catch (error) {
-      message.error('Không thể tải thông tin cá nhân');
-      console.error('Error fetching profile:', error);
-    }
-  };
-  const onFinish = async (values) => {
+  }, [fetchProfile]);  const onFinish = async (values) => {
     setLoading(true);
     try {
-      await apiClient.put('/api/teacher/profile', values);
-      message.success('Cập nhật thông tin thành công');
+      const result = await ProfileDataService.updateProfileWithFallback(values);
+      
+      if (result.success) {
+        message.success({
+          content: result.message || 'Cập nhật thông tin thành công',
+          duration: 3
+        });
+      } else {
+        message.warning({
+          content: result.message || 'Không thể cập nhật trên server, đã lưu cục bộ',
+          duration: 4
+        });
+      }
     } catch (error) {
-      message.error('Không thể cập nhật thông tin');
-      console.error('Error updating profile:', error);
+      console.error('Error in onFinish:', error);
+      message.error({
+        content: 'Có lỗi xảy ra khi cập nhật thông tin',
+        duration: 4
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  return (
+  };return (
     <div className="container mx-auto px-4 py-8">
-      <Card title="Chỉnh Sửa Thông Tin Giáo Viên" className="max-w-2xl mx-auto">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          className="max-w-xl mx-auto"
-        >
+      <Card title="Chỉnh Sửa Thông Tin Giáo Viên" className="max-w-2xl mx-auto" loading={initialLoading}>
+        {formReady ? (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            className="max-w-xl mx-auto"
+            initialValues={defaultValues}
+          >
           <Form.Item
             name="fullName"
             label="Họ và Tên"
@@ -149,14 +213,18 @@ const EditProfile = () => {
             rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy' }]}
           >
             <Input />
-          </Form.Item>
-
-          <Form.Item>
+          </Form.Item>          <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
               Cập Nhật Thông Tin
             </Button>
           </Form.Item>
         </Form>
+        ) : (
+          <div className="text-center p-4">
+            <Spin size="large" />
+            <p className="mt-2 text-gray-500">Đang tải thông tin...</p>
+          </div>
+        )}
       </Card>
     </div>
   );

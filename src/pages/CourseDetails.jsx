@@ -1,19 +1,73 @@
 import { BookOutlined, CalendarOutlined, FileTextOutlined, PlayCircleOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Button, Card, Descriptions, List, Progress, Spin, Tabs, message } from 'antd';
+import { Alert, App, Avatar, Button, Card, Descriptions, List, Progress, Spin, Tabs, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import WeeklyTimetable from '../components/WeeklyTimetable';
 import CourseService from '../services/courseService';
 import MaterialService from '../services/materialService';
 
-const { TabPane } = Tabs;
-
 const CourseDetails = () => {
-  const { courseId } = useParams();
+  const { message } = App.useApp();
+  const { Title, Text } = Typography;
+  const navigate = useNavigate();
+  const { courseId: pathCourseId } = useParams();
+  const location = useLocation();
+  
+  // Get course ID from query parameters or path parameters
+  const getCourseId = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryId = searchParams.get('id');
+    return queryId || pathCourseId;
+  };
+  
+  // Format date time safely
+  const formatDateTime = (dateTime) => {
+    try {
+      if (!dateTime) return 'Chưa xác định';
+      
+      // Handle different date formats
+      let date;
+      if (typeof dateTime === 'string') {
+        // If it's a string, try to parse it
+        date = new Date(dateTime);
+      } else if (dateTime instanceof Date) {
+        // If it's already a Date object
+        date = dateTime;
+      } else if (typeof dateTime === 'number') {
+        // If it's a timestamp
+        date = new Date(dateTime);
+      } else {
+        return 'Định dạng thời gian không hợp lệ';
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Thời gian không hợp lệ';
+      }
+      
+      // Format with Vietnamese locale
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Ho_Chi_Minh'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Lỗi định dạng thời gian';
+    }
+  };
+  
+  const courseId = getCourseId();
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [progress, setProgress] = useState(0);
+  const [suggestedCourses, setSuggestedCourses] = useState([]);
+  const [hasNetworkError, setHasNetworkError] = useState(false);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -23,25 +77,78 @@ const CourseDetails = () => {
     try {
       setLoading(true);
       
+      // Check if courseId exists
+      if (!courseId) {
+        message.error('Course ID không được cung cấp');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching course details for ID:', courseId);
+      
       // Use CourseService to fetch course details
       const courseData = await CourseService.getCourseDetails(courseId);
+      console.log('Course data received:', courseData);
       setCourse(courseData);
 
-      // Fetch course materials
-      const materialsData = await CourseService.getCourseMaterials(courseId);
-      setMaterials(materialsData);
+      // Fetch course materials - handle errors separately
+      try {
+        const materialsData = await CourseService.getCourseMaterials(courseId);
+        console.log('Materials data received:', materialsData);
+        setMaterials(materialsData);
+      } catch (materialError) {
+        console.warn('Could not fetch materials:', materialError);
+        setMaterials([]);
+      }
 
-      // Fetch course schedule
-      const scheduleData = await CourseService.getCourseSchedule(courseId);
-      setSchedule(scheduleData);
+      // Fetch course schedule - handle errors separately
+      try {
+        const scheduleData = await CourseService.getCourseSchedule(courseId);
+        console.log('Schedule data received:', scheduleData);
+        setSchedule(scheduleData);
+      } catch (scheduleError) {
+        console.warn('Could not fetch schedule:', scheduleError);
+        setSchedule([]);
+      }
 
       // Calculate progress
       setProgress(courseData.progress || 0);
     } catch (error) {
       console.error('Error fetching course details:', error);
-      message.error('Không thể tải thông tin khóa học');
+      
+      // Handle specific error types
+      if (error.response?.status === 404) {
+        message.error({
+          content: `Không tìm thấy khóa học với ID: ${courseId}. Vui lòng kiểm tra lại ID hoặc chọn khóa học khác.`,
+          duration: 5
+        });
+        setCourse(null);
+        setHasNetworkError(false);
+        // Fetch suggested courses for the user
+        fetchSuggestedCourses();
+      } else if (error.response?.status === 403) {
+        message.error('Bạn không có quyền truy cập khóa học này');
+        setHasNetworkError(false);
+      } else if (!error.response) {
+        // Network error
+        message.error('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.');
+        setHasNetworkError(true);
+      } else {
+        message.error('Không thể tải thông tin khóa học. Vui lòng thử lại sau.');
+        setHasNetworkError(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSuggestedCourses = async () => {
+    try {
+      const coursesData = await CourseService.getMyMyCourses();
+      setSuggestedCourses(coursesData?.slice(0, 5) || []); // Show up to 5 courses
+    } catch (error) {
+      console.warn('Could not fetch suggested courses:', error);
+      setSuggestedCourses([]);
     }
   };
 
@@ -63,6 +170,126 @@ const CourseDetails = () => {
       message.error('Không thể tải file');
     }
   };
+
+  if (!courseId) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Card>
+          <h3>Lỗi: Không tìm thấy ID khóa học</h3>
+          <p>URL phải chứa tham số ID khóa học (?id=courseId)</p>
+          <Button type="primary" onClick={() => window.history.back()}>
+            Quay lại
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // Network error state
+  if (!loading && hasNetworkError && !course) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Card style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <Alert
+            message="Lỗi kết nối"
+            description="Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng của bạn."
+            type="error"
+            showIcon
+          />
+          <div style={{ marginTop: '20px' }}>
+            <Button 
+              type="primary" 
+              onClick={() => {
+                setHasNetworkError(false);
+                fetchCourseDetails();
+              }}
+              style={{ marginRight: '10px' }}
+            >
+              Thử lại
+            </Button>
+            <Button onClick={() => navigate(-1)}>
+              Quay lại
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  if (!loading && course === null) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Card style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <Alert
+            message="Không tìm thấy khóa học"
+            description={
+              <div style={{ textAlign: 'left' }}>
+                <p>Khóa học với ID <strong>{courseId}</strong> không tồn tại hoặc đã bị xóa.</p>
+                <p><strong>Bạn có thể:</strong></p>
+                <ul style={{ marginTop: '10px', paddingLeft: '20px' }}>
+                  <li>Kiểm tra lại URL có đúng không</li>
+                  <li>Truy cập từ danh sách khóa học của bạn</li>
+                  <li>Liên hệ với giáo viên nếu đây là khóa học bạn đã đăng ký</li>
+                </ul>
+              </div>
+            }
+            type="warning"
+            showIcon
+            style={{ textAlign: 'left' }}
+          />
+          
+          {/* Suggested Courses */}
+          {suggestedCourses.length > 0 && (
+            <div style={{ marginTop: '20px', textAlign: 'left' }}>
+              <Title level={4}>Khóa học của bạn:</Title>
+              <List
+                dataSource={suggestedCourses}
+                renderItem={(suggestedCourse) => (
+                  <List.Item 
+                    actions={[
+                      <Button 
+                        type="link" 
+                        onClick={() => navigate(`/course-details?id=${suggestedCourse.id}`)}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<BookOutlined />} />}
+                      title={suggestedCourse.name || suggestedCourse.courseName}
+                      description={
+                        <div>
+                          <Text type="secondary">ID: {suggestedCourse.id}</Text>
+                          {suggestedCourse.description && (
+                            <div style={{ marginTop: '4px' }}>
+                              <Text>{suggestedCourse.description}</Text>
+                            </div>
+                          )}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </div>
+          )}
+          
+          <div style={{ marginTop: '20px' }}>
+            <Button 
+              type="primary" 
+              onClick={() => navigate('/student/enrolled-courses')}
+              style={{ marginRight: '10px' }}
+            >
+              Tất cả khóa học
+            </Button>
+            <Button onClick={() => navigate(-1)}>
+              Quay lại
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -104,136 +331,121 @@ const CourseDetails = () => {
             {course?.enrolledCount || 0} sinh viên
           </Descriptions.Item>
           <Descriptions.Item label="Thời gian bắt đầu">
-            {course?.startDate ? new Date(course.startDate).toLocaleDateString('vi-VN') : 'Chưa xác định'}
+            {course?.startDate ? formatDateTime(course.startDate) : 'Chưa xác định'}
           </Descriptions.Item>
           <Descriptions.Item label="Thời gian kết thúc">
-            {course?.endDate ? new Date(course.endDate).toLocaleDateString('vi-VN') : 'Chưa xác định'}
+            {course?.endDate ? formatDateTime(course.endDate) : 'Chưa xác định'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
-      <Tabs defaultActiveKey="syllabus">
-        <TabPane 
-          tab={
-            <span>
-              <FileTextOutlined />
-              Giáo trình
-            </span>
-          } 
-          key="syllabus"
-        >
-          <Card>
-            <div dangerouslySetInnerHTML={{ __html: course?.syllabus || 'Chưa có giáo trình' }} />
-          </Card>
-        </TabPane>
-
-        <TabPane 
-          tab={
-            <span>
-              <CalendarOutlined />
-              Lịch học
-            </span>
-          } 
-          key="schedule"
-        >
-          <List
-            dataSource={schedule}
-            renderItem={item => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={<Avatar icon={<CalendarOutlined />} />}
-                  title={item.title}
-                  description={
-                    <div>
-                      <p><strong>Thời gian:</strong> {new Date(item.startTime).toLocaleString('vi-VN')}</p>
-                      <p><strong>Địa điểm:</strong> {item.location}</p>
-                      <p><strong>Mô tả:</strong> {item.description}</p>
-                    </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </TabPane>
-
-        <TabPane 
-          tab={
-            <span>
-              <FileTextOutlined />
-              Tài liệu
-            </span>
-          } 
-          key="materials"
-        >
-          <List
-            dataSource={materials}
-            renderItem={item => (
-              <List.Item
-                actions={[
-                  <Button 
-                    type="primary" 
-                    size="small"
-                    onClick={() => downloadMaterial(item.id, item.fileName)}
+      <Tabs 
+        defaultActiveKey="syllabus"
+        items={[
+          {
+            key: 'syllabus',
+            label: (
+              <span>
+                <FileTextOutlined />
+                Giáo trình
+              </span>
+            ),
+            children: (
+              <Card>
+                <div dangerouslySetInnerHTML={{ __html: course?.syllabus || 'Chưa có giáo trình' }} />
+              </Card>
+            )
+          },
+          {
+            key: 'schedule',
+            label: (
+              <span>
+                <CalendarOutlined />
+                Lịch học
+              </span>
+            ),
+            children: <WeeklyTimetable schedule={schedule} />,
+          },
+          {
+            key: 'materials',
+            label: (
+              <span>
+                <FileTextOutlined />
+                Tài liệu
+              </span>
+            ),
+            children: (
+              <List
+                dataSource={materials}
+                renderItem={item => (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        type="primary" 
+                        size="small"
+                        onClick={() => downloadMaterial(item.id, item.fileName)}
+                      >
+                        Tải xuống
+                      </Button>
+                    ]}
                   >
-                    Tải xuống
-                  </Button>
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar icon={<FileTextOutlined />} />}
-                  title={item.fileName}
-                  description={
-                    <div>
-                      <p><strong>Loại:</strong> {item.fileType}</p>
-                      <p><strong>Kích thước:</strong> {item.fileSize}</p>
-                      <p><strong>Ngày tải lên:</strong> {new Date(item.uploadDate).toLocaleDateString('vi-VN')}</p>
-                    </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </TabPane>
-
-        <TabPane 
-          tab={
-            <span>
-              <PlayCircleOutlined />
-              Video bài giảng
-            </span>
-          } 
-          key="lectures"
-        >
-          <List
-            dataSource={course?.lectures || []}
-            renderItem={item => (
-              <List.Item
-                actions={[
-                  <Button type="primary" icon={<PlayCircleOutlined />}>
-                    Xem video
-                  </Button>
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar icon={<PlayCircleOutlined />} />}
-                  title={item.title}
-                  description={
-                    <div>
-                      <p><strong>Thời lượng:</strong> {item.duration} phút</p>
-                      <p><strong>Mô tả:</strong> {item.description}</p>
-                      <Progress 
-                        percent={item.watchProgress || 0} 
-                        size="small" 
-                        format={percent => `${percent}%`}
-                      />
-                    </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </TabPane>
-      </Tabs>
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<FileTextOutlined />} />}
+                      title={item.fileName}
+                      description={
+                        <div>
+                          <p><strong>Loại:</strong> {item.fileType || 'Không rõ'}</p>
+                          <p><strong>Kích thước:</strong> {item.fileSize || 'Không rõ'}</p>
+                          <p><strong>Ngày tải lên:</strong> {item.uploadDate ? formatDateTime(item.uploadDate) : 'Chưa xác định'}</p>
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            )
+          },
+          {
+            key: 'lectures',
+            label: (
+              <span>
+                <PlayCircleOutlined />
+                Video bài giảng
+              </span>
+            ),
+            children: (
+              <List
+                dataSource={course?.lectures || []}
+                renderItem={item => (
+                  <List.Item
+                    actions={[
+                      <Button type="primary" icon={<PlayCircleOutlined />}>
+                        Xem video
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<PlayCircleOutlined />} />}
+                      title={item.title}
+                      description={
+                        <div>
+                          <p><strong>Thời lượng:</strong> {item.duration} phút</p>
+                          <p><strong>Mô tả:</strong> {item.description}</p>
+                          <Progress 
+                            percent={item.watchProgress || 0} 
+                            size="small" 
+                            format={percent => `${percent}%`}
+                          />
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            )
+          }
+        ]}
+      />
     </div>
   );
 };

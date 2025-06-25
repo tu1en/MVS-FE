@@ -7,13 +7,13 @@ import {
     PlusOutlined
 } from '@ant-design/icons';
 import {
+    App,
     Button,
     Card,
     Col,
     Descriptions,
     Form,
     Input,
-    message,
     Modal,
     Row,
     Select,
@@ -26,11 +26,11 @@ import {
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 
-const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Option } = Select;
 
 export default function TeacherGrading() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [assignments, setAssignments] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -324,42 +324,52 @@ export default function TeacherGrading() {
         </Col>
       </Row>
 
-      <Tabs defaultActiveKey="assignments">
-        <TabPane tab="Quản lý bài tập" key="assignments">
-          <Card 
-            title="Danh sách bài tập" 
-            extra={
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />} 
-                onClick={() => setCreateModalVisible(true)}
+      <Tabs 
+        defaultActiveKey="assignments"
+        items={[
+          {
+            key: 'assignments',
+            label: 'Quản lý bài tập',
+            children: (
+              <Card 
+                title="Danh sách bài tập" 
+                extra={
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />} 
+                    onClick={() => setCreateModalVisible(true)}
+                  >
+                    Tạo bài tập mới
+                  </Button>
+                }
               >
-                Tạo bài tập mới
-              </Button>
-            }
-          >
-            <Table
-              columns={assignmentColumns}
-              dataSource={assignments}
-              loading={loading}
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane tab="Bài nộp chờ chấm" key="pending">
-          <Card title="Bài nộp chờ chấm điểm">
-            <Table
-              columns={submissionColumns}
-              dataSource={submissions.filter(s => !s.isGraded)}
-              loading={loading}
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-            />
-          </Card>
-        </TabPane>
-      </Tabs>
+                <Table
+                  columns={assignmentColumns}
+                  dataSource={assignments}
+                  loading={loading}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            )
+          },
+          {
+            key: 'pending',
+            label: 'Bài nộp chờ chấm',
+            children: (
+              <Card title="Bài nộp chờ chấm điểm">
+                <Table
+                  columns={submissionColumns}
+                  dataSource={submissions.filter(s => !s.isGraded)}
+                  loading={loading}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            )
+          }
+        ]}
+      />
 
       {/* Assignment Submissions Modal */}
       <Modal

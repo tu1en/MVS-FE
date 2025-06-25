@@ -1,30 +1,30 @@
 import {
-  DownloadOutlined,
-  EyeOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  SendOutlined,
-  TrophyOutlined,
-  UserOutlined
+    DownloadOutlined,
+    EyeOutlined,
+    MailOutlined,
+    PhoneOutlined,
+    SendOutlined,
+    TrophyOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import {
-  Avatar,
-  Button,
-  Card,
-  Col,
-  Descriptions,
-  Dropdown,
-  Input,
-  Menu,
-  message,
-  Modal,
-  Progress,
-  Row,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tag
+    Avatar,
+    Button,
+    Card,
+    Col,
+    Descriptions,
+    Dropdown,
+    Input,
+    Menu,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag
 } from 'antd';
 import { useEffect, useState } from 'react';
 import CourseService from '../services/courseService';
@@ -424,7 +424,7 @@ const StudentListManager = () => {
             Thông tin chi tiết sinh viên
           </div>
         }
-        visible={modalVisible}
+        open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={[
           <Button key="message" type="primary" icon={<SendOutlined />}
