@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import CreateLectureModal from '../../components/teacher/CreateLectureModal';
 import LectureList from '../../components/teacher/LectureList';
 
@@ -13,6 +13,8 @@ const CourseDetail = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState('lectures');
   const [editingLecture, setEditingLecture] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null); // 1. State cho file
+  const [isUploading, setIsUploading] = useState(false); // State cho trạng thái upload
 
   useEffect(() => {
     if (courseId) {
@@ -59,6 +61,32 @@ const CourseDetail = () => {
   const handleEditLecture = (lecture) => {
     setEditingLecture(lecture);
     setShowCreateModal(true);
+  };
+
+  // 2. Hàm xử lý khi chọn file
+  const handleFileChange = (e) => {
+      setSelectedFile(e.target.files[0]);
+  };
+
+  // 3. Hàm xử lý khi nhấn nút upload
+  const handleUploadMaterial = () => {
+      if (!selectedFile) {
+          alert("Please select a file to upload.");
+          return;
+      }
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('material', selectedFile);
+      formData.append('courseId', courseId);
+
+      // TODO: Gọi API POST /api/v1/teacher/upload-material với formData
+      console.log("Uploading material for course:", courseId, selectedFile.name);
+      // Giả lập API call
+      setTimeout(() => {
+          setIsUploading(false);
+          alert("Upload successful!");
+          setSelectedFile(null); // Reset input
+      }, 1500);
   };
 
   if (loading) {
@@ -108,7 +136,7 @@ const CourseDetail = () => {
               ← Quay lại danh sách khóa học
             </button>
             <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
-            <p className="text-gray-600 mb-4">{course.description}</p>
+            <p className="text-gray-600 mb-6">Mã lớp: {course.code}</p>
           </div>
           <button 
             onClick={() => setShowCreateModal(true)}
@@ -162,8 +190,7 @@ const CourseDetail = () => {
             }`}
           >
             Học viên
-          </button>
-          <button
+          </button>          <button
             onClick={() => setActiveTab('assignments')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'assignments'
@@ -172,16 +199,6 @@ const CourseDetail = () => {
             }`}
           >
             Bài tập
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'settings'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Cài đặt
           </button>
         </nav>
       </div>
@@ -298,9 +315,28 @@ const CourseDetail = () => {
         )}
       </div>
 
+      {/* Upload Material Form */}
+      <div className="mt-8 p-4 border rounded-lg shadow-sm">
+        <h2 className="text-xl font-semibold mb-3">Upload New Material</h2>
+        <div className="flex items-center">
+            <input 
+                type="file" 
+                onChange={handleFileChange} 
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <button 
+                onClick={handleUploadMaterial} 
+                disabled={!selectedFile || isUploading}
+                className="ml-4 px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-400"
+            >
+                {isUploading ? 'Uploading...' : 'Upload'}
+            </button>
+        </div>
+      </div>
+
       {/* Create Lecture Modal */}
       <CreateLectureModal
-        visible={showCreateModal}
+        open={showCreateModal}
         onCancel={() => {
           setShowCreateModal(false);
           setEditingLecture(null);

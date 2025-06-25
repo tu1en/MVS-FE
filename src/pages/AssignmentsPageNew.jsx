@@ -1,5 +1,5 @@
 import { ClockCircleOutlined, FileTextOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, DatePicker, Drawer, Empty, Form, Input, message, Modal, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Empty, Form, Input, Modal, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import AssignmentService from '../services/assignmentService';
@@ -13,7 +13,9 @@ const { Dragger } = Upload;
  * @returns {JSX.Element} AssignmentsPage component
  */
 function AssignmentsPage() {
-  const [assignments, setAssignments] = useState([]);
+  const { message } = App.useApp();
+  const [upcomingAssignments, setUpcomingAssignments] = useState([]);
+  const [pastAssignments, setPastAssignments] = useState([]);
   const [submissions, setSubmissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -73,37 +75,43 @@ function AssignmentsPage() {
 
   const fetchAssignments = async () => {
     try {
-      let assignmentsData = [];
-      
-      // Role-based assignment fetching
       if (userRole === '1' || userRole === 'STUDENT') {
-        // Student: Get assignments from their enrolled classrooms
         console.log('Fetching assignments for STUDENT role');
-        assignmentsData = await AssignmentService.getAssignmentsByStudent(userId);
-      } else if (userRole === '2' || userRole === 'TEACHER') {
-        // Teacher: Get assignments they created
-        console.log('Fetching assignments for TEACHER role');
-        assignmentsData = await AssignmentService.getAssignmentsByTeacher(userId);
+        const [upcoming, past] = await Promise.all([
+          AssignmentService.getUpcomingAssignments(userId),
+          AssignmentService.getPastAssignments(userId)
+        ]);
+        setUpcomingAssignments(Array.isArray(upcoming) ? upcoming : []);
+        setPastAssignments(Array.isArray(past) ? past : []);
+        // Combine for searching and other operations if needed, or remove if not necessary
+        // setAssignments([...(Array.isArray(upcoming) ? upcoming : []), ...(Array.isArray(past) ? past : [])]);
       } else {
-        // Admin/Manager: Get all assignments
-        console.log('Fetching all assignments for ADMIN/MANAGER role');
-        assignmentsData = await AssignmentService.getAllAssignments();
+        let assignmentsData = [];
+        if (userRole === '2' || userRole === 'TEACHER') {
+          console.log('Fetching assignments for TEACHER role');
+          assignmentsData = await AssignmentService.getAssignmentsByTeacher(userId);
+        } else {
+          console.log('Fetching all assignments for ADMIN/MANAGER role');
+          assignmentsData = await AssignmentService.getAllAssignments();
+        }
+        
+        if (!Array.isArray(assignmentsData)) {
+          console.warn('Assignments data is not an array:', assignmentsData);
+          assignmentsData = [];
+        }
+        
+        // For non-students, we can split into upcoming/past on the client
+        const now = new Date();
+        const upcoming = assignmentsData.filter(a => new Date(a.dueDate) >= now);
+        const past = assignmentsData.filter(a => new Date(a.dueDate) < now);
+        setUpcomingAssignments(upcoming);
+        setPastAssignments(past);
       }
-      
-      // Ensure assignmentsData is always an array
-      if (!Array.isArray(assignmentsData)) {
-        console.warn('Assignments data is not an array:', assignmentsData);
-        assignmentsData = [];
-      }
-      
-      console.log('Fetched assignments:', assignmentsData.length, 'items');
-      setAssignments(assignmentsData);
     } catch (error) {
       message.error('Không thể tải danh sách bài tập');
       console.error('Error fetching assignments:', error);
-      // Set empty array on error to prevent runtime errors
-      setAssignments([]);
-      throw error;
+      setUpcomingAssignments([]);
+      setPastAssignments([]);
     }
   };
 
@@ -521,38 +529,38 @@ function AssignmentsPage() {
           </Title>
         </div>
         
-        <Tabs defaultActiveKey="pending" items={[
-          {
-            key: 'pending',
-            label: 'Cần làm',
-            children: renderStudentAssignmentsList(assignments.filter(assignment => {
-              // Filter for assignments that are not overdue and not submitted
-              return !submissions[assignment.id] && new Date(assignment.dueDate) > new Date();
-            }))
-          },
-          {
-            key: 'submitted',
-            label: 'Đã nộp',
-            children: renderStudentAssignmentsList(assignments.filter(assignment => 
-              submissions[assignment.id] && 
-              (submissions[assignment.id].score === null || submissions[assignment.id].score === undefined)
-            ))
-          },
-          {
-            key: 'graded',
-            label: 'Đã chấm điểm',
-            children: renderStudentAssignmentsList(assignments.filter(assignment => 
-              submissions[assignment.id] && submissions[assignment.id].score !== null
-            ))
-          },
-          {
-            key: 'overdue',
-            label: 'Quá hạn',
-            children: renderStudentAssignmentsList(assignments.filter(assignment => 
-              !submissions[assignment.id] && new Date(assignment.dueDate) < new Date()
-            ))
-          }
-        ]} />
+        <Tabs 
+          defaultActiveKey="pending"
+          items={[
+            {
+              key: 'pending',
+              label: 'Cần làm',
+              children: renderStudentAssignmentsList(upcomingAssignments)
+            },
+            {
+              key: 'submitted',
+              label: 'Đã nộp',
+              children: renderStudentAssignmentsList(upcomingAssignments.filter(assignment => 
+                submissions[assignment?.id] && 
+                (submissions[assignment?.id].score === null || submissions[assignment?.id].score === undefined)
+              ))
+            },
+            {
+              key: 'graded',
+              label: 'Đã chấm điểm',
+              children: renderStudentAssignmentsList(upcomingAssignments.filter(assignment => 
+                submissions[assignment?.id] && submissions[assignment?.id].score !== null
+              ))
+            },
+            {
+              key: 'overdue',
+              label: 'Quá hạn',
+              children: renderStudentAssignmentsList(upcomingAssignments.filter(assignment => 
+                !submissions[assignment?.id] && new Date(assignment?.dueDate) < new Date()
+              ))
+            }
+          ]}
+        />
       </div>
     );
   };
@@ -667,38 +675,41 @@ function AssignmentsPage() {
           </Space>
         </div>
         
-        <Tabs defaultActiveKey="all" items={[
-          {
-            key: 'all',
-            label: 'Tất cả bài tập',
-            children: renderTeacherAssignmentsList(assignments)
-          },
-          {
-            key: 'needGrading',
-            label: 'Cần chấm điểm',
-            children: renderTeacherAssignmentsList(assignments.filter(assignment => {
-              // Filter for assignments that have ungraded submissions
-              const hasUngradedSubmissions = submissionsList.some(
-                sub => sub.assignmentId === assignment.id && (sub.score === null || sub.score === undefined)
-              );
-              return hasUngradedSubmissions;
-            }))
-          },
-          {
-            key: 'upcoming',
-            label: 'Sắp đến hạn',
-            children: renderTeacherAssignmentsList(assignments.filter(assignment => 
-              new Date(assignment.dueDate) > new Date()
-            ))
-          },
-          {
-            key: 'past',
-            label: 'Đã hết hạn',
-            children: renderTeacherAssignmentsList(assignments.filter(assignment => 
-              new Date(assignment.dueDate) < new Date()
-            ))
-          }
-        ]} />
+        <Tabs 
+          defaultActiveKey="all"
+          items={[
+            {
+              key: 'all',
+              label: 'Tất cả bài tập',
+              children: renderTeacherAssignmentsList(upcomingAssignments)
+            },
+            {
+              key: 'needGrading',
+              label: 'Cần chấm điểm',
+              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => {
+                // Filter for assignments that have ungraded submissions
+                const hasUngradedSubmissions = submissionsList.some(
+                  sub => sub?.assignmentId === assignment?.id && (sub?.score === null || sub?.score === undefined)
+                );
+                return hasUngradedSubmissions;
+              }))
+            },
+            {
+              key: 'upcoming',
+              label: 'Sắp đến hạn',
+              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => 
+                new Date(assignment?.dueDate) > new Date()
+              ))
+            },
+            {
+              key: 'past',
+              label: 'Đã hết hạn',
+              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => 
+                new Date(assignment?.dueDate) < new Date()
+              ))
+            }
+          ]}
+        />
       </div>
     );
   };
@@ -909,8 +920,8 @@ function AssignmentsPage() {
           setGradingDrawerVisible(false);
           setSelectedSubmission(null);
         }}
-        visible={gradingDrawerVisible}
-        bodyStyle={{ paddingBottom: 80 }}
+        open={gradingDrawerVisible}
+        styles={{ body: { paddingBottom: 80 } }}
         extra={
           selectedSubmission ? (
             <Button type="primary" onClick={handleGradeSubmission}>
@@ -1036,8 +1047,8 @@ function AssignmentsPage() {
           setSubmitDrawerVisible(false);
           setSelectedAssignment(null);
         }}
-        visible={submitDrawerVisible}
-        bodyStyle={{ paddingBottom: 80 }}
+        open={submitDrawerVisible}
+        styles={{ body: { paddingBottom: 80 } }}
         extra={
           <Button type="primary" onClick={handleSubmitAssignment}>
             Nộp bài

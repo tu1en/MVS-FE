@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { Modal, message } from 'antd';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const LectureList = ({ courseId, courseName, onEditLecture }) => {
+  const navigate = useNavigate();
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,46 +57,83 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
       </div>
     );
   };
+  const handleDeleteLecture = async (lectureId, lectureTitle) => {
+    Modal.confirm({
+      title: 'Xác nhận xóa bài giảng',
+      content: `Bạn có chắc chắn muốn xóa bài giảng "${lectureTitle || 'này'}"? Tất cả tài liệu bên trong cũng sẽ bị xóa.`,
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          setDeletingId(lectureId);
+          const token = localStorage.getItem('token');
+          
+          const response = await fetch(`http://localhost:8088/api/courses/${courseId}/lectures/${lectureId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Content-Type': 'application/json'
+            }
+          });
 
-  const handleDeleteLecture = async (lectureId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài giảng này?')) {
-      return;
-    }
+          if (!response.ok) {
+            throw new Error(`Failed to delete lecture: ${response.status}`);
+          }
 
-    try {
-      setDeletingId(lectureId);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`http://localhost:8088/api/courses/${courseId}/lectures/${lectureId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
+          // Remove from local state
+          setLectures(prev => prev.filter(lecture => lecture.id !== lectureId));
+          message.success('Đã xóa bài giảng thành công');
+          console.log('Lecture deleted successfully');
+          
+        } catch (error) {
+          console.error('Error deleting lecture:', error);
+          message.error('Lỗi xóa bài giảng: ' + error.message);
+        } finally {
+          setDeletingId(null);
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete lecture: ${response.status}`);
+      },
+      onCancel() {
+        console.log('Delete cancelled');
       }
-
-      // Remove from local state
-      setLectures(prev => prev.filter(lecture => lecture.id !== lectureId));
-      console.log('Lecture deleted successfully');
-      
-    } catch (error) {
-      console.error('Error deleting lecture:', error);
-      alert('Lỗi xóa bài giảng: ' + error.message);
-    } finally {
-      setDeletingId(null);
-    }
+    });
   };
-
   const handleEditLecture = (lecture) => {
     if (onEditLecture) {
       onEditLecture(lecture);
     } else {
       console.warn('onEditLecture callback not provided');
     }
+  };
+  const handleStartLecture = (lecture) => {
+    Modal.confirm({
+      title: 'Bắt đầu bài giảng',
+      content: `Bạn có muốn bắt đầu bài giảng "${lecture.title}" ngay bây giờ không? Hệ thống sẽ chuyển bạn đến phòng học trực tuyến.`,
+      okText: 'Bắt đầu',
+      okType: 'primary',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          // Navigate to teacher online classes page
+          navigate('/teacher/online-classes');
+          
+          // Show success message
+          message.success(`Đã bắt đầu bài giảng "${lecture.title}". Chuyển đến phòng học trực tuyến.`);
+          
+          console.log('Starting lecture:', lecture);
+          
+          // Optional: You could call an API to mark lecture as started
+          // await markLectureAsStarted(lecture.id);
+          
+        } catch (error) {
+          console.error('Error starting lecture:', error);
+          message.error('Lỗi khi bắt đầu bài giảng: ' + error.message);
+        }
+      },
+      onCancel() {
+        console.log('Start lecture cancelled');
+      }
+    });
   };
 
   if (loading) {
@@ -206,12 +246,13 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
                   className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
                   Chỉnh sửa
-                </button>
-                <button className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600">
+                </button>                <button 
+                  onClick={() => handleStartLecture(lecture)}
+                  className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                >
                   Bắt đầu
-                </button>
-                <button 
-                  onClick={() => handleDeleteLecture(lecture.id)}
+                </button><button 
+                  onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
                   disabled={deletingId === lecture.id}
                   className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400"
                 >

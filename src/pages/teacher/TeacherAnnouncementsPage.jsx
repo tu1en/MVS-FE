@@ -1,31 +1,31 @@
 import {
-  BellOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  NotificationOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined
+    BellOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    EyeOutlined,
+    NotificationOutlined,
+    PlusOutlined,
+    ReloadOutlined,
+    SearchOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  List,
-  message,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Spin,
-  Switch,
-  Tag,
-  Typography
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Form,
+    Input,
+    List,
+    message,
+    Modal,
+    Popconfirm,
+    Row,
+    Select,
+    Space,
+    Spin,
+    Switch,
+    Tag,
+    Typography
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
@@ -373,7 +373,7 @@ const TeacherAnnouncementsPage = () => {
       {/* Create/Edit Modal */}
       <Modal
         title={editingAnnouncement ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
         width={700}
