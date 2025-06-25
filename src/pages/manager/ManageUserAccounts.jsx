@@ -2,7 +2,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, UserOutline
 import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../../config/api-config';
+import API_CONFIG from '../../config/api-config';
 
 const { Option } = Select;
 
@@ -27,7 +27,7 @@ const ManageUserAccounts = () => {
           return;
         }
         
-        const response = await axios.get(`${API_BASE_URL}/api/v1/users`, {
+        const response = await axios.get(`${API_CONFIG.BASE_URL}/api/v1/users`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -149,7 +149,7 @@ const ManageUserAccounts = () => {
           const token = localStorage.getItem('token');
           
           // Delete in the backend
-          await axios.delete(`${API_BASE_URL}/api/v1/users/${id}`, {
+          await axios.delete(`${API_CONFIG.BASE_URL}/api/v1/users/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -181,7 +181,7 @@ const ManageUserAccounts = () => {
               roleId: getRoleId(values.role)
             };
             
-            await axios.put(`${API_BASE_URL}/api/v1/users/${editingUser.id}`, updatedUser, {
+            await axios.put(`${API_CONFIG.BASE_URL}/api/v1/users/${editingUser.id}`, updatedUser, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -203,7 +203,7 @@ const ManageUserAccounts = () => {
               hireDate: values.role !== 'STUDENT' ? new Date().toISOString().split('T')[0] : null,
             };
             
-            const response = await axios.post(`${API_BASE_URL}/api/v1/users`, newUserData, {
+            const response = await axios.post(`${API_CONFIG.BASE_URL}/api/v1/users`, newUserData, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             
