@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Badge, message, Card } from 'antd';
+import { Badge, Calendar, Card, message } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
 
 const TeacherSchedule = () => {
   const [schedules, setSchedules] = useState([]);
@@ -19,9 +19,10 @@ const TeacherSchedule = () => {
       console.error('Error fetching schedules:', error);
     }
   };
-
-  const dateCellRender = (value) => {
-    const date = value.format('YYYY-MM-DD');
+  const cellRender = (current, info) => {
+    if (info.type !== 'date') return info.originNode;
+    
+    const date = current.format('YYYY-MM-DD');
     const daySchedules = schedules.filter(
       schedule => dayjs(schedule.date).format('YYYY-MM-DD') === date
     );
@@ -55,9 +56,8 @@ const TeacherSchedule = () => {
   return (
     <div style={{ padding: '24px' }}>
       <h2 className="text-2xl font-bold mb-6">Lịch Dạy</h2>
-      <Card className="shadow-md">
-        <Calendar 
-          dateCellRender={dateCellRender}
+      <Card className="shadow-md">        <Calendar 
+          cellRender={cellRender}
           mode="month"
           style={{ 
             backgroundColor: 'white',

@@ -9,6 +9,7 @@ import {
     VideoCameraOutlined
 } from "@ant-design/icons";
 import {
+    App,
     Button,
     Card,
     Col,
@@ -16,7 +17,6 @@ import {
     Form,
     Image,
     Input,
-    message,
     Modal,
     Row,
     Space,
@@ -32,9 +32,9 @@ import * as blogService from "../services/blogService";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
 const BlogPages = () => {
+  const { message } = App.useApp();
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewModalVisible, setViewModalVisible] = useState(false);
@@ -339,13 +339,16 @@ const BlogPages = () => {
             Create Blog
           </Button>
         </Space>
-      </div>
-
-      <Tabs activeKey={activeTab} onChange={handleTabChange} style={{ marginBottom: 16 }}>
-        <TabPane tab="All Blogs" key="all" />
-        <TabPane tab="Published" key="published" />
-        {isAuthenticated && <TabPane tab="My Blogs" key="my" />}
-      </Tabs>
+      </div>      <Tabs 
+        activeKey={activeTab} 
+        onChange={handleTabChange} 
+        style={{ marginBottom: 16 }}
+        items={[
+          { key: 'all', label: 'All Blogs' },
+          { key: 'published', label: 'Published' },
+          ...(isAuthenticated ? [{ key: 'my', label: 'My Blogs' }] : [])
+        ]}
+      />
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "50px 0" }}>

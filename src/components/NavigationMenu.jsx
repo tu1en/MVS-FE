@@ -4,7 +4,6 @@ import {
     FileTextOutlined,
     LogoutOutlined,
     MessageOutlined,
-    SettingOutlined,
     UserOutlined,
     VideoCameraOutlined
 } from '@ant-design/icons';
@@ -107,12 +106,6 @@ export default function NavigationMenu() {
   ];
 
   const userMenuItems = [
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Cài đặt',
-      onClick: () => navigate('/change-password')
-    },
     {
       key: 'logout',
       icon: <LogoutOutlined />,

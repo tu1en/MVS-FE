@@ -1,32 +1,22 @@
 import React, { useState } from 'react';
 
-export const Tabs = ({ children, defaultValue, value, onValueChange, className = '' }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState(defaultValue);
-  
-  // Use controlled value if provided, otherwise use internal state
-  const activeTab = value !== undefined ? value : internalActiveTab;
-  const setActiveTab = onValueChange || setInternalActiveTab;
+export const Tabs = ({ children, defaultValue, className = '' }) => {
+  const [activeTab, setActiveTab] = useState(defaultValue);
   
   return (
     <div className={`${className}`} data-active-tab={activeTab}>
-      {React.Children.map(children, child => {
-        if (React.isValidElement(child)) {
-          return React.cloneElement(child, { activeTab, setActiveTab });
-        }
-        return child;
-      })}
+      {React.Children.map(children, child => 
+        React.cloneElement(child, { activeTab, setActiveTab })
+      )}
     </div>
   );
-};
+ };
 
 export const TabsList = ({ children, activeTab, setActiveTab, className = '' }) => (
   <div className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ${className}`}>
-    {React.Children.map(children, child => {
-      if (React.isValidElement(child)) {
-        return React.cloneElement(child, { activeTab, setActiveTab });
-      }
-      return child;
-    })}
+    {React.Children.map(children, child => 
+      React.cloneElement(child, { activeTab, setActiveTab })
+    )}
   </div>
 );
 

@@ -1,101 +1,173 @@
-import api from './api';
+import apiClient from './apiClient';
 
+const API_URL = '/api/attendance';
+
+/**
+ * Service for attendance-related API calls
+ */
 const attendanceService = {
-  // Lấy tất cả phiên điểm danh
-  getAttendanceSessions: async () => {
+  /**
+   * Get attendance sessions for a teacher
+   * @param {number} teacherId - The teacher's ID
+   * @returns {Promise} Promise containing attendance sessions
+   */
+  getTeacherSessions: async (teacherId) => {
     try {
-      const response = await api.get('/api/attendance/sessions');
+      const response = await apiClient.get(`${API_URL}/teacher/${teacherId}/sessions`);
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách phiên điểm danh:', error);
-      throw error;
+      console.error('Error fetching teacher sessions:', error);
+      return [];
     }
   },
 
-  // Lấy phiên điểm danh theo ID
-  getSessionById: async (sessionId) => {
+  /**
+   * Get attendance sessions for a student
+   * @param {number} studentId - The student's ID
+   * @returns {Promise} Promise containing attendance sessions
+   */
+  getStudentSessions: async (studentId) => {
     try {
-      const response = await api.get(`/api/attendance/sessions/${sessionId}`);
+      const response = await apiClient.get(`${API_URL}/student/${studentId}/sessions`);
       return response.data;
     } catch (error) {
-      console.error(`Lỗi khi lấy phiên điểm danh ${sessionId}:`, error);
-      throw error;
+      console.error('Error fetching student sessions:', error);
+      return [];
     }
   },
 
-  // Lấy danh sách sinh viên cho một phiên điểm danh
-  getStudentsForSession: async (sessionId) => {
+  /**
+   * Get classrooms for a teacher
+   * @param {number} teacherId - The teacher's ID
+   * @returns {Promise} Promise containing classrooms
+   */
+  getTeacherClassrooms: async (teacherId) => {
     try {
-      const response = await api.get(`/api/attendance/session/${sessionId}/students`);
+      const response = await apiClient.get(`/api/classrooms/teacher/${teacherId}`);
       return response.data;
     } catch (error) {
-      console.error(`Lỗi khi lấy danh sách sinh viên cho phiên ${sessionId}:`, error);
-      throw error;
+      console.error('Error fetching teacher classrooms:', error);
+      return [];
     }
   },
 
-  // Ghi nhận điểm danh cho sinh viên
-  markAttendance: async (sessionId, attendanceData) => {
+  /**
+   * Get attendance records for a teacher's sessions
+   * @param {number} teacherId - The teacher's ID
+   * @returns {Promise} Promise containing attendance records
+   */
+  getTeacherAttendanceRecords: async (teacherId) => {
     try {
-      const response = await api.post(`/api/attendance/mark/${sessionId}`, attendanceData);
+      const response = await apiClient.get(`${API_URL}/teacher/${teacherId}/records`);
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi ghi nhận điểm danh:', error);
-      throw error;
+      console.error('Error fetching teacher attendance records:', error);
+      return [];
     }
   },
 
-  // Cập nhật trạng thái điểm danh
-  updateAttendanceStatus: async (attendanceId, status) => {
+  /**
+   * Get attendance records for a student
+   * @param {number} studentId - The student's ID
+   * @returns {Promise} Promise containing attendance records
+   */
+  getStudentAttendanceRecords: async (studentId) => {
     try {
-      const response = await api.put(`/api/attendance/${attendanceId}/status`, { status });
+      const response = await apiClient.get(`${API_URL}/student/${studentId}/records`);
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi cập nhật trạng thái điểm danh:', error);
-      throw error;
+      console.error('Error fetching student attendance records:', error);
+      return [];
     }
   },
 
-  // Lấy thông tin điểm danh theo phiên học
-  getAttendanceBySession: async (sessionId) => {
-    try {
-      const response = await api.get(`/api/attendance/session/${sessionId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Lỗi khi lấy điểm danh cho phiên ${sessionId}:`, error);
-      throw error;
-    }
-  },
-
-  // Tạo phiên điểm danh mới
+  /**
+   * Create a new attendance session
+   * @param {Object} sessionData - The session data
+   * @returns {Promise} Promise containing created session
+   */
   createAttendanceSession: async (sessionData) => {
     try {
-      const response = await api.post('/api/attendance/sessions', sessionData);
+      const response = await apiClient.post(`${API_URL}/sessions`, sessionData);
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi tạo phiên điểm danh mới:', error);
+      console.error('Error creating attendance session:', error);
       throw error;
     }
   },
 
-  // Bắt đầu một phiên điểm danh
-  startAttendanceSession: async (sessionId) => {
+  /**
+   * Update attendance session status
+   * @param {number} sessionId - The session ID
+   * @param {string} status - The new status
+   * @returns {Promise} Promise containing updated session
+   */
+  updateSessionStatus: async (sessionId, status) => {
     try {
-      const response = await api.put(`/api/attendance/sessions/${sessionId}/start`);
+      const response = await apiClient.put(`${API_URL}/sessions/${sessionId}/status`, { status });
       return response.data;
     } catch (error) {
-      console.error(`Lỗi khi bắt đầu phiên điểm danh ${sessionId}:`, error);
+      console.error('Error updating session status:', error);
       throw error;
     }
   },
 
-  // Kết thúc một phiên điểm danh
-  endAttendanceSession: async (sessionId) => {
+  /**
+   * Mark attendance for a student
+   * @param {Object} attendanceData - The attendance data
+   * @returns {Promise} Promise containing created attendance record
+   */
+  markAttendance: async (attendanceData) => {
     try {
-      const response = await api.put(`/api/attendance/sessions/${sessionId}/end`);
+      const response = await apiClient.post(`${API_URL}/mark`, attendanceData);
       return response.data;
     } catch (error) {
-      console.error(`Lỗi khi kết thúc phiên điểm danh ${sessionId}:`, error);
+      console.error('Error marking attendance:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get attendance view for a student
+   * @returns {Promise} Promise containing attendance view data
+   */
+  getStudentAttendanceView: async () => {
+    try {
+      const response = await apiClient.get(`${API_URL}/student/view`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching student attendance view:', error);
+      return { records: [] };
+    }
+  },
+
+  /**
+   * Get students for attendance in a session
+   * @param {number} sessionId - The session ID
+   * @returns {Promise} Promise containing students list
+   */
+  getStudentsForAttendance: async (sessionId) => {
+    try {
+      const response = await apiClient.get(`${API_URL}/sessions/${sessionId}/students`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching students for attendance:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Update attendance records for multiple students
+   * @param {number} sessionId - The session ID
+   * @param {Array} records - The attendance records
+   * @returns {Promise} Promise containing updated records
+   */
+  updateAttendanceRecords: async (sessionId, records) => {
+    try {
+      const response = await apiClient.put(`${API_URL}/sessions/${sessionId}/records`, { records });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating attendance records:', error);
       throw error;
     }
   }

@@ -341,49 +341,52 @@ export default function AttendanceManagement() {
         </Col>
       </Row>
 
-      <Tabs defaultActiveKey="sessions" items={[
-        {
-          key: "sessions",
-          label: "Phiên điểm danh",
-          children: (
-            <Card 
-              title="Danh sách phiên điểm danh" 
-              extra={
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
-                  onClick={() => setCreateModalVisible(true)}
-                >
-                  Tạo phiên mới
-                </Button>
-              }
-            >
-              <Table
-                columns={sessionColumns}
-                dataSource={sessions}
-                loading={loading}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-              />
-            </Card>
-          )
-        },
-        {
-          key: "history",
-          label: "Lịch sử điểm danh",
-          children: (
-            <Card title="Lịch sử điểm danh">
-              <Table
-                columns={attendanceColumns}
-                dataSource={attendanceRecords}
-                loading={loading}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-              />
-            </Card>
-          )
-        }
-      ]} />
+      <Tabs 
+        defaultActiveKey="sessions"
+        items={[
+          {
+            key: 'sessions',
+            label: 'Phiên điểm danh',
+            children: (
+              <Card 
+                title="Danh sách phiên điểm danh" 
+                extra={
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />} 
+                    onClick={() => setCreateModalVisible(true)}
+                  >
+                    Tạo phiên mới
+                  </Button>
+                }
+              >
+                <Table
+                  columns={sessionColumns}
+                  dataSource={sessions}
+                  loading={loading}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            )
+          },
+          {
+            key: 'history',
+            label: 'Lịch sử điểm danh',
+            children: (
+              <Card title="Lịch sử điểm danh">
+                <Table
+                  columns={attendanceColumns}
+                  dataSource={attendanceRecords}
+                  loading={loading}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            )
+          }
+        ]}
+      />
 
       {/* Create Session Modal */}
       <Modal
