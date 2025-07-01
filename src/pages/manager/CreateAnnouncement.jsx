@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, Select, Button, Card, Typography } from 'antd';
 import { toast } from 'react-toastify';
+import AnnouncementService from '../../services/announcementService';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -10,14 +11,32 @@ const CreateAnnouncement = () => {
 
   const handleSubmit = async (values) => {
     try {
-      // TODO: Call API to create announcement
-      console.log('Announcement values:', values);
+      // Lấy userId từ localStorage
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        toast.error('Không xác định được người tạo. Vui lòng đăng nhập lại.');
+        window.location.href = '/login';
+        return;
+      }
+      // Gửi kèm createdBy
+      const payload = { ...values, createdBy: parseInt(userId, 10) };
+      await AnnouncementService.createAnnouncement(payload);
       toast.success('Thông báo đã được tạo thành công!');
       form.resetFields();
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi tạo thông báo!');
+      // Robust error handling for 401 and other errors
+      if (error.response && error.response.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+      } else {
+        toast.error('Có lỗi xảy ra khi tạo thông báo!');
+      }
     }
   };
+
+
 
   return (
     <Card className="max-w-3xl mx-auto mt-8">

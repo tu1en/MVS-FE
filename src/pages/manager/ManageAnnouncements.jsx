@@ -2,30 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Modal, message, Card, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import AnnouncementService from '../../services/announcementService';
 
 const ManageAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
 
-  // Temporary data for testing
+  // Fetch announcements from backend
   useEffect(() => {
-    setAnnouncements([
-      {
-        id: 1,
-        title: 'Thông báo lịch thi học kỳ 1',
-        content: 'Lịch thi học kỳ 1 năm học 2023-2024...',
-        createdAt: '2023-12-01',
-        status: 'active',
-        priority: 'high',
-      },
-      {
-        id: 2,
-        title: 'Thông báo nghỉ Tết Nguyên Đán',
-        content: 'Thông báo về lịch nghỉ Tết Nguyên Đán 2024...',
-        createdAt: '2023-12-15',
-        status: 'scheduled',
-        priority: 'medium',
-      },
-    ]);
+    const fetchAnnouncements = async () => {
+      try {
+        const data = await AnnouncementService.getAnnouncements();
+        setAnnouncements(data);
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1500);
+        } else {
+          message.error('Không thể tải danh sách thông báo.');
+        }
+      }
+    };
+    fetchAnnouncements();
   }, []);
 
   const columns = [
@@ -133,9 +132,21 @@ const ManageAnnouncements = () => {
     Modal.confirm({
       title: 'Xác nhận xóa thông báo',
       content: 'Bạn có chắc chắn muốn xóa thông báo "' + announcement.title + '"?',
-      onOk() {
-        setAnnouncements(announcements.filter((item) => item.id !== announcement.id));
-        message.success('Xóa thông báo thành công');
+      async onOk() {
+        try {
+          await AnnouncementService.deleteAnnouncement(announcement.id);
+          setAnnouncements(announcements.filter((item) => item.id !== announcement.id));
+          message.success('Xóa thông báo thành công');
+        } catch (error) {
+          if (error.response && error.response.status === 401) {
+            message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 1500);
+          } else {
+            message.error('Không thể xóa thông báo.');
+          }
+        }
       },
     });
   };

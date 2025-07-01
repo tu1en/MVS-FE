@@ -27,7 +27,11 @@ export default function LoginScreen() {
     console.log('Đang đăng nhập với:', email, 'URL:', `${baseUrl}/auth/login`);
     
     try {
+<<<<<<< Updated upstream
       const res = await fetch(`${baseUrl}/auth/login`, {
+=======
+      const res = await fetch('/api/auth/login', {
+>>>>>>> Stashed changes
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -68,6 +72,9 @@ export default function LoginScreen() {
             break;
           case ROLE.MANAGER: //MANAGER
             navigate('/manager');
+            break;
+          case ROLE.ACCOUNTANT: //ACCOUNTANT
+            navigate('/accounting/dashboard');
             break;
           default:
             console.warn('Unknown role:', data.role);
@@ -155,7 +162,7 @@ export default function LoginScreen() {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;
-            case ROLE.MANAGER: //MANAGER
+          case ROLE.MANAGER: //MANAGER
             navigate('/manager');
             break;
           case ROLE.TEACHER: //TEACHER
@@ -163,6 +170,9 @@ export default function LoginScreen() {
             break;
           case ROLE.STUDENT: //STUDENT
             navigate('/student');
+            break;
+          case ROLE.ACCOUNTANT: //ACCOUNTANT
+            navigate('/accounting/dashboard');
             break;
           default:
             navigate('/');
