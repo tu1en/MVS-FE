@@ -37,7 +37,7 @@ export const getNormalizedRole = (role) => {
 
   // Accept both number and string, any case
   switch (roleStr.toUpperCase()) {
-    case '0':
+    case '4':
     case 'ADMIN':
       return 'ADMIN';
     case '1':

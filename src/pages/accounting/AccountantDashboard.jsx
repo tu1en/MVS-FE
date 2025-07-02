@@ -16,6 +16,9 @@ const initialForm = {
 };
 
 const AccountantDashboard = () => {
+  const [terminateModalOpen, setTerminateModalOpen] = useState(false);
+  const [terminating, setTerminating] = useState(null);
+  const [terminateForm] = Form.useForm();
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,7 +28,10 @@ const AccountantDashboard = () => {
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(API_URL);
+      const token = localStorage.getItem('token');
+      const res = await axios.get(API_URL, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       setContracts(res.data);
     } catch (err) {
       message.error('Không thể tải danh sách hợp đồng');
@@ -36,6 +42,32 @@ const AccountantDashboard = () => {
   useEffect(() => {
     fetchContracts();
   }, []);
+
+  // Chức năng chấm dứt hợp đồng
+  const openTerminate = (record) => {
+    setTerminating(record);
+    terminateForm.resetFields();
+    setTerminateModalOpen(true);
+  };
+
+  const handleTerminate = async () => {
+    try {
+      const values = await terminateForm.validateFields();
+      await axios.post(`/api/contracts/${terminating.id}/terminate`, {
+        terminationDate: values.terminationDate.format('YYYY-MM-DD'),
+        reason: values.reason,
+        note: values.note,
+      }, {
+        headers: { 'X-User-Id': localStorage.getItem('userId') }
+      });
+      message.success('Đã chấm dứt hợp đồng');
+      setTerminateModalOpen(false);
+      fetchContracts();
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Không thể chấm dứt hợp đồng');
+    }
+  };
+
 
   const openCreate = () => {
     setEditing(null);
@@ -54,7 +86,10 @@ const AccountantDashboard = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       message.success('Đã xóa hợp đồng');
       fetchContracts();
     } catch {
@@ -71,11 +106,16 @@ const AccountantDashboard = () => {
         endDate: values.dateRange[1],
       };
       delete data.dateRange;
+      const token = localStorage.getItem('token');
       if (editing) {
-        await axios.put(`${API_URL}/${editing}`, data);
+        await axios.put(`${API_URL}/${editing}`, data, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
         message.success('Cập nhật thành công');
       } else {
-        await axios.post(API_URL, data);
+        await axios.post(API_URL, data, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
         message.success('Tạo mới thành công');
       }
       setModalOpen(false);
@@ -97,6 +137,7 @@ const AccountantDashboard = () => {
         <>
           <Button onClick={() => openEdit(record)} type="link">Sửa</Button>
           <Button onClick={() => handleDelete(record.id)} type="link" danger>Xóa</Button>
+          <Button onClick={() => openTerminate(record)} type="link" danger style={{color: 'orange'}}>Chấm dứt</Button>
         </>
       ),
     },
@@ -128,6 +169,27 @@ const AccountantDashboard = () => {
           </Form.Item>
           <Form.Item name="description" label="Mô tả">
             <Input.TextArea rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
+      {/* Modal chấm dứt hợp đồng */}
+      <Modal
+        open={terminateModalOpen}
+        onCancel={() => setTerminateModalOpen(false)}
+        onOk={handleTerminate}
+        title={`Chấm dứt hợp đồng: ${terminating?.employeeName || ''}`}
+        okText="Chấm dứt"
+        cancelText="Hủy"
+      >
+        <Form form={terminateForm} layout="vertical">
+          <Form.Item name="terminationDate" label="Ngày chấm dứt" rules={[{ required: true, message: 'Chọn ngày' }]}> 
+            <DatePicker format="YYYY-MM-DD" disabledDate={d => d.isAfter(new Date())} style={{width:'100%'}} />
+          </Form.Item>
+          <Form.Item name="reason" label="Lý do chấm dứt" rules={[{ required: true, message: 'Nhập lý do' }]}> 
+            <Input />
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú (tuỳ chọn)">
+            <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
       </Modal>

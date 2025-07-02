@@ -204,8 +204,6 @@ function NavigationBar() {
       path: '/student/accomplishments', 
       icon: '🏆',
       roles: [ROLE.STUDENT]
-    },
-
     }
   ];
 

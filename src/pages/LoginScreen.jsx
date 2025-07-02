@@ -27,11 +27,7 @@ export default function LoginScreen() {
     console.log('Đang đăng nhập với:', email, 'URL:', `${baseUrl}/auth/login`);
     
     try {
-<<<<<<< Updated upstream
       const res = await fetch(`${baseUrl}/auth/login`, {
-=======
-      const res = await fetch('/api/auth/login', {
->>>>>>> Stashed changes
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,8 +55,11 @@ export default function LoginScreen() {
         dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         toast.success('Đăng nhập thành công!');
 
-        console.log('Navigating based on role:', data.role);
-        switch (data.role) {
+        // Normalize role for navigation
+        const { getNormalizedRole } = require('../utils/authUtils');
+        const normalizedRole = getNormalizedRole(data.role);
+        console.log('Navigating based on normalized role:', normalizedRole);
+        switch (normalizedRole) {
           case ROLE.ADMIN: //ADMIN
             navigate('/admin');
             break;

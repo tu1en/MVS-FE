@@ -3,9 +3,6 @@ export const ROLE = {
   TEACHER: 'TEACHER',
   MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
-<<<<<<< Updated upstream
-=======
   ACCOUNTANT: 'ACCOUNTANT',
   GUEST: 'GUEST'
->>>>>>> Stashed changes
 }
