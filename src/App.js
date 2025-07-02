@@ -32,6 +32,7 @@ import ExamResults from './pages/ExamResults';
 import BlogPages from './pages/BlogPages';
 import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
 import AccountantDashboard from './pages/accounting/AccountantDashboard.jsx';
+import AttendanceExplanation from './pages/accounting/AttendanceExplanation.jsx';
 import { ROLE } from "./constants/constants.js";
 
 // Fix missing components below (you must create or import them properly)
@@ -113,6 +114,7 @@ function App() {
           <Route path="/student/lectures" element={<ProtectedRoute allowedRoles={["1", "STUDENT"]}><BlankPage /></ProtectedRoute>} />
           <Route path="/lectures-new" element={<Navigate to="/student/lectures" replace />} />
           <Route path="/accounting/dashboard" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
+          <Route path="/accounting/attendance-explanation" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT", "2", "TEACHER"]}><AttendanceExplanation /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={["4", "ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/teacher" element={<ProtectedRoute allowedRoles={["2", "TEACHER"]}><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute allowedRoles={["3", "MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />

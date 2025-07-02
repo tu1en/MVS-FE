@@ -146,7 +146,10 @@ const AccountantDashboard = () => {
   return (
     <div style={{ padding: 24 }}>
       <h2>Quản lý hợp đồng lao động</h2>
-      <Button type="primary" onClick={openCreate} style={{ marginBottom: 16 }}>Tạo hợp đồng mới</Button>
+      <Button type="primary" onClick={openCreate} style={{ marginBottom: 16, marginRight: 8 }}>Tạo hợp đồng mới</Button>
+      <Button onClick={() => window.location.href = '/accounting/attendance-explanation'} style={{ marginBottom: 16 }}>
+        Gửi giải trình chấm công
+      </Button>
       <Table columns={columns} dataSource={contracts} rowKey="id" loading={loading} />
       <Modal
         open={modalOpen}

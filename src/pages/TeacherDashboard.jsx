@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
 
@@ -15,6 +16,9 @@ export default function TeacherDashboard() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Trang Giáo Viên</h1>
+      <Button type="primary" style={{ marginBottom: 24 }} onClick={() => navigate('/accounting/attendance-explanation')}>
+        Gửi giải trình chấm công
+      </Button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Lớp học của tôi</h2>
