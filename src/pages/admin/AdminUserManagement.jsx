@@ -42,22 +42,33 @@ export default function AdminUserManagement() {
     fetchUsers();
   }, []);
 
-
   // Handle add/edit user
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setError('');
       if (editId) {
-        await axios.put(`${API_BASE}/${editId}`, formData);
+        // Update existing user - không cho đổi mật khẩu
+        const { password, ...userData } = formData;
+        await axios.put(`${API_BASE}/${editId}`, userData);
+        alert('Cập nhật thông tin thành công!');
       } else {
-        await axios.post(API_BASE, formData);
+        // Create new user với mật khẩu mặc định
+        const userData = {
+          ...formData,
+          password: '123456789'
+        };
+        await axios.post(API_BASE, userData);
+        alert('Tạo tài khoản thành công!');
       }
-      setShowForm(false);
       setEditId(null);
       setFormData({ username: '', password: '', email: '', fullName: '', role: 'STUDENT' });
-      fetchUsers();
+      await fetchUsers();
+      setShowForm(false);
     } catch (err) {
-      setError('Lỗi lưu thông tin người dùng!');
+      // Hiển thị thông báo lỗi từ backend nếu có
+      const errorMessage = err.response?.data?.message || err.response?.data || 'Lỗi lưu thông tin người dùng!';
+      setError(errorMessage);
     }
   };
 
@@ -98,16 +109,9 @@ export default function AdminUserManagement() {
     }
   };
 
-  // Handle reset password
-  const handleResetPassword = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn reset mật khẩu cho tài khoản này?')) return;
-    try {
-      const res = await axios.post(`${API_BASE}/${id}/reset-password`);
-      alert(`Mật khẩu mới: ${res.data}`);
-    } catch {
-      setError('Lỗi reset mật khẩu!');
-    }
-  };
+  // Mật khẩu mặc định khi tạo tài khoản mới
+  const DEFAULT_PASSWORD = '123456789';
+
 
   // Handle lock/unlock
   const handleLock = async (id, lock) => {
@@ -137,10 +141,19 @@ export default function AdminUserManagement() {
             <label className="block">Tên đăng nhập</label>
             <input className="border p-2 w-full" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required disabled={!!editId} />
           </div>
-          <div className="mb-2">
-            <label className="block">Mật khẩu {editId ? '(bỏ qua nếu không đổi)' : ''}</label>
-            <input className="border p-2 w-full" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editId} />
-          </div>
+          {!editId && (
+            <div className="mb-2">
+              <label className="block">Mật khẩu</label>
+              <input 
+                className="border p-2 w-full bg-gray-100" 
+                type="text" 
+                value="123456789" 
+                readOnly
+                disabled
+              />
+              <p className="text-sm text-gray-500">Mật khẩu mặc định: 123456789</p>
+            </div>
+          )}
           <div className="mb-2">
             <label className="block">Email</label>
             <input className="border p-2 w-full" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
@@ -195,7 +208,6 @@ export default function AdminUserManagement() {
                   <td className="border px-4 py-2 flex flex-wrap gap-2 justify-center">
                     <button className="px-3 py-1 bg-yellow-400 text-white rounded shadow hover:bg-yellow-500 transition" onClick={() => handleEdit(user)}>Sửa</button>
                     <button className="px-3 py-1 bg-red-500 text-white rounded shadow hover:bg-red-600 transition" onClick={() => handleDelete(user.id)}>Xóa</button>
-                    <button className="px-3 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition" onClick={() => handleResetPassword(user.id)}>Reset mật khẩu</button>
                     {user.status === '1' ? (
                       <button className="px-3 py-1 bg-gray-700 text-white rounded shadow hover:bg-gray-900 transition" onClick={() => handleLock(user.id, true)}>Khoá</button>
                     ) : (
