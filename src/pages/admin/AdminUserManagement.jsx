@@ -7,7 +7,8 @@ const roleMap = {
   STUDENT: 'Học sinh',
   TEACHER: 'Giáo viên',
   MANAGER: 'Quản lý',
-  ADMIN: 'Quản trị',
+  ACCOUNTANT: 'Kế toán',
+  ADMIN: 'Quản trị viên',
 };
 
 export default function AdminUserManagement() {
@@ -20,7 +21,7 @@ export default function AdminUserManagement() {
     password: '',
     email: '',
     fullName: '',
-    role: 'STUDENT',
+    role: 'ADMIN',
   });
   const [editId, setEditId] = useState(null);
 
