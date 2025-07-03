@@ -131,9 +131,9 @@ function NavigationBar() {
     },
     {
       name: 'Quản lý tài khoản',
-      path: '/accounts',
+      path: '/admin/user-management',
       icon: '👥',
-      roles: [ROLE.MANAGER, ROLE.ADMIN]
+      roles: [ROLE.ADMIN]
     },
     { 
       name: 'Lớp Học', 

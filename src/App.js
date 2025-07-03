@@ -9,8 +9,7 @@ import "./App.css";
 
 // Layout and common components
 import Layout from "./components/Layout.jsx";
-import ForgotPassword from './components/ForgotPassword';
-import ResetPassword from './components/ResetPassword';
+
 
 // Pages
 import AssignmentsPage from "./pages/AssignmentsPage.jsx";
@@ -22,20 +21,13 @@ import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
-import RequestList from './pages/RequestList';
-import ChangePasswordPage from './pages/ChangePasswordPage';
-import StudentsDashboard from './pages/StudentsDashboard';
-import AcademicPerformance from './pages/AcademicPerformance';
-import AttendanceRecords from './pages/AttendanceRecords';
-import HomeworkScores from './pages/HomeworkScores';
-import ExamResults from './pages/ExamResults';
-import BlogPages from './pages/BlogPages';
-import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
+
 import AccountantDashboard from './pages/accounting/AccountantDashboard.jsx';
 import AttendanceExplanation from './pages/accounting/AttendanceExplanation.jsx';
 import AttendanceShiftReport from './pages/accounting/AttendanceShiftReport.jsx';
-import { ROLE } from "./constants/constants.js";
 
+
+import AdminUserManagement from './pages/admin/AdminUserManagement';
 // Fix missing components below (you must create or import them properly)
 
 
@@ -118,6 +110,7 @@ function App() {
           <Route path="/accounting/attendance-shift-report" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT"]}><AttendanceShiftReport /></ProtectedRoute>} />
           <Route path="/accounting/attendance-explanation" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT", "2", "TEACHER"]}><AttendanceExplanation /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={["4", "ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/user-management" element={<ProtectedRoute allowedRoles={["4", "ADMIN"]}><AdminUserManagement /></ProtectedRoute>} />
           <Route path="/teacher" element={<ProtectedRoute allowedRoles={["2", "TEACHER"]}><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute allowedRoles={["3", "MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
