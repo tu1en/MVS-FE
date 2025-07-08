@@ -59,12 +59,12 @@ class AnnouncementService {
   /**
    * Get announcements for a specific user
    * @param {number} userId - User ID
-   * @param {Object} params - Query parameters
+   * @param {string} filter - The filter string for the query.
    * @returns {Promise<Array>} User's announcements
    */
-  static async getUserAnnouncements(userId, params = {}) {
+  static async getUserAnnouncements(userId, filter = 'all') {
     try {
-      const response = await apiClient.get(`/announcements/user/${userId}`, { params });
+      const response = await apiClient.get(`/notifications/announcements/user/${userId}`, { params: { filter } });
       return response.data;
     } catch (error) {
       console.error('Error fetching user announcements:', error);
@@ -337,6 +337,20 @@ class AnnouncementService {
       return response.data;
     } catch (error) {
       console.error('Error updating notification preferences:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get announcements for student
+   * @returns {Promise<Array>} List of announcements for student
+   */
+  static async getAnnouncementsForStudent() {
+    try {
+      const response = await apiClient.get('/announcements/student');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching announcements for student:', error);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import api from './api';
+import axiosInstance from '../config/axiosInstance';
 
 const academicPerformanceService = {
   /**
@@ -7,7 +7,7 @@ const academicPerformanceService = {
    */
   getAcademicPerformance: async () => {
     try {
-      const response = await api.get('/academic-performance/student');
+      const response = await axiosInstance.get('/academic-performance/student');
       return response.data;
     } catch (error) {
       console.error('Error fetching academic performance:', error);

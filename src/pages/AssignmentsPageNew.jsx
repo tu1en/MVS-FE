@@ -1,19 +1,29 @@
-import { ClockCircleOutlined, FileTextOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Card, DatePicker, Drawer, Empty, Form, Input, Modal, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
+import { ClockCircleOutlined, FileOutlined, FileTextOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, DatePicker, Descriptions, Divider, Form, Input, InputNumber, Modal, Select, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import AssignmentStatusCell from '../components/AssignmentStatusCell';
+import DebugPanel from '../components/DebugPanel';
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
+import { useAuth } from '../context/AuthContext';
 import AssignmentService from '../services/assignmentService';
+import ClassroomService from '../services/classroomService';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Dragger } = Upload;
+const { Option } = Select;
 
 /**
  * AssignmentsPage component for managing assignments
  * @returns {JSX.Element} AssignmentsPage component
  */
-function AssignmentsPage() {
+function AssignmentsPageNew() {
   const { message } = App.useApp();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { courseId } = useParams(); // Get courseId from URL
   const [upcomingAssignments, setUpcomingAssignments] = useState([]);
   const [pastAssignments, setPastAssignments] = useState([]);
   const [submissions, setSubmissions] = useState({});
@@ -28,25 +38,64 @@ function AssignmentsPage() {
   const [submissionComment, setSubmissionComment] = useState('');
   const [gradeValue, setGradeValue] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [teacherClassrooms, setTeacherClassrooms] = useState([]);
   const [form] = Form.useForm();
+  const [currentAssignment, setCurrentAssignment] = useState(null);
+  const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
+  const [isGradeModalVisible, setIsGradeModalVisible] = useState(false);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [attachmentFile, setAttachmentFile] = useState(null);
+  const [attachmentName, setAttachmentName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [grading, setGrading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [submissionForm] = Form.useForm();
+  const [gradeForm] = Form.useForm();
+  const [assignmentForm] = Form.useForm();
+  const [showSubmissionDetail, setShowSubmissionDetail] = useState(false);
+  const [currentSubmission, setCurrentSubmission] = useState(null);
+  const [classrooms, setClassrooms] = useState([]);
+  const [currentStudent, setCurrentStudent] = useState(null);
+  const [grades, setGrades] = useState({});
 
-  // Get user info from localStorage
-  const userId = localStorage.getItem('userId');
-  const userRole = localStorage.getItem('role');
-  const isAdmin = userRole === '0'; // Check if user is admin
+  // Get user info from context, not localStorage
+  const userId = user?.id;
+  const userRole = user?.role?.replace('ROLE_', '') || localStorage.getItem('role')?.replace('ROLE_', '');
+  const isAdmin = userRole === 'TEACHER' || userRole === 'ADMIN'; // Adjust role name as per your system
 
   // Debug logging for role detection
-  console.log('AssignmentsPageNew - Role Debug:', { 
-    userId, 
-    userRole, 
-    roleFromStorage: localStorage.getItem('role'),
-    token: localStorage.getItem('token') 
+  console.log('AssignmentsPageNew - Role Debug:', {
+    userId,
+    userRole,
+    userFromContext: user
   });
 
   useEffect(() => {
     // Use real API calls instead of mock data
-    fetchData();
-  }, [userId, userRole]);
+    if (userId && userRole) { // Ensure user info is available before fetching
+      fetchData();
+    }
+  }, [userId, userRole]); // Rerun when user info changes
+
+  const fetchTeacherClassrooms = async () => {
+    try {
+      const response = await ClassroomService.getClassroomsByCurrentTeacher();
+      console.log('Fetched teacher classrooms:', response);
+      setTeacherClassrooms(response);
+      setClassrooms(response);
+    } catch (error) {
+      console.error('Error fetching teacher classrooms:', error);
+      // If error, set some mock classrooms for testing
+      const mockClassrooms = [
+        { id: 1, name: 'Lớp 10A1' },
+        { id: 2, name: 'Lớp 11A2' },
+        { id: 3, name: 'Lớp 12A3' }
+      ];
+      setTeacherClassrooms(mockClassrooms);
+      setClassrooms(mockClassrooms);
+    }
+  };
 
   // Fetch all necessary data based on user role
   const fetchData = async () => {
@@ -61,9 +110,20 @@ function AssignmentsPage() {
     
     setLoading(true);
     try {
-      await fetchAssignments();
-      if (userRole === '1' || userRole === 'STUDENT') { // Student role
-        await fetchSubmissions();
+      if (courseId) {
+        // If courseId is present, fetch assignments for that specific course
+        const assignments = await AssignmentService.getAssignmentsByClassroom(courseId);
+        // You might want to split these into upcoming and past as well
+        setUpcomingAssignments(assignments.filter(a => new Date(a.dueDate) >= new Date()));
+        setPastAssignments(assignments.filter(a => new Date(a.dueDate) < new Date()));
+      } else {
+        // Fallback to original behavior if no courseId
+        await fetchAssignments();
+        if (userRole === 'STUDENT') {
+          await fetchSubmissions();
+        } else if (userRole === 'TEACHER') {
+          await fetchTeacherClassrooms();
+        }
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -75,7 +135,7 @@ function AssignmentsPage() {
 
   const fetchAssignments = async () => {
     try {
-      if (userRole === '1' || userRole === 'STUDENT') {
+      if (userRole === 'STUDENT') { // Adjust role name
         console.log('Fetching assignments for STUDENT role');
         const [upcoming, past] = await Promise.all([
           AssignmentService.getUpcomingAssignments(userId),
@@ -87,9 +147,10 @@ function AssignmentsPage() {
         // setAssignments([...(Array.isArray(upcoming) ? upcoming : []), ...(Array.isArray(past) ? past : [])]);
       } else {
         let assignmentsData = [];
-        if (userRole === '2' || userRole === 'TEACHER') {
+        if (userRole === 'TEACHER') { // Adjust role name
           console.log('Fetching assignments for TEACHER role');
-          assignmentsData = await AssignmentService.getAssignmentsByTeacher(userId);
+          assignmentsData = await AssignmentService.getCurrentTeacherAssignments();
+          console.log('Received teacher assignments data:', assignmentsData);
         } else {
           console.log('Fetching all assignments for ADMIN/MANAGER role');
           assignmentsData = await AssignmentService.getAllAssignments();
@@ -102,14 +163,95 @@ function AssignmentsPage() {
         
         // For non-students, we can split into upcoming/past on the client
         const now = new Date();
-        const upcoming = assignmentsData.filter(a => new Date(a.dueDate) >= now);
-        const past = assignmentsData.filter(a => new Date(a.dueDate) < now);
+        console.log('Current time:', now);
+        console.log('Sample assignment data:', assignmentsData[0]);
+        console.log('Total assignments from API:', assignmentsData.length);
+        
+        // Check what dueDate field is actually called
+        const sampleAssignment = assignmentsData[0];
+        if (sampleAssignment) {
+          console.log('Assignment keys:', Object.keys(sampleAssignment));
+          console.log('Due date field:', sampleAssignment.dueDate);
+          console.log('End date field:', sampleAssignment.endDate);
+          console.log('Deadline field:', sampleAssignment.deadline);
+        }
+        
+        const upcoming = assignmentsData.filter(a => {
+          // Handle different date formats from backend (LocalDateTime)
+          let dueDate;
+          if (a.dueDate) {
+            // Check if dueDate is an array (Java LocalDateTime serialization)
+            if (Array.isArray(a.dueDate)) {
+              // Format: [year, month, day, hour, minute, second, nanosecond]
+              // Note: month is 1-based in the array but 0-based in JavaScript Date
+              const [year, month, day, hour, minute, second] = a.dueDate;
+              dueDate = new Date(year, month - 1, day, hour, minute, second);
+            } else {
+              // Try to parse as ISO string or other format
+              dueDate = new Date(a.dueDate);
+            }
+          } else if (a.endDate) {
+            dueDate = Array.isArray(a.endDate) 
+              ? new Date(a.endDate[0], a.endDate[1] - 1, a.endDate[2], a.endDate[3], a.endDate[4], a.endDate[5])
+              : new Date(a.endDate);
+          } else if (a.deadline) {
+            dueDate = Array.isArray(a.deadline) 
+              ? new Date(a.deadline[0], a.deadline[1] - 1, a.deadline[2], a.deadline[3], a.deadline[4], a.deadline[5])
+              : new Date(a.deadline);
+          } else {
+            console.warn('No valid date field found for assignment:', a);
+            return false;
+          }
+          
+          const isValidDate = !isNaN(dueDate.getTime());
+          const isUpcoming = isValidDate && dueDate >= now;
+          
+          console.log('Assignment:', a.title || a.name, 'Due:', dueDate, 'Valid:', isValidDate, 'Upcoming:', isUpcoming);
+          return isUpcoming;
+        });
+        
+        const past = assignmentsData.filter(a => {
+          let dueDate;
+          if (a.dueDate) {
+            if (Array.isArray(a.dueDate)) {
+              const [year, month, day, hour, minute, second] = a.dueDate;
+              dueDate = new Date(year, month - 1, day, hour, minute, second);
+            } else {
+              dueDate = new Date(a.dueDate);
+            }
+          } else if (a.endDate) {
+            dueDate = Array.isArray(a.endDate) 
+              ? new Date(a.endDate[0], a.endDate[1] - 1, a.endDate[2], a.endDate[3], a.endDate[4], a.endDate[5])
+              : new Date(a.endDate);
+          } else if (a.deadline) {
+            dueDate = Array.isArray(a.deadline) 
+              ? new Date(a.deadline[0], a.deadline[1] - 1, a.deadline[2], a.deadline[3], a.deadline[4], a.deadline[5])
+              : new Date(a.deadline);
+          } else {
+            return false;
+          }
+          
+          const isValidDate = !isNaN(dueDate.getTime());
+          return isValidDate && dueDate < now;
+        });
+        console.log('Setting upcoming assignments:', upcoming);
+        console.log('Setting past assignments:', past);
         setUpcomingAssignments(upcoming);
         setPastAssignments(past);
       }
     } catch (error) {
-      message.error('Không thể tải danh sách bài tập');
       console.error('Error fetching assignments:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      if (error.response?.status === 401) {
+        message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 403) {
+        message.error('Bạn không có quyền xem bài tập.');
+      } else {
+        message.error('Không thể tải danh sách bài tập: ' + (error.response?.data?.message || error.message));
+      }
+      
       setUpcomingAssignments([]);
       setPastAssignments([]);
     }
@@ -138,19 +280,6 @@ function AssignmentsPage() {
     }
   };
 
-  // const fetchSubmissionsForAssignment = async (assignmentId) => {
-  //   setLoading(true);
-  //   try {
-  //     const submissionsData = await AssignmentService.getSubmissionsForAssignment(assignmentId);
-  //     setSubmissionsList(submissionsData);
-  //   } catch (error) {
-  //     console.error(`Error fetching submissions for assignment ${assignmentId}:`, error);
-  //     message.error('Không thể tải danh sách bài làm');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const getAssignmentStatus = (assignment) => {
     const now = new Date();
     const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
@@ -171,33 +300,60 @@ function AssignmentsPage() {
   };
 
   const handleCreateAssignment = async (values) => {
+    if (!classroomId) {
+      message.error("Vui lòng chọn lớp học.");
+      return;
+    }
+
+    // Convert classroomId from object to number if needed
+    const finalClassroomId = typeof classroomId === 'object' ? classroomId.id : classroomId;
+    
+    // Check if finalClassroomId is a valid number
+    if (isNaN(parseInt(finalClassroomId))) {
+      message.error("Mã lớp học không hợp lệ.");
+      console.error("Invalid classroomId:", classroomId);
+      return;
+    }
+
     try {
-      setLoading(true);
-      
-      // Convert form values to assignment data format
+      setCreating(true);
       const assignmentData = {
         title: values.title,
         description: values.description,
         dueDate: values.dueDate.toISOString(),
-        points: values.points,
-        classroomId: values.classroomId,
-        fileAttachmentUrl: values.fileAttachmentUrl || null
+        maxScore: values.maxScore,
+        classroomId: finalClassroomId, // Use the extracted ID
+        // Hardcode other required fields for now
+        courseId: 1, // Example course ID
+        teacherId: userId, // Use the logged-in user's ID
       };
       
+      console.log('Assignment data to send:', assignmentData);
+      
       // Call API to create assignment
-      await AssignmentService.createAssignment(assignmentData);
+      const result = await AssignmentService.createAssignment(assignmentData);
+      console.log('Create assignment result:', result);
       
       message.success('Tạo bài tập thành công!');
-      setCreateModalVisible(false);
-      form.resetFields();
+      setIsCreateModalVisible(false);
+      setEditingAssignment(null);
+      assignmentForm.resetFields();
       
       // Refresh assignments list
-      await fetchAssignments();
+      await fetchData();
     } catch (error) {
       console.error('Error creating assignment:', error);
-      message.error('Không thể tạo bài tập');
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 401) {
+        message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 403) {
+        message.error('Bạn không có quyền tạo bài tập.');
+      } else {
+        message.error('Không thể tạo bài tập: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
-      setLoading(false);
+      setCreating(false);
     }
   };
 
@@ -290,49 +446,33 @@ function AssignmentsPage() {
   };
 
   const handleGradeClick = async (assignment) => {
+    console.log('Grading assignment:', assignment);
     setSelectedAssignment(assignment);
-    setGradingDrawerVisible(true);
     
-    // For testing, use the mock data directly
-    const filteredSubmissions = submissionsList.filter(
-      sub => sub.assignmentId === assignment.id
-    );
-    
-    if (filteredSubmissions.length > 0) {
-      setSubmissionsList(filteredSubmissions);
-    } else {
-      // If no submissions exist for this assignment in mock data, create some
-      const generatedSubmissions = [
-        {
-          id: 201,
-          assignmentId: assignment.id,
-          student: {
-            id: 1,
-            fullName: 'Nguyễn Văn A',
-            email: 'student@classroom.com'
-          },
-          submittedAt: moment().subtract(1, 'days').toISOString(),
-          fileSubmissionUrl: 'https://example.com/submission_new.pdf',
-          comment: 'Em đã hoàn thành bài tập.',
-          score: null,
-          feedback: null
-        },
-        {
-          id: 202,
-          assignmentId: assignment.id,
-          student: {
-            id: 2,
-            fullName: 'Trần Thị B',
-            email: 'student2@classroom.com'
-          },
-          submittedAt: moment().subtract(6, 'hours').toISOString(),
-          fileSubmissionUrl: 'https://example.com/submission_new2.pdf',
-          comment: 'Bài tập của em đây ạ.',
-          score: null,
-          feedback: null
-        }
-      ];
-      setSubmissionsList(generatedSubmissions);
+    try {
+      setLoading(true);
+      console.log(`Fetching submissions for assignment ID: ${assignment.id}`);
+      const token = localStorage.getItem('token');
+      console.log(`Using token: ${token?.substring(0, 20)}...`);
+      
+      const submissions = await AssignmentService.getSubmissionsForAssignment(assignment.id);
+      console.log(`Received ${submissions?.length || 0} submissions:`, submissions);
+      
+      // If no submissions, show message but open modal anyway to show empty state
+      if (!submissions || submissions.length === 0) {
+        message.info("Không có bài nộp nào cho bài tập này.");
+        console.log("No submissions found for this assignment");
+      }
+      
+      setSubmissionsList(submissions || []);
+      setIsGradeModalVisible(true);
+    } catch (error) {
+      message.error("Không thể tải danh sách bài nộp.");
+      console.error("Error fetching submissions for grading:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -364,166 +504,33 @@ function AssignmentsPage() {
   };
 
   const handleEditAssignment = (assignment) => {
-    form.setFieldsValue({
-      title: assignment.title,
-      description: assignment.description,
-      dueDate: moment(assignment.dueDate),
-      points: assignment.points
-    });
-    setSelectedAssignment(assignment);
-    setCreateModalVisible(true);
+    console.log('Editing assignment:', assignment);
+    setEditingAssignment(assignment);
+    
+    // Reset form first
+    assignmentForm.resetFields();
+    
+    // Convert dueDate from ISO string to moment object for DatePicker
+    const initialValues = {
+      ...assignment,
+      dueDate: assignment.dueDate ? moment(assignment.dueDate) : null,
+      classroomId: assignment.classroomId || (courseId ? parseInt(courseId, 10) : undefined)
+    };
+    
+    console.log('Setting form values for editing:', initialValues);
+    
+    // Set the form values after reset
+    assignmentForm.setFieldsValue(initialValues);
+    
+    // Open the creation modal in edit mode
+    setIsCreateModalVisible(true);
   };
 
-  const handleSeedMockData = async () => {
-    try {
-      setLoading(true);
-      await AssignmentService.seedAssignmentData();
-      message.success('Dữ liệu mẫu đã được tạo thành công!');
-      // Refresh assignments list
-      await fetchAssignments();
-    } catch (error) {
-      console.error('Error seeding mock data:', error);
-      message.error('Không thể tạo dữ liệu mẫu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // COMMENTED OUT - This table columns definition is not used in current implementation
-  /*
-  const columns = [
-    {
-      title: 'Tên bài tập',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text) => (
-        <Space>
-          <FileTextOutlined />
-          <strong>{text}</strong>
-        </Space>
-      ),
-    },
-    {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-    },
-    {
-      title: 'Hạn nộp',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date) => {
-        if (!date) return 'Không có hạn';
-        const dueDate = new Date(date);
-        const now = new Date();
-        const isOverdue = now > dueDate;
-        
-        return (
-          <Space>
-            <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
-            <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
-              {dueDate.toLocaleDateString('vi-VN')}
-            </span>
-          </Space>
-        );
-      },
-    },
-    {
-      title: 'Điểm',
-      dataIndex: 'points',
-      key: 'points',
-      render: (points) => `${points || 10} điểm`,
-    },
-    {
-      title: 'Trạng thái',
-      key: 'status',
-      render: (_, record) => {
-        if (userRole !== '1') {
-          // For teachers, show submission count
-          const submissionCount = submissionsList.filter(sub => sub.assignmentId === record.id).length;
-          return <Tag color="blue">{`Đã nộp: ${submissionCount || 0}`}</Tag>;
-        }
-        
-        // For students
-        const { color, text } = getAssignmentStatus(record);
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
-    {
-      title: 'Hành động',
-      key: 'actions',
-      render: (_, record) => {
-        if (userRole === '1') { // Student actions
-          const submission = submissions[record.id];
-          const isOverdue = record.dueDate && new Date() > new Date(record.dueDate);
-          
-          if (submission) {
-            return (
-              <Space>
-                <Button 
-                  size="small" 
-                  onClick={() => handleSubmitClick(record)}
-                >
-                  Xem bài nộp
-                </Button>
-                {!submission.score && !isOverdue && (
-                  <Button 
-                    type="primary" 
-                    size="small"
-                    onClick={() => handleSubmitClick(record)}
-                  >
-                    Nộp lại
-                  </Button>
-                )}
-              </Space>
-            );
-          }
-          
-          return (
-            <Button 
-              type="primary" 
-              size="small"
-              disabled={isOverdue}
-              onClick={() => handleSubmitClick(record)}
-            >
-              {isOverdue ? 'Đã quá hạn' : 'Nộp bài'}
-            </Button>
-          );
-        } else { // Teacher actions
-          return (
-            <Space>
-              <Button 
-                type="primary"
-                size="small"
-                onClick={() => handleGradeClick(record)}
-              >
-                Chấm bài
-              </Button>
-              <Button 
-                size="small"
-                onClick={() => {
-                  handleEditAssignment(record);
-                }}
-              >
-                Sửa
-              </Button>
-            </Space>
-          );
-        }
-      },
-    },
-  ];
-  */
-
-  // RENDER FUNCTIONS BASED ON USER ROLE
-
-  // Student view components
   const renderStudentDashboard = () => {
     return (
       <div className="student-dashboard">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>
+          <Title level={4} style={{ margin: 0 }} className="vietnamese-heading">
             <Tag color="blue" style={{ marginRight: 8, fontSize: '14px' }}>HỌC SINH</Tag>
             Bài tập của tôi
           </Title>
@@ -566,81 +573,149 @@ function AssignmentsPage() {
   };
 
   const renderStudentAssignmentsList = (assignmentsList) => {
-    // Debug logging
-    console.log('renderStudentAssignmentsList called with:', assignmentsList, 'Type:', typeof assignmentsList, 'IsArray:', Array.isArray(assignmentsList));
-    
-    // Ensure assignmentsList is an array
-    if (!Array.isArray(assignmentsList) || assignmentsList.length === 0) {
-      return <Empty description="Không có bài tập nào" />;
-    }
-
-    return (
-      <div className="assignments-list">
-        {assignmentsList.map(assignment => {
-          const status = getAssignmentStatus(assignment);
-          const submission = submissions[assignment.id];
+    const columns = [
+      {
+        title: 'Tên bài tập',
+        dataIndex: 'title',
+        key: 'title',
+        render: (text) => (
+          <Space>
+            <FileTextOutlined />
+            <strong>{text}</strong>
+          </Space>
+        ),
+      },
+      {
+        title: 'Mô tả',
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      },
+      {
+        title: 'Hạn nộp',
+        dataIndex: 'dueDate',
+        key: 'dueDate',
+        render: (date) => {
+          if (!date) return 'Không có hạn';
+          const dueDate = new Date(date);
+          const now = new Date();
+          const isOverdue = now > dueDate;
           
           return (
-            <Card 
-              key={assignment.id}
-              style={{ marginBottom: 16 }}
-              title={
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <FileTextOutlined style={{ marginRight: 8 }} />
-                  {assignment.title}
-                </div>
-              }
-              extra={
-                <Space>
-                  <Tag color="blue">
-                    <ClockCircleOutlined /> Hạn nộp: {moment(assignment.dueDate).format('DD/MM/YYYY HH:mm')}
-                  </Tag>
-                  <Tag color={status.color}>{status.text}</Tag>
-                </Space>
-              }
-              actions={[
-                submission ? (
-                  submission.score !== null ? (
-                    <Button key="view" onClick={() => handleViewGraded(assignment)}>
-                      Xem điểm & Nhận xét
-                    </Button>
-                  ) : (
-                    <Button key="edit" onClick={() => handleSubmitClick(assignment)}>
-                      Sửa bài nộp
-                    </Button>
-                  )
-                ) : (
-                  <Button 
-                    key="submit" 
-                    type="primary" 
-                    disabled={new Date(assignment.dueDate) < new Date()}
-                    onClick={() => handleSubmitClick(assignment)}
-                  >
-                    Nộp bài
-                  </Button>
-                )
-              ]}
-            >
-              <div className="assignment-description" style={{ marginBottom: 16 }}>
-                {assignment.description}
-              </div>
-              <div className="assignment-details">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>Điểm tối đa: {assignment.points}</Text>
-                  {submission && submission.score !== null && (
-                    <Text strong>Điểm của bạn: {submission.score}/{assignment.points}</Text>
-                  )}
-                </div>
-                {submission && submission.submittedAt && (
-                  <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">Đã nộp lúc: {moment(submission.submittedAt).format('DD/MM/YYYY HH:mm')}</Text>
-                  </div>
-                )}
-              </div>
-            </Card>
+            <Space>
+              <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
+              <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
+                {dueDate.toLocaleDateString('vi-VN')}
+              </span>
+            </Space>
           );
-        })}
-      </div>
+        },
+      },
+      {
+        title: 'Điểm',
+        dataIndex: 'points',
+        key: 'points',
+        render: (points) => `${points || 10} điểm`,
+      },
+      {
+        title: 'Trạng thái',
+        key: 'status',
+        render: (_, record) => {
+          // For students, show their specific submission status
+          const { color, text } = getAssignmentStatus(record);
+          return <Tag color={color} className="vietnamese-text">{text}</Tag>;
+        },
+      },
+      {
+        title: 'Hành động',
+        key: 'actions',
+        render: (_, record) => {
+          if (userRole === 'STUDENT') {
+            const submission = submissions[record.id];
+            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate);
+            
+            if (submission) {
+              return (
+                <Space>
+                  <Button 
+                    size="small" 
+                    onClick={() => handleSubmitClick(record)}
+                  >
+                    Xem bài nộp
+                  </Button>
+                  {!submission.score && !isOverdue && (
+                    <Button 
+                      type="primary" 
+                      size="small"
+                      onClick={() => handleSubmitClick(record)}
+                    >
+                      Nộp lại
+                    </Button>
+                  )}
+                </Space>
+              );
+            }
+            
+            return (
+              <Button 
+                type="primary" 
+                size="small"
+                disabled={isOverdue}
+                onClick={() => handleSubmitClick(record)}
+              >
+                {isOverdue ? 'Đã quá hạn' : 'Nộp bài'}
+              </Button>
+            );
+          } else {
+            return (
+              <Space>
+                <Button 
+                  type="primary"
+                  size="small"
+                  onClick={() => handleGradeClick(record)}
+                >
+                  Chấm bài
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    handleEditAssignment(record);
+                  }}
+                >
+                  Sửa
+                </Button>
+              </Space>
+            );
+          }
+        },
+      },
+    ];
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={assignmentsList}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 10 }}
+        expandable={{
+          expandedRowRender: (record) => (
+            <div style={{ padding: '16px', backgroundColor: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+              <Title level={5}>Chi tiết bài tập:</Title>
+              <MarkdownRenderer content={record.description} />
+              {record.fileAttachmentUrl && (
+                <p style={{ marginTop: '10px' }}>
+                  <strong>Tài liệu đính kèm:</strong>{' '}
+                  <a href={record.fileAttachmentUrl} target="_blank" rel="noopener noreferrer">
+                    Tải về
+                  </a>
+                </p>
+              )}
+            </div>
+          ),
+          rowExpandable: (record) => record.description,
+        }}
+      />
     );
   };
 
@@ -649,25 +724,18 @@ function AssignmentsPage() {
     return (
       <div className="teacher-dashboard">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>
+          <Title level={4} style={{ margin: 0 }} className="vietnamese-heading">
             <Tag color="green" style={{ marginRight: 8, fontSize: '14px' }}>GIẢNG VIÊN</Tag>
             Quản lý bài tập
           </Title>
           <Space>
-            {isAdmin && (
-              <Button 
-                onClick={handleSeedMockData}
-                style={{ marginRight: 8 }}
-              >
-                Tạo dữ liệu mẫu
-              </Button>
-            )}
             <Button 
               type="primary" 
-              icon={<PlusOutlined />} 
+              icon={<PlusOutlined />}
+              className="button-vietnamese" 
               onClick={() => {
-                form.resetFields();
-                setCreateModalVisible(true);
+                assignmentForm.resetFields();
+                setIsCreateModalVisible(true);
               }}
             >
               Tạo bài tập
@@ -715,52 +783,140 @@ function AssignmentsPage() {
   };
 
   const renderTeacherAssignmentsList = (assignmentsList) => {
-    // Debug logging
-    console.log('renderTeacherAssignmentsList called with:', assignmentsList, 'Type:', typeof assignmentsList, 'IsArray:', Array.isArray(assignmentsList));
-    
-    // Ensure assignmentsList is an array
-    if (!Array.isArray(assignmentsList) || assignmentsList.length === 0) {
-      return <Empty description="Không có bài tập nào" />;
-    }
-
-    return (
-      <div className="assignments-list">
-        {assignmentsList.map(assignment => (
-          <Card 
-            key={assignment.id}
-            style={{ marginBottom: 16 }}
-            title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FileTextOutlined style={{ marginRight: 8 }} />
-                {assignment.title}
-              </div>
+    const columns = [
+      {
+        title: 'Tên bài tập',
+        dataIndex: 'title',
+        key: 'title',
+        render: (text) => (
+          <Space>
+            <FileTextOutlined />
+            <strong>{text}</strong>
+          </Space>
+        ),
+      },
+      {
+        title: 'Mô tả',
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      },
+      {
+        title: 'Hạn nộp',
+        dataIndex: 'dueDate',
+        key: 'dueDate',
+        render: (date) => {
+          if (!date) return 'Không có hạn';
+          const dueDate = new Date(date);
+          const now = new Date();
+          const isOverdue = now > dueDate;
+          
+          return (
+            <Space>
+              <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
+              <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
+                {dueDate.toLocaleDateString('vi-VN')}
+              </span>
+            </Space>
+          );
+        },
+      },
+      {
+        title: 'Điểm',
+        dataIndex: 'points',
+        key: 'points',
+        render: (points) => `${points || 10} điểm`,
+      },
+      {
+        title: 'Trạng thái',
+        key: 'status',
+        render: (_, record) => {
+          // For teachers, use the dedicated component to show submission count
+          return <AssignmentStatusCell assignmentId={record.id} />;
+        },
+      },
+      {
+        title: 'Hành động',
+        key: 'actions',
+        render: (_, record) => {
+          if (userRole === 'STUDENT') {
+            const submission = submissions[record.id];
+            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate);
+            
+            if (submission) {
+              return (
+                <Space>
+                  <Button 
+                    size="small" 
+                    onClick={() => handleSubmitClick(record)}
+                  >
+                    Xem bài nộp
+                  </Button>
+                  {!submission.score && !isOverdue && (
+                    <Button 
+                      type="primary" 
+                      size="small"
+                      onClick={() => handleSubmitClick(record)}
+                    >
+                      Nộp lại
+                    </Button>
+                  )}
+                </Space>
+              );
             }
-            extra={
-              <Space>
-                <Tag color="blue">
-                  <ClockCircleOutlined /> Hạn nộp: {moment(assignment.dueDate).format('DD/MM/YYYY HH:mm')}
-                </Tag>
-                <Tag color="purple">Điểm: {assignment.points}</Tag>
-              </Space>
-            }
-            actions={[
-              <Button key="grade" type="primary" onClick={() => handleGradeClick(assignment)}>
-                Xem & Chấm bài nộp
-              </Button>,
-              <Button key="edit" onClick={() => handleEditAssignment(assignment)}>
-                Sửa bài tập
+            
+            return (
+              <Button 
+                type="primary" 
+                size="small"
+                disabled={isOverdue}
+                onClick={() => handleSubmitClick(record)}
+              >
+                {isOverdue ? 'Đã quá hạn' : 'Nộp bài'}
               </Button>
-            ]}
-          >
-            <div className="assignment-description" style={{ marginBottom: 16 }}>
-              {assignment.description}
+            );
+          } else {
+            return (
+              <Space>
+                <Button 
+                  type="primary"
+                  size="small"
+                  onClick={() => handleGradeClick(record)}
+                >
+                  Chấm bài
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    handleEditAssignment(record);
+                  }}
+                >
+                  Sửa
+                </Button>
+              </Space>
+            );
+          }
+        },
+      },
+    ];
+    
+    return (
+      <Table
+        columns={columns}
+        dataSource={assignmentsList}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 10 }}
+        expandable={{
+          expandedRowRender: (record) => (
+            <div style={{ padding: '16px', backgroundColor: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+              <Title level={5}>Mô tả chi tiết:</Title>
+              <MarkdownRenderer content={record.description} />
             </div>
-            <div className="assignment-stats">
-              {renderSubmissionStats(assignment)}
-            </div>
-          </Card>
-        ))}
-      </div>
+          ),
+          rowExpandable: (record) => record.description,
+        }}
+      />
     );
   };
 
@@ -784,84 +940,328 @@ function AssignmentsPage() {
     if (!submission) return;
     
     Modal.info({
-      title: `Kết quả bài tập: ${assignment.title}`,
-      width: 600,
+      title: `Điểm số: ${submission.score || 'Chưa chấm'}`,
       content: (
-        <div className="graded-submission-details">
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Điểm số:</Text> {submission.score}/{assignment.points}
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Nhận xét của giáo viên:</Text>
-            <div style={{ padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: 4, marginTop: 8 }}>
-              {submission.feedback || 'Không có nhận xét'}
-            </div>
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Bài nộp của bạn:</Text>
-            <div style={{ marginTop: 8 }}>
-              <a href={submission.fileSubmissionUrl} target="_blank" rel="noopener noreferrer">
-                {submission.fileSubmissionUrl.split('/').pop()}
-              </a>
-            </div>
-          </div>
-          
-          {submission.comment && (
-            <div>
-              <Text strong>Ghi chú của bạn:</Text>
-              <div style={{ padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: 4, marginTop: 8 }}>
-                {submission.comment}
-              </div>
-            </div>
-          )}
+        <div>
+          <p>Bài tập: {assignment.title}</p>
+          <p>Điểm: {submission.score || 'Chưa chấm'}</p>
+          <p>Nhận xét: {submission.feedback || 'Chưa có nhận xét'}</p>
         </div>
       ),
-      okText: 'Đóng',
     });
   };
 
-  // Shared UI Components
-  const renderAssignmentCreationModal = () => {
-    return (
+  const handleSaveGrade = async (submissionId) => {
+    console.log(`Starting grade save for submission ${submissionId}`);
+    try {
+      setGrading(true);
+      const gradeData = grades[submissionId];
+      console.log(`Grade data for submission ${submissionId}:`, gradeData);
+      
+      if (!gradeData || gradeData.score === undefined) {
+        message.error("Vui lòng nhập điểm.");
+        console.error("Missing grade data for submission", submissionId);
+        return;
+      }
+
+      if (!selectedAssignment || !selectedAssignment.id) {
+        message.error("Không thể xác định bài tập cần chấm.");
+        console.error("Missing selectedAssignment.id in handleSaveGrade");
+        return;
+      }
+
+      console.log(`Saving grade for assignment ${selectedAssignment.id}, submission ${submissionId}:`, {
+        score: gradeData.score,
+        feedback: gradeData.feedback || ''
+      });
+
+      await AssignmentService.gradeSubmission(selectedAssignment.id, {
+        submissionId,
+        score: gradeData.score,
+        feedback: gradeData.feedback || '',
+      });
+
+      message.success("Chấm điểm thành công!");
+      console.log("Grade saved successfully");
+      
+      // Refresh submissions list
+      console.log(`Refreshing submissions for assignment ${selectedAssignment.id}`);
+      const updatedSubmissions = await AssignmentService.getSubmissionsForAssignment(selectedAssignment.id);
+      console.log(`Received ${updatedSubmissions.length} updated submissions after grading`);
+      setSubmissionsList(updatedSubmissions);
+
+    } catch (error) {
+      message.error("Lỗi khi lưu điểm.");
+      console.error("Error saving grade:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+    } finally {
+      setGrading(false);
+    }
+  };
+
+  const handleGradeChange = (submissionId, value) => {
+    setGrades(prev => ({
+      ...prev,
+      [submissionId]: { ...prev[submissionId], score: value }
+    }));
+  };
+
+  const handleFeedbackChange = (submissionId, value) => {
+    setGrades(prev => ({
+      ...prev,
+      [submissionId]: { ...prev[submissionId], feedback: value }
+    }));
+  };
+
+  // Render the appropriate dashboard based on user role
+  return (
+    <div className="assignments-container vietnamese-text">
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        <>
+          {userRole === 'STUDENT' ? renderStudentDashboard() : renderTeacherDashboard()}
+        </>
+      )}
+      
+      {/* Assignment submission modal */}
       <Modal
-        title="Giao bài tập mới"
-        open={createModalVisible}
-        onCancel={() => setCreateModalVisible(false)}
+        title={currentAssignment ? `${isSubmitting ? 'Nộp bài:' : 'Chi tiết bài tập:'} ${currentAssignment.title}` : 'Nộp bài tập'}
+        open={isSubmitModalVisible}
+        onCancel={() => setIsSubmitModalVisible(false)}
         footer={null}
-        width={700}
+        width={800}
+        className="vietnamese-text"
+      >
+        {currentAssignment && (
+          <div>
+            <Descriptions title="Thông tin bài tập" bordered column={1} className="vietnamese-text">
+              <Descriptions.Item label="Tên bài tập">{currentAssignment.title}</Descriptions.Item>
+              <Descriptions.Item label="Mô tả">
+                <MarkdownRenderer content={currentAssignment.description || 'Không có mô tả'} />
+              </Descriptions.Item>
+              <Descriptions.Item label="Hạn nộp">
+                {currentAssignment.dueDate 
+                  ? new Date(currentAssignment.dueDate).toLocaleString('vi-VN') 
+                  : 'Không có hạn nộp'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Điểm tối đa">{currentAssignment.points || 10} điểm</Descriptions.Item>
+            </Descriptions>
+            
+            <Divider />
+            
+            {/* Display existing submission if available */}
+            {submissions[currentAssignment.id] && (
+              <>
+                <Title level={5}>Bài nộp hiện tại:</Title>
+                <Descriptions bordered column={1}>
+                  <Descriptions.Item label="Thời gian nộp">
+                    {new Date(submissions[currentAssignment.id].submittedAt).toLocaleString('vi-VN')}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Nội dung">
+                    <MarkdownRenderer content={submissions[currentAssignment.id].content || 'Không có nội dung'} />
+                  </Descriptions.Item>
+                  {submissions[currentAssignment.id].attachmentUrl && (
+                    <Descriptions.Item label="Tệp đính kèm">
+                      <a href={submissions[currentAssignment.id].attachmentUrl} target="_blank" rel="noopener noreferrer">
+                        <FileOutlined /> {submissions[currentAssignment.id].attachmentName || 'Tải tệp đính kèm'}
+                      </a>
+                    </Descriptions.Item>
+                  )}
+                  {submissions[currentAssignment.id].score !== null && (
+                    <Descriptions.Item label="Điểm số">
+                      <Tag color="green">{submissions[currentAssignment.id].score} / {currentAssignment.points || 10}</Tag>
+                    </Descriptions.Item>
+                  )}
+                  {submissions[currentAssignment.id].feedback && (
+                    <Descriptions.Item label="Nhận xét">
+                      {submissions[currentAssignment.id].feedback}
+                    </Descriptions.Item>
+                  )}
+                </Descriptions>
+                <Divider />
+              </>
+            )}
+            
+            {/* Submission form if due date has not passed or no submission exists */}
+            {(!currentAssignment.dueDate || new Date() < new Date(currentAssignment.dueDate) || !submissions[currentAssignment.id]) && (
+              <>
+                <Title level={5}>{submissions[currentAssignment.id] ? 'Nộp lại bài:' : 'Nộp bài:'}</Title>
+                <Form
+                  form={submissionForm}
+                  layout="vertical"
+                  onFinish={handleSubmitAssignment}
+                >
+                  <Form.Item
+                    name="content"
+                    label="Nội dung bài nộp"
+                    rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}
+                  >
+                    <Input.TextArea rows={6} placeholder="Nhập nội dung bài nộp hoặc giải thích về file đính kèm..." />
+                  </Form.Item>
+                  
+                  <Form.Item
+                    name="attachment"
+                    label="Tệp đính kèm (không bắt buộc)"
+                  >
+                    <Upload 
+                      beforeUpload={file => {
+                        setAttachmentFile(file);
+                        return false;
+                      }}
+                      fileList={attachmentFile ? [attachmentFile] : []}
+                      onRemove={() => setAttachmentFile(null)}
+                    >
+                      <Button icon={<UploadOutlined />}>Tải lên tệp</Button>
+                    </Upload>
+                  </Form.Item>
+                  
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" loading={submitting}>
+                      Nộp bài
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
+      
+      {/* Grade Submissions Modal */}
+      <Modal
+        title={`Chấm bài cho: ${selectedAssignment?.title}`}
+        open={isGradeModalVisible}
+        onCancel={() => setIsGradeModalVisible(false)}
+        footer={null}
+        width={1000}
+        className="vietnamese-text"
+      >
+        {loading ? (
+          <Spin />
+        ) : submissionsList.length > 0 ? (
+          <Table
+            dataSource={submissionsList}
+            rowKey="id"
+            className="vietnamese-text"
+            columns={[
+              {
+                title: 'Sinh viên',
+                dataIndex: ['student', 'fullName'],
+                key: 'studentName',
+                className: 'vietnamese-text',
+              },
+              {
+                title: 'Ngày nộp',
+                dataIndex: 'submittedAt',
+                key: 'submittedAt',
+                render: (text) => moment(text).format('DD/MM/YYYY HH:mm'),
+              },
+              {
+                title: 'Bài nộp',
+                dataIndex: 'fileSubmissionUrl',
+                key: 'file',
+                render: (url) => <a href={url} target="_blank" rel="noopener noreferrer">Tải xuống</a>,
+              },
+              {
+                title: 'Điểm',
+                key: 'grade',
+                render: (_, record) => (
+                  <InputNumber
+                    min={0}
+                    max={selectedAssignment?.points || 100}
+                    defaultValue={record.score}
+                    onChange={(value) => handleGradeChange(record.id, value)}
+                  />
+                ),
+              },
+              {
+                title: 'Nhận xét',
+                key: 'feedback',
+                render: (_, record) => (
+                  <TextArea
+                    rows={2}
+                    defaultValue={record.feedback}
+                    onChange={(e) => handleFeedbackChange(record.id, e.target.value)}
+                  />
+                ),
+              },
+              {
+                title: 'Hành động',
+                key: 'action',
+                render: (_, record) => (
+                  <Button
+                    type="primary"
+                    onClick={() => handleSaveGrade(record.id)}
+                    loading={grading && grades[record.id]}
+                  >
+                    Lưu
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        ) : (
+          <Text>Chưa có sinh viên nào nộp bài.</Text>
+        )}
+      </Modal>
+      
+      {/* Create/Edit Assignment Modal */}
+      <Modal
+        title={editingAssignment ? `Sửa bài tập: ${editingAssignment.title}` : 'Tạo bài tập mới'}
+        open={isCreateModalVisible}
+        onCancel={() => setIsCreateModalVisible(false)}
+        footer={null}
+        width={800}
+        className="vietnamese-text"
       >
         <Form
-          form={form}
+          form={assignmentForm}
           layout="vertical"
           onFinish={handleCreateAssignment}
+          className="form-vietnamese"
         >
           <Form.Item
             name="title"
             label="Tiêu đề bài tập"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề bài tập' }]}
+            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề bài tập!' }]}
           >
             <Input placeholder="Nhập tiêu đề bài tập" />
           </Form.Item>
           
           <Form.Item
             name="description"
-            label="Mô tả / Hướng dẫn"
-            rules={[{ required: true, message: 'Vui lòng nhập mô tả bài tập' }]}
+            label="Mô tả bài tập"
+            rules={[{ required: true, message: 'Vui lòng nhập mô tả bài tập!' }]}
           >
-            <TextArea rows={4} placeholder="Nhập mô tả chi tiết và hướng dẫn làm bài" />
+            <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết bài tập..." />
+          </Form.Item>
+          
+          <Form.Item
+            name="classroomId"
+            label="Lớp học"
+            rules={[{ required: true, message: 'Vui lòng chọn lớp học!' }]}
+          >
+            <Select placeholder="Chọn lớp học">
+              {classrooms.map(classroom => (
+                <Option key={classroom.id} value={classroom.id}>
+                  {classroom.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
           
           <Form.Item
             name="dueDate"
-            label="Hạn nộp bài"
-            rules={[{ required: true, message: 'Vui lòng chọn hạn nộp bài' }]}
+            label="Hạn nộp"
           >
             <DatePicker 
               showTime 
-              format="DD/MM/YYYY HH:mm" 
-              placeholder="Chọn ngày và giờ"
+              format="YYYY-MM-DD HH:mm:ss" 
+              placeholder="Chọn hạn nộp"
               style={{ width: '100%' }}
             />
           </Form.Item>
@@ -869,302 +1269,66 @@ function AssignmentsPage() {
           <Form.Item
             name="points"
             label="Điểm tối đa"
-            rules={[{ required: true, message: 'Vui lòng nhập điểm tối đa' }]}
-            initialValue={100}
+            initialValue={10}
           >
-            <Input type="number" min={0} max={1000} />
-          </Form.Item>
-          
-          <Form.Item
-            name="fileAttachmentUrl"
-            label="Tệp đính kèm (Tùy chọn)"
-          >
-            <Upload
-              maxCount={1}
-              beforeUpload={() => false}
-            >
-              <Button icon={<FileTextOutlined />}>Chọn tệp</Button>
-            </Upload>
+            <InputNumber min={1} max={100} />
           </Form.Item>
           
           <Form.Item>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button style={{ marginRight: 8 }} onClick={() => setCreateModalVisible(false)}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit">
-                Giao bài
-              </Button>
-            </div>
+            <Button type="primary" htmlType="submit" loading={creating}>
+              {editingAssignment ? "Cập nhật bài tập" : "Tạo bài tập"}
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
-    );
-  };
-
-  const renderGradingDrawer = () => {
-    return (
-      <Drawer
-        title={
-          <div>
-            <div>Chấm bài tập</div>
-            {selectedAssignment && (
-              <Text type="secondary" style={{ fontSize: 14 }}>
-                {selectedAssignment.title}
-              </Text>
-            )}
-          </div>
-        }
-        width={720}
-        onClose={() => {
-          setGradingDrawerVisible(false);
-          setSelectedSubmission(null);
-        }}
-        open={gradingDrawerVisible}
-        styles={{ body: { paddingBottom: 80 } }}
-        extra={
-          selectedSubmission ? (
-            <Button type="primary" onClick={handleGradeSubmission}>
-              Lưu điểm
-            </Button>
-          ) : null
-        }
-      >
-        {selectedSubmission ? (
-          <div className="submission-details">
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Sinh viên:</Text> {selectedSubmission.student.fullName}
-            </div>
-            
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Thời gian nộp:</Text> {moment(selectedSubmission.submittedAt).format('DD/MM/YYYY HH:mm')}
-            </div>
-            
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Bài nộp:</Text>
-              <div style={{ marginTop: 8 }}>
-                <a href={selectedSubmission.fileSubmissionUrl} target="_blank" rel="noopener noreferrer">
-                  {selectedSubmission.fileSubmissionUrl.split('/').pop()}
-                </a>
-              </div>
-            </div>
-            
-            {selectedSubmission.comment && (
-              <div style={{ marginBottom: 16 }}>
-                <Text strong>Ghi chú của sinh viên:</Text>
-                <div style={{ padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: 4, marginTop: 8 }}>
-                  {selectedSubmission.comment}
-                </div>
-              </div>
-            )}
-            
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Điểm số:</Text>
-              <Input 
-                type="number" 
-                min={0} 
-                max={selectedAssignment ? selectedAssignment.points : 100}
-                value={gradeValue}
-                onChange={e => setGradeValue(e.target.value)}
-                placeholder={`Điểm (tối đa: ${selectedAssignment ? selectedAssignment.points : 100})`}
-                style={{ width: '100%', marginTop: 8 }}
-              />
-            </div>
-            
-            <div>
-              <Text strong>Nhận xét:</Text>
-              <TextArea 
-                rows={4} 
-                value={feedback}
-                onChange={e => setFeedback(e.target.value)}
-                placeholder="Nhập nhận xét cho sinh viên"
-                style={{ marginTop: 8 }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="submissions-list">
-            <Table
-              dataSource={submissionsList}
-              rowKey="id"
-              columns={[
-                {
-                  title: 'Sinh viên',
-                  dataIndex: ['student', 'fullName'],
-                  key: 'studentName',
-                },
-                {
-                  title: 'Thời gian nộp',
-                  dataIndex: 'submittedAt',
-                  key: 'submittedAt',
-                  render: text => moment(text).format('DD/MM/YYYY HH:mm'),
-                },
-                {
-                  title: 'Trạng thái',
-                  key: 'status',
-                  render: (_, record) => (
-                    <Tag color={record.score !== null && record.score !== undefined ? 'success' : 'processing'}>
-                      {record.score !== null && record.score !== undefined ? 'Đã chấm điểm' : 'Chưa chấm điểm'}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: 'Thao tác',
-                  key: 'action',
-                  render: (_, record) => (
-                    <Button type="primary" onClick={() => {
-                      setSelectedSubmission(record);
-                      setGradeValue(record.score !== null && record.score !== undefined ? record.score.toString() : '');
-                      setFeedback(record.feedback || '');
-                    }}>
-                      {record.score !== null && record.score !== undefined ? 'Sửa điểm' : 'Chấm điểm'}
-                    </Button>
-                  ),
-                },
-              ]}
-            />
-          </div>
-        )}
-      </Drawer>
-    );
-  };
-
-  const renderSubmissionDrawer = () => {
-    return (
-      <Drawer
-        title={
-          <div>
-            <div>Nộp bài tập</div>
-            {selectedAssignment && (
-              <Text type="secondary" style={{ fontSize: 14 }}>
-                {selectedAssignment.title}
-              </Text>
-            )}
-          </div>
-        }
-        width={520}
-        onClose={() => {
-          setSubmitDrawerVisible(false);
-          setSelectedAssignment(null);
-        }}
-        open={submitDrawerVisible}
-        styles={{ body: { paddingBottom: 80 } }}
-        extra={
-          <Button type="primary" onClick={handleSubmitAssignment}>
-            Nộp bài
-          </Button>
-        }
-      >
-        {selectedAssignment && (
-          <div className="submission-form">
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Hạn nộp:</Text> {moment(selectedAssignment.dueDate).format('DD/MM/YYYY HH:mm')}
-            </div>
-            
-            <div style={{ marginBottom: 24 }}>
-              <Text strong>Tải lên bài làm:</Text>
-              <Dragger
-                fileList={fileList}
-                beforeUpload={() => false}
-                onChange={info => {
-                  setFileList(info.fileList.slice(-1));
-                }}
-                onRemove={() => {
-                  setFileList([]);
-                }}
-                maxCount={1}
-                style={{ marginTop: 8 }}
-              >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">Nhấp hoặc kéo tệp vào khu vực này để tải lên</p>
-                <p className="ant-upload-hint">Chỉ hỗ trợ tải lên một tệp duy nhất.</p>
-              </Dragger>
-            </div>
-            
-            <div>
-              <Text strong>Ghi chú (không bắt buộc):</Text>
-              <TextArea 
-                rows={4} 
-                value={submissionComment}
-                onChange={e => setSubmissionComment(e.target.value)}
-                placeholder="Nhập ghi chú cho giáo viên"
-                style={{ marginTop: 8 }}
-              />
-            </div>
-          </div>
-        )}
-      </Drawer>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  // Render appropriate view based on user role
-  const renderMainContent = () => {
-    // If no role is detected, show error message
-    if (!userRole || !userId) {
-      return (
-        <div className="text-center p-8">
-          <h2>⚠️ Lỗi phân quyền</h2>
-          <p>Không thể xác định vai trò người dùng. Vui lòng đăng nhập lại.</p>
-          <Button type="primary" onClick={() => window.location.href = '/login'}>
-            Đăng nhập lại
-          </Button>
-        </div>
-      );
-    }
-
-    // Student view for role '1' or 'STUDENT'
-    if (userRole === '1' || userRole === 'STUDENT') {
-      return renderStudentDashboard();
-    }
-    
-    // Teacher view for role '2' or 'TEACHER' 
-    if (userRole === '2' || userRole === 'TEACHER') {
-      return renderTeacherDashboard();
-    }
-    
-    // Admin view for role '0' or 'ADMIN'
-    if (userRole === '0' || userRole === 'ADMIN') {
-      return renderTeacherDashboard(); // Admins can see teacher view
-    }
-    
-    // Manager view for role '3' or 'MANAGER'
-    if (userRole === '3' || userRole === 'MANAGER') {
-      return renderTeacherDashboard(); // Managers can see teacher view
-    }
-    
-    // If role is not recognized, show error
-    return (
-      <div className="text-center p-8">
-        <h2>⚠️ Vai trò không được hỗ trợ</h2>
-        <p>Vai trò "{userRole}" không được hỗ trợ cho trang này.</p>
-        <Button type="primary" onClick={() => window.location.href = '/login'}>
-          Đăng nhập lại
-        </Button>
-      </div>
-    );
-  };
-
-  return (
-    <div className="assignments-page">
-      {/* Main content based on user role */}
-      {renderMainContent()}
       
-      {/* Shared UI components */}
-      {renderAssignmentCreationModal()}
-      {renderGradingDrawer()}
-      {renderSubmissionDrawer()}
+      {/* Debug Panel - Only show in development environment */}
+      {process.env.NODE_ENV === 'development' && (
+        <DebugPanel
+          title="Assignment Debugging"
+          data={{
+            userId,
+            userRole,
+            courseId,
+            assignmentCounts: {
+              upcoming: upcomingAssignments.length,
+              past: pastAssignments.length,
+              submissionsList: submissionsList.length
+            },
+            uiState: {
+              isGradeModalVisible,
+              isCreateModalVisible,
+              isSubmitModalVisible,
+              loading,
+              grading,
+              creating
+            },
+            selectedAssignment: selectedAssignment ? {
+              id: selectedAssignment.id,
+              title: selectedAssignment.title,
+              dueDate: selectedAssignment.dueDate
+            } : null,
+            classroomInfo: {
+              courseId,
+              classroomCount: classrooms.length,
+              teacherClassroomCount: teacherClassrooms.length
+            }
+          }}
+          onRunTest={() => {
+            // Test function - fetch submissions for currently selected assignment
+            if (selectedAssignment) {
+              handleGradeClick(selectedAssignment);
+            } else {
+              console.log("No assignment selected for testing");
+              message.info("Please select an assignment first");
+            }
+          }}
+          onRefresh={() => fetchData()}
+          collapsed={true}
+        />
+      )}
     </div>
   );
 }
 
-export default AssignmentsPage;
+export default AssignmentsPageNew;

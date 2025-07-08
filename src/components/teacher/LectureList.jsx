@@ -2,8 +2,9 @@ import { Modal, message } from 'antd';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
-const LectureList = ({ courseId, courseName, onEditLecture }) => {
+const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = false }) => {
   const navigate = useNavigate();
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,8 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
       setError(null);
       
       const token = localStorage.getItem('token');
+      
+      // Fetch lectures
       const response = await axios.get(`http://localhost:8088/api/courses/${courseId}/lectures`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
@@ -29,8 +32,36 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
         }
       });
       
-      console.log('Lectures response:', response.data);
-      setLectures(response.data || []);
+      // Process lectures to ensure materials are properly included
+      const lecturesData = response.data || [];
+      
+      // If materials are not included in the response, fetch them separately
+      const lecturesWithMaterials = await Promise.all(lecturesData.map(async (lecture) => {
+        if (!lecture.materials || lecture.materials.length === 0) {
+          try {
+            // Try to fetch materials for this lecture
+            const materialsResponse = await axios.get(`http://localhost:8088/api/courses/${courseId}/lectures/${lecture.id}/materials`, {
+              headers: {
+                'Authorization': token ? `Bearer ${token}` : '',
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            // Return lecture with materials
+            return {
+              ...lecture,
+              materials: materialsResponse.data || []
+            };
+          } catch (materialError) {
+            console.warn(`Could not fetch materials for lecture ${lecture.id}:`, materialError);
+            return lecture; // Return lecture without materials if fetch fails
+          }
+        }
+        return lecture; // Return lecture as is if it already has materials
+      }));
+      
+      console.log('Lectures response:', lecturesWithMaterials);
+      setLectures(lecturesWithMaterials);
     } catch (error) {
       console.error('Error loading lectures:', error);
       setError('Không thể tải danh sách bài giảng. Vui lòng thử lại.');
@@ -58,6 +89,9 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
     );
   };
   const handleDeleteLecture = async (lectureId, lectureTitle) => {
+    // Only allow deleting in teacher view
+    if (isStudentView) return;
+    
     Modal.confirm({
       title: 'Xác nhận xóa bài giảng',
       content: `Bạn có chắc chắn muốn xóa bài giảng "${lectureTitle || 'này'}"? Tất cả tài liệu bên trong cũng sẽ bị xóa.`,
@@ -99,6 +133,9 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
     });
   };
   const handleEditLecture = (lecture) => {
+    // Only allow editing in teacher view
+    if (isStudentView) return;
+    
     if (onEditLecture) {
       onEditLecture(lecture);
     } else {
@@ -106,6 +143,9 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
     }
   };
   const handleStartLecture = (lecture) => {
+    // Only allow starting lecture in teacher view
+    if (isStudentView) return;
+    
     Modal.confirm({
       title: 'Bắt đầu bài giảng',
       content: `Bạn có muốn bắt đầu bài giảng "${lecture.title}" ngay bây giờ không? Hệ thống sẽ chuyển bạn đến phòng học trực tuyến.`,
@@ -165,7 +205,9 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Bài giảng - {courseName}</h2>
+        <h2 className="text-xl font-bold">
+          {isStudentView ? 'Danh sách bài giảng' : `Bài giảng - ${courseName}`}
+        </h2>
         <span className="text-sm text-gray-500">{lectures.length} bài giảng</span>
       </div>
 
@@ -184,7 +226,9 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
                     <p className="text-gray-600 text-sm mb-2">{lecture.description}</p>
                   )}
                   {lecture.content && (
-                    <p className="text-gray-700 mb-3">{lecture.content}</p>
+                    <div className="mb-3">
+                      <MarkdownRenderer content={lecture.content} />
+                    </div>
                   )}
                 </div>
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -239,26 +283,28 @@ const LectureList = ({ courseId, courseName, onEditLecture }) => {
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="mt-4 flex space-x-2">
-                <button 
-                  onClick={() => handleEditLecture(lecture)}
-                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Chỉnh sửa
-                </button>                <button 
-                  onClick={() => handleStartLecture(lecture)}
-                  className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  Bắt đầu
-                </button><button 
-                  onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
-                  disabled={deletingId === lecture.id}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400"
-                >
-                  {deletingId === lecture.id ? 'Đang xóa...' : 'Xóa'}
-                </button>
-              </div>
+              {/* Actions - Only show for teacher view */}
+              {!isStudentView && (
+                <div className="mt-4 flex space-x-2">
+                  <button 
+                    onClick={() => handleEditLecture(lecture)}
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Chỉnh sửa
+                  </button>                <button 
+                    onClick={() => handleStartLecture(lecture)}
+                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    Bắt đầu
+                  </button><button 
+                    onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
+                    disabled={deletingId === lecture.id}
+                    className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400"
+                  >
+                    {deletingId === lecture.id ? 'Đang xóa...' : 'Xóa'}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

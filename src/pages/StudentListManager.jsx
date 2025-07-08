@@ -27,7 +27,6 @@ import {
     Tag
 } from 'antd';
 import { useEffect, useState } from 'react';
-import CourseService from '../services/courseService';
 import StudentService from '../services/studentService';
 
 const { Option } = Select;
@@ -55,12 +54,12 @@ const StudentListManager = () => {
 
   const fetchClasses = async () => {
     try {
-      // Use CourseService to get teacher's courses
-      const data = await CourseService.getMyMyCourses();
-      setClasses(data);
-      if (data.length > 0) {
-        setSelectedClass(data[0].id);
-      }
+      // Use ClassroomService to get teacher's courses - Method does not exist yet.
+      // const data = await ClassroomService.getMyMyCourses();
+      setClasses([]); // Set to empty array
+      // if (data.length > 0) {
+      //   setSelectedClass(data[0].id);
+      // }
     } catch (error) {
       console.error('Error fetching classes:', error);
       message.error('Không thể tải danh sách lớp học');

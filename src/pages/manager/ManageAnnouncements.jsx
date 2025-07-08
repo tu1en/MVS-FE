@@ -1,32 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, message, Card, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Card, Modal, Space, Table, Tag, message } from 'antd';
 import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { managerService } from '../../services/managerService';
 
 const ManageAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Temporary data for testing
   useEffect(() => {
-    setAnnouncements([
-      {
-        id: 1,
-        title: 'Thông báo lịch thi học kỳ 1',
-        content: 'Lịch thi học kỳ 1 năm học 2023-2024...',
-        createdAt: '2023-12-01',
-        status: 'active',
-        priority: 'high',
-      },
-      {
-        id: 2,
-        title: 'Thông báo nghỉ Tết Nguyên Đán',
-        content: 'Thông báo về lịch nghỉ Tết Nguyên Đán 2024...',
-        createdAt: '2023-12-15',
-        status: 'scheduled',
-        priority: 'medium',
-      },
-    ]);
+    fetchAnnouncements();
   }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true);
+      const data = await managerService.getAnnouncements();
+      setAnnouncements(data);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      message.error('Không thể tải danh sách thông báo');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
     {
@@ -129,14 +126,20 @@ const ManageAnnouncements = () => {
     window.location.href = '/manager/announcements/edit/' + announcement.id;
   };
 
-  const handleDelete = (announcement) => {
+  const handleDelete = async (announcement) => {
     Modal.confirm({
       title: 'Xác nhận xóa thông báo',
       content: 'Bạn có chắc chắn muốn xóa thông báo "' + announcement.title + '"?',
-      onOk() {
-        setAnnouncements(announcements.filter((item) => item.id !== announcement.id));
-        message.success('Xóa thông báo thành công');
-      },
+      onOk: async () => {
+        try {
+          await managerService.deleteAnnouncement(announcement.id);
+          message.success('Xóa thông báo thành công');
+          fetchAnnouncements();
+        } catch (error) {
+          console.error('Error deleting announcement:', error);
+          message.error('Không thể xóa thông báo');
+        }
+      }
     });
   };
 
@@ -150,7 +153,7 @@ const ManageAnnouncements = () => {
         Tạo Thông Báo Mới
       </Button>
 
-      <Table columns={columns} dataSource={announcements} rowKey="id" />
+      <Table columns={columns} dataSource={announcements} rowKey="id" loading={loading} />
     </Card>
   );
 };
