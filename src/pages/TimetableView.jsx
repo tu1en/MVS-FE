@@ -5,8 +5,7 @@ import {
     CalendarOutlined,
     ClockCircleOutlined,
     EnvironmentOutlined,
-    ExclamationCircleOutlined,
-    UserOutlined
+    ExclamationCircleOutlined
 } from '@ant-design/icons';
 import {
     App,
@@ -66,11 +65,10 @@ const TimetableView = () => {
       
       console.log('Fetching timetable for:', { startDate, endDate, viewMode });
       
-      // Use TimetableService to fetch schedule
-      const data = await TimetableService.getTimetable({
+      // Use TimetableService to fetch my timetable (for students)
+      const data = await TimetableService.getMyTimetable({
         startDate,
-        endDate,
-        view: viewMode
+        endDate
       });
       
       console.log('Timetable data received:', data);
@@ -99,14 +97,14 @@ const TimetableView = () => {
     if (!Array.isArray(events) || events.length === 0) return [];
     
     const dateEvents = events.filter(event => {
-      if (!event.startTime && !event.start_datetime) return false;
-      const eventDate = dayjs(event.startTime || event.start_datetime).format('YYYY-MM-DD');
+      if (!event.startDatetime) return false;
+      const eventDate = dayjs(event.startDatetime).format('YYYY-MM-DD');
       return eventDate === value.format('YYYY-MM-DD');
     });
     
     return dateEvents.map(event => ({
-      type: getEventType(event.type || event.event_type),
-      content: event.title || event.name || 'Không có tiêu đề',
+      type: getEventType(event.eventType),
+      content: event.title || 'Không có tiêu đề',
       event: event
     }));
   };
@@ -114,17 +112,16 @@ const TimetableView = () => {
   const getEventType = (type) => {
     switch (type?.toLowerCase()) {
       case 'class':
-      case 'lop_hoc':
+      case 'class_session':
         return 'success';
       case 'exam':
-      case 'kiem_tra':
-      case 'thi':
+      case 'test':
         return 'error';
       case 'assignment':
-      case 'bai_tap':
+      case 'assignment_due':
         return 'warning';
       case 'event':
-      case 'su_kien':
+      case 'other':
         return 'default';
       default:
         return 'default';
@@ -134,17 +131,16 @@ const TimetableView = () => {
   const getEventIcon = (type) => {
     switch (type?.toLowerCase()) {
       case 'class':
-      case 'lop_hoc':
+      case 'class_session':
         return <BookOutlined />;
       case 'exam':
-      case 'kiem_tra':
-      case 'thi':
+      case 'test':
         return <ExclamationCircleOutlined />;
       case 'assignment':
-      case 'bai_tap':
+      case 'assignment_due':
         return <ClockCircleOutlined />;
       case 'event':
-      case 'su_kien':
+      case 'other':
         return <CalendarOutlined />;
       default:
         return <CalendarOutlined />;
@@ -154,17 +150,16 @@ const TimetableView = () => {
   const getEventColor = (type) => {
     switch (type?.toLowerCase()) {
       case 'class':
-      case 'lop_hoc':
+      case 'class_session':
         return '#52c41a';
       case 'exam':
-      case 'kiem_tra':
-      case 'thi':
+      case 'test':
         return '#f5222d';
       case 'assignment':
-      case 'bai_tap':
+      case 'assignment_due':
         return '#faad14';
       case 'event':
-      case 'su_kien':
+      case 'other':
         return '#1890ff';
       default:
         return '#1890ff';
@@ -212,15 +207,15 @@ const TimetableView = () => {
   const getTodayEvents = () => {
     const today = dayjs().format('YYYY-MM-DD');
     return events.filter(event => 
-      dayjs(event.start_datetime || event.startTime).format('YYYY-MM-DD') === today
+      dayjs(event.startDatetime).format('YYYY-MM-DD') === today
     );
   };
 
   const getUpcomingEvents = () => {
     const today = dayjs();
     return events
-      .filter(event => dayjs(event.start_datetime || event.startTime).isAfter(today))
-      .sort((a, b) => dayjs(a.start_datetime || a.startTime).diff(dayjs(b.start_datetime || b.startTime)))
+      .filter(event => dayjs(event.startDatetime).isAfter(today))
+      .sort((a, b) => dayjs(a.startDatetime).diff(dayjs(b.startDatetime)))
       .slice(0, 5);
   };
 
@@ -385,8 +380,8 @@ const TimetableView = () => {
                   <List.Item.Meta
                     avatar={
                       <Avatar 
-                        icon={getEventIcon(item.type)} 
-                        style={{ backgroundColor: getEventColor(item.type) }}
+                        icon={getEventIcon(item.eventType)} 
+                        style={{ backgroundColor: getEventColor(item.eventType) }}
                         size="small"
                       />
                     }
@@ -395,7 +390,7 @@ const TimetableView = () => {
                     }
                     description={
                       <div style={{ fontSize: '11px' }}>
-                        {dayjs(item.start_datetime || item.startTime).format('HH:mm')} - {dayjs(item.end_datetime || item.endTime).format('HH:mm')}
+                        {dayjs(item.startDatetime).format('HH:mm')} - {dayjs(item.endDatetime).format('HH:mm')}
                         <br />
                         {item.location}
                       </div>
@@ -428,8 +423,8 @@ const TimetableView = () => {
                   <List.Item.Meta
                     avatar={
                       <Avatar 
-                        icon={getEventIcon(item.type)} 
-                        style={{ backgroundColor: getEventColor(item.type) }}
+                        icon={getEventIcon(item.eventType)} 
+                        style={{ backgroundColor: getEventColor(item.eventType) }}
                         size="small"
                       />
                     }
@@ -438,7 +433,7 @@ const TimetableView = () => {
                     }
                     description={
                       <div style={{ fontSize: '11px' }}>
-                        {dayjs(item.start_datetime || item.startTime).format('DD/MM - HH:mm')}
+                        {dayjs(item.startDatetime).format('DD/MM - HH:mm')}
                         <br />
                         {item.location}
                       </div>
@@ -477,21 +472,21 @@ const TimetableView = () => {
             <Descriptions.Item label="Loại">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <Avatar 
-                  icon={getEventIcon(selectedEvent.event_type || selectedEvent.type)} 
-                  style={{ backgroundColor: getEventColor(selectedEvent.event_type || selectedEvent.type) }}
+                  icon={getEventIcon(selectedEvent.eventType)} 
+                  style={{ backgroundColor: getEventColor(selectedEvent.eventType) }}
                   size="small"
                 />
                 <span style={{ marginLeft: '8px' }}>
-                  {(selectedEvent.event_type || selectedEvent.type) === 'CLASS' ? 'Lớp học' :
-                   (selectedEvent.event_type || selectedEvent.type) === 'EXAM' ? 'Kiểm tra/Thi' :
-                   (selectedEvent.event_type || selectedEvent.type) === 'ASSIGNMENT' ? 'Bài tập' : 'Sự kiện'}
+                  {selectedEvent.eventType === 'CLASS_SESSION' ? 'Lớp học' :
+                   selectedEvent.eventType === 'EXAM' ? 'Kiểm tra/Thi' :
+                   selectedEvent.eventType === 'ASSIGNMENT_DUE' ? 'Hạn nộp bài' : 'Sự kiện'}
                 </span>
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="Thời gian">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <ClockCircleOutlined style={{ marginRight: '8px' }} />
-                {dayjs(selectedEvent.start_datetime || selectedEvent.startTime).format('DD/MM/YYYY HH:mm')} - {dayjs(selectedEvent.end_datetime || selectedEvent.endTime).format('HH:mm')}
+                {dayjs(selectedEvent.startDatetime).format('DD/MM/YYYY HH:mm')} - {dayjs(selectedEvent.endDatetime).format('HH:mm')}
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="Địa điểm">
@@ -500,16 +495,10 @@ const TimetableView = () => {
                 {selectedEvent.location || 'Chưa xác định'}
               </div>
             </Descriptions.Item>
-            <Descriptions.Item label="Giảng viên">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <UserOutlined style={{ marginRight: '8px' }} />
-                {selectedEvent.teacherName || 'Chưa xác định'}
-              </div>
-            </Descriptions.Item>
             <Descriptions.Item label="Khóa học">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <BookOutlined style={{ marginRight: '8px' }} />
-                {selectedEvent.courseName || 'Chưa xác định'}
+                {selectedEvent.classroomName || 'Chưa xác định'}
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="Mô tả">

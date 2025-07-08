@@ -1,88 +1,51 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Input, Button, message } from 'antd';
+import { Button, Form, Input, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import requestService from '../services/requestService'; // Import new service
 
 const { TextArea } = Input;
 
 const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [hasActiveRequest, setHasActiveRequest] = useState(false);
-  
-  const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
-
-  // Hàm validate số điện thoại
-  const validatePhoneNumber = (_, value) => {
-    if (!value) {
-      return Promise.reject('Vui lòng nhập số điện thoại');
-    }
-    
-    // Kiểm tra chỉ chứa số
-    if (!/^\d+$/.test(value)) {
-      return Promise.reject('Số điện thoại chỉ được chứa số');
-    }
-    
-    // Kiểm tra độ dài (10-11 chữ số)
-    if (value.length !== 10 && value.length !== 11) {
-      return Promise.reject('Số điện thoại phải có 10 hoặc 11 chữ số');
-    }
-    
-    // Kiểm tra đầu số (03, 05, 07, 08, 09)
-    const validPrefixes = ['03', '05', '07', '08', '09'];
-    const prefix = value.substring(0, 2);
-    if (!validPrefixes.includes(prefix)) {
-      return Promise.reject('Số điện thoại phải bắt đầu bằng 03, 05, 07, 08, 09');
-    }
-    
-    return Promise.resolve();
-  };
-
-  const checkActiveRequest = useCallback(async (email) => {
-    try {
-      const response = await fetch(`${baseUrl}/role-requests/check?email=${email}&role=STUDENT`);
-      if (response.ok) {
-        const hasRequest = await response.json();
-        setHasActiveRequest(hasRequest);
-        if (hasRequest) {
-          message.info('Bạn đã có yêu cầu đăng ký làm học sinh đang chờ xử lý');
-        }
-      }
-    } catch (error) {
-      console.error('Error checking request status:', error);
-    }
-  }, [baseUrl]);
 
   useEffect(() => {
-    // Ưu tiên sử dụng initialEmail từ prop nếu có
-    const emailToUse = initialEmail || localStorage.getItem('email');
-    if (emailToUse) {
-      form.setFieldsValue({ email: emailToUse });
-      checkActiveRequest(emailToUse);
+    if (initialEmail) {
+      form.setFieldsValue({ email: initialEmail });
     }
-  }, [form, checkActiveRequest, initialEmail]);
+  }, [form, initialEmail]);
+
+  // Simplified phone number validation
+  const validatePhoneNumber = (_, value) => {
+    if (value && /^\d{10,11}$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject('Số điện thoại phải có 10 hoặc 11 chữ số.');
+  };
 
   const onFinish = async (values) => {
     setLoading(true);
-    
     try {
-      const response = await fetch(`${baseUrl}/role-requests/student`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(values)
-      });
+      // Structure the data according to CreateRequestDto
+      const requestData = {
+        email: values.email,
+        fullName: values.fullName,
+        phoneNumber: values.phoneNumber,
+        requestedRole: 'STUDENT',
+        // Stringify additional form fields into formResponses
+        formResponses: JSON.stringify({
+          grade: values.grade,
+          parentContact: values.parentContact,
+          additionalInfo: values.additionalInfo,
+        }),
+      };
 
-      if (response.ok) {
-        message.success('Đăng ký thành công! Yêu cầu của bạn đang được xử lý.');
-        localStorage.setItem('email', values.email); // Save email for future use
-        onClose();
-      } else {
-        const errorData = await response.json();
-        message.error(`Đăng ký thất bại: ${errorData.message || 'Vui lòng thử lại sau'}`);
-      }
+      await requestService.submitRequest(requestData);
+
+      message.success('Yêu cầu đăng ký học sinh đã được gửi thành công!');
+      onClose(); // Close the modal on success
     } catch (error) {
-      message.error('Đã xảy ra lỗi khi gửi yêu cầu');
-      console.error('Error submitting request:', error);
+      const errorMsg = error.response?.data?.message || 'Gửi yêu cầu thất bại. Vui lòng thử lại.';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -95,14 +58,13 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
       layout="vertical"
       onFinish={onFinish}
       autoComplete="off"
-      disabled={hasActiveRequest || loading}
     >
       <Form.Item
         name="email"
         label="Email"
         rules={[
           { required: true, message: 'Vui lòng nhập email' },
-          { type: 'email', message: 'Email không hợp lệ' }
+          { type: 'email', message: 'Email không hợp lệ' },
         ]}
       >
         <Input placeholder="Nhập email của bạn" disabled={!!initialEmail} />
@@ -121,10 +83,10 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
         label="Số điện thoại"
         rules={[
           { required: true, message: 'Vui lòng nhập số điện thoại' },
-          { validator: validatePhoneNumber }
+          { validator: validatePhoneNumber },
         ]}
       >
-        <Input placeholder="Nhập số điện thoại liên hệ" maxLength={11} />
+        <Input placeholder="Nhập số điện thoại" />
       </Form.Item>
 
       <Form.Item
@@ -143,24 +105,15 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
         <TextArea rows={3} placeholder="Tên và số điện thoại liên hệ của phụ huynh" />
       </Form.Item>
 
-      <Form.Item
-        name="additionalInfo"
-        label="Thông tin thêm"
-      >
+      <Form.Item name="additionalInfo" label="Thông tin thêm">
         <TextArea rows={3} placeholder="Thông tin thêm (nếu có)" />
       </Form.Item>
-
-      {hasActiveRequest ? (
-        <div className="text-orange-500 mb-4">
-          Bạn đã có yêu cầu đăng ký đang chờ xử lý. Vui lòng chờ phản hồi.
-        </div>
-      ) : (
-        <Form.Item>
-          <Button type="primary" htmlType="submit" block loading={loading}>
-            Gửi yêu cầu
-          </Button>
-        </Form.Item>
-      )}
+      
+      <Form.Item>
+        <Button type="primary" htmlType="submit" block loading={loading}>
+          Gửi yêu cầu
+        </Button>
+      </Form.Item>
     </Form>
   );
 };

@@ -1,61 +1,94 @@
-import { Badge, Calendar, message } from 'antd';
-import axios from 'axios';
+import { Badge, Calendar, Empty, message, Spin, Tooltip } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import scheduleService from '../../services/scheduleService';
 
-const Schedule = () => {
-  const [schedules, setSchedules] = useState([]);
+// Component con để hiển thị một sự kiện
+const EventItem = ({ item }) => (
+    <Tooltip title={`${item.title} (${item.classroomName}) - ${item.description || 'Không có mô tả'}`}>
+        <li>
+            <Badge 
+                color={item.color || 'blue'} 
+                text={`${dayjs(item.startDatetime).format('HH:mm')} ${item.title}`} 
+            />
+        </li>
+    </Tooltip>
+);
+
+const StudentSchedule = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(dayjs());
+
+  // Sử dụng useMemo để tối ưu hóa việc nhóm các sự kiện theo ngày
+  const eventsByDate = useMemo(() => {
+    const groupedEvents = {};
+    events.forEach(event => {
+      const dateStr = dayjs(event.startDatetime).format('YYYY-MM-DD');
+      if (!groupedEvents[dateStr]) {
+        groupedEvents[dateStr] = [];
+      }
+      groupedEvents[dateStr].push(event);
+    });
+    return groupedEvents;
+  }, [events]);
 
   useEffect(() => {
-    fetchSchedules();
-  }, []);
-
-  const fetchSchedules = async () => {
+    const fetchTimetable = async (date) => {
+    setLoading(true);
     try {
-      const response = await axios.get('/api/student/schedules');
-      setSchedules(response.data);
+        const startOfMonth = date.startOf('month').format('YYYY-MM-DD');
+        const endOfMonth = date.endOf('month').format('YYYY-MM-DD');
+        const data = await scheduleService.getMyTimetable(startOfMonth, endOfMonth);
+        setEvents(data || []);
     } catch (error) {
-      message.error('Không thể tải thời khóa biểu');
-      console.error('Error fetching schedules:', error);
+      console.error("Failed to fetch timetable", error);
+        message.error("Không thể tải lịch học. Vui lòng thử lại sau.");
+        setEvents([]); // Đảm bảo events là một mảng trống khi có lỗi
+    } finally {
+      setLoading(false);
     }
   };
-  const cellRender = (current, info) => {
-    if (info.type !== 'date') return info.originNode;
-    
-    const date = current.format('YYYY-MM-DD');
-    const daySchedules = schedules.filter(
-      schedule => dayjs(schedule.date).format('YYYY-MM-DD') === date
-    );
+
+    fetchTimetable(currentDate);
+  }, [currentDate]);
+
+  // Hàm được truyền cho Ant Design Calendar để render nội dung cho mỗi ô ngày
+  const dateCellRender = (date) => {
+    const dateStr = date.format('YYYY-MM-DD');
+    const dayEvents = eventsByDate[dateStr] || [];
+
+    if (dayEvents.length === 0) {
+        return null; // Không hiển thị gì nếu không có sự kiện
+    }
 
     return (
-      <ul className="events" style={{ listStyle: 'none', padding: 0 }}>
-        {daySchedules.map(schedule => (
-          <li key={schedule.id}>
-            <Badge 
-              status="processing" 
-              text={`${schedule.className} (${schedule.startTime}-${schedule.endTime})`}
-              style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            />
-          </li>
-        ))}
+      <ul className="events" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {dayEvents.map(item => <EventItem key={item.id} item={item} />)}
       </ul>
     );
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h2>Thời Khóa Biểu</h2>      <Calendar 
-        cellRender={cellRender}
-        mode="month"
-        style={{ 
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}
-      />
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">Lịch học và Sự kiện</h1>
+        <div className="bg-white p-4 rounded-lg shadow-lg">
+            <Spin spinning={loading} tip="Đang tải dữ liệu lịch...">
+        <Calendar 
+                    onPanelChange={(date) => setCurrentDate(date)} 
+                    cellRender={dateCellRender}
+        />
+                {!loading && events.length === 0 && (
+                    <div className="py-10">
+                        <Empty description="Không có lịch học hoặc sự kiện nào trong tháng này." />
+                    </div>
+                )}
+      </Spin>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default Schedule;
+export default StudentSchedule;

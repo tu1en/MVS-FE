@@ -1,6 +1,5 @@
-import React from 'react';
-import { Form, Input, Select, Button, Card, Typography } from 'antd';
-import { toast } from 'react-toastify';
+import { Button, Card, Form, Input, Select, Typography, message } from 'antd';
+import { managerService } from '../../services/managerService';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -10,12 +9,12 @@ const CreateAnnouncement = () => {
 
   const handleSubmit = async (values) => {
     try {
-      // TODO: Call API to create announcement
-      console.log('Announcement values:', values);
-      toast.success('Thông báo đã được tạo thành công!');
+      await managerService.createAnnouncement(values);
+      message.success('Thông báo đã được tạo thành công!');
       form.resetFields();
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi tạo thông báo!');
+      console.error('Error creating announcement:', error);
+      message.error('Có lỗi xảy ra khi tạo thông báo!');
     }
   };
 

@@ -10,6 +10,7 @@ class ClassroomModel {
     this.id = classroomData.id || null;
     this.name = classroomData.name || '';
     this.teacherId = classroomData.teacherId || classroomData.teacher_id || null;
+    this.teacherName = classroomData.teacherName || '';
     this.description = classroomData.description || '';
     this.code = classroomData.code || '';
     this.section = classroomData.section || '';
@@ -18,6 +19,7 @@ class ClassroomModel {
     this.enrolledStudents = classroomData.enrolledStudents || [];
     this.assignments = classroomData.assignments || [];
     this.syllabus = classroomData.syllabus || null;
+    this.progressPercentage = classroomData.progressPercentage || 0;
     this.createdAt = classroomData.createdAt ? new Date(classroomData.createdAt) : new Date();
     this.updatedAt = classroomData.updatedAt ? new Date(classroomData.updatedAt) : new Date();
   }
@@ -30,10 +32,12 @@ class ClassroomModel {
       id: this.id,
       name: this.name,
       teacherId: this.teacherId,
+      teacherName: this.teacherName,
       description: this.description,
       code: this.code,
       section: this.section,
-      subject: this.subject
+      subject: this.subject,
+      progressPercentage: this.progressPercentage
     };
   }
 

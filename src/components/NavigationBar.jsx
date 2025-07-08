@@ -23,11 +23,14 @@ function NavigationBar() {
   // State to control sidebar collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
   // User role state
-  const [userRole, setUserRole] = useState(null);  // Get role from Redux and localStorage, and convert to role constant
+  const [userRole, setUserRole] = useState(null);
+  
+  // Get role from Redux and localStorage, and convert to role constant
   useEffect(() => {
     // First sync Redux state with localStorage
     dispatch(syncFromLocalStorage());
-      // Use utility function to check if user is actually logged in
+    
+    // Use utility function to check if user is actually logged in
     const actuallyLoggedIn = isUserLoggedIn();
     
     // Check if user is actually logged in before using any role
@@ -38,7 +41,8 @@ function NavigationBar() {
       if (process.env.NODE_ENV === 'development') {
         console.log('User not logged in (actuallyLoggedIn:', actuallyLoggedIn, 'isLogin:', isLogin, '), setting role to GUEST');
       }
-      return;    }
+      return;
+    }
     
     // Only process role if user is definitively logged in
     if (reduxRole && isLogin === true && actuallyLoggedIn) {
@@ -108,14 +112,11 @@ function NavigationBar() {
     };
     
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);  }, []);
-    // Handle header menu button click
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Handle header menu button click
   useEffect(() => {
-    // Remove unused handleMenuClick function
-    // const handleMenuClick = () => {
-    //   setIsMobileOpen(prevState => !prevState);
-    // };
-    
     const handleHeaderToggle = () => {
       setIsCollapsed(prevState => !prevState);
     };
@@ -126,6 +127,7 @@ function NavigationBar() {
       window.removeEventListener('toggleSidebarFromHeader', handleHeaderToggle);
     };
   }, []);
+
   // Toggle sidebar function
   const ToggleSidebar = () => {
     setIsCollapsed(prevState => !prevState);
@@ -148,6 +150,7 @@ function NavigationBar() {
       }));
     }
   }, []);
+
   // Combined classes for mobile responsiveness and collapsed state
   const navClasses = `${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-md h-full fixed left-0 top-16 overflow-y-auto z-40 transition-all duration-300 ${
     isMobileOpen ? 'translate-x-0' : '-translate-x-full'
@@ -203,12 +206,13 @@ function NavigationBar() {
     }
   ];
 
-  // Define navigation items for STUDENT
+  // Define navigation items for STUDENT - Updated with new routes
   const studentNavItems = [
     {
       category: "Chính",
-      items: [        { 
-          name: 'Trang Chủ/Dashboard', 
+      items: [        
+        { 
+          name: 'Dashboard', 
           path: '/student', 
           icon: '🏠'
         }
@@ -218,33 +222,34 @@ function NavigationBar() {
       category: "Học tập",
       items: [
         { 
-          name: 'Khóa Học Của Tôi', 
-          path: '/student/my-courses', 
+          name: 'Khóa học của tôi', 
+          path: '/student/courses', 
           icon: '📚'
         },
         { 
-          name: 'Lịch Học', 
-          path: '/student/timetable', 
+          name: 'Lịch trình', 
+          path: '/student/schedule', 
           icon: '📅'
-        },        { 
-          name: 'Kết Quả Học Tập', 
-          path: '/student/academic-performance', 
-          icon: '📊'
         },
-        {
-          name: 'Bài Tập', 
+        { 
+          name: 'Bài tập', 
           path: '/student/assignments', 
           icon: '📝'
+        },        
+        { 
+          name: 'Kết quả học tập', 
+          path: '/student/grades-attendance', 
+          icon: '📊'
         },
         { 
-          name: 'Bài Giảng', 
-          path: '/student/lectures', 
-          icon: '📔'
+          name: 'Tài liệu', 
+          path: '/student/materials', 
+          icon: '📄'
         },
         { 
-          name: 'Xem Điểm Danh', 
-          path: '/student/attendance-records', 
-          icon: '📋'
+          name: 'Thông báo', 
+          path: '/student/announcements', 
+          icon: '📢'
         }
       ]
     },
@@ -252,14 +257,9 @@ function NavigationBar() {
       category: "Giao tiếp",
       items: [
         { 
-          name: 'Hỏi Đáp & Tin Nhắn', 
+          name: 'Tin Nhắn', 
           path: '/student/messages', 
           icon: '💬'
-        },
-        { 
-          name: 'Blog', 
-          path: '/blog', 
-          icon: '📝'
         }
       ]
     },
@@ -284,7 +284,8 @@ function NavigationBar() {
   const teacherNavItems = [
     {
       category: "Chính",
-      items: [        { 
+      items: [
+        { 
           name: 'Trang Chủ/Dashboard', 
           path: '/teacher', 
           icon: '🏠'
@@ -315,9 +316,9 @@ function NavigationBar() {
           icon: '📔'
         },
         {
-          name: 'Quản Lý Điểm Danh', 
-          path: '/teacher/attendance', 
-          icon: '📋'
+          name: 'Lịch Sử Giảng Dạy', 
+          path: '/teacher/teaching-history', 
+          icon: '🕒'
         }
       ]
     },
@@ -357,7 +358,8 @@ function NavigationBar() {
   const managerNavItems = [
     {
       category: "Chính",
-      items: [        { 
+      items: [
+        { 
           name: 'Trang Chủ/Dashboard', 
           path: '/manager', 
           icon: '🏠'
@@ -366,7 +368,8 @@ function NavigationBar() {
     },
     {
       category: "Quản lý",
-      items: [        { 
+      items: [
+        { 
           name: 'Quản Lý Yêu Cầu', 
           path: '/request-list',
           icon: '📋'
@@ -414,7 +417,8 @@ function NavigationBar() {
   const adminNavItems = [
     {
       category: "Chính",
-      items: [        { 
+      items: [
+        { 
           name: 'Trang Chủ/Dashboard', 
           path: '/admin', 
           icon: '🏠'
@@ -478,122 +482,108 @@ function NavigationBar() {
     }
   ];
 
-  // Select navigation items based on user role
-  let navItems = [];
+  const getNavItems = () => {
+    switch(userRole) {
+      case ROLE.STUDENT:
+        return studentNavItems;
+      case ROLE.TEACHER:
+        return teacherNavItems;
+      case ROLE.ADMIN:
+        return adminNavItems;
+      case ROLE.MANAGER:
+        return managerNavItems;
+      default:
+        return guestNavItems;
+    }
+  };
+
+  const navItems = getNavItems();
   
-  switch(userRole) {
-    case ROLE.STUDENT:
-      navItems = studentNavItems;
-      break;
-    case ROLE.TEACHER:
-      navItems = teacherNavItems;
-      break;
-    case ROLE.MANAGER:
-      navItems = managerNavItems;
-      break;
-    case ROLE.ADMIN:
-      navItems = adminNavItems;
-      break;
-    default:
-      navItems = guestNavItems;
-      break;  }
+  if (!isLogin && userRole === ROLE.GUEST) {
+    return null; // Don't render sidebar if not logged in
+  }
 
   return (
-    <nav className={navClasses}>
-      <div className="p-4">
-        {!isCollapsed && (
-          <h2 className="text-lg font-semibold text-primary mb-4 border-b border-gray-200 pb-2">MVS Classroom</h2>
-        )}
-
-        <div className="space-y-4">
-          {navItems.map((category, categoryIndex) => (
-            <div key={categoryIndex} className="nav-category">
-              {!isCollapsed && (
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-4">
-                  {category.category}
-                </h3>
-              )}
-              <ul className="space-y-1">
-                {category.items.map((item, itemIndex) => (
-                  <li key={itemIndex}>
-                    <NavLink 
-                      to={item.path}
-                      className={({ isActive }) => 
-                        `flex ${isCollapsed ? 'justify-center' : ''} items-center px-4 py-2 rounded-lg transition-colors ${
-                          isActive 
-                            ? 'bg-primary text-white' 
-                            : 'text-gray-700 hover:bg-primary-light hover:text-primary'
-                        }`
-                      }
-                      end={item.path === '/'}
-                      onClick={() => window.innerWidth < 768 && setIsMobileOpen(false)}
-                      title={isCollapsed ? item.name : ''}
-                    >
-                      <span className={isCollapsed ? '' : 'mr-3'} style={{ fontSize: '1.25rem' }}>{item.icon}</span>
-                      {!isCollapsed && <span>{item.name}</span>}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-              {!isCollapsed && categoryIndex < navItems.length - 1 && (
-                <div className="border-b border-gray-200 my-3"></div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Quick Actions Section - Only for logged in users */}
-      {!isCollapsed && userRole !== ROLE.GUEST && (
-        <div className="p-4 border-t border-gray-200 mt-4">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
-            Thao Tác Nhanh
-          </h3>
-          <div className="space-y-2">
-            {(userRole === ROLE.TEACHER || userRole === ROLE.ADMIN) && (
-              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-                <span className="mr-3 text-xl">➕</span>
-                <span>Tạo Lớp Mới</span>
-              </button>
+    <div className={navClasses}>
+      <nav className="flex-1 px-2 py-4 space-y-2">
+        {navItems.map((nav, index) => (
+          <div key={index}>
+            {!isCollapsed && (
+              <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {nav.category}
+              </h3>
             )}
-            {userRole === ROLE.ADMIN && (              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-                <span className="mr-3 text-xl">📊</span>
-                <span>Báo Cáo</span>
-              </button>
-            )}
-            <button 
-              className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
-              onClick={() => navigate('/change-password')}
-            >
-              <span className="mr-3 text-xl">🔑</span>
-              <span>Đổi Mật Khẩu</span>
-            </button>
-            <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-              <span className="mr-3 text-xl">⚙️</span>
-              <span>Cài Đặt</span>
-            </button>
-            <button 
-              onClick={handleLogout}
-              className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
-            >
-              <span className="mr-3 text-xl">🚪</span>
-              <span>Đăng Xuất</span>
-            </button>
+            {nav.items.map((item, idx) => (
+              <NavLink
+                key={idx}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  } ${isCollapsed ? 'justify-center' : ''}`
+                }
+              >
+                <span className="text-lg">{item.icon}</span>
+                {!isCollapsed && <span className="ml-3">{item.name}</span>}
+              </NavLink>
+            ))}
           </div>
-        </div>
-      )}
-
-      {/* Toggle Button */}
-      <div className="absolute bottom-4 right-2 flex justify-center items-center">
-        <button 
+        ))}
+        
+        {/* Quick Actions Section - Only for logged in users */}
+        {!isCollapsed && userRole !== ROLE.GUEST && (
+          <div className="p-4 border-t border-gray-200 mt-4">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+              Thao Tác Nhanh
+            </h3>
+            <div className="space-y-2">
+              {(userRole === ROLE.TEACHER || userRole === ROLE.ADMIN) && (
+                <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
+                  <span className="mr-3 text-xl">➕</span>
+                  <span>Tạo Lớp Mới</span>
+                </button>
+              )}
+              {userRole === ROLE.ADMIN && (
+                <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
+                  <span className="mr-3 text-xl">📊</span>
+                  <span>Báo Cáo</span>
+                </button>
+              )}
+              <button 
+                className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
+                onClick={() => navigate('/change-password')}
+              >
+                <span className="mr-3 text-xl">🔑</span>
+                <span>Đổi Mật Khẩu</span>
+              </button>
+              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
+                <span className="mr-3 text-xl">⚙️</span>
+                <span>Cài Đặt</span>
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-100 transition-colors flex items-center"
+              >
+                <span className="mr-3 text-xl">🚪</span>
+                <span>Đăng Xuất</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </nav>
+      
+      {/* Sidebar Toggle Button */}
+      <div className="p-4 border-t border-gray-200">
+        <button
           onClick={ToggleSidebar}
-          className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-primary-dark transition-colors"
-          title={isCollapsed ? "Mở rộng" : "Thu gọn"}
+          className="w-full px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors duration-150"
         >
-          {isCollapsed ? '→' : '←'}
+          {isCollapsed ? 'Mở rộng' : 'Thu gọn'}
         </button>
       </div>
-    </nav>
+    </div>
   );
 }
 

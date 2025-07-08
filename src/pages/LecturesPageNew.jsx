@@ -23,6 +23,8 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import CreateLectureModal from '../components/teacher/CreateLectureModal';
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
+import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
 
 const { Title, Text, Paragraph } = Typography;
@@ -53,16 +55,17 @@ function LecturesPageNew() {
   // Get App context for message and modal
   const { message, modal } = App.useApp();
   
-  // Get user info from localStorage
-  const userId = localStorage.getItem('userId');
-  const userRole = localStorage.getItem('role');
+  // Get user info from the AuthContext
+  const { user } = useAuth();
+  const userId = user?.id;
+  // The role from context is prefixed (e.g., "ROLE_TEACHER"), so we extract the simple name.
+  const userRole = user?.role?.replace('ROLE_', '');
 
   // Debug logging for role detection
-  console.log('LecturesPageNew - Role Debug:', { 
+  console.log('LecturesPageNew - Role Debug (from Context):', { 
     userId, 
-    userRole, 
-    roleFromStorage: localStorage.getItem('role'),
-    token: localStorage.getItem('token') 
+    userRole,
+    userFromContext: user
   });
 
   // Add state for courses and lectures with loading states
@@ -79,9 +82,10 @@ function LecturesPageNew() {
       setCourseError(null);
       
       try {
-        const endpoint = userRole === '1' || userRole === 'STUDENT' 
-          ? `classrooms/student/${userId}`
-          : `classrooms/teacher/${userId}`;
+        // The endpoint is now determined by the role from the context
+        const endpoint = userRole === 'STUDENT'
+          ? `classrooms/student/me`
+          : `classrooms/current-teacher`;
           
         console.log(`Fetching courses from: /api/${endpoint}`);
         const response = await apiClient.get(endpoint, { timeout: 15000 });
@@ -101,7 +105,10 @@ function LecturesPageNew() {
       }
     };
     
-    fetchCourses();
+    // Fetch only if we have a valid user
+    if (userId && userRole) {
+      fetchCourses();
+    }
   }, [userId, userRole]);
 
   // Add useEffect to fetch lectures when selectedCourse changes
@@ -386,64 +393,55 @@ function LecturesPageNew() {
   
   // Helper function to generate Collapse items for student view
   const generateStudentCollapseItems = () => {
-    return lectures.map((lecture) => ({
-      key: lecture.id.toString(),
+    return lectures.map(lecture => ({
+      key: lecture.id,
       label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <span>{lecture.title}</span>
-          <Space>
-            <Tag color="blue">📄 {lecture.materials.filter(m => m.type === 'pdf' || m.type === 'doc').length}</Tag>
-            <Tag color="green">🎬 {lecture.materials.filter(m => m.type === 'video').length}</Tag>
-          </Space>
-        </div>
+        <Space>
+          <Text strong>{lecture.title}</Text>
+          {lecture.isCompleted && <Tag color="green" icon={<CheckOutlined />}>Đã hoàn thành</Tag>}
+        </Space>
       ),
       children: (
         <div>
-          {lecture.description && (
-            <Paragraph style={{ marginBottom: 16 }}>
-              {lecture.description}
-            </Paragraph>
-          )}
-          
-          <List
-            itemLayout="horizontal"
-            dataSource={lecture.materials}
-            locale={{ emptyText: <Empty description="Chưa có tài liệu" /> }}
-            renderItem={material => (
-              <List.Item
-                actions={[
-                  <Button 
-                    type="primary"
-                    key="view" 
-                    icon={<EyeOutlined />} 
-                    onClick={() => handleViewMaterial(material)}
+          <MarkdownRenderer content={lecture.description || lecture.content} />
+          {lecture.materials && lecture.materials.length > 0 && (
+            <>
+              <Title level={5} style={{ marginTop: 20 }}>Tài liệu bài giảng:</Title>
+              <List
+                dataSource={lecture.materials}
+                renderItem={material => (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        type="primary"
+                        key="view" 
+                        icon={<EyeOutlined />} 
+                        onClick={() => handleViewMaterial(material)}
+                      >
+                        Xem
+                      </Button>
+                    ]}
                   >
-                    {material.viewed ? 'Xem lại' : 'Xem'}
-                  </Button>
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={
-                    material.type === 'pdf' ? (
-                      <span style={{ fontSize: 24 }}>📄</span>
-                    ) : material.type === 'video' ? (
-                      <span style={{ fontSize: 24 }}>🎬</span>
-                    ) : material.type === 'link' ? (
-                      <span style={{ fontSize: 24 }}>🔗</span>
-                    ) : (
-                      <span style={{ fontSize: 24 }}>📝</span>
-                    )
-                  }
-                  title={
-                    <Space>
-                      {material.name}
-                      {material.viewed && <CheckOutlined style={{ color: 'green' }} />}
-                    </Space>
-                  }                  description={`Đã tải lên: ${new Date(material.uploadedAt).toLocaleDateString()}`}
-                />
-              </List.Item>
-            )}
-          />
+                    <List.Item.Meta
+                      avatar={
+                        material.type === 'pdf' ? (
+                          <span style={{ fontSize: 24 }}>📄</span>
+                        ) : material.type === 'video' ? (
+                          <span style={{ fontSize: 24 }}>🎬</span>
+                        ) : material.type === 'link' ? (
+                          <span style={{ fontSize: 24 }}>🔗</span>
+                        ) : (
+                          <span style={{ fontSize: 24 }}>📝</span>
+                        )
+                      }
+                      title={material.name}
+                      description={material.contentType === 'video/youtube' ? 'Video YouTube' : 'Tài liệu'}
+                    />
+                  </List.Item>
+                )}
+              />
+            </>
+          )}
         </div>
       )
     }));
@@ -806,6 +804,25 @@ function LecturesPageNew() {
     
     // Check if the material is a YouTube video
     const isYoutubeVideo = selectedMaterial.contentType === 'video/youtube';
+    
+    // Special handling for markdown text content from lecture description
+    const isMarkdownContent = !selectedMaterial.contentType; 
+
+    // Special handling for markdown text content from lecture description
+    if (isMarkdownContent) {
+        return (
+            <Modal
+                title={selectedMaterial.title || "Nội dung bài giảng"}
+                open={viewMaterialVisible}
+                onCancel={() => setViewMaterialVisible(false)}
+                footer={null}
+                width="80vw"
+                style={{ top: 20 }}
+            >
+                <MarkdownRenderer content={selectedMaterial.description} />
+            </Modal>
+        );
+    }
     
     return (      <Modal
         title={selectedMaterial.name}

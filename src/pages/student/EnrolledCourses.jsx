@@ -1,7 +1,9 @@
-import { Alert, Button, Card, Col, Row, Spin, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { BookOutlined, UserOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Progress, Row, Spin, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CourseService from '../../services/courseService';
+import { useAuth } from '../../context/AuthContext';
+import ClassroomService from '../../services/classroomService';
 
 const { Title, Text } = Typography;
 
@@ -10,6 +12,7 @@ const EnrolledCourses = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchCourses();
@@ -18,18 +21,9 @@ const EnrolledCourses = () => {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const currentUser = JSON.parse(localStorage.getItem('user'));
-      const userId = currentUser?.id || localStorage.getItem('userId');
-      
-      if (!userId) {
-        setError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
-        setLoading(false);
-        return;
-      }
-      
-      // Use the CourseService to get courses
-      const coursesData = await CourseService.getCurrentStudentCourses();
-      setCourses(coursesData || []);
+      // Sử dụng API endpoint mới theo tài liệu hướng dẫn
+      const coursesData = await ClassroomService.getMyStudentCourses();
+      setCourses(coursesData.data);
       setError(null);
     } catch (err) {
       setError('Không thể tải danh sách khóa học. Vui lòng thử lại sau.');
@@ -76,35 +70,60 @@ const EnrolledCourses = () => {
       
       <Row gutter={[16, 16]}>
         {courses.map((course) => (
-          <Col xs={24} sm={12} key={course.id}>
+          <Col xs={24} sm={12} lg={8} xl={6} key={course.id}>
             <Card 
               hoverable
               className="h-full"
+              cover={
+                <div className="h-48 bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center">
+                  <BookOutlined className="text-4xl text-white" />
+                </div>
+              }
             >
-              <Title level={4}>
-                {course.title || course.name}
-              </Title>
-              
-              <Text type="secondary" className="mb-4 block min-h-[60px]">
-                {course.description}
-              </Text>
-              
-              <div className="mt-auto">
-                <Text type="secondary" className="block mb-2">
-                  Giáo viên: {course.teacherName || course.instructorName}
+              <div className="flex flex-col h-full">
+                <Title level={4} className="mb-2" ellipsis={{ tooltip: course.name }}>
+                  {course.name}
+                </Title>
+                
+                <Text type="secondary" className="mb-3 block flex-1" ellipsis={{ rows: 2 }}>
+                  {course.description}
                 </Text>
                 
-                <Text type="secondary" className="block mb-4">
-                  Ngày bắt đầu: {course.startDate ? new Date(course.startDate).toLocaleDateString('vi-VN') : 'N/A'}
-                </Text>
+                {/* Thanh tiến độ theo yêu cầu tài liệu */}
+                <div className="mb-3">
+                  <Text type="secondary" className="text-sm mb-1 block">
+                    Tiến độ học tập:
+                  </Text>
+                  <Progress 
+                    percent={course.progressPercentage || 0} 
+                    size="small" 
+                    strokeColor={{
+                      '0%': '#108ee9',
+                      '100%': '#87d068',
+                    }}
+                  />
+                </div>
                 
-                <Button 
-                  type="primary" 
-                  block
-                  onClick={() => navigate(`/student/course-details?id=${course.id}`)}
-                >
-                  Xem Chi Tiết
-                </Button>
+                <div className="mt-auto">
+                  <div className="flex items-center mb-2">
+                    <UserOutlined className="mr-1" />
+                    <Text type="secondary" className="text-sm">
+                      {course.teacherName}
+                    </Text>
+                  </div>
+                  
+                  <Text type="secondary" className="block mb-3 text-sm">
+                    Ngày bắt đầu: {course.startDate ? new Date(course.startDate).toLocaleDateString('vi-VN') : 'N/A'}
+                  </Text>
+                  
+                  <Button 
+                    type="primary" 
+                    block
+                    onClick={() => navigate(`/student/courses/${course.id}`)}
+                  >
+                    Xem Chi Tiết
+                  </Button>
+                </div>
               </div>
             </Card>
           </Col>

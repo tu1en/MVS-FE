@@ -37,7 +37,7 @@ function LecturesPage() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
       } else { // Teacher
-        response = await axios.get(`/api/classrooms/teacher/${userId}`, {
+        response = await axios.get(`/api/classrooms/current-teacher`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
       }

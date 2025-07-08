@@ -4,11 +4,43 @@
 /* Đảm bảo phông chữ hiển thị đẹp cho tiếng Việt */
 .vietnamese-text {
   font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: "kern" 1;
-  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  font-variant-ligatures: common-ligatures contextual;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Fix for Vietnamese diacritical marks position */
+.vietnamese-diacritics-fix {
+  font-feature-settings: "mark" 1, "mkmk" 1;
+}
+
+/* Fix for Vietnamese tone marks */
+.vietnamese-tone-fix {
+  font-feature-settings: "mark" 1, "mkmk" 1, "kern" 1;
+  word-spacing: 0.02em;
+}
+
+/* Fix for dropdown menus and dialogs */
+.ant-select-dropdown, .ant-modal-content, .ant-dropdown-menu {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix for table data */
+.ant-table {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix for tooltip and popover components */
+.ant-tooltip, .ant-popover {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Tiêu đề lớn cho tiếng Việt */

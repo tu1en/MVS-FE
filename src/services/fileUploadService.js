@@ -1,133 +1,215 @@
-import { storage } from '../config/firebase';
-import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
+import { message } from 'antd';
 import axios from 'axios';
+import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+import { auth, storage } from '../config/firebase';
 
 /**
- * Service for file upload operations
+ * Creates a temporary local URL for a file.
+ * Useful as a fallback or for previews.
+ * @param {File} file - The file object.
+ * @returns {Object} - An object representing the local file.
  */
-class FileUploadService {
-  /**
-   * Upload a file to Firebase Storage
-   * 
-   * @param {File} file The file to upload
-   * @param {string} folder The folder to store the file in
-   * @returns {Promise<string>} The URL of the uploaded file
-   */
-  static async uploadFile(file, folder = 'uploads') {
-    const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:8088';
-    
+const createLocalFileUrl = (file) => {
+    const localUrl = URL.createObjectURL(file);
+    console.log(`[Debug] Created local blob URL: ${localUrl}`);
+    return {
+        name: file.name,
+        url: localUrl,
+        type: file.type,
+        size: file.size,
+        isLocalFile: true
+    };
+};
+
+/**
+ * Upload file to backend API (as fallback for CORS issues)
+ */
+const uploadFileToBackend = async ({ file, onSuccess, onError, onProgress }, path = 'uploads') => {
+    console.log(`[Debug] uploadFileToBackend: Starting upload for "${file.name}" to folder "${path}".`);
+
     try {
-      console.log(`Starting file upload: ${file.name}, size: ${file.size}, type: ${file.type}`);
-      
-      // For small images, convert to base64 and use uploadString
-      if (file.type.startsWith('image/') && file.size < 1024 * 1024) {
-        try {
-          console.log("Using base64 upload for small image");
-          return await this.uploadBase64(file, folder);
-        } catch (base64Error) {
-          console.error("Base64 upload failed:", base64Error);
-          // Fall through to other methods
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', path);
+
+        const response = await axios.post('http://localhost:8088/api/files/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.lengthComputable) {
+                    const progress = (progressEvent.loaded / progressEvent.total) * 100;
+                    console.log(`[Debug] Upload progress: ${progress.toFixed(2)}%`);
+                    if (onProgress) {
+                        onProgress({ percent: progress });
+                    }
+                }
+            }
+        });
+
+        if (response.data && response.data.url) {
+            console.log(`[Debug] File uploaded successfully: ${response.data.url}`);
+            
+            const uploadedFileData = {
+                name: file.name,
+                url: response.data.url,
+                type: file.type,
+                size: file.size,
+                isLocalFile: false,
+            };
+
+            message.success(`Tải file "${file.name}" thành công!`);
+            if (onSuccess) {
+                onSuccess(uploadedFileData, file);
+            }
+        } else {
+            throw new Error('Server không trả về URL file');
         }
-      }
-      
-      // Method 1: Upload directly to Firebase Storage (frontend)
-      try {
-        console.log("Attempting direct Firebase Storage upload...");
-        const timestamp = new Date().getTime();
-        const uniqueFilename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const fullPath = `${folder}/${uniqueFilename}`;
+    } catch (error) {
+        console.error('[Debug] Backend upload error:', error);
         
-        console.log(`Uploading to path: ${fullPath}`);
-        const storageRef = ref(storage, fullPath);
+        let errorMessage = 'Lỗi không xác định khi tải file';
+        if (error.response) {
+            errorMessage = `Lỗi server: ${error.response.status} - ${error.response.data?.error || error.response.statusText}`;
+        } else if (error.request) {
+            errorMessage = 'Không thể kết nối tới server';
+        } else {
+            errorMessage = error.message;
+        }
+        
+        message.error(`Lỗi tải file: ${errorMessage}`);
+        
+        const localFile = createLocalFileUrl(file);
+        if (onError) {
+            onError(error, localFile);
+        }
+    }
+};
+
+/**
+ * This is the CORE upload function using Firebase Storage with CORS fallback.
+ * It is designed to be called by Ant Design's Upload component's `customRequest`.
+ * @param {Object} options - The options object from Ant Design's customRequest.
+ * @param {File} options.file - The file to upload.
+ * @param {Function} options.onSuccess - Callback on successful upload.
+ * @param {Function} options.onError - Callback on upload error.
+ * @param {Function} options.onProgress - Callback for upload progress.
+ * @param {string} path - The destination path in Firebase Storage (e.g., 'lectures/course-123').
+ */
+const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) => {
+    // Check if the file object is valid
+    if (!file || typeof file.name === 'undefined') {
+        console.error('[Debug] uploadFileToFirebase: Invalid file object received.', file);
+        message.error('Lỗi: File không hợp lệ để tải lên.');
+        if (onError) {
+            onError(new Error("Invalid file object provided."));
+        }
+        return;
+    }
+
+    console.log(`[Debug] uploadFileToFirebase: Starting upload for "${file.name}" to path "${path}".`);
+
+    // Check if user is authenticated
+    const user = auth.currentUser;
+    if (!user) {
+        console.log('[Debug] User not authenticated, falling back to backend upload');
+        message.warning('Đang sử dụng phương thức upload qua server...');
+        uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+        return;
+    }
+
+    console.log('[Debug] User authenticated, proceeding with Firebase upload');
+
+    try {
+        const timestamp = Date.now();
+        const uniqueFileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const storagePath = `${path}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+
+        console.log(`[Debug] Firebase storage path: ${storagePath}`);
         
         const metadata = {
           contentType: file.type,
           customMetadata: {
-            'uploaded-by': 'teacher-form',
-            'original-filename': file.name
+            uploadedBy: user.email || user.uid,
+            uploadTimestamp: new Date().toISOString(),
+            originalFileName: file.name
           }
         };
-        
-        const uploadResult = await uploadBytes(storageRef, file, metadata);
-        console.log("Upload successful, getting download URL...", uploadResult);
-        
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log(`Download URL obtained: ${downloadURL}`);
-        
-        return downloadURL;
-      } catch (firebaseError) {
-        console.error("Firebase direct upload failed:", firebaseError);
-        console.log("Falling back to backend API upload...");
-        
-        // Method 2: Upload through backend API (only as fallback)
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', folder);
-        
-        console.log(`Uploading via backend API: ${baseUrl}/api/files/upload`);
-        
-        const response = await axios({
-          method: 'post',
-          url: `${baseUrl}/api/files/upload`,
-          data: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          withCredentials: false
-        });
-        
-        console.log("Backend API upload response:", response.data);
-        return response.data.url;
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Upload a small image as base64 string
-   * @param {File} file Image file to upload
-   * @param {string} folder Destination folder
-   * @returns {Promise<string>} Download URL
-   */
-  static async uploadBase64(file, folder) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
-        try {
-          const base64String = e.target.result;
-          console.log(`Base64 conversion complete. Length: ${base64String.length}`);
-          
-          const timestamp = new Date().getTime();
-          const uniqueFilename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          const fullPath = `${folder}/${uniqueFilename}`;
-          
-          const storageRef = ref(storage, fullPath);
-          
-          // Upload as base64 data URL
-          const result = await uploadString(storageRef, base64String, 'data_url');
-          console.log("Base64 upload successful:", result);
-          
-          const downloadURL = await getDownloadURL(result.ref);
-          console.log("Base64 download URL:", downloadURL);
-          
-          resolve(downloadURL);
-        } catch (error) {
-          console.error("Error in base64 upload:", error);
-          reject(error);
-        }
-      };
-      
-      reader.onerror = (error) => {
-        console.error("Error reading file:", error);
-        reject(error);
-      };
-      
-      reader.readAsDataURL(file);
-    });
-  }
-}
 
-export default FileUploadService; 
+        const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log(`[Debug] Upload progress: ${progress.toFixed(2)}%`);
+                if (onProgress) {
+                    onProgress({ percent: progress });
+                }
+            },
+            (error) => {
+                console.error('[Debug] Firebase upload error:', error);
+                
+                // Enhanced error detection for CORS and other issues
+                const isCorsError = error.message.includes('CORS') || 
+                                  error.message.includes('cors') ||
+                                  error.message.includes('Access-Control-Allow-Origin') ||
+                                  error.code === 'storage/unauthorized' ||
+                                  error.code === 'storage/unknown';
+                
+                if (isCorsError) {
+                    console.log('[Debug] CORS/Network error detected, falling back to backend upload');
+                    message.warning('Đang chuyển sang phương thức upload khác...');
+                    uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+                    return;
+                }
+                
+                message.error(`Lỗi tải file lên Firebase: ${error.code || error.message}`);
+                const localFile = createLocalFileUrl(file);
+                if (onError) {
+                    onError(error, localFile);
+                }
+            },
+            async () => {
+                try {
+                    console.log('[Debug] Upload complete. Getting download URL...');
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    console.log(`[Debug] File available at: ${downloadURL}`);
+                    
+                    const uploadedFileData = {
+                        name: file.name,
+                        url: downloadURL,
+                        type: file.type,
+                        size: file.size,
+                        isLocalFile: false,
+                    };
+
+                    message.success(`Tải file "${file.name}" thành công!`);
+                    if (onSuccess) {
+                        onSuccess(uploadedFileData, file);
+                    }
+                } catch (getUrlError) {
+                    console.error('[Debug] Error getting download URL:', getUrlError);
+                    message.error('Lỗi lấy URL file sau khi tải lên.');
+                    if (onError) {
+                        onError(getUrlError, createLocalFileUrl(file));
+                    }
+                }
+            }
+        );
+    } catch (setupError) {
+        console.error('[Debug] Error setting up upload task:', setupError);
+        
+        // Fallback to backend upload if setup fails
+        console.log('[Debug] Setup error, falling back to backend upload');
+        uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+    }
+};
+
+const FileUploadService = {
+    uploadFile: uploadFileToFirebase, // Switch back to Firebase with CORS fixed
+};
+
+export default FileUploadService;

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { Lock, LogOut, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { syncFromLocalStorage } from '../store/slices/authSlice';
+import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
 import RegisterModal from './RegisterModal';
 
 /**
@@ -11,17 +12,39 @@ import RegisterModal from './RegisterModal';
 function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isLogin } = useSelector((state) => state.auth);
+  const { isLogin, user } = useSelector((state) => state.auth);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const settingsMenuRef = useRef(null);
 
   // Sync Redux state with localStorage on component mount
   useEffect(() => {
     dispatch(syncFromLocalStorage());
   }, [dispatch]);
 
+  // Close settings menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
+        setShowSettingsMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleLogin = () => {
     navigate('/login');
   };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+    setShowSettingsMenu(false);
+  };
+
   // Toggle sidebar function
   const toggleSidebar = () => {
     window.dispatchEvent(new Event('toggleSidebarFromHeader'));
@@ -33,6 +56,10 @@ function Header() {
 
   const closeRegisterModal = () => {
     setRegisterModalVisible(false);
+  };
+
+  const toggleSettingsMenu = () => {
+    setShowSettingsMenu(!showSettingsMenu);
   };
 
   return (
@@ -68,12 +95,63 @@ function Header() {
         {/* User Actions */}
         <div className="flex items-center space-x-4">
           {isLogin && (
-            <div className="relative">
-              <button className="p-2 text-primary hover:text-primary-dark">
-                <span className="text-xl">🔔</span>
-                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-              </button>
-            </div>
+            <>
+              <div className="relative">
+                <button className="p-2 text-primary hover:text-primary-dark">
+                  <span className="text-xl">🔔</span>
+                  <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
+                </button>
+              </div>
+              
+              {/* Settings Dropdown */}
+              <div className="relative" ref={settingsMenuRef}>
+                <button 
+                  onClick={toggleSettingsMenu}
+                  className="flex items-center space-x-2 hover:bg-gray-100 rounded-full p-1 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white overflow-hidden">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}</span>
+                    )}
+                  </div>
+                  <span className="hidden md:inline font-medium">{user?.name || 'Người dùng'}</span>
+                  <svg className={`w-4 h-4 transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Settings Dropdown Menu */}
+                {showSettingsMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    <Link 
+                      to="/profile" 
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setShowSettingsMenu(false)}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Hồ sơ
+                    </Link>
+                    <Link 
+                      to="/change-password" 
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setShowSettingsMenu(false)}
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Đổi mật khẩu
+                    </Link>
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
           {!isLogin && (
             <>
