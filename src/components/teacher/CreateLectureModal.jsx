@@ -20,9 +20,9 @@ import {
     Typography,
     Upload
 } from 'antd';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { useEffect, useState } from 'react';
-import { storage } from '../../config/firebase';
+import FileUploadService from '../../services/fileUploadService';
+import lectureService from '../../services/lectureService';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -135,60 +135,31 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
     return videoId !== null;
   };
 
-  // Upload file to Firebase
-  const uploadFileToFirebase = async (file) => {
-    return new Promise((resolve, reject) => {
-      const timestamp = Date.now();
-      const fileName = `lectures/${courseId}/${timestamp}_${file.name}`;
-      const storageRef = ref(storage, fileName);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+  // Handle file upload
+  const handleFileUpload = (options) => {
+    console.log('[Debug] CreateLectureModal: handleFileUpload triggered.');
+    const { file, onSuccess, onError, onProgress } = options;
 
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },        (error) => {
-          console.error('Upload error:', error);
-          // Note: message context may not be available in async callbacks
-          try {
-            message.error('Lỗi upload file');
-          } catch (e) {
-            console.error('Lỗi upload file');
-          }
-          reject(error);
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve({
-              name: file.name,
-              url: downloadURL,
-              type: file.type,
-              size: file.size
-            });
-          } catch (error) {
-            reject(error);
-          }
-        }
-      );
-    });
-  };
+    const customSuccessHandler = (uploadedFileData) => {
+      console.log('[Debug] CreateLectureModal: Upload success callback received.', uploadedFileData);
+      setUploadedFiles(prev => [...prev, uploadedFileData]);
+      onSuccess(uploadedFileData, file);
+    };
 
-  // Custom upload handler
-  const handleUpload = async ({ file, onSuccess, onError }) => {
-    try {
-      const uploadedFile = await uploadFileToFirebase(file);
-      setUploadedFiles(prev => [...prev, uploadedFile]);
-      onSuccess(uploadedFile);
-      message.success(`${file.name} đã upload thành công`);    } catch (error) {
-      onError(error);
-      try {
-        message.error(`Lỗi upload ${file.name}`);
-      } catch (e) {
-        console.error(`Lỗi upload ${file.name}`);
+    const customErrorHandler = (error, fallbackData) => {
+      console.error('[Debug] CreateLectureModal: Upload error callback received.', error);
+      if (fallbackData) {
+        setUploadedFiles(prev => [...prev, fallbackData]);
       }
-    }
+      onError(error);
+    };
+
+    FileUploadService.uploadFile({
+        file,
+        onSuccess: customSuccessHandler,
+        onError: customErrorHandler,
+        onProgress
+    }, `lectures/${courseId || 'temp'}`);
   };
 
   // Remove uploaded file
@@ -204,6 +175,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
       console.log('Form submitted with values:', values);
       console.log('Title:', values.title);
       console.log('Description:', values.description);
+      console.log('Uploaded files:', uploadedFiles);
 
       // Basic validation
       if (!values.title || values.title.trim() === '') {
@@ -231,88 +203,53 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
         message.error('Vui lòng chọn khóa học');
         setLoading(false);
         return;
-      }      // Create lecture data matching backend LectureDto structure
+      }
+
       const lectureData = {
         title: values.title,
-        content: values.description, // Use description as content
-        description: values.description,
-        type: 'ONLINE', // Default type since we removed the selection field
-        isRecordingEnabled: values.isRecordingEnabled || false,
-        materials: []
+        content: values.description,
       };
 
-      // Add YouTube video as material if provided
-      if (values.youtubeUrl && validateYouTubeUrl(values.youtubeUrl)) {        const videoId = extractYouTubeId(values.youtubeUrl);
-        lectureData.materials.push({
-          fileName: `YouTube Video: ${values.title}`,
-          contentType: 'video/youtube',
-          downloadUrl: `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&showinfo=0&controls=1&modestbranding=1&iv_load_policy=3`
-        });
-      }
-
-      // Add uploaded files as materials
-      uploadedFiles.forEach(file => {
-        lectureData.materials.push({
-          fileName: file.name,
-          contentType: file.type || 'application/octet-stream',
-          downloadUrl: file.url
-        });
-      });      // Determine if this is create or update
-      const isEditing = editingLecture && editingLecture.id;
-      const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing 
-        ? `http://localhost:8088/api/courses/${selectedCourseId}/lectures/${editingLecture.id}`
-        : `http://localhost:8088/api/courses/${selectedCourseId}/lectures`;
-
-      // Call API to create or update lecture
-      const token = localStorage.getItem('token');
-      console.log('Creating lecture with request:', {
-        url,
-        method,
-        token: token ? `Bearer ${token.substring(0, 10)}...` : 'No token',
-        data: JSON.stringify(lectureData)
-      });
-      
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(lectureData)
-      });
-
-      console.log('Server response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error response:', errorText);
+      // Xử lý tệp đã tải lên
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        // Kiểm tra nếu có tệp cục bộ (do lỗi Firebase)
+        const hasLocalFiles = uploadedFiles.some(file => file.isLocalFile);
         
-        // Handle specific error cases
-        if (response.status === 404 && isEditing) {
-          throw new Error('Bài giảng không tồn tại hoặc đã bị xóa. Vui lòng tải lại trang.');
-        } else if (response.status === 403) {
-          throw new Error('Bạn không có quyền thực hiện thao tác này.');
-        } else if (response.status === 401) {
-          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        if (hasLocalFiles) {
+          console.log('Có tệp cục bộ, xử lý đặc biệt');
+          
+          // Thông báo cho người dùng
+          message.warning('Một số tệp đang được sử dụng ở dạng cục bộ do lỗi Firebase Storage. Bạn có thể tiếp tục nhưng tệp có thể không khả dụng sau khi tải lại trang.');
+          
+          // Vẫn gửi thông tin tệp đến backend
+          lectureData.materials = uploadedFiles.map(file => ({
+            fileName: file.name,
+            fileUrl: file.url,
+            fileType: file.type,
+            fileSize: file.size,
+              localFile: file.isLocalFile || false
+          }));
         } else {
-          throw new Error(`Lỗi server (${response.status}): ${errorText || 'Không thể xử lý yêu cầu'}`);
+          // Xử lý bình thường với tệp từ Firebase
+          lectureData.materials = uploadedFiles.map(file => ({
+            fileName: file.name,
+            fileUrl: file.url,
+            fileType: file.type,
+            fileSize: file.size,
+              localFile: false
+          }));
         }
       }
-
-      const resultLecture = await response.json();
-      console.log(`Lecture ${isEditing ? 'updated' : 'created'} successfully:`, resultLecture);
       
-      message.success(`${isEditing ? 'Cập nhật' : 'Tạo'} bài giảng thành công!`);
-      form.resetFields();
-      setUploadedFiles([]);
-      setYoutubeUrl('');
-      setUploadProgress(0);
-      onSuccess && onSuccess(resultLecture);
-      onCancel();
+      console.log("Submitting to backend:", { selectedCourseId, lectureData });
+
+      await lectureService.createLecture(selectedCourseId, lectureData);
+
+      message.success('Bài giảng đã được tạo thành công!');
+      onSuccess(); // Close modal and refresh list
     } catch (error) {
-      console.error(`Error ${editingLecture ? 'updating' : 'creating'} lecture:`, error);
-      message.error(`Lỗi ${editingLecture ? 'cập nhật' : 'tạo'} bài giảng: ` + error.message);
+      console.error('Failed to create lecture:', error);
+      message.error(error.response?.data?.message || 'Không thể tạo bài giảng.');
     } finally {
       setLoading(false);
     }
@@ -320,7 +257,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
 
   // File upload props
   const uploadProps = {
-    customRequest: handleUpload,
+    customRequest: handleFileUpload,
     showUploadList: false,
     multiple: true,
     accept: '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.mp4,.avi,.mov,.wmv,.jpg,.jpeg,.png,.gif'
@@ -356,39 +293,34 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
             </Col>
             <Col span={24}>              <Form.Item
                 name="description"
-                label="Mô tả"
-                rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
+                label={<Text strong>Mô tả</Text>}
+                rules={[{ required: true, message: 'Vui lòng nhập mô tả bài giảng' }]}
               >
                 <TextArea 
                   rows={3} 
-                  placeholder="Mô tả ngắn về nội dung bài giảng"
+                  placeholder="Mô tả ngắn gọn về nội dung chính của bài giảng"
                 />
               </Form.Item>
             </Col>
-            {/* Add classroom selection field only if courseId is not provided via props */}
-            {!courseId && (
-              <Col span={24}>
+            <Col span={24}>
                 <Form.Item
-                  name="courseId"
-                  label="Chọn lớp học"
-                  rules={[{ required: true, message: 'Vui lòng chọn lớp học!' }]}
+                    name="courseId"
+                    label={<Text strong>Thuộc khóa học</Text>}
+                    rules={[{ required: true, message: 'Vui lòng chọn khóa học' }]}
                 >
-                  <Select 
-                    placeholder="Chọn lớp học để thêm bài giảng"
-                    loading={availableCourses.length === 0}
-                    showSearch
-                    filterOption={(input, option) =>
-                      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                    }
-                  >
-                    {availableCourses.map(course => (
-                      <Option key={course.id} value={course.id}>
-                        {course.name} ({course.subject || course.description})
-                      </Option>
-                    ))}
-                  </Select>                </Form.Item>
-              </Col>
-            )}
+                    <Select
+                        placeholder="Chọn một khóa học"
+                        disabled={!!courseId} // Disable if a course is already selected
+                        loading={availableCourses.length === 0}
+                    >
+                        {availableCourses.map(course => (
+                            <Option key={course.id} value={course.id}>
+                                {course.name} ({course.subject})
+                            </Option>
+                        ))}
+                    </Select>
+                </Form.Item>
+            </Col>
             <Col span={12}>
               <Form.Item
                 name="lectureType"

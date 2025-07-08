@@ -1,16 +1,19 @@
 import { message } from 'antd';
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import CourseCreationModal from '../../components/teacher/CourseCreationModal';
+import ClassroomCreationModal from '../../components/teacher/ClassroomCreationModal';
 import CreateLectureModal from '../../components/teacher/CreateLectureModal';
+import { teacherClassroomService } from '../../services/teacherClassroomService';
 
 const TeacherCoursesSimple = () => {
   const navigate = useNavigate();
+  const { role } = useSelector((state) => state.auth);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState([]);
   const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+  const [showCreateLectureModal, setShowCreateLectureModal] = useState(false);
+  const [showCreateClassroomModal, setShowCreateClassroomModal] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   useEffect(() => {
@@ -22,29 +25,25 @@ const TeacherCoursesSimple = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      
-      // Using fetch instead of axios for better error handling
-      const response = await fetch('http://localhost:8088/api/classrooms/current-teacher', {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('API Error:', response.status, errorData);
-        throw new Error(`Không thể kết nối đến server (${response.status})`);
-      }
-      
-      const data = await response.json();
+      const data = await teacherClassroomService.getMyClassrooms();
       console.log('Teacher courses response:', data);
       setCourses(data || []);
     } catch (error) {
       console.error('Error loading teacher courses:', error);
-      setError('Không thể tải danh sách khóa học. Vui lòng thử lại: ' + error.message);
+      // Don't show error message for canceled requests
+      if (error.code !== 'ERR_CANCELED') {
+        setError('Không thể tải danh sách khóa học. Vui lòng thử lại: ' + error.message);
+      } else {
+        // If it was canceled but we got data in the console log, try once more
+        try {
+          const retryData = await teacherClassroomService.getMyClassrooms();
+          setCourses(retryData || []);
+        } catch (retryError) {
+          if (retryError.code !== 'ERR_CANCELED') {
+            setError('Không thể tải danh sách khóa học. Vui lòng thử lại: ' + retryError.message);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -52,23 +51,23 @@ const TeacherCoursesSimple = () => {
 
   const handleCreateLecture = (courseId) => {
     setSelectedCourseId(courseId);
-    setShowCreateModal(true);
+    setShowCreateLectureModal(true);
   };
 
   const handleLectureCreated = () => {
-    setShowCreateModal(false);
+    setShowCreateLectureModal(false);
     setSelectedCourseId(null);
     // Reload courses to get updated data
     loadTeacherCourses();
   };
   
-  const handleCourseSuggested = (newCourse) => {
-    setShowCreateCourseModal(false);
+  const handleClassroomCreated = (newClassroom) => {
+    setShowCreateClassroomModal(false);
     
     // Show a success message
-    message.success(`Đề xuất khóa học "${newCourse.name}" đã được gửi thành công!`);
+    message.success(`Lớp học "${newClassroom.name}" đã được tạo thành công!`);
     
-    // Optional: Reload all courses to ensure data consistency
+    // Reload all courses to ensure data consistency
     setTimeout(() => {
       loadTeacherCourses();
     }, 500);
@@ -107,15 +106,17 @@ const TeacherCoursesSimple = () => {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản lý khóa học</h1>
+        <h1 className="text-2xl font-bold">Quản lý lớp học</h1>
         <div className="flex gap-2">
+          {role !== 'TEACHER' && (
           <button 
-            onClick={() => setShowCreateCourseModal(true)}
+            onClick={() => setShowCreateClassroomModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
           >
             <span className="text-sm">📝</span>
-            Đề xuất khóa học mới
+              Tạo lớp học mới
           </button>
+          )}
           <button 
             onClick={() => {
               if (courses.length === 0) {
@@ -123,11 +124,11 @@ const TeacherCoursesSimple = () => {
               } else if (courses.length === 1) {
                 // If there's only one course, select it automatically
                 setSelectedCourseId(courses[0].id);
-                setShowCreateModal(true);
+                setShowCreateLectureModal(true);
               } else {
                 // If multiple courses, require selection
                 setSelectedCourseId(null); // Clear any previous selection
-                setShowCreateModal(true);
+                setShowCreateLectureModal(true);
               }
             }}
             className={`${
@@ -145,19 +146,15 @@ const TeacherCoursesSimple = () => {
       
       {courses.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 mb-4">Chưa có khóa học nào được phân công.</p>
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg max-w-lg mx-auto">
-            <h3 className="text-lg font-semibold text-yellow-700 mb-2">Thông báo</h3>
-            <p className="text-yellow-600">
-              Giáo viên không thể trực tiếp tạo khóa học. Bạn có thể gửi đề xuất khóa học mới kèm theo thời gian không thể dạy để nhà trường xem xét và sắp xếp lịch phù hợp.
-            </p>
-            <button 
-              onClick={() => setShowCreateCourseModal(true)}
-              className="mt-3 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-            >
-              Đề xuất khóa học mới
-            </button>
-          </div>
+          <p className="text-gray-500 mb-4">Chưa có lớp học nào được phân công.</p>
+          {role !== 'TEACHER' && (
+          <button 
+            onClick={() => setShowCreateClassroomModal(true)}
+            className="mt-3 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+              Tạo lớp học mới
+          </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +215,7 @@ const TeacherCoursesSimple = () => {
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-600">{courses.length}</div>
-              <div className="text-sm text-gray-600">Khóa học</div>
+              <div className="text-sm text-gray-600">Lớp học</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">
@@ -236,29 +233,32 @@ const TeacherCoursesSimple = () => {
         </div>
       )}
 
+      {role !== 'TEACHER' && (
       <div className="mt-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
         <h3 className="text-lg font-semibold text-blue-700 mb-2">Lưu ý về đề xuất khóa học</h3>
         <p className="text-blue-600">
           Giáo viên không thể trực tiếp tạo khóa học. Khi bạn đề xuất khóa học mới, vui lòng cung cấp thông tin về thời gian không thể dạy để nhà trường xem xét và sắp xếp lịch phù hợp.
         </p>
       </div>
+      )}
 
       {/* Create Lecture Modal */}
       <CreateLectureModal
-        open={showCreateModal}
+        open={showCreateLectureModal}
         onCancel={() => {
-          setShowCreateModal(false);
+          setShowCreateLectureModal(false);
           setSelectedCourseId(null);
         }}
         onSuccess={handleLectureCreated}
         courseId={selectedCourseId}
+        courses={courses}
       />
       
-      {/* Suggest Course Modal */}
-      <CourseCreationModal
-        visible={showCreateCourseModal}
-        onCancel={() => setShowCreateCourseModal(false)}
-        onSuccess={handleCourseSuggested}
+      {/* Create Classroom Modal */}
+      <ClassroomCreationModal
+        visible={showCreateClassroomModal}
+        onCancel={() => setShowCreateClassroomModal(false)}
+        onSuccess={handleClassroomCreated}
       />
     </div>
   );

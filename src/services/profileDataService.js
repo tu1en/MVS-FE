@@ -49,19 +49,11 @@ class ProfileDataService {
       };
     }
 
-    // Try multiple endpoints that might exist
-    const endpointsToTry = [
-      '/users/me',
-      '/v1/users/me', 
-      '/teacher/profile',
-      '/v1/users/current'
-    ];
-
-    for (const endpoint of endpointsToTry) {
-      try {
-        console.log(`Trying endpoint: ${endpoint}`);
-        const response = await api.get(endpoint);
-        const profileData = response.data?.data || response.data;
+    // Try the new, single authoritative endpoint
+    try {
+        console.log("Fetching profile from /api/users/me");
+        const response = await api.get('/users/me'); 
+        const profileData = response.data;
         
         // Save to localStorage for future fallback
         this.saveToLocalStorage(profileData);
@@ -69,25 +61,19 @@ class ProfileDataService {
         return {
           success: true,
           data: profileData,
-          source: 'server',
-          endpoint: endpoint
+          source: 'server'
         };
       } catch (error) {
-        console.warn(`Endpoint ${endpoint} failed:`, error.response?.status || error.message);
-        continue; // Try next endpoint
+        console.error("Failed to fetch profile from server, using localStorage fallback", error);
+        const fallbackData = this.getFromLocalStorage(userType);
+        
+        return {
+          success: false,
+          data: fallbackData,
+          source: 'localStorage',
+          error: error
+        };
       }
-    }
-
-    // All endpoints failed, use fallback
-    console.error('All profile endpoints failed, using localStorage fallback');
-    const fallbackData = this.getFromLocalStorage(userType);
-    
-    return {
-      success: false,
-      data: fallbackData,
-      source: 'localStorage',
-      error: new Error('All profile endpoints returned errors')
-    };
   }
 
   /**
@@ -96,44 +82,32 @@ class ProfileDataService {
    * @returns {Object} Update result
    */
   static async updateProfileWithFallback(profileData) {
-    // Try multiple endpoints for updating profile
-    const updateEndpoints = [
-      '/users/me',
-      '/v1/users/me',
-      '/teacher/profile',
-      '/v1/users/current'
-    ];
-
-    for (const endpoint of updateEndpoints) {
-      try {
-        console.log(`Trying to update via endpoint: ${endpoint}`);
-        await api.put(endpoint, profileData);
-        
-        // Save to localStorage on successful update
-        this.saveToLocalStorage(profileData);
-        
-        return {
-          success: true,
-          message: 'Cập nhật thông tin thành công',
-          source: 'server',
-          endpoint: endpoint
-        };
-      } catch (error) {
-        console.warn(`Update endpoint ${endpoint} failed:`, error.response?.status || error.message);
-        continue; // Try next endpoint
-      }
+    // Use the single authoritative endpoint for updating the profile
+    try {
+      console.log("Trying to update via endpoint: /users/me");
+      await api.put('/users/me', profileData);
+      
+      // Save to localStorage on successful update
+      this.saveToLocalStorage(profileData);
+      
+      return {
+        success: true,
+        message: 'Cập nhật thông tin thành công',
+        source: 'server'
+      };
+    } catch (error) {
+      console.error('Update endpoint /users/me failed, saving to localStorage', error);
+      
+      // Save locally as a fallback
+      this.saveToLocalStorage(profileData);
+      
+      return {
+        success: false,
+        message: 'Server hiện không khả dụng, nhưng thông tin đã được lưu cục bộ. Dữ liệu sẽ được đồng bộ khi server hoạt động trở lại.',
+        source: 'localStorage',
+        error: error
+      };
     }
-
-    // All update endpoints failed, save locally
-    console.error('All update endpoints failed, saving to localStorage');
-    this.saveToLocalStorage(profileData);
-    
-    return {
-      success: false,
-      message: 'Server hiện không khả dụng, nhưng thông tin đã được lưu cục bộ. Dữ liệu sẽ được đồng bộ khi server hoạt động trở lại.',
-      source: 'localStorage',
-      error: new Error('All update endpoints failed')
-    };
   }
 
   /**

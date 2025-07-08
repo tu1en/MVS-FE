@@ -57,6 +57,21 @@ class TimetableService {
   }
 
   /**
+   * Get current user's timetable (for students)
+   * @param {Object} params - Query parameters including startDate, endDate
+   * @returns {Promise<Array>} List of timetable events for current user
+   */
+  static async getMyTimetable(params = {}) {
+    try {
+      const response = await apiClient.get('/schedule/my-timetable', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching my timetable:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get timetable for a specific user
    * @param {number} userId - User ID
    * @param {Object} params - Query parameters

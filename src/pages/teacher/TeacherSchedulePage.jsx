@@ -2,7 +2,6 @@ import { message, Spin } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import ScheduleTable from "../../components/ScheduleTable";
-import { getTeacherSchedule } from "../../services/scheduleService";
 import "../student/SchedulePage.css";
 
 // Chuyển đổi dữ liệu từ API sang định dạng hiển thị (nếu cần)
@@ -50,17 +49,9 @@ const TeacherSchedulePage = () => {
       setScheduleItems(response.data || []);
       
     } catch (error) {
-      console.warn('API không khả dụng, sử dụng mock data:', error.message);
-      
-      // Sử dụng dữ liệu giả lập trong trường hợp API lỗi
-      try {
-        const rawData = getTeacherSchedule(parseInt(teacherId) || 1, currentWeekStart);
-        const formattedData = transformScheduleData(rawData);
-        setScheduleItems(formattedData);
-      } catch (mockError) {
-        console.error('Lỗi lấy mock data:', mockError);
-        message.error('Không thể tải lịch dạy');
-      }
+      console.error('Error fetching teacher schedule:', error);
+      message.error('Không thể tải lịch dạy. Vui lòng thử lại.');
+      setScheduleItems([]);
     } finally {
       setLoading(false);
     }

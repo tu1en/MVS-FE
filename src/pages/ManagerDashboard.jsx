@@ -1,20 +1,90 @@
-import { useEffect } from 'react';
+import { BookOutlined, CalendarOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Col, Row, Statistic, message } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
+import { managerService } from '../services/managerService';
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalCourses: 0,
+    totalSchedules: 0,
+    totalMessages: 0
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem('role');
     if (role !== ROLE.MANAGER) {
       navigate('/');
     }
+    fetchDashboardStats();
   }, [navigate]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const data = await managerService.getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      message.error('Không thể tải thống kê dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Trang Quản Lý</h1>
+      
+      {/* Statistics Cards */}
+      <Row gutter={16} className="mb-8">
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Tổng người dùng"
+              value={stats.totalUsers}
+              prefix={<UserOutlined />}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Tổng khóa học"
+              value={stats.totalCourses}
+              prefix={<BookOutlined />}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Lịch học"
+              value={stats.totalSchedules}
+              prefix={<CalendarOutlined />}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Tin nhắn"
+              value={stats.totalMessages}
+              prefix={<MessageOutlined />}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Management Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý yêu cầu đăng ký</h2>
