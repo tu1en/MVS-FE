@@ -34,30 +34,27 @@ const RequestList = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  const fetchPendingRequests = useCallback(async () => {
+  const fetchAllRequests = useCallback(async () => {
     setLoading(true);
     try {
-      // Use the new service method for pending requests
-      const data = await requestService.getPendingRequests();
-      setRequests(data);
+      const response = await requestService.getAllRequests();
+      setRequests(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching requests:', error);
       message.error(error.response?.data?.message || 'Không thể tải dữ liệu yêu cầu');
+      setRequests([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchPendingRequests();
-    
-    // Optional: Keep polling for new requests
+    fetchAllRequests();
     const interval = setInterval(() => {
-      fetchPendingRequests();
+      fetchAllRequests();
     }, 60000);
-    
     return () => clearInterval(interval);
-  }, [fetchPendingRequests]);
+  }, [fetchAllRequests]);
 
   const showApproveModal = (e, requestId) => {
     e.stopPropagation();
@@ -69,11 +66,12 @@ const RequestList = () => {
     if (!selectedRequestId) return;
     try {
       message.loading({ content: 'Đang xử lý...', key: 'approveLoading' });
-      // Updated service call, no comment needed
       await requestService.approveRequest(selectedRequestId);
       message.success({ content: 'Phê duyệt yêu cầu thành công', key: 'approveLoading' });
       setApproveModalVisible(false);
-      fetchPendingRequests(); // Refresh list
+      setSelectedRequestId(null);
+      setSelectedRequest(null);
+      fetchAllRequests();
     } catch (error) {
       console.error("Approve endpoint error:", error);
       message.error({ content: `Không thể phê duyệt: ${error.response?.data?.message || error.message}`, key: 'approveLoading' });
@@ -108,24 +106,23 @@ const RequestList = () => {
       await requestService.rejectRequest(selectedRequestId, rejectReason);
       message.success('Từ chối yêu cầu thành công');
       setRejectModalVisible(false);
-      fetchPendingRequests(); // Refresh list
+      setSelectedRequestId(null);
+      setSelectedRequest(null);
+      fetchAllRequests(); // Refresh list
     } catch (error) {
       console.error('Error rejecting request:', error);
       message.error(`Lỗi: ${error.response?.data?.message || error.message}`);
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'PENDING':
-        return <Tag color="orange">Đang Chờ</Tag>;
-      case 'APPROVED':
-        return <Tag color="green">Đã Duyệt</Tag>;
-      case 'REJECTED':
-        return <Tag color="red">Đã Từ Chối</Tag>;
-      default:
-        return <Tag>{status}</Tag>;
+  const getStatusBadge = (status, resultStatus) => {
+    if (status === 'COMPLETED') {
+      if (resultStatus === 'APPROVED') return <Tag color="green">Đã Duyệt</Tag>;
+      if (resultStatus === 'REJECTED') return <Tag color="red">Đã Từ Chối</Tag>;
+      return <Tag color="blue">Hoàn Thành</Tag>;
     }
+    if (status === 'PENDING') return <Tag color="orange">Đang Chờ</Tag>;
+    return <Tag>{status}</Tag>;
   };
 
   const renderDetailContent = () => {
@@ -140,7 +137,7 @@ const RequestList = () => {
       { key: '3', label: 'Email', children: formDetails.email },
       { key: '4', label: 'Số điện thoại', children: formDetails.phoneNumber || 'N/A' },
       { key: '5', label: 'Ngày yêu cầu', children: new Date(formDetails.createdAt).toLocaleString() },
-      { key: '6', label: 'Trạng thái', children: getStatusBadge(formDetails.status) },
+      { key: '6', label: 'Trạng thái', children: getStatusBadge(formDetails.status, formDetails.resultStatus) },
     ];
     
     const teacherItems = formDetails.requestedRole === 'TEACHER' ? [
@@ -202,7 +199,7 @@ const RequestList = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => getStatusBadge(status),
+      render: (status) => getStatusBadge(status, selectedRequest?.resultStatus),
     },
     {
       title: 'Hành động',

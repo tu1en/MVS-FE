@@ -12,7 +12,13 @@ const requestService = {
         return api.post(`/admin/requests/${requestId}/approve`);
     },
     rejectRequest: (requestId, reason) => {
-        return api.post(`/admin/requests/${requestId}/reject`, { reason });
+        // Backend nhận body là chuỗi lý do, không phải object
+        return api.post(`/admin/requests/${requestId}/reject`, reason, {
+            headers: { 'Content-Type': 'text/plain' }
+        });
+    },
+    getAllRequests: () => {
+        return api.get('/admin/requests');
     }
 };
 

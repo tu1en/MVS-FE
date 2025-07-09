@@ -49,6 +49,7 @@ import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
 import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
+import RequestList from "./pages/RequestList.jsx";
 
 // Student Pages
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -228,6 +229,7 @@ function App() {
               <Route path="/manager/messages" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
 
               {/* Test Upload Page */}
               <Route path="/test-upload" element={<TestUpload />} />
