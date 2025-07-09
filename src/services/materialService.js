@@ -1,40 +1,4 @@
-import axios from 'axios';
-import API_CONFIG from '../config/api-config.js';
-
-// Create an axios instance with default configuration
-const apiClient = axios.create({
-  baseURL: API_CONFIG.BASE_URL,
-  timeout: 30000, // Longer timeout for file operations
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Request interceptor to add authentication token
-apiClient.interceptors.request.use(
-  config => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  error => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-apiClient.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+import axiosInstance from '../config/axiosInstance';
 
 /**
  * Material Service for handling course materials and file operations
@@ -49,6 +13,48 @@ class MaterialService {
    */
   static async uploadMaterial(formData, onProgress = null) {
     try {
+      // Validate required parameters
+      const classroomId = formData.get('classroomId');
+      const uploadedBy = formData.get('uploadedBy');
+      const file = formData.get('file');
+      
+      console.log('Debug uploadMaterial params:', { 
+        classroomId: typeof classroomId === 'object' ? 'File object' : classroomId,
+        uploadedBy,
+        hasFile: !!file,
+        fileType: file ? file.type : 'N/A',
+        fileName: file ? file.name : 'N/A'
+      });
+      
+      // Validate file
+      if (!file) {
+        throw new Error('No file attached for upload');
+      }
+      
+      // Validate classroom ID
+      if (!classroomId) {
+        throw new Error('Missing classroomId parameter');
+      }
+      
+      const parsedClassroomId = parseInt(classroomId);
+      if (isNaN(parsedClassroomId)) {
+        throw new Error(`Invalid classroomId parameter: ${classroomId}`);
+      }
+      
+      // Validate user ID
+      if (!uploadedBy) {
+        throw new Error('Missing uploadedBy parameter');
+      }
+      
+      const parsedUploadedBy = parseInt(uploadedBy);
+      if (isNaN(parsedUploadedBy)) {
+        throw new Error(`Invalid uploadedBy parameter: ${uploadedBy}`);
+      }
+      
+      // Ensure values are integers in the FormData
+      formData.set('classroomId', parsedClassroomId);
+      formData.set('uploadedBy', parsedUploadedBy);
+      
       const config = {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -62,10 +68,15 @@ class MaterialService {
         };
       }
 
-      const response = await apiClient.post('/materials/upload', formData, config);
+      console.log('Making API request to upload material');
+      const response = await axiosInstance.post('/materials/upload', formData, config);
+      console.log('Upload response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error uploading material:', error);
+      if (error.response) {
+        console.error('Server error details:', error.response.data);
+      }
       throw error;
     }
   }
@@ -77,7 +88,7 @@ class MaterialService {
    */
   static async getMaterials(params = {}) {
     try {
-      const response = await apiClient.get('/materials', { params });
+      const response = await axiosInstance.get('/materials', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching materials:', error);
@@ -92,7 +103,7 @@ class MaterialService {
    */
   static async getMaterialById(materialId) {
     try {
-      const response = await apiClient.get(`/materials/${materialId}`);
+      const response = await axiosInstance.get(`/materials/${materialId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching material:', error);
@@ -106,15 +117,35 @@ class MaterialService {
    * @returns {Promise<Blob>} File blob
    */
   static async downloadMaterial(materialId) {
-    try {
-      const response = await apiClient.get(`/materials/${materialId}/download`, {
-        responseType: 'blob'
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error downloading material:', error);
-      throw error;
+    // Array of possible endpoint patterns to try
+    const endpointPatterns = [
+      `/materials/${materialId}/download`,
+      `/materials/download/${materialId}`,
+      `/mock-materials/${materialId}/download`,
+      `/mock-materials/download/${materialId}`,
+      `/materials-alt/${materialId}/download`,
+      `/materials-alt/download/${materialId}`
+    ];
+    
+    let lastError = null;
+    
+    // Try each endpoint pattern in sequence
+    for (const endpoint of endpointPatterns) {
+      try {
+        const response = await axiosInstance.get(endpoint, {
+          responseType: 'blob'
+        });
+        return response.data;
+      } catch (error) {
+        lastError = error;
+        console.log(`Tried endpoint ${endpoint}, failed with: ${error.message}`);
+        // Continue to next endpoint pattern
+      }
     }
+    
+    // If we get here, all attempts failed
+    console.error('Error downloading material:', lastError);
+    throw lastError;
   }
 
   /**
@@ -125,11 +156,34 @@ class MaterialService {
    */
   static async getMaterialsByCourse(courseId, params = {}) {
     try {
-      const response = await apiClient.get(`/materials/course/${courseId}`, { params });
-      return response.data;
+      // Array of possible endpoints to try in order
+      const endpoints = [
+        `/materials/course/${courseId}`,
+        `/mock-materials/course/${courseId}`,
+        `/materials-alt/course/${courseId}`
+      ];
+      
+      let lastError = null;
+      
+      // Try each endpoint in sequence
+      for (const endpoint of endpoints) {
+        try {
+          const response = await axiosInstance.get(endpoint, { params });
+          return response.data;
+        } catch (error) {
+          lastError = error;
+          console.log(`Tried endpoint ${endpoint}, failed with: ${error.message}`);
+          // Continue to next endpoint
+        }
+      }
+      
+      // If we get here, all attempts failed
+      console.error('All material endpoints failed:', lastError);
+      return []; // Return empty array for graceful degradation
     } catch (error) {
       console.error('Error fetching course materials:', error);
-      throw error;
+      // In case of complete failure, return empty array for graceful degradation
+      return [];
     }
   }
 
@@ -142,7 +196,7 @@ class MaterialService {
   static async searchMaterials(query, filters = {}) {
     try {
       const params = { query, ...filters };
-      const response = await apiClient.get('/materials/search', { params });
+      const response = await axiosInstance.get('/materials/search', { params });
       return response.data;
     } catch (error) {
       console.error('Error searching materials:', error);
@@ -158,7 +212,7 @@ class MaterialService {
    */
   static async updateMaterial(materialId, updateData) {
     try {
-      const response = await apiClient.put(`/materials/${materialId}`, updateData);
+      const response = await axiosInstance.put(`/materials/${materialId}`, updateData);
       return response.data;
     } catch (error) {
       console.error('Error updating material:', error);
@@ -173,7 +227,7 @@ class MaterialService {
    */
   static async deleteMaterial(materialId) {
     try {
-      const response = await apiClient.delete(`/materials/${materialId}`);
+      const response = await axiosInstance.delete(`/materials/${materialId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting material:', error);
@@ -187,7 +241,7 @@ class MaterialService {
    */
   static async getCategories() {
     try {
-      const response = await apiClient.get('/materials/categories');
+      const response = await axiosInstance.get('/materials/categories');
       return response.data;
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -202,7 +256,7 @@ class MaterialService {
    */
   static async createCategory(categoryData) {
     try {
-      const response = await apiClient.post('/materials/categories', categoryData);
+      const response = await axiosInstance.post('/materials/categories', categoryData);
       return response.data;
     } catch (error) {
       console.error('Error creating category:', error);
@@ -218,7 +272,7 @@ class MaterialService {
    */
   static async getMaterialsByCategory(categoryId, params = {}) {
     try {
-      const response = await apiClient.get(`/materials/category/${categoryId}`, { params });
+      const response = await axiosInstance.get(`/materials/category/${categoryId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching materials by category:', error);
@@ -234,7 +288,7 @@ class MaterialService {
    */
   static async shareMaterial(materialId, userIds) {
     try {
-      const response = await apiClient.post(`/materials/${materialId}/share`, { userIds });
+      const response = await axiosInstance.post(`/materials/${materialId}/share`, { userIds });
       return response.data;
     } catch (error) {
       console.error('Error sharing material:', error);
@@ -249,7 +303,7 @@ class MaterialService {
    */
   static async getSharedMaterials(params = {}) {
     try {
-      const response = await apiClient.get('/materials/shared', { params });
+      const response = await axiosInstance.get('/materials/shared', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching shared materials:', error);
@@ -264,7 +318,7 @@ class MaterialService {
    */
   static async getMaterialStats(materialId) {
     try {
-      const response = await apiClient.get(`/materials/${materialId}/stats`);
+      const response = await axiosInstance.get(`/materials/${materialId}/stats`);
       return response.data;
     } catch (error) {
       console.error('Error fetching material stats:', error);
@@ -280,7 +334,7 @@ class MaterialService {
    */
   static async createMaterialVersion(materialId, formData) {
     try {
-      const response = await apiClient.post(`/materials/${materialId}/versions`, formData, {
+      const response = await axiosInstance.post(`/materials/${materialId}/versions`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -299,7 +353,7 @@ class MaterialService {
    */
   static async getMaterialVersions(materialId) {
     try {
-      const response = await apiClient.get(`/materials/${materialId}/versions`);
+      const response = await axiosInstance.get(`/materials/${materialId}/versions`);
       return response.data;
     } catch (error) {
       console.error('Error fetching material versions:', error);

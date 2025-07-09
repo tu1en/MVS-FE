@@ -1,160 +1,156 @@
+import { Button, DatePicker, Form, Input, message, Modal, Popconfirm, Space, Table } from 'antd';
+import { format, parseISO } from "date-fns";
+import moment from 'moment';
 import React, { useEffect, useState } from "react";
 import { accomplishmentService } from "../services/accomplishmentService";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
-import { toast } from 'react-toastify';
+
+const AccomplishmentFormModal = ({ visible, onCancel, onFinish, initialData }) => {
+    const [form] = Form.useForm();
+    
+    useEffect(() => {
+        if (initialData) {
+            form.setFieldsValue({
+                ...initialData,
+                issueDate: initialData.issueDate ? moment(initialData.issueDate, 'YYYY-MM-DD') : null
+            });
+        } else {
+            form.resetFields();
+        }
+    }, [initialData, form]);
+
+
+    return (
+        <Modal
+            title={initialData ? "Sửa thành tích" : "Thêm thành tích"}
+            open={visible}
+            onCancel={onCancel}
+            onOk={() => form.submit()}
+            destroyOnClose
+        >
+            <Form form={form} onFinish={onFinish} layout="vertical">
+                <Form.Item name="title" label="Tên thành tích/Chứng chỉ" rules={[{ required: true }]}>
+                    <Input />
+                </Form.Item>
+                <Form.Item name="description" label="Mô tả">
+                    <Input.TextArea />
+                </Form.Item>
+                <Form.Item name="issueDate" label="Ngày cấp" rules={[{ required: true }]}>
+                    <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+                </Form.Item>
+            </Form>
+        </Modal>
+    );
+};
+
 
 const StudentAccomplishments = () => {
   const [accomplishments, setAccomplishments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const fetchData = () => {
+    setLoading(true);
+    accomplishmentService.getMyAccomplishments()
+        .then(res => {
+            setAccomplishments(res.data);
+        })
+        .catch(() => message.error("Không thể tải danh sách thành tích"))
+        .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    const fetchAccomplishments = async () => {
-      try {
-        // Get authentication data from localStorage
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        const userId = localStorage.getItem('userId');
-        
-        // Check if user is logged in and is a student
-        if (!token || !role || role !== 'STUDENT') {
-          const errorMsg = "Vui lòng đăng nhập với tài khoản học sinh để xem thành tích học tập.";
-          setError(errorMsg);
-          toast.error(errorMsg);
-          setLoading(false);
-          navigate('/login');
-          return;
-        }
+      fetchData();
+  }, []);
 
-        if (!userId) {
-          const errorMsg = "Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.";
-          setError(errorMsg);
-          toast.error(errorMsg);
-          setLoading(false);
-          navigate('/login');
-          return;
-        }
-
-        // Use userId directly instead of email
-        const data = await accomplishmentService.getStudentAccomplishments(userId);
-        if (Array.isArray(data)) {
-          // Sort accomplishments by completion date in descending order (newest first)
-          const sortedAccomplishments = data.sort((a, b) => 
-            new Date(b.completionDate) - new Date(a.completionDate)
-          );
-          setAccomplishments(sortedAccomplishments);
-          if (sortedAccomplishments.length === 0) {
-            toast.info("Chưa có thành tích học tập nào.");
-          }
-        } else {
-          setAccomplishments([]);
-          toast.info("Chưa có thành tích học tập nào.");
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching accomplishments:", err);
-        const errorMsg = "Không thể tải dữ liệu thành tích học tập. Vui lòng thử lại sau.";
-        setError(errorMsg);
-        toast.error(errorMsg);
-        setLoading(false);
-      }
+  const handleFinish = (values) => {
+    const dataToSubmit = {
+        ...values,
+        issueDate: values.issueDate ? values.issueDate.format('YYYY-MM-DD') : null,
     };
 
-    fetchAccomplishments();
-  }, [navigate]);
+    const promise = editingItem
+        ? accomplishmentService.updateAccomplishment(editingItem.id, dataToSubmit)
+        : accomplishmentService.createAccomplishment(dataToSubmit);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px] bg-[#e7f6e7]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
+    promise.then(() => {
+        message.success("Thao tác thành công!");
+        setIsModalVisible(false);
+        setEditingItem(null);
+        fetchData();
+    }).catch((err) => {
+        const errorMsg = err.response?.data?.message || "Đã có lỗi xảy ra!";
+        message.error(errorMsg);
+    });
+  };
+    
+  const handleDelete = (id) => {
+    accomplishmentService.deleteAccomplishment(id)
+        .then(() => {
+            message.success("Xóa thành tích thành công!");
+            fetchData();
+        })
+        .catch(() => message.error("Xóa thất bại!"));
+  };
 
-  if (error) {
-    return (
-      <div className="text-center p-4 bg-[#e7f6e7]">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
-  }
+  const columns = [
+    {
+        title: 'Thành tích',
+        dataIndex: 'title',
+        key: 'title',
+    },
+    {
+        title: 'Mô tả',
+        dataIndex: 'description',
+        key: 'description',
+    },
+    {
+        title: 'Ngày cấp',
+        dataIndex: 'issueDate',
+        key: 'issueDate',
+        render: (text) => text ? format(parseISO(text), "dd/MM/yyyy") : 'N/A'
+    },
+    {
+        title: 'Hành động',
+        key: 'action',
+        render: (_, record) => (
+            <Space size="middle">
+                <Button onClick={() => { setEditingItem(record); setIsModalVisible(true); }}>Sửa</Button>
+                <Popconfirm
+                    title="Bạn có chắc muốn xóa?"
+                    onConfirm={() => handleDelete(record.id)}
+                    okText="Có"
+                    cancelText="Không"
+                >
+                    <Button danger>Xóa</Button>
+                </Popconfirm>
+            </Space>
+        ),
+    },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8 bg-[#e7f6e7] min-h-screen">
-      <div className="flex items-center gap-3 mb-6">
-        <span className="text-3xl">🏆</span>
-        <h1 className="text-2xl font-bold text-gray-800">Thành tựu</h1>
+      <div className="flex justify-between items-center gap-3 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Quản lý Thành tích Cá nhân</h1>
+        <Button type="primary" onClick={() => { setEditingItem(null); setIsModalVisible(true); }}>
+            Thêm mới
+        </Button>
       </div>
       <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tên khóa học
-              </th>
-              <th className="px-6 py-3 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Môn học
-              </th>
-              <th className="px-6 py-3 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Giáo viên
-              </th>
-              <th className="px-6 py-3 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Điểm
-              </th>
-              <th className="px-6 py-3 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ngày hoàn thành
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {accomplishments.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                  Chưa có thành tựu nào
-                </td>
-              </tr>
-            ) : (
-              accomplishments.map((accomplishment) => (
-                <tr key={accomplishment.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {accomplishment.courseTitle}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {accomplishment.subject}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {accomplishment.teacherName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${
-                          accomplishment.grade >= 8.5
-                            ? "bg-green-100 text-green-800"
-                            : accomplishment.grade >= 7.0
-                            ? "bg-blue-100 text-blue-800"
-                            : accomplishment.grade >= 5.0
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                    >
-                      {accomplishment.grade.toFixed(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {format(new Date(accomplishment.completionDate), "dd/MM/yyyy", {
-                      locale: vi,
-                    })}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <Table
+            columns={columns}
+            dataSource={accomplishments}
+            rowKey="id"
+            loading={loading}
+        />
       </div>
+      <AccomplishmentFormModal
+          visible={isModalVisible}
+          onCancel={() => { setIsModalVisible(false); setEditingItem(null); }}
+          onFinish={handleFinish}
+          initialData={editingItem}
+      />
     </div>
   );
 };

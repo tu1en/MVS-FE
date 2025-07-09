@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { App, Avatar, Badge, Button, Card, Input, List, Select, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import AnnouncementService from '../services/announcementService';
 
 const { Search } = Input;
@@ -15,6 +16,7 @@ const { Option } = Select;
 
 const AnnouncementCenter = () => {
   const { message } = App.useApp();
+  const { user } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -22,16 +24,15 @@ const AnnouncementCenter = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, [filter]);
+    if (user?.id) {
+      fetchAnnouncements();
+    }
+  }, [filter, user?.id]);
 
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const userId = localStorage.getItem('userId');
-      
-      // Use AnnouncementService to fetch announcements
-      const data = await AnnouncementService.getUserAnnouncements(userId, { filter });
+      const data = await AnnouncementService.getUserAnnouncements(user.id, filter);
       setAnnouncements(data);
       setUnreadCount(data.filter(item => !item.isRead).length);
     } catch (error) {
@@ -65,7 +66,7 @@ const AnnouncementCenter = () => {
   const markAllAsRead = async () => {
     try {
       // Use AnnouncementService to mark all as read
-      await AnnouncementService.markAllAsRead();
+      await AnnouncementService.markAllAsRead(user.id);
       
       setAnnouncements(prev => 
         prev.map(item => ({ ...item, isRead: true }))
