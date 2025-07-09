@@ -1,9 +1,12 @@
-import { BookOutlined, CalendarOutlined, CheckCircleOutlined, FileTextOutlined, MessageOutlined, VideoCameraOutlined } from "@ant-design/icons";
-import { App, Card, Col, Row, Spin, Statistic } from "antd";
+import { AreaChartOutlined, BookOutlined, CalendarOutlined, CheckCircleOutlined, FileTextOutlined, MessageOutlined, UserOutlined, VideoCameraOutlined } from "@ant-design/icons";
+import { App, Button, Card, Col, Progress, Row, Spin, Statistic, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROLE } from "../constants/constants";
 import api from "../services/api";
+import ClassroomService from "../services/classroomService";
+
+const { Title, Text } = Typography;
 
 export default function StudentDashboard() {
   const { message } = App.useApp();
@@ -24,6 +27,9 @@ export default function StudentDashboard() {
     grades: [],
     schedule: []
   });
+  // Thêm state cho widget "Khóa học của tôi"
+  const [myCourses, setMyCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
 
   useEffect(() => {
     const role = localStorage.getItem("role");
@@ -32,19 +38,50 @@ export default function StudentDashboard() {
       return;
     }
     loadDashboardData();
+    loadMyCourses();
   }, [navigate]);
+
+  const loadMyCourses = async () => {
+    try {
+      setCoursesLoading(true);
+      const coursesData = await ClassroomService.getMyStudentCourses();
+      // Lấy chỉ 3 khóa học đầu tiên để hiển thị trong widget
+      setMyCourses((coursesData.data || []).slice(0, 3));
+    } catch (error) {
+      console.error('Error loading my courses:', error);
+      // Fallback data for widget
+      setMyCourses([
+        {
+          id: 1,
+          name: 'Lập trình Java Nâng cao',
+          teacherName: 'Nguyễn Văn A',
+          progressPercentage: 75
+        },
+        {
+          id: 2,
+          name: 'Cấu trúc dữ liệu và giải thuật',
+          teacherName: 'Trần Thị B',
+          progressPercentage: 45
+        }
+      ]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
   
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       
+      // Debug: Run API diagnosis (uncomment to debug)
+      // await DebugService.diagnoseStudentDashboardAPIs();
+      
       // Use Promise.allSettled instead of Promise.all to handle individual endpoint failures
-      const results = await Promise.allSettled([
-        api.get('/v1/assignments/student'),
-        api.get('/attendance/student/view'), // Updated to correct endpoint
-        // Skip courses for now to avoid 403 error - we'll calculate from assignments
-        // api.get('/classrooms'), // General classrooms endpoint
-        // api.get('/student-messages/unread-count')
+      const [classroomsRes, attendanceRes, assignmentsRes, messagesRes] = await Promise.allSettled([
+        api.get('/classrooms/student/me'), // Student's enrolled classrooms
+        api.get('/v1/attendance/my-history?classroomId=1'), // Fixed endpoint with required param
+        api.get('/assignments/student/me'), // Alternative endpoint for student assignments  
+        api.get('/messages/dashboard/unread-count') // Fixed endpoint for unread messages
       ]);
       
       // Initialize with default empty data
@@ -54,11 +91,11 @@ export default function StudentDashboard() {
       let unreadCount = 0;
       
       // Process results safely
-      if (results[0].status === 'fulfilled') {
-        const assignmentData = results[0].value.data;
+      if (assignmentsRes.status === 'fulfilled') {
+        const assignmentData = assignmentsRes.value.data;
         assignments = Array.isArray(assignmentData) ? assignmentData : (assignmentData?.data || []);
       } else {
-        console.error('Error loading assignments:', results[0].reason);
+        console.error('Error loading assignments:', assignmentsRes.reason);
         // Fallback mock data for assignments
         assignments = [
           {
@@ -81,11 +118,11 @@ export default function StudentDashboard() {
         console.log('Using fallback assignment data');
       }
       
-      if (results[1].status === 'fulfilled') {
-        const attendanceData = results[1].value.data;
-        attendance = Array.isArray(attendanceData) ? attendanceData : (attendanceData?.data || []);
+      if (attendanceRes.status === 'fulfilled' && attendanceRes.value.data) {
+        const attendanceData = attendanceRes.value.data;
+        attendance = Array.isArray(attendanceData) ? attendanceData : (attendanceData.data || []);
       } else {
-        console.error('Error loading attendance data:', results[1].reason);
+        console.error('Error loading attendance data:', attendanceRes.reason);
         // Fallback mock data for attendance
         attendance = [
           {
@@ -104,6 +141,7 @@ export default function StudentDashboard() {
           }
         ];
         console.log('Using fallback attendance data');
+        message.error('Không thể tải dữ liệu điểm danh.');
       }
       
       // Extract unique courses from assignments data
@@ -113,12 +151,20 @@ export default function StudentDashboard() {
       }
       
       // For now, set unread messages to 0 since the endpoint isn't working
-      unreadCount = 0;
+      if (messagesRes.status === 'fulfilled' && messagesRes.value.data) {
+        const messageData = messagesRes.value.data;
+        // Handle different response formats from the endpoint
+        unreadCount = messageData.data?.count || messageData.count || 0;
+      } else {
+        console.error('Error loading messages:', messagesRes.reason);
+        unreadCount = 0;
+      }
       
       // Calculate statistics based on available data
       const submittedCount = Array.isArray(assignments) ? assignments.filter(a => a.submissionStatus === 'SUBMITTED').length : 0;
-      const attendedCount = Array.isArray(attendance) ? attendance.filter(a => a.status === 'PRESENT').length : 0;
-      const attendancePercentage = Array.isArray(attendance) && attendance.length > 0 ? Math.round((attendedCount / attendance.length) * 100) : 0;
+      const attendedCount = Array.isArray(attendance) ? attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length : 0;
+      const totalSessions = Array.isArray(attendance) ? attendance.length : 0;
+      const attendancePercentage = totalSessions > 0 ? Math.round((attendedCount / totalSessions) * 100) : 0;
       const activeCourses = Array.isArray(courses) ? courses.filter(c => c.status === 'ACTIVE').length : 0;
       
       // Update dashboard data
@@ -129,7 +175,7 @@ export default function StudentDashboard() {
           pending: (Array.isArray(assignments) ? assignments.length : 0) - submittedCount
         },
         attendanceStats: {
-          totalSessions: Array.isArray(attendance) ? attendance.length : 0,
+          totalSessions: totalSessions,
           attended: attendedCount,
           percentage: attendancePercentage
         },
@@ -209,19 +255,129 @@ export default function StudentDashboard() {
         </Col>
       </Row>
 
+      {/* Widget "Khóa học của tôi" theo tài liệu hướng dẫn */}
+      <Row gutter={[24, 24]} className="mb-8">
+        <Col xs={24} lg={12}>
+          <Card 
+            title={
+              <div className="flex items-center justify-between">
+                <span className="flex items-center">
+                  <BookOutlined className="mr-2" />
+                  Các khóa học của tôi
+                </span>
+                <Button 
+                  type="link" 
+                  size="small"
+                  onClick={() => navigate("/student/courses")}
+                >
+                  Xem tất cả
+                </Button>
+              </div>
+            }
+            className="h-full"
+          >
+            {coursesLoading ? (
+              <div className="text-center py-8">
+                <Spin size="large" />
+              </div>
+            ) : myCourses.length === 0 ? (
+              <div className="text-center py-8">
+                <Text type="secondary">Bạn chưa đăng ký khóa học nào</Text>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myCourses.map((course) => (
+                  <div 
+                    key={course.id}
+                    className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/student/courses/${course.id}`)}
+                  >
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                      <BookOutlined className="text-white text-lg" />
+                    </div>
+                    <div className="flex-1">
+                      <Title level={5} className="mb-1" ellipsis={{ tooltip: course.name }}>
+                        {course.name}
+                      </Title>
+                      <div className="flex items-center mb-2">
+                        <UserOutlined className="mr-1 text-gray-400" />
+                        <Text type="secondary" className="text-sm">
+                          {course.teacherName}
+                        </Text>
+                      </div>
+                      <Progress 
+                        percent={course.progressPercentage || 0} 
+                        size="small"
+                        strokeColor={{
+                          '0%': '#108ee9',
+                          '100%': '#87d068',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </Col>
+        
+        <Col xs={24} lg={12}>
+          <Card 
+            title={
+              <span className="flex items-center">
+                <CalendarOutlined className="mr-2" />
+                Hoạt động gần đây
+              </span>
+            }
+            className="h-full"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center p-2 border-l-4 border-blue-500 bg-blue-50">
+                <FileTextOutlined className="mr-2 text-blue-500" />
+                <Text className="text-sm">Bài tập Toán học - Hạn nộp: 30/12/2024</Text>
+              </div>
+              <div className="flex items-center p-2 border-l-4 border-green-500 bg-green-50">
+                <CheckCircleOutlined className="mr-2 text-green-500" />
+                <Text className="text-sm">Đã nộp bài tập Ngữ văn thành công</Text>
+              </div>
+              <div className="flex items-center p-2 border-l-4 border-orange-500 bg-orange-50">
+                <VideoCameraOutlined className="mr-2 text-orange-500" />
+                <Text className="text-sm">Buổi học trực tuyến Java - 9:00 AM hôm nay</Text>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       {/* Main Navigation Cards */}
       <Row gutter={[24, 24]}>
         <Col xs={24} sm={12} lg={8}>
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/accomplishments")}
+            onClick={() => handleCardClick("/student/courses")}
           >
             <div className="text-center">
               <BookOutlined className="text-4xl text-blue-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Xem tổng quan học lực</h2>
+              <h2 className="text-xl font-semibold mb-4">Khóa học của tôi</h2>
               <p className="text-gray-600">
-                Hiển thị tổng quát điểm trung bình, xếp loại, học lực theo môn
+                Xem danh sách các khóa học đã đăng ký và tiến độ học tập
+              </p>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            hoverable
+            className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
+            onClick={() => handleCardClick("/student/materials")}
+          >
+            <div className="text-center">
+              <FileTextOutlined className="text-4xl text-purple-500 mb-4" />
+              <h2 className="text-xl font-semibold mb-4">Tài liệu học tập</h2>
+              <p className="text-gray-600">
+                Xem và tải xuống tài liệu học tập từ các khóa học
               </p>
             </div>
           </Card>
@@ -247,61 +403,13 @@ export default function StudentDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/assignments")}
+            onClick={() => handleCardClick("/student/academic-performance")}
           >
             <div className="text-center">
-              <FileTextOutlined className="text-4xl text-purple-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Bài tập</h2>
+              <AreaChartOutlined className="text-4xl text-red-500 mb-4" />
+              <h2 className="text-xl font-semibold mb-4">Kết quả học tập</h2>
               <p className="text-gray-600">
-                Xem và nộp bài tập, theo dõi trạng thái nộp bài
-              </p>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={8}>
-          <Card
-            hoverable
-            className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/lectures")}
-          >
-            <div className="text-center">
-              <VideoCameraOutlined className="text-4xl text-orange-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Bài giảng</h2>
-              <p className="text-gray-600">
-                Xem bài giảng, tài liệu và video học tập
-              </p>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={8}>
-          <Card
-            hoverable
-            className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/messages")}
-          >
-            <div className="text-center">
-              <MessageOutlined className="text-4xl text-cyan-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Nhắn tin & Phản hồi</h2>
-              <p className="text-gray-600">
-                Nhắn tin với giáo viên và gửi phản hồi khóa học
-              </p>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={8}>
-          <Card
-            hoverable
-            className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/exam-results")}
-          >
-            <div className="text-center">
-              <CheckCircleOutlined className="text-4xl text-red-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Kết quả kiểm tra</h2>
-              <p className="text-gray-600">
-                Xem điểm số và kết quả các bài kiểm tra
+                Xem kết quả học tập và tiến độ các khóa học
               </p>
             </div>
           </Card>

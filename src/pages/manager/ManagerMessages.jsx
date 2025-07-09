@@ -1,401 +1,321 @@
-import { DeleteOutlined, EyeOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Input, List, Modal, Tabs, Tag, message } from 'antd';
-import axios from 'axios';
+import { DeleteOutlined, EyeOutlined, MessageOutlined, ReloadOutlined, SendOutlined } from '@ant-design/icons';
+import { Badge, Button, Card, Form, Input, List, message, Modal, Popconfirm, Space, Tag } from 'antd';
 import { useEffect, useState } from 'react';
-import API_CONFIG from '../../config/api-config';
+import { managerService } from '../../services/managerService';
 
-const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 const ManagerMessages = () => {
-  const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [messageModalVisible, setMessageModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
-  const [replyContent, setReplyContent] = useState('');
-  
-  // Fetch messages from API
+  const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [form] = Form.useForm();
+
   useEffect(() => {
-    const fetchMessages = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
-        
-        if (!token || !userId) {
-          message.error('Bạn chưa đăng nhập');
-          setLoading(false);
-          return;
-        }
-        
-        const response = await axios.get(`${API_CONFIG.BASE_URL}/api/student-messages/messages/received/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.data) {
-          setMessages(response.data.map(msg => ({
-            id: msg.id,
-            sender: msg.senderName || 'Người dùng',
-            senderRole: getRoleNameFromId(msg.senderId),
-            senderEmail: msg.senderEmail || 'email@example.com',
-            title: msg.subject || 'Không có tiêu đề',
-            content: msg.content || 'Không có nội dung',
-            date: msg.createdAt || new Date().toISOString(),
-            status: msg.isRead ? 'read' : 'unread',
-            priority: msg.priority ? msg.priority.toLowerCase() : 'normal'
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-        message.error('Không thể tải tin nhắn');
-        
-        // Fallback to sample data if API fails
-        setMessages([
-          {
-            id: 1,
-            sender: 'Nguyễn Văn A',
-            senderRole: 'TEACHER',
-            senderEmail: 'teacher@example.com', 
-            title: 'Yêu cầu hỗ trợ về lịch dạy',
-            content: 'Kính gửi Ban quản lý, tôi cần được hỗ trợ về việc điều chỉnh lịch dạy tuần tới do có công việc đột xuất...',
-            date: '2025-06-25T08:30:00',
-            status: 'unread',
-            priority: 'high'
-          },
-          {
-            id: 2,
-            sender: 'Trần Thị B',
-            senderRole: 'STUDENT',
-            senderEmail: 'student@example.com',
-            title: 'Thắc mắc về học phí',
-            content: 'Em muốn hỏi thông tin về chính sách học phí kỳ tới...',
-            date: '2025-06-24T15:45:00',
-            status: 'read',
-            priority: 'normal' 
-          },
-          {
-            id: 3,
-            sender: 'Admin',
-            senderRole: 'ADMIN',
-            senderEmail: 'admin@example.com',
-            title: 'Cập nhật chính sách mới',
-            content: 'Thông báo về việc cập nhật chính sách đánh giá giảng viên...',
-            date: '2025-06-23T11:20:00',
-            status: 'read',
-            priority: 'high'
-          }
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchMessages();
   }, []);
 
-  // Helper function to convert role ID to role name
-  const getRoleNameFromId = (senderId) => {
-    // This is a simple mapping based on user ID
-    // In a real application, you would get this from the API
-    if (senderId === 1) return 'STUDENT';
-    if (senderId === 2) return 'TEACHER';
-    if (senderId === 3) return 'MANAGER';
-    if (senderId === 4) return 'ADMIN';
-    return 'USER';
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      const data = await managerService.getMessages();
+      setMessages(data);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      message.error('Không thể tải danh sách tin nhắn');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mark message as read
-  const handleViewMessage = async (msg) => {
+  const handleMarkAsRead = async (messageId) => {
+    try {
+      await managerService.markMessageAsRead(messageId);
+      message.success('Đã đánh dấu tin nhắn là đã đọc');
+      fetchMessages();
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      message.error('Không thể đánh dấu tin nhắn');
+    }
+  };
+
+  const handleDelete = async (messageId) => {
+    try {
+      await managerService.deleteMessage(messageId);
+      message.success('Xóa tin nhắn thành công');
+      fetchMessages();
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      message.error('Không thể xóa tin nhắn');
+    }
+  };
+
+  const handleReply = (msg) => {
     setSelectedMessage(msg);
-    setMessageModalVisible(true);
+    form.setFieldsValue({
+      subject: `Re: ${msg.subject}`,
+      content: ''
+    });
+    setReplyModalVisible(true);
+  };
+
+  const handleViewMessage = (msg) => {
+    setSelectedMessage(msg);
+    setViewModalVisible(true);
     
     // Mark as read if unread
-    if (msg.status === 'unread') {
-      try {
-        const token = localStorage.getItem('token');
-        
-        // Update in the backend
-        await axios.put(`${API_CONFIG.BASE_URL}/api/student-messages/messages/${msg.id}/read`, {}, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        // Update in the frontend
-        setMessages(messages.map(item => 
-          item.id === msg.id ? {...item, status: 'read'} : item
-        ));
-      } catch (error) {
-        console.error('Error marking message as read:', error);
-        // Still update UI even if API fails
-        setMessages(messages.map(item => 
-          item.id === msg.id ? {...item, status: 'read'} : item
-        ));
-      }
+    if (!msg.isRead) {
+      handleMarkAsRead(msg.id);
     }
   };
 
-  // Handle delete message
-  const handleDeleteMessage = (id) => {
-    Modal.confirm({
-      title: 'Xác nhận xóa tin nhắn',
-      content: 'Bạn có chắc chắn muốn xóa tin nhắn này không?',
-      onOk: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          
-          // Delete in the backend
-          await axios.delete(`${API_CONFIG.BASE_URL}/api/student-messages/messages/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          // Update in the frontend
-          setMessages(messages.filter(msg => msg.id !== id));
-          message.success('Đã xóa tin nhắn');
-        } catch (error) {
-          console.error('Error deleting message:', error);
-          message.error('Không thể xóa tin nhắn');
-          
-          // Still update UI even if API fails
-          setMessages(messages.filter(msg => msg.id !== id));
-        }
-      }
-    });
-  };
-
-  // Handle reply to message
-  const handleReply = async () => {
-    if (!replyContent.trim()) {
-      message.error('Vui lòng nhập nội dung trả lời');
-      return;
-    }
-
-    const loadingMsg = message.loading('Đang gửi...', 0);
-    
+  const handleSendReply = async (values) => {
     try {
-      const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
-      
-      if (!token || !userId) {
-        message.error('Bạn chưa đăng nhập');
-        return;
-      }
-      
-      // Create reply message
-      const replyMessage = {
-        senderId: parseInt(userId),
-        recipientId: selectedMessage.id,
-        subject: `Re: ${selectedMessage.title}`,
-        content: replyContent,
-        priority: selectedMessage.priority.toUpperCase(),
-        messageType: 'REPLY'
+      const replyData = {
+        ...values,
+        parentMessageId: selectedMessage.id,
+        receiverId: selectedMessage.senderId
       };
       
-      // Send to backend
-      await axios.post(`${API_CONFIG.BASE_URL}/api/student-messages/messages`, replyMessage, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      loadingMsg();
-      message.success(`Đã gửi trả lời đến ${selectedMessage.sender}`);
+      await managerService.sendMessage(replyData);
+      message.success('Gửi phản hồi thành công');
       setReplyModalVisible(false);
-      setReplyContent('');
+      form.resetFields();
+      fetchMessages();
     } catch (error) {
-      loadingMsg();
       console.error('Error sending reply:', error);
-      message.error('Không thể gửi trả lời');
+      message.error('Không thể gửi phản hồi');
     }
   };
 
-  // Get status color
-  const getStatusColor = (status) => {
-    return status === 'unread' ? 'blue' : 'default';
+  const getMessageTypeColor = (type) => {
+    const colors = {
+      'COMPLAINT': 'red',
+      'INQUIRY': 'blue',
+      'FEEDBACK': 'green',
+      'SUPPORT': 'orange',
+      'OTHER': 'default'
+    };
+    return colors[type] || 'default';
   };
 
-  // Get priority color
+  const getMessageTypeText = (type) => {
+    const texts = {
+      'COMPLAINT': 'Khiếu nại',
+      'INQUIRY': 'Văn hỏi',
+      'FEEDBACK': 'Phản hồi',
+      'SUPPORT': 'Hỗ trợ',
+      'OTHER': 'Khác'
+    };
+    return texts[type] || type;
+  };
+
   const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'high': return 'red';
-      case 'normal': return 'orange';
-      case 'low': return 'green';
-      default: return 'default';
-    }
+    const colors = {
+      'HIGH': 'red',
+      'MEDIUM': 'orange',
+      'LOW': 'green'
+    };
+    return colors[priority] || 'default';
   };
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
+  const getPriorityText = (priority) => {
+    const texts = {
+      'HIGH': 'Cao',
+      'MEDIUM': 'Trung bình',
+      'LOW': 'Thấp'
+    };
+    return texts[priority] || priority;
   };
 
   return (
-    <div className="p-6">
-      <Card title="Quản lý Tin nhắn" className="shadow-md">
-        <Tabs defaultActiveKey="all">
-          <TabPane tab="Tất cả tin nhắn" key="all">
-            <List
-              loading={loading}
-              dataSource={messages}
-              locale={{ emptyText: <Empty description="Không có tin nhắn nào" /> }}
-              renderItem={item => (
-                <List.Item
-                  actions={[
-                    <Button icon={<EyeOutlined />} onClick={() => handleViewMessage(item)} />,
-                    <Button icon={<DeleteOutlined />} danger onClick={() => handleDeleteMessage(item.id)} />
-                  ]}
+    <div style={{ padding: '24px' }}>
+      <Card>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>
+            <MessageOutlined style={{ marginRight: 8 }} />
+            Quản lý tin nhắn
+          </h2>
+          <Button icon={<ReloadOutlined />} onClick={fetchMessages} loading={loading}>
+            Tải lại
+          </Button>
+        </div>
+
+        <List
+          loading={loading}
+          dataSource={messages}
+          renderItem={(msg) => (
+            <List.Item
+              key={msg.id}
+              actions={[
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleViewMessage(msg)}
                 >
-                  <List.Item.Meta
-                    title={
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.title}</span>
-                        <Tag color={getStatusColor(item.status)}>
-                          {item.status === 'unread' ? 'Chưa đọc' : 'Đã đọc'}
-                        </Tag>
-                        <Tag color={getPriorityColor(item.priority)}>
-                          {item.priority === 'high' ? 'Quan trọng' : 
-                           item.priority === 'normal' ? 'Thông thường' : 'Thấp'}
-                        </Tag>
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <div>
-                          <UserOutlined /> {item.sender} ({item.senderRole})
-                        </div>
-                        <div>{formatDate(item.date)}</div>
-                      </div>
-                    }
-                  />
-                  <div className="truncate max-w-md">{item.content.substring(0, 100)}...</div>
-                </List.Item>
-              )}
-              pagination={{
-                pageSize: 10,
-                position: 'bottom',
-                align: 'center',
-              }}
-            />
-          </TabPane>
-          <TabPane tab="Chưa đọc" key="unread">
-            <List
-              loading={loading}
-              dataSource={messages.filter(msg => msg.status === 'unread')}
-              locale={{ emptyText: <Empty description="Không có tin nhắn chưa đọc" /> }}
-              renderItem={item => (
-                <List.Item
-                  actions={[
-                    <Button icon={<EyeOutlined />} onClick={() => handleViewMessage(item)} />,
-                    <Button icon={<DeleteOutlined />} danger onClick={() => handleDeleteMessage(item.id)} />
-                  ]}
+                  Xem
+                </Button>,
+                <Button
+                  type="text"
+                  icon={<SendOutlined />}
+                  onClick={() => handleReply(msg)}
                 >
-                  <List.Item.Meta
-                    title={
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.title}</span>
-                        <Tag color="blue">Chưa đọc</Tag>
-                        <Tag color={getPriorityColor(item.priority)}>
-                          {item.priority === 'high' ? 'Quan trọng' : 
-                           item.priority === 'normal' ? 'Thông thường' : 'Thấp'}
-                        </Tag>
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <div>
-                          <UserOutlined /> {item.sender} ({item.senderRole})
-                        </div>
-                        <div>{formatDate(item.date)}</div>
-                      </div>
-                    }
-                  />
-                  <div className="truncate max-w-md">{item.content.substring(0, 100)}...</div>
-                </List.Item>
+                  Trả lời
+                </Button>,
+                <Popconfirm
+                  title="Bạn có chắc chắn muốn xóa tin nhắn này?"
+                  onConfirm={() => handleDelete(msg.id)}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                >
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                  >
+                    Xóa
+                  </Button>
+                </Popconfirm>
+              ]}
+            >
+              <List.Item.Meta
+                title={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Badge dot={!msg.isRead}>
+                      <span style={{ fontWeight: msg.isRead ? 'normal' : 'bold' }}>
+                        {msg.subject}
+                      </span>
+                    </Badge>
+                    <Tag color={getMessageTypeColor(msg.type)}>
+                      {getMessageTypeText(msg.type)}
+                    </Tag>
+                    {msg.priority && (
+                      <Tag color={getPriorityColor(msg.priority)}>
+                        {getPriorityText(msg.priority)}
+                      </Tag>
+                    )}
+                  </div>
+                }
+                description={
+                  <div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Từ:</strong> {msg.senderName || msg.senderEmail}
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Nội dung:</strong> {msg.content?.substring(0, 100)}...
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {msg.createdAt ? new Date(msg.createdAt).toLocaleString('vi-VN') : ''}
+                    </div>
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          pagination={{
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} tin nhắn`
+          }}
+        />
+
+        {/* View Message Modal */}
+        <Modal
+          title="Chi tiết tin nhắn"
+          open={viewModalVisible}
+          onCancel={() => setViewModalVisible(false)}
+          footer={[
+            <Button key="close" onClick={() => setViewModalVisible(false)}>
+              Đóng
+            </Button>,
+            <Button key="reply" type="primary" onClick={() => {
+              setViewModalVisible(false);
+              handleReply(selectedMessage);
+            }}>
+              Trả lời
+            </Button>
+          ]}
+          width={700}
+        >
+          {selectedMessage && (
+            <div>
+              <div style={{ marginBottom: 16 }}>
+                <strong>Chủ đề:</strong> {selectedMessage.subject}
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <strong>Từ:</strong> {selectedMessage.senderName || selectedMessage.senderEmail}
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <strong>Loại:</strong> 
+                <Tag color={getMessageTypeColor(selectedMessage.type)} style={{ marginLeft: 8 }}>
+                  {getMessageTypeText(selectedMessage.type)}
+                </Tag>
+              </div>
+              {selectedMessage.priority && (
+                <div style={{ marginBottom: 16 }}>
+                  <strong>Độ ưu tiên:</strong> 
+                  <Tag color={getPriorityColor(selectedMessage.priority)} style={{ marginLeft: 8 }}>
+                    {getPriorityText(selectedMessage.priority)}
+                  </Tag>
+                </div>
               )}
-              pagination={{
-                pageSize: 10,
-                position: 'bottom',
-                align: 'center',
-              }}
-            />
-          </TabPane>
-        </Tabs>
+              <div style={{ marginBottom: 16 }}>
+                <strong>Thời gian:</strong> {selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('vi-VN') : ''}
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <strong>Nội dung:</strong>
+                <div style={{ marginTop: 8, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                  {selectedMessage.content}
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Reply Modal */}
+        <Modal
+          title="Trả lời tin nhắn"
+          open={replyModalVisible}
+          onCancel={() => setReplyModalVisible(false)}
+          footer={null}
+          width={600}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSendReply}
+          >
+            <Form.Item
+              label="Chủ đề"
+              name="subject"
+              rules={[{ required: true, message: 'Vui lòng nhập chủ đề!' }]}
+            >
+              <Input placeholder="Nhập chủ đề" />
+            </Form.Item>
+
+            <Form.Item
+              label="Nội dung"
+              name="content"
+              rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}
+            >
+              <TextArea rows={6} placeholder="Nhập nội dung phản hồi" />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+              <Space>
+                <Button onClick={() => setReplyModalVisible(false)}>
+                  Hủy
+                </Button>
+                <Button type="primary" htmlType="submit">
+                  Gửi phản hồi
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
       </Card>
-
-      {/* Message detail modal */}
-      <Modal
-        title={selectedMessage?.title}
-        open={messageModalVisible}
-        onCancel={() => setMessageModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setMessageModalVisible(false)}>
-            Đóng
-          </Button>,
-          <Button 
-            key="reply" 
-            type="primary" 
-            icon={<SendOutlined />}
-            onClick={() => {
-              setMessageModalVisible(false);
-              setReplyModalVisible(true);
-            }}
-          >
-            Trả lời
-          </Button>
-        ]}
-        width={700}
-      >
-        {selectedMessage && (
-          <div>
-            <p>
-              <strong>Người gửi:</strong> {selectedMessage.sender} ({selectedMessage.senderRole})
-            </p>
-            <p>
-              <strong>Email:</strong> {selectedMessage.senderEmail}
-            </p>
-            <p>
-              <strong>Thời gian:</strong> {formatDate(selectedMessage.date)}
-            </p>
-            <Card className="mt-4 bg-gray-50">
-              <div style={{ whiteSpace: 'pre-wrap' }}>{selectedMessage.content}</div>
-            </Card>
-          </div>
-        )}
-      </Modal>
-
-      {/* Reply modal */}
-      <Modal
-        title={`Trả lời: ${selectedMessage?.title || ''}`}
-        open={replyModalVisible}
-        onCancel={() => setReplyModalVisible(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setReplyModalVisible(false)}>
-            Hủy
-          </Button>,
-          <Button 
-            key="send" 
-            type="primary" 
-            icon={<SendOutlined />}
-            onClick={handleReply}
-          >
-            Gửi
-          </Button>
-        ]}
-        width={700}
-      >
-        {selectedMessage && (
-          <div>
-            <p>
-              <strong>Gửi đến:</strong> {selectedMessage.sender} ({selectedMessage.senderEmail})
-            </p>
-            <TextArea
-              rows={10}
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Nhập nội dung trả lời..."
-              className="mt-4"
-            />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

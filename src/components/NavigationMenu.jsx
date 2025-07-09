@@ -41,6 +41,12 @@ export default function NavigationMenu() {
       onClick: () => navigate('/lectures')
     },
     {
+      key: 'materials',
+      icon: <FileTextOutlined />,
+      label: 'Tài liệu học tập',
+      onClick: () => navigate('/student/materials')
+    },
+    {
       key: 'attendance',
       icon: <CalendarOutlined />,
       label: 'Điểm danh',
@@ -56,7 +62,7 @@ export default function NavigationMenu() {
       key: 'academic',
       icon: <BookOutlined />,
       label: 'Học lực',
-      onClick: () => navigate('/student/accomplishments')
+      onClick: () => navigate('/student/academic-performance')
     }
   ];
 

@@ -1,8 +1,15 @@
-import axios from 'axios';
+import { Button } from 'antd';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import CreateLectureModal from '../../components/teacher/CreateLectureModal';
+import CreateRealtimeAttendanceModal from '../../components/teacher/CreateRealtimeAttendanceModal';
+import EditClassroomModal from '../../components/teacher/EditClassroomModal';
 import LectureList from '../../components/teacher/LectureList';
+import StudentListTab from '../../components/teacher/StudentListTab';
+import ClassroomService from '../../services/classroomService';
+import ExamManagementTab from './ExamManagementTab';
+
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -15,6 +22,11 @@ const CourseDetail = () => {
   const [editingLecture, setEditingLecture] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null); // 1. State cho file
   const [isUploading, setIsUploading] = useState(false); // State cho trạng thái upload
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false); // State for enrollment modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Get auth state from Redux
+  const auth = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (courseId) {
@@ -22,27 +34,19 @@ const CourseDetail = () => {
     }
   }, [courseId]);
 
+  const handleSessionCreated = (newSession) => {
+    // Navigate to the new real-time page, passing the session object in state
+    navigate(`/teacher/courses/${courseId}/attendance-session`, { state: { session: newSession } });
+  };
+
   const loadCourseDetail = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8088/api/classrooms/current-teacher', {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const courses = response.data || [];
-      const foundCourse = courses.find(c => c.id === parseInt(courseId));
-      
-      if (foundCourse) {
-        setCourse(foundCourse);
-      } else {
-        setError('Không tìm thấy khóa học.');
-      }
+      const response = await ClassroomService.getClassroomDetails(courseId);
+      setCourse(response.data);
+
     } catch (error) {
       console.error('Error loading course detail:', error);
       setError('Không thể tải thông tin khóa học. Vui lòng thử lại.');
@@ -69,24 +73,85 @@ const CourseDetail = () => {
   };
 
   // 3. Hàm xử lý khi nhấn nút upload
-  const handleUploadMaterial = () => {
+  const handleUploadMaterial = async () => {
       if (!selectedFile) {
           alert("Please select a file to upload.");
           return;
       }
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append('material', selectedFile);
-      formData.append('courseId', courseId);
+      try {
+          setIsUploading(true);
+          const formData = new FormData();
+          formData.append('file', selectedFile); // File để upload
+          
+          // Các tham số bắt buộc từ CourseMaterialController
+          formData.append('title', selectedFile.name); // Sử dụng tên file làm tiêu đề
+          formData.append('description', 'Material uploaded from web interface'); // Mô tả mặc định
+          
+          // Ensure courseId is a valid number
+          const parsedCourseId = parseInt(courseId);
+          if (isNaN(parsedCourseId)) {
+              throw new Error('Invalid classroom ID');
+          }
+          formData.append('classroomId', parsedCourseId); // ID lớp học - ensure it's a number
+          
+          formData.append('isPublic', 'true'); // Tài liệu được chia sẻ công khai
+          
+          // Get userId from Redux state - this is the most reliable source
+          let userId = auth.userId;
+          
+          // Fallback to localStorage if Redux state doesn't have it
+          if (!userId || userId === 'null' || userId === 'undefined') {
+              userId = localStorage.getItem('userId');
+          }
+          
+          // If still no userId, check user object in localStorage as a last resort
+          if (!userId || userId === 'null' || userId === 'undefined') {
+              const userDataStr = localStorage.getItem('user');
+              if (userDataStr && userDataStr !== 'null' && userDataStr !== 'undefined') {
+                  try {
+                      const userData = JSON.parse(userDataStr);
+                      userId = userData.id || userData.userId;
+                  } catch (e) {
+                      console.error('Failed to parse user data:', e);
+                  }
+              }
+          }
+          
+          // Additional validation to ensure we have a valid userId
+          if (!userId || userId === 'null' || userId === 'undefined' || userId.toString().trim() === '') {
+              console.error('Auth state:', auth);
+              console.error('LocalStorage userId:', localStorage.getItem('userId'));
+              console.error('LocalStorage user:', localStorage.getItem('user'));
+              throw new Error('User ID not found. Please log in again.');
+          }
+          
+          // Ensure userId is a number - convert string to number if needed
+          const parsedUserId = parseInt(userId.toString().trim());
+          if (isNaN(parsedUserId) || parsedUserId <= 0) {
+              console.error('Invalid userId value:', userId);
+              throw new Error('Invalid user ID format. Please log in again.');
+          }
+          
+          formData.append('uploadedBy', parsedUserId);
 
-      // TODO: Gọi API POST /api/v1/teacher/upload-material với formData
-      console.log("Uploading material for course:", courseId, selectedFile.name);
-      // Giả lập API call
-      setTimeout(() => {
-          setIsUploading(false);
+          // Import and use the actual MaterialService instead of setTimeout simulation
+          const MaterialService = require('../../services/materialService').default;
+          const response = await MaterialService.uploadMaterial(formData, (progress) => {
+              console.log(`Upload progress: ${progress}%`);
+          });
+          
+          console.log("Material uploaded successfully:", response);
           alert("Upload successful!");
+          
+          // Refresh the course details to show the newly uploaded material
+          await loadCourseDetail();
+      } catch (error) {
+          console.error("Error uploading material:", error);
+          alert(`Upload failed: ${error.message || 'Unknown error'}`);
+      } finally {
+          setIsUploading(false);
           setSelectedFile(null); // Reset input
-      }, 1500);
+      }
   };
 
   if (loading) {
@@ -136,33 +201,45 @@ const CourseDetail = () => {
               ← Quay lại danh sách khóa học
             </button>
             <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
-            <p className="text-gray-600 mb-6">Mã lớp: {course.code}</p>
+            <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.name}</p>
           </div>
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
-          >
-            <span>📚</span>
-            Tạo bài giảng mới
-          </button>
+          <div className="flex flex-col space-y-2">
+            <Button 
+              type="primary"
+              onClick={() => setShowCreateModal(true)}
+              className="bg-green-500 hover:bg-green-600 flex items-center justify-center"
+            >
+              Tạo bài giảng mới
+            </Button>
+            <Button 
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center justify-center"
+            >
+              Chỉnh sửa lớp học
+            </Button>
+            <CreateRealtimeAttendanceModal 
+              classroomId={parseInt(courseId)}
+              onSessionCreated={handleSessionCreated}
+            />
+          </div>
         </div>
 
         {/* Course Info Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-600">{course.enrolledStudents?.length || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{course.students?.length || 0}</div>
             <div className="text-sm text-blue-800">Học viên</div>
           </div>
           <div className="bg-green-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-600">{course.assignments?.length || 0}</div>
-            <div className="text-sm text-green-800">Bài tập</div>
+            <div className="text-2xl font-bold text-green-600">{course.lectures?.length || 0}</div>
+            <div className="text-sm text-green-800">Bài giảng</div>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{course.subject}</div>
+            <div className="text-2xl font-bold text-purple-600">{course.course?.subject}</div>
             <div className="text-sm text-purple-800">Môn học</div>
           </div>
           <div className="bg-orange-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-orange-600">{course.section}</div>
+            <div className="text-2xl font-bold text-orange-600">{course.course?.section}</div>
             <div className="text-sm text-orange-800">Lớp</div>
           </div>
         </div>
@@ -190,15 +267,27 @@ const CourseDetail = () => {
             }`}
           >
             Học viên
-          </button>          <button
-            onClick={() => setActiveTab('assignments')}
+          </button>
+          <Link
+            to={`/teacher/courses/${courseId}/assignments`}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'assignments'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
+            onClick={() => setActiveTab('assignments')}
           >
             Bài tập
+          </Link>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'exams'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Exams
           </button>
         </nav>
       </div>
@@ -207,6 +296,7 @@ const CourseDetail = () => {
       <div className="tab-content">
         {activeTab === 'lectures' && (
           <LectureList 
+            lectures={course.lectures || []}
             courseId={courseId} 
             courseName={course.name} 
             onEditLecture={handleEditLecture}
@@ -214,68 +304,11 @@ const CourseDetail = () => {
         )}
         
         {activeTab === 'students' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Danh sách học viên</h3>
-            {course.enrolledStudents && course.enrolledStudents.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-auto">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-2 text-left">Tên</th>
-                      <th className="px-4 py-2 text-left">Email</th>
-                      <th className="px-4 py-2 text-left">Trạng thái</th>
-                      <th className="px-4 py-2 text-left">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {course.enrolledStudents.map((student, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="px-4 py-2">{student.name || `Học viên ${index + 1}`}</td>
-                        <td className="px-4 py-2">{student.email || 'N/A'}</td>
-                        <td className="px-4 py-2">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
-                            Đang học
-                          </span>
-                        </td>
-                        <td className="px-4 py-2">
-                          <button className="text-blue-500 hover:text-blue-700 text-sm">
-                            Xem chi tiết
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500">Chưa có học viên nào đăng ký khóa học này.</p>
-            )}
-          </div>
+          <StudentListTab classroomId={parseInt(courseId)} />
         )}
 
-        {activeTab === 'assignments' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Bài tập</h3>
-            {course.assignments && course.assignments.length > 0 ? (
-              <div className="space-y-4">
-                {course.assignments.map((assignment, index) => (
-                  <div key={index} className="border rounded p-4">
-                    <h4 className="font-semibold">{assignment.title || `Bài tập ${index + 1}`}</h4>
-                    <p className="text-gray-600 text-sm">{assignment.description || 'Chưa có mô tả'}</p>
-                    <div className="mt-2 flex space-x-2">
-                      <button className="text-blue-500 hover:text-blue-700 text-sm">Chỉnh sửa</button>
-                      <button className="text-green-500 hover:text-green-700 text-sm">Xem bài nộp</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">Chưa có bài tập nào cho khóa học này.</p>
-            )}
-            <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-              Tạo bài tập mới
-            </button>
-          </div>
+        {activeTab === 'exams' && (
+          <ExamManagementTab />
         )}
 
         {activeTab === 'settings' && (
@@ -345,6 +378,16 @@ const CourseDetail = () => {
         courseId={parseInt(courseId)}
         editingLecture={editingLecture}
       />
+
+      <EditClassroomModal
+            visible={isEditModalOpen}
+            onCancel={() => setIsEditModalOpen(false)}
+            onOk={(updatedClassroom) => {
+                setCourse(updatedClassroom);
+                setIsEditModalOpen(false);
+            }}
+            classroom={course}
+        />
     </div>
   );
 };

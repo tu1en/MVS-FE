@@ -1,176 +1,164 @@
 import apiClient from './apiClient';
 
-const API_URL = '/api/attendance';
+const API_URL = '/v1/attendance';
 
 /**
- * Service for attendance-related API calls
+ * Service for refactored attendance-related API calls (V2)
  */
 const attendanceService = {
-  /**
-   * Get attendance sessions for a teacher
-   * @param {number} teacherId - The teacher's ID
-   * @returns {Promise} Promise containing attendance sessions
-   */
-  getTeacherSessions: async (teacherId) => {
-    try {
-      const response = await apiClient.get(`${API_URL}/teacher/${teacherId}/sessions`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching teacher sessions:', error);
-      return [];
-    }
-  },
 
   /**
-   * Get attendance sessions for a student
-   * @param {number} studentId - The student's ID
-   * @returns {Promise} Promise containing attendance sessions
+   * Gets the attendance status for all enrolled students for a specific lecture.
+   * This is used by a teacher to view and mark attendance.
+   * If no attendance has been taken, it returns a list of students with null status.
+   * @param {number} lectureId The ID of the lecture.
+   * @param {number} classroomId The ID of the classroom.
+   * @returns {Promise<Array>} A promise that resolves to a list of attendance records.
    */
-  getStudentSessions: async (studentId) => {
+  getAttendanceForLecture: async (lectureId, classroomId) => {
     try {
-      const response = await apiClient.get(`${API_URL}/student/${studentId}/sessions`);
+      const response = await apiClient.get(`${API_URL}/lecture/${lectureId}`, {
+        params: { classroomId }
+      });
       return response.data;
     } catch (error) {
-      console.error('Error fetching student sessions:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Get classrooms for a teacher
-   * @param {number} teacherId - The teacher's ID
-   * @returns {Promise} Promise containing classrooms
-   */
-  getTeacherClassrooms: async (teacherId) => {
-    try {
-      const response = await apiClient.get(`/api/classrooms/teacher/${teacherId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching teacher classrooms:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Get attendance records for a teacher's sessions
-   * @param {number} teacherId - The teacher's ID
-   * @returns {Promise} Promise containing attendance records
-   */
-  getTeacherAttendanceRecords: async (teacherId) => {
-    try {
-      const response = await apiClient.get(`${API_URL}/teacher/${teacherId}/records`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching teacher attendance records:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Get attendance records for a student
-   * @param {number} studentId - The student's ID
-   * @returns {Promise} Promise containing attendance records
-   */
-  getStudentAttendanceRecords: async (studentId) => {
-    try {
-      const response = await apiClient.get(`${API_URL}/student/${studentId}/records`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching student attendance records:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Create a new attendance session
-   * @param {Object} sessionData - The session data
-   * @returns {Promise} Promise containing created session
-   */
-  createAttendanceSession: async (sessionData) => {
-    try {
-      const response = await apiClient.post(`${API_URL}/sessions`, sessionData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating attendance session:', error);
+      console.error(`Error fetching attendance for lecture ${lectureId}:`, error);
       throw error;
     }
   },
 
   /**
-   * Update attendance session status
-   * @param {number} sessionId - The session ID
-   * @param {string} status - The new status
-   * @returns {Promise} Promise containing updated session
+   * Creates or updates attendance records for a specific lecture.
+   * This is used by a teacher to submit attendance for the whole class.
+   * @param {Object} dto The data transfer object.
+   * @param {number} dto.lectureId The ID of the lecture.
+   * @param {number} dto.classroomId The ID of the classroom.
+   * @param {Array<Object>} dto.records The list of student attendance records.
+   * @param {number} dto.records.studentId The student's ID.
+   * @param {string} dto.records.status The attendance status ('PRESENT', 'ABSENT', 'LATE', 'EXCUSED').
+   * @returns {Promise<void>} A promise that resolves when the operation is complete.
    */
-  updateSessionStatus: async (sessionId, status) => {
+  createOrUpdateAttendance: async (dto) => {
     try {
-      const response = await apiClient.put(`${API_URL}/sessions/${sessionId}/status`, { status });
-      return response.data;
+      await apiClient.post(API_URL, dto);
     } catch (error) {
-      console.error('Error updating session status:', error);
+      console.error('Error updating attendance:', error);
       throw error;
     }
   },
 
   /**
-   * Mark attendance for a student
-   * @param {Object} attendanceData - The attendance data
-   * @returns {Promise} Promise containing created attendance record
+   * Gets the personal attendance history for the currently authenticated student.
+   * This is used by a student to view their own attendance record for a course.
+   * @param {number} classroomId The ID of the classroom.
+   * @returns {Promise<Array>} A promise that resolves to the student's attendance history.
    */
-  markAttendance: async (attendanceData) => {
+  getMyAttendanceHistory: async (classroomId) => {
     try {
-      const response = await apiClient.post(`${API_URL}/mark`, attendanceData);
+      // Calls the secure endpoint that gets the user ID from the token
+      const response = await apiClient.get(`${API_URL}/my-history`, {
+        params: { classroomId }
+      });
       return response.data;
     } catch (error) {
-      console.error('Error marking attendance:', error);
+      console.error(`Error fetching current user's attendance history for classroom ${classroomId}:`, error);
       throw error;
     }
   },
 
   /**
-   * Get attendance view for a student
-   * @returns {Promise} Promise containing attendance view data
+   * Gets the attendance history for a specific student in a specific classroom.
+   * This is intended for TEACHERS to view a student's record.
+   * @param {number} studentId The ID of the student.
+   * @param {number} classroomId The ID of the classroom.
+   * @returns {Promise<Array>} A promise that resolves to the student's attendance history.
    */
-  getStudentAttendanceView: async () => {
+  getStudentAttendanceHistoryForTeacher: async (studentId, classroomId) => {
     try {
-      const response = await apiClient.get(`${API_URL}/student/view`);
+      const response = await apiClient.get(`${API_URL}/history/student/${studentId}`, {
+        params: { classroomId }
+      });
       return response.data;
     } catch (error) {
-      console.error('Error fetching student attendance view:', error);
-      return { records: [] };
+      console.error(`Error fetching attendance history for student ${studentId} in classroom ${classroomId}:`, error);
+      throw error;
     }
   },
 
   /**
-   * Get students for attendance in a session
-   * @param {number} sessionId - The session ID
-   * @returns {Promise} Promise containing students list
+   * Lấy lịch sử giảng dạy của giáo viên đang đăng nhập
+   * Dùng cho giáo viên để xem lịch sử các buổi dạy đã được ghi nhận
+   * @returns {Promise<Array>} Promise trả về danh sách các buổi học đã dạy
    */
-  getStudentsForAttendance: async (sessionId) => {
+  getTeachingHistory: async () => {
     try {
-      const response = await apiClient.get(`${API_URL}/sessions/${sessionId}/students`);
+      console.log(`[attendanceService] Fetching teaching history from: ${API_URL}/teaching-history`);
+      const response = await apiClient.get(`${API_URL}/teaching-history`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching students for attendance:', error);
+      console.error("Error fetching teaching history:", error);
+      // Let the caller handle the error by re-throwing it
+      throw error;
+    }
+  },
+
+  /**
+   * Lấy lịch sử giảng dạy của một giáo viên cụ thể
+   * Dành cho Manager/Admin để xem lịch sử giảng dạy của giáo viên
+   * @param {number} teacherId ID của giáo viên
+   * @returns {Promise<Array>} Promise trả về danh sách các buổi học đã dạy
+   */
+  getTeachingHistoryForTeacher: async (teacherId) => {
+    try {
+      const response = await apiClient.get(`${API_URL}/teaching-history/${teacherId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching teaching history for teacher ${teacherId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all my attendance history across all enrolled classrooms
+   * @returns {Promise<Array>} List of all attendance records with classroom info
+   */
+  getAllMyAttendanceHistory: async () => {
+    try {
+      // First get all enrolled classrooms
+      const classroomResponse = await apiClient.get('/api/classrooms/student/me');
+      const classrooms = Array.isArray(classroomResponse.data) ? classroomResponse.data : [];
+      
+      if (classrooms.length === 0) {
+        return [];
+      }
+
+      // Fetch attendance for each classroom
+      const attendancePromises = classrooms.map(classroom => 
+        attendanceService.getMyAttendanceHistory(classroom.id)
+      );
+      
+      const attendanceResults = await Promise.allSettled(attendancePromises);
+      const allAttendance = [];
+      
+      attendanceResults.forEach((result, index) => {
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          // Add classroom info to each attendance record
+          const attendanceWithClassroom = result.value.map(attendance => ({
+            ...attendance,
+            classroomId: classrooms[index].id,
+            classroomName: classrooms[index].name,
+            subject: classrooms[index].subject
+          }));
+          allAttendance.push(...attendanceWithClassroom);
+        }
+      });
+      
+      return allAttendance;
+    } catch (error) {
+      console.error('Error fetching all my attendance history:', error);
       return [];
     }
   },
-
-  /**
-   * Update attendance records for multiple students
-   * @param {number} sessionId - The session ID
-   * @param {Array} records - The attendance records
-   * @returns {Promise} Promise containing updated records
-   */
-  updateAttendanceRecords: async (sessionId, records) => {
-    try {
-      const response = await apiClient.put(`${API_URL}/sessions/${sessionId}/records`, { records });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating attendance records:', error);
-      throw error;
-    }
-  }
 };
 
-export default attendanceService; 
+export default attendanceService;

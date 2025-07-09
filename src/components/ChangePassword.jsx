@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-const baseUrl = process.env.REACT_APP_BASE_URL;
+import authService from '../services/authService'; // Import authService
 
 const ChangePassword = () => {
   const [oldPassword, setOldPassword] = useState('');
@@ -70,41 +70,20 @@ const ChangePassword = () => {
     }
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setMessage('Bạn cần đăng nhập để thực hiện chức năng này');
-        return;
-      }
+      const data = await authService.changePassword(oldPassword, newPassword);
       
-      const response = await fetch(`${baseUrl}/auth/change-password?token=${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          oldPassword,
-          newPassword
-        }),
-      });
-      
-      const data = await response.text();
-      
-      if (response.ok) {
-        setIsSuccess(true);
-        setMessage(data);
-        // Reset form
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        // Start countdown for redirect
-        setCountdown(3);
-      } else {
-        setMessage(data || 'Đổi mật khẩu thất bại');
-      }
+      setIsSuccess(true);
+      setMessage(data);
+      // Reset form
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      // Start countdown for redirect
+      setCountdown(3);
+
     } catch (error) {
       console.error('Error:', error);
-      setMessage('Đã xảy ra lỗi khi đổi mật khẩu');
+      setMessage(error.response?.data || 'Đã xảy ra lỗi khi đổi mật khẩu');
     }
   };
 

@@ -1,32 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message, Card } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Form, Input, message, Modal, Space, Table } from 'antd';
+import { useEffect, useState } from 'react';
+import { managerService } from '../../services/managerService';
 
 const ManageCourses = () => {
   const [courses, setCourses] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [editingCourse, setEditingCourse] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Temporary data for testing
   useEffect(() => {
-    setCourses([
-      {
-        id: 1,
-        name: 'Toán Đại Số',
-        description: 'Khóa học toán đại số cơ bản',
-        teacher: 'Nguyễn Văn A',
-        duration: '3 tháng',
-      },
-      {
-        id: 2,
-        name: 'Vật Lý Cơ Bản',
-        description: 'Khóa học vật lý dành cho học sinh THPT',
-        teacher: 'Trần Thị B',
-        duration: '4 tháng',
-      },
-    ]);
+    fetchCourses();
   }, []);
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const data = await managerService.getClassrooms();
+      setCourses(data);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      message.error('Không thể tải danh sách khóa học');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
     {
@@ -80,40 +79,43 @@ const ManageCourses = () => {
     setIsModalVisible(true);
   };
 
-  const handleDelete = (course) => {
+  const handleDelete = async (course) => {
     Modal.confirm({
       title: 'Xác nhận xóa khóa học',
       content: 'Bạn có chắc chắn muốn xóa khóa học "' + course.name + '"?',
-      onOk() {
-        setCourses(courses.filter((item) => item.id !== course.id));
-        message.success('Xóa khóa học thành công');
-      },
+      onOk: async () => {
+        try {
+          await managerService.deleteClassroom(course.id);
+          message.success('Xóa khóa học thành công');
+          fetchCourses();
+        } catch (error) {
+          console.error('Error deleting course:', error);
+          message.error('Không thể xóa khóa học');
+        }
+      }
     });
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
       if (editingCourse) {
         // Update existing course
-        setCourses(
-          courses.map((course) =>
-            course.id === editingCourse.id ? { ...course, ...values } : course
-          )
-        );
+        await managerService.updateClassroom(editingCourse.id, values);
         message.success('Cập nhật khóa học thành công');
       } else {
         // Add new course
-        const newCourse = {
-          id: Math.max(...courses.map((c) => c.id)) + 1,
-          ...values,
-        };
-        setCourses([...courses, newCourse]);
+        await managerService.createClassroom(values);
         message.success('Thêm khóa học thành công');
       }
       setIsModalVisible(false);
       form.resetFields();
       setEditingCourse(null);
-    });
+      fetchCourses();
+    } catch (error) {
+      console.error('Error saving course:', error);
+      message.error('Không thể lưu thông tin khóa học');
+    }
   };
 
   const handleModalCancel = () => {
@@ -139,7 +141,7 @@ const ManageCourses = () => {
         Thêm Khóa Học Mới
       </Button>
 
-      <Table columns={columns} dataSource={courses} rowKey="id" />
+      <Table columns={columns} dataSource={courses} rowKey="id" loading={loading} />
 
       <Modal
         title={editingCourse ? 'Sửa Khóa Học' : 'Thêm Khóa Học Mới'}

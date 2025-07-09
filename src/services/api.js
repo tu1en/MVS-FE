@@ -184,7 +184,7 @@ const api = {
    */
   GetClassroomsByTeacher: async (teacherId) => {
     try {
-      const response = await apiClient.get(`/classrooms/teacher/${teacherId}`);
+      const response = await apiClient.get(`/classrooms/current-teacher`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);
@@ -511,7 +511,7 @@ class ApiService {
    */
   static async GetClassroomsByTeacher(teacherId) {
     try {
-      const response = await apiClient.get(API_CONFIG.ENDPOINTS.CLASSROOMS_BY_TEACHER(teacherId));
+      const response = await apiClient.get(`/classrooms/current-teacher`);
       
       let classrooms = [];
       if (Array.isArray(response.data)) {
@@ -884,7 +884,7 @@ class ApiService {
    */
   static async GetClassroomsByTeacher(teacherId) {
     try {
-      const response = await apiClient.get(`/classrooms/teacher/${teacherId}`);
+      const response = await apiClient.get(`/classrooms/current-teacher`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);

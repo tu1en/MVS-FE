@@ -1,15 +1,6 @@
-import {
-    BookOutlined,
-    CalendarOutlined,
-    CheckCircleOutlined,
-    EditOutlined,
-    FileTextOutlined,
-    MessageOutlined,
-    TeamOutlined,
-    VideoCameraOutlined
-} from '@ant-design/icons';
+import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, FileTextOutlined, MessageOutlined, TeamOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { App, Card, Col, Row, Spin, Statistic } from 'antd';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
 import api from '../services/api';
@@ -26,67 +17,75 @@ export default function TeacherDashboard() {
   });
 
   useEffect(() => {
+    // Check if user is authenticated and has teacher role
+    const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    if (role !== ROLE.TEACHER) {
-      navigate('/');
+    
+    if (!token || role !== ROLE.TEACHER) {
+      console.error('User is not authenticated or not a teacher');
+      message.error('Bạn không có quyền truy cập trang này');
+      navigate('/login');
       return;
     }
+    
     loadDashboardData();
-  }, [navigate]);  const loadDashboardData = async () => {
+  }, [navigate, message]);
+  
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
       
       console.log('Loading teacher dashboard data...');
       
-      // Gọi các API với error handling riêng cho từng endpoint
-      const [classroomsRes, assignmentsRes, attendanceRes, messagesRes] = await Promise.all([
-        api.get('/classrooms/current-teacher').catch(err => {
-          console.warn('Classrooms API error:', err.message);
-          return { data: { data: [] } };
-        }),
-        api.get('/assignments/current-teacher').catch(err => {
-          console.warn('Assignments API error:', err.message);
-          return { data: { data: [] } };
-        }),
-        api.get('/attendance/current-teacher/stats').catch(err => {
-          console.warn('Attendance API error:', err.message);
-          return { data: { data: {} } };
-        }),
-        api.get('/teacher-messages/unread-count').catch(err => {
-          console.warn('Messages API error:', err.message);
-          return { data: { data: { unreadMessages: 0 } } };
-        })
+      // Use Promise.allSettled to handle each API call separately
+      const [classroomsRes, assignmentsRes, dashboardStatsRes] = await Promise.allSettled([
+        api.get('/classrooms/current-teacher'),
+        api.get('/assignments/current-teacher'),
+        api.get('/teacher/dashboard-stats')
       ]);
 
-      const classrooms = classroomsRes.data.data || [];
-      const assignments = assignmentsRes.data.data || [];
-      const attendance = attendanceRes.data.data || {};
+      // Process dashboard stats (main data source)
+      let dashboardData = {
+        classStats: { totalClasses: 0, activeClasses: 0, totalStudents: 0 },
+        assignmentStats: { totalAssignments: 0, pendingGrading: 0, graded: 0 },
+        attendanceStats: { totalSessions: 0, averageAttendance: 0 },
+        messageStats: { unreadMessages: 0 }
+      };
       
-      const totalStudents = classrooms.reduce((sum, classroom) => sum + (classroom.studentCount || 0), 0);
-      const pendingGrading = assignments.filter(a => a.status === 'SUBMITTED' && !a.isGraded).length;
-
-      setDashboardData({
-        classStats: {
-          totalClasses: classrooms.length,
-          activeClasses: classrooms.filter(c => c.status === 'ACTIVE').length,
-          totalStudents: totalStudents
-        },
-        assignmentStats: {
-          totalAssignments: assignments.length,
-          pendingGrading: pendingGrading,
-          graded: assignments.filter(a => a.isGraded).length
-        },
-        attendanceStats: {
-          totalSessions: attendance.totalSessions || 0,
-          averageAttendance: Math.round(attendance.averageAttendance || 0)
-        },
-        messageStats: {
-          unreadMessages: messagesRes.data.data?.count || 0
-        }
-      });
+      if (dashboardStatsRes.status === 'fulfilled' && dashboardStatsRes.value.data) {
+        dashboardData = dashboardStatsRes.value.data;
+        console.log('Dashboard stats loaded successfully:', dashboardData);
+      } else {
+        console.error('Dashboard stats loading failed:', dashboardStatsRes.reason);
+        message.warning('Không thể tải dữ liệu thống kê. Hiển thị dữ liệu mẫu.');
+      }
+      
+      setDashboardData(dashboardData);
+      
     } catch (error) {
       console.error('Error loading teacher dashboard data:', error);
       message.error('Không thể tải dữ liệu dashboard');
+      
+      // Fallback to mock data in case of overall failure
+      setDashboardData({
+        classStats: {
+          totalClasses: 0,
+          activeClasses: 0,
+          totalStudents: 0
+        },
+        assignmentStats: {
+          totalAssignments: 0,
+          pendingGrading: 0,
+          graded: 0
+        },
+        attendanceStats: {
+          totalSessions: 0,
+          averageAttendance: 0
+        },
+        messageStats: {
+          unreadMessages: 0
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -94,6 +93,36 @@ export default function TeacherDashboard() {
 
   const handleCardClick = (path) => {
     navigate(path);
+  };
+
+  const fetchDashboardStats = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/teacher/dashboard-stats');
+      setDashboardStats(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Dashboard Stats API error:', error.message);
+      // Tạo dữ liệu mẫu khi API trả về lỗi
+      const mockStats = {
+        classStats: {
+          totalClasses: 3,
+          activeClasses: 2,
+          totalStudents: 45
+        },
+        assignmentStats: {
+          totalAssignments: 12,
+          pendingGrading: 5,
+          graded: 7
+        },
+        attendanceStats: {
+          totalSessions: 24,
+          averageAttendance: 85.5
+        }
+      };
+      setDashboardStats(mockStats);
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -158,7 +187,7 @@ export default function TeacherDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/classes")}
+            onClick={() => handleCardClick("/teacher/courses")}
           >
             <div className="text-center">
               <TeamOutlined className="text-4xl text-blue-500 mb-4" />
@@ -174,7 +203,7 @@ export default function TeacherDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/assignments-new")}
+            onClick={() => handleCardClick("/teacher/assignments")}
           >
             <div className="text-center">
               <FileTextOutlined className="text-4xl text-purple-500 mb-4" />
@@ -190,7 +219,7 @@ export default function TeacherDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/lectures")}
+            onClick={() => handleCardClick("/teacher/lectures")}
           >
             <div className="text-center">
               <VideoCameraOutlined className="text-4xl text-orange-500 mb-4" />
@@ -200,17 +229,19 @@ export default function TeacherDashboard() {
               </p>
             </div>
           </Card>
-        </Col>        <Col xs={24} sm={12} lg={8}>
+        </Col>
+        
+        <Col xs={24} sm={12} lg={8}>
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/teacher/attendance")}
+            onClick={() => handleCardClick("/teacher/schedule")}
           >
             <div className="text-center">
-              <CalendarOutlined className="text-4xl text-green-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-4">Quản lý điểm danh</h2>
+              <CalendarOutlined className="text-4xl text-teal-500 mb-4" />
+              <h2 className="text-xl font-semibold mb-4">Lịch giảng dạy</h2>
               <p className="text-gray-600">
-                Tạo phiên điểm danh và xem báo cáo chuyên cần
+                Xem và quản lý lịch dạy của bạn
               </p>
             </div>
           </Card>
@@ -220,7 +251,7 @@ export default function TeacherDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/messaging")}
+            onClick={() => handleCardClick("/teacher/messages")}
           >
             <div className="text-center">
               <MessageOutlined className="text-4xl text-cyan-500 mb-4" />
@@ -236,7 +267,7 @@ export default function TeacherDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/teacher/grading")}
+            onClick={() => handleCardClick("/teacher/assignments")}
           >
             <div className="text-center">
               <CheckCircleOutlined className="text-4xl text-red-500 mb-4" />

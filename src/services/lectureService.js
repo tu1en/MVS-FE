@@ -43,15 +43,16 @@ class LectureService {
 
   /**
    * Create a new lecture
+   * @param {number} classroomId - Classroom ID
    * @param {Object} lectureData - Lecture data
    * @returns {Promise<Object>} Created lecture
    */
-  static async createLecture(lectureData) {
+  static async createLecture(classroomId, lectureData) {
     try {
-      const response = await apiClient.post('/lectures', lectureData);
+      const response = await apiClient.post(`/lectures/classrooms/${classroomId}`, lectureData);
       return response.data;
     } catch (error) {
-      console.error('Error creating lecture:', error);
+      console.error("Error creating lecture:", error.response?.data || error.message);
       throw error;
     }
   }
@@ -95,7 +96,7 @@ class LectureService {
    */
   static async getLecturesByCourse(courseId, params = {}) {
     try {
-      const response = await apiClient.get(`/lectures/course/${courseId}`, { params });
+      const response = await apiClient.get(`/lectures/classrooms/${courseId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching course lectures:', error);
