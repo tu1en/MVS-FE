@@ -11,7 +11,7 @@ export const managerService = {
    */
   async getUsers(params = {}) {
     try {
-      const response = await apiClient.get('/api/manager/users', { params });
+      const response = await apiClient.get('/manager/users', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -27,7 +27,7 @@ export const managerService = {
    */
   async updateUserStatus(userId, enabled) {
     try {
-      const response = await apiClient.put(`/api/manager/users/${userId}/status`, { enabled });
+      const response = await apiClient.put(`/manager/users/${userId}/status`, { enabled });
       return response.data;
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -43,7 +43,7 @@ export const managerService = {
    */
   async updateUserRole(userId, role) {
     try {
-      const response = await apiClient.put(`/api/manager/users/${userId}/role`, { role });
+      const response = await apiClient.put(`/manager/users/${userId}/role`, { role });
       return response.data;
     } catch (error) {
       console.error('Error updating user role:', error);
@@ -58,7 +58,7 @@ export const managerService = {
    */
   async createUser(userData) {
     try {
-      const response = await apiClient.post('/api/manager/users', userData);
+      const response = await apiClient.post('/manager/users', userData);
       return response.data;
     } catch (error) {
       console.error('Error creating user:', error);
@@ -74,7 +74,7 @@ export const managerService = {
    */
   async updateUser(userId, userData) {
     try {
-      const response = await apiClient.put(`/api/manager/users/${userId}`, userData);
+      const response = await apiClient.put(`/manager/users/${userId}`, userData);
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -89,7 +89,7 @@ export const managerService = {
    */
   async deleteUser(userId) {
     try {
-      await apiClient.delete(`/api/manager/users/${userId}`);
+      await apiClient.delete(`/manager/users/${userId}`);
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
@@ -102,7 +102,7 @@ export const managerService = {
    */
   async getClassrooms() {
     try {
-      const response = await apiClient.get('/api/manager/classrooms');
+      const response = await apiClient.get('/manager/classrooms');
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms:', error);
@@ -117,7 +117,7 @@ export const managerService = {
    */
   async createClassroom(classroomData) {
     try {
-      const response = await apiClient.post('/api/manager/classrooms', classroomData);
+      const response = await apiClient.post('/manager/classrooms', classroomData);
       return response.data;
     } catch (error) {
       console.error('Error creating classroom:', error);
@@ -133,7 +133,7 @@ export const managerService = {
    */
   async updateClassroom(classroomId, classroomData) {
     try {
-      const response = await apiClient.put(`/api/manager/classrooms/${classroomId}`, classroomData);
+      const response = await apiClient.put(`/manager/classrooms/${classroomId}`, classroomData);
       return response.data;
     } catch (error) {
       console.error('Error updating classroom:', error);
@@ -148,7 +148,7 @@ export const managerService = {
    */
   async deleteClassroom(classroomId) {
     try {
-      await apiClient.delete(`/api/manager/classrooms/${classroomId}`);
+      await apiClient.delete(`/manager/classrooms/${classroomId}`);
     } catch (error) {
       console.error('Error deleting classroom:', error);
       throw error;
@@ -161,7 +161,7 @@ export const managerService = {
    */
   async getTeachers() {
     try {
-      const response = await apiClient.get('/api/manager/teachers');
+      const response = await apiClient.get('/manager/teachers');
       return response.data;
     } catch (error) {
       console.error('Error fetching teachers:', error);
@@ -176,7 +176,7 @@ export const managerService = {
    */
   async createSchedule(scheduleData) {
     try {
-      const response = await apiClient.post('/api/manager/schedules', scheduleData);
+      const response = await apiClient.post('/manager/schedules', scheduleData);
       return response.data;
     } catch (error) {
       console.error('Error creating schedule:', error);
@@ -190,7 +190,7 @@ export const managerService = {
    */
   async getSchedules() {
     try {
-      const response = await apiClient.get('/api/manager/schedules');
+      const response = await apiClient.get('/manager/schedules');
       return response.data;
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -205,7 +205,7 @@ export const managerService = {
    */
   async deleteSchedule(scheduleId) {
     try {
-      await apiClient.delete(`/api/manager/schedules/${scheduleId}`);
+      await apiClient.delete(`/manager/schedules/${scheduleId}`);
     } catch (error) {
       console.error('Error deleting schedule:', error);
       throw error;
@@ -219,7 +219,7 @@ export const managerService = {
    */
   async createAnnouncement(announcementData) {
     try {
-      const response = await apiClient.post('/api/manager/announcements', announcementData);
+      const response = await apiClient.post('/manager/announcements', announcementData);
       return response.data;
     } catch (error) {
       console.error('Error creating announcement:', error);
@@ -233,7 +233,7 @@ export const managerService = {
    */
   async getAnnouncements() {
     try {
-      const response = await apiClient.get('/api/manager/announcements');
+      const response = await apiClient.get('/manager/announcements');
       return response.data;
     } catch (error) {
       console.error('Error fetching announcements:', error);
@@ -249,7 +249,7 @@ export const managerService = {
    */
   async updateAnnouncement(announcementId, announcementData) {
     try {
-      const response = await apiClient.put(`/api/manager/announcements/${announcementId}`, announcementData);
+      const response = await apiClient.put(`/manager/announcements/${announcementId}`, announcementData);
       return response.data;
     } catch (error) {
       console.error('Error updating announcement:', error);
@@ -264,7 +264,7 @@ export const managerService = {
    */
   async deleteAnnouncement(announcementId) {
     try {
-      await apiClient.delete(`/api/manager/announcements/${announcementId}`);
+      await apiClient.delete(`/manager/announcements/${announcementId}`);
     } catch (error) {
       console.error('Error deleting announcement:', error);
       throw error;
@@ -277,7 +277,7 @@ export const managerService = {
    */
   async getProfile() {
     try {
-      const response = await apiClient.get('/api/manager/profile');
+      const response = await apiClient.get('/manager/profile');
       return response.data;
     } catch (error) {
       console.error('Error fetching manager profile:', error);
@@ -292,7 +292,7 @@ export const managerService = {
    */
   async updateProfile(profileData) {
     try {
-      const response = await apiClient.put('/api/manager/profile', profileData);
+      const response = await apiClient.put('/manager/profile', profileData);
       return response.data;
     } catch (error) {
       console.error('Error updating manager profile:', error);
@@ -306,7 +306,7 @@ export const managerService = {
    */
   async getMessages() {
     try {
-      const response = await apiClient.get('/api/manager/messages');
+      const response = await apiClient.get('/manager/messages');
       return response.data;
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -322,7 +322,7 @@ export const managerService = {
    */
   async replyToMessage(messageId, content) {
     try {
-      const response = await apiClient.post(`/api/manager/messages/${messageId}/reply`, { content });
+      const response = await apiClient.post(`/manager/messages/${messageId}/reply`, { content });
       return response.data;
     } catch (error) {
       console.error('Error replying to message:', error);
@@ -337,7 +337,7 @@ export const managerService = {
    */
   async markMessageAsRead(messageId) {
     try {
-      await apiClient.put(`/api/manager/messages/${messageId}/read`);
+      await apiClient.put(`/manager/messages/${messageId}/read`);
     } catch (error) {
       console.error('Error marking message as read:', error);
       throw error;
@@ -351,7 +351,7 @@ export const managerService = {
    */
   async deleteMessage(messageId) {
     try {
-      await apiClient.delete(`/api/manager/messages/${messageId}`);
+      await apiClient.delete(`/manager/messages/${messageId}`);
     } catch (error) {
       console.error('Error deleting message:', error);
       throw error;
@@ -365,7 +365,7 @@ export const managerService = {
    */
   async sendMessage(messageData) {
     try {
-      const response = await apiClient.post('/api/manager/messages', messageData);
+      const response = await apiClient.post('/manager/messages', messageData);
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -381,7 +381,7 @@ export const managerService = {
    */
   async updateSchedule(scheduleId, scheduleData) {
     try {
-      const response = await apiClient.put(`/api/manager/schedules/${scheduleId}`, scheduleData);
+      const response = await apiClient.put(`/manager/schedules/${scheduleId}`, scheduleData);
       return response.data;
     } catch (error) {
       console.error('Error updating schedule:', error);
@@ -396,7 +396,7 @@ export const managerService = {
    */
   async deleteSchedule(scheduleId) {
     try {
-      await apiClient.delete(`/api/manager/schedules/${scheduleId}`);
+      await apiClient.delete(`/manager/schedules/${scheduleId}`);
     } catch (error) {
       console.error('Error deleting schedule:', error);
       throw error;
@@ -409,7 +409,7 @@ export const managerService = {
    */
   async getDashboardStats() {
     try {
-      const response = await apiClient.get('/api/manager/dashboard/stats');
+      const response = await apiClient.get('/manager/dashboard/stats');
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
