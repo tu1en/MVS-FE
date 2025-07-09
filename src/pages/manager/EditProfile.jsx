@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, message, Card } from 'antd';
-import axios from 'axios';
-import { validatePhoneNumber, validateEmail } from '../../utils/validation';
+import { Button, Card, Form, Input, message } from 'antd';
+import { useEffect, useState } from 'react';
+import { managerService } from '../../services/managerService';
+import { validateEmail, validatePhoneNumber } from '../../utils/validation';
 
 const EditProfile = () => {
   const [form] = Form.useForm();
@@ -14,23 +14,22 @@ const EditProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await axios.get('/api/manager/profile');
-      const data = response.data;
+      const data = await managerService.getProfile();
       form.setFieldsValue({ ...data });
     } catch (error) {
-      message.error('Không thể tải thông tin cá nhân');
       console.error('Error fetching profile:', error);
+      message.error('Không thể tải thông tin cá nhân');
     }
   };
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await axios.put('/api/manager/profile', values);
+      await managerService.updateProfile(values);
       message.success('Cập nhật thông tin thành công');
     } catch (error) {
-      message.error('Không thể cập nhật thông tin');
       console.error('Error updating profile:', error);
+      message.error('Không thể cập nhật thông tin');
     } finally {
       setLoading(false);
     }

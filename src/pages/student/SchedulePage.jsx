@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import ScheduleTable from "../../components/ScheduleTable";
 import { getStudentSchedule } from "../../services/scheduleService";
 import "./SchedulePage.css";

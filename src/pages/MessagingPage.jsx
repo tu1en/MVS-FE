@@ -1,7 +1,8 @@
 import { MessageOutlined, SendOutlined, StarOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Input, List, message, Rate, Select, Space, Spin, Typography } from 'antd';
-import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import apiClient from '../services/apiClient';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -26,24 +27,22 @@ function MessagingPage() {
   const [feedbackText, setFeedbackText] = useState('');
   const [rating, setRating] = useState(5);
 
-  // Get user info from localStorage
-  const userId = localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('role');
+  // Get user info from context
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userRole = user?.role;
 
   useEffect(() => {
-    if (userId && token) {
+    if (userId) {
       fetchMessages();
       fetchTeachers();
       fetchCourses();
     }
-  }, [userId, token]);
+  }, [userId]);
 
   const fetchMessages = async () => {
     try {
-      const response = await axios.get(`/api/student-messages/student/${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await apiClient.get(`/student-messages/student/${userId}`);
       setMessages(response.data);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -52,9 +51,7 @@ function MessagingPage() {
 
   const fetchTeachers = async () => {
     try {
-      const response = await axios.get('/api/users/teachers', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await apiClient.get('/users/teachers');
       setTeachers(response.data);
     } catch (error) {
       console.error('Error fetching teachers:', error);
@@ -64,14 +61,10 @@ function MessagingPage() {
   const fetchCourses = async () => {
     try {
       let response;
-      if (userRole === '1') { // Student
-        response = await axios.get(`/api/classrooms/student/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+      if (userRole === 'STUDENT') { 
+        response = await apiClient.get(`/classrooms/student/${userId}`);
       } else {
-        response = await axios.get(`/api/classrooms/teacher/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        response = await apiClient.get(`/classrooms/current-teacher`);
       }
       setCourses(response.data);
     } catch (error) {
@@ -90,16 +83,14 @@ function MessagingPage() {
     setSending(true);
     try {
       const messageData = {
-        senderId: parseInt(userId),
+        senderId: userId,
         receiverId: selectedTeacher,
         message: messageText,
         subject: 'Câu hỏi từ học sinh',
         priority: 'MEDIUM'
       };
 
-      await axios.post('/api/student-messages', messageData, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await apiClient.post('/student-messages', messageData);
 
       message.success('Gửi tin nhắn thành công!');
       setMessageText('');
@@ -122,7 +113,7 @@ function MessagingPage() {
     setSending(true);
     try {
       const feedbackData = {
-        studentId: parseInt(userId),
+        studentId: userId,
         classroomId: selectedCourse,
         overallRating: rating,
         contentQuality: rating,
@@ -133,9 +124,7 @@ function MessagingPage() {
         suggestions: feedbackText
       };
 
-      await axios.post('/api/course-feedback', feedbackData, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await apiClient.post('/course-feedback', feedbackData);
 
       message.success('Gửi phản hồi thành công!');
       setFeedbackText('');

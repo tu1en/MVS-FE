@@ -1,6 +1,7 @@
 import { Alert, Card, Col, Empty, Row, Spin, Statistic, Table, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import managerReportService from '../../services/managerReportService';
 
 const { TabPane } = Tabs;
 
@@ -30,83 +31,29 @@ const ManagerReports = () => {
                     return;
                 }
                 
-                // In a real application, you would fetch from your API
-                // const response = await axios.get(`${API_BASE_URL}/api/manager/reports`, {
-                //     headers: { 'Authorization': `Bearer ${token}` }
-                // });
-                
-                // For now, we'll use sample data that would normally come from the backend
-                // This simulates what would be returned from the API
-                
-                // Attendance report data
-                const attendanceData = {
-                    totalSessions: 45,
-                    totalStudents: 120,
-                    attendanceRate: 92.5,
-                    absentStudents: 8,
-                    classData: [
-                        { className: 'Lớp A10', attendanceRate: 95.2, studentCount: 25 },
-                        { className: 'Lớp A11', attendanceRate: 91.8, studentCount: 30 },
-                        { className: 'Lớp A12', attendanceRate: 89.5, studentCount: 28 },
-                        { className: 'Lớp A13', attendanceRate: 94.0, studentCount: 22 },
-                        { className: 'Lớp B12', attendanceRate: 90.2, studentCount: 15 }
-                    ]
-                };
-                
-                // Performance report data
-                const performanceData = {
-                    totalStudents: 120,
-                    averageScore: 7.8,
-                    excellentCount: 32,
-                    goodCount: 45,
-                    averageCount: 35,
-                    belowAverageCount: 8,
-                    subjectData: [
-                        { subject: 'Toán', averageScore: 7.5, highestScore: 9.8, lowestScore: 4.5 },
-                        { subject: 'Lý', averageScore: 7.2, highestScore: 9.5, lowestScore: 5.0 },
-                        { subject: 'Hóa', averageScore: 7.8, highestScore: 9.7, lowestScore: 4.8 },
-                        { subject: 'Văn', averageScore: 8.1, highestScore: 9.9, lowestScore: 5.5 },
-                        { subject: 'Anh', averageScore: 8.0, highestScore: 9.8, lowestScore: 5.2 }
-                    ]
-                };
-                
-                // Financial report data
-                const financialData = {
-                    totalRevenue: 1250000000,
-                    totalExpense: 950000000,
-                    profit: 300000000,
-                    tuitionCollected: 1150000000,
-                    otherRevenue: 100000000,
-                    expenseBreakdown: [
-                        { category: 'Lương giáo viên', amount: 650000000, percentage: 68.4 },
-                        { category: 'Cơ sở vật chất', amount: 150000000, percentage: 15.8 },
-                        { category: 'Học liệu', amount: 80000000, percentage: 8.4 },
-                        { category: 'Chi phí hành chính', amount: 70000000, percentage: 7.4 }
-                    ]
-                };
+                // Fetch real data from API
+                const [attendanceData, performanceData, financialData] = await Promise.all([
+                    managerReportService.getAttendanceReport('month'),
+                    managerReportService.getPerformanceReport('semester'),
+                    managerReportService.getFinancialReport('quarter')
+                ]);
                 
                 setReports({
-                    attendance: {
-                        title: 'Báo cáo điểm danh tháng 6/2025',
-                        description: 'Tổng hợp tình hình điểm danh của học viên trong tháng 6/2025',
-                        data: attendanceData
-                    },
-                    performance: {
-                        title: 'Báo cáo kết quả học tập học kỳ 1',
-                        description: 'Tổng hợp kết quả học tập của học viên trong học kỳ 1 năm học 2024-2025',
-                        data: performanceData
-                    },
-                    financial: {
-                        title: 'Báo cáo tài chính quý 2/2025',
-                        description: 'Tổng hợp tình hình tài chính quý 2 năm 2025',
-                        data: financialData
-                    }
+                    attendance: attendanceData,
+                    performance: performanceData,
+                    financial: financialData
                 });
+                
             } catch (error) {
                 console.error('Error fetching reports:', error);
-                setError('Không thể tải dữ liệu báo cáo');
+                setError('Không thể tải báo cáo. Vui lòng thử lại.');
+                setReports({
+                    attendance: null,
+                    performance: null,
+                    financial: null
+                });
             } finally {
-        setIsLoading(false);
+                setIsLoading(false);
             }
         };
         

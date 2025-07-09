@@ -43,17 +43,22 @@ const API_CONFIG = {
     GRADE_SUBMISSION: (submissionId) => `/submissions/${submissionId}/grade`,
 
     // Attendance endpoints
-    ATTENDANCE: "/attendance",
-    ATTENDANCE_SESSIONS: "/attendance/sessions",    ATTENDANCE_SESSIONS_TEACHER: "/attendance/sessions/teacher",
-    ATTENDANCE_TEACHER: "/attendance/teacher",
-    ATTENDANCE_STUDENT: "/attendance/student/view",
-    ATTENDANCE_SESSION_BY_ID: (sessionId) => `/attendance/sessions/${sessionId}`,
-    ATTENDANCE_SESSION_STATUS: (sessionId) => `/attendance/sessions/${sessionId}/status`,
-    ATTENDANCE_MARK: (sessionId) => `/attendance/sessions/${sessionId}/mark`,    // Teacher specific endpoints
-    TEACHER_SCHEDULE: "/teacher/schedule",
-    TEACHER_COURSES: "/teacher/courses", 
+    ATTENDANCE: "/v1/attendance",
+    ATTENDANCE_SESSIONS: "/v1/attendance/sessions",
+    ATTENDANCE_SESSIONS_TEACHER: "/v1/attendance/sessions/teacher",
+    ATTENDANCE_TEACHER: "/v1/attendance/teacher",
+    ATTENDANCE_STUDENT: "/v1/attendance/student/view",
+    ATTENDANCE_SESSION_BY_ID: (sessionId) => `/v1/attendance/sessions/${sessionId}`,
+    ATTENDANCE_SESSION_STATUS: (sessionId) => `/v1/attendance/sessions/${sessionId}/status`,
+    ATTENDANCE_MARK: (sessionId) => `/v1/attendance/sessions/${sessionId}/mark`,
+    
+    // Teacher specific endpoints
+    TEACHER_SCHEDULE: "/schedule/my-timetable", // Updated to use the correct endpoint
+    TEACHER_COURSES: "/classrooms/current-teacher", 
     TEACHER_DASHBOARD_STATS: "/teacher/dashboard-stats",
-    TEACHER_PROFILE: "/teacher/profile",    // Message endpoints
+    TEACHER_PROFILE: "/teacher/profile",    
+    
+    // Message endpoints
     MESSAGES_RECEIVED: (recipientId) => `/messages/received/${recipientId}`,
     MESSAGES_SENT: (senderId) => `/messages/sent/${senderId}`,
     MESSAGES_CONVERSATION: (userId1, userId2) => `/student-messages/conversation/${userId1}/${userId2}`,
@@ -61,7 +66,7 @@ const API_CONFIG = {
     MESSAGES_MARK_READ: (messageId) => `/messages/${messageId}/read`,
 
     // Classroom by teacher endpoints
-    CLASSROOMS_BY_TEACHER: (teacherId) => `/classrooms/teacher/${teacherId}`,
+    CLASSROOMS_BY_TEACHER: () => `/classrooms/current-teacher`,
   },
 
   // Pagination defaults

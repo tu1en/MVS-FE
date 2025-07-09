@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import '../styles/vietnamese-fonts.css';
 import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
@@ -51,7 +52,7 @@ function Layout({ children }) {
 
   if (!isUserLoggedIn) {
     return (
-      <div className="flex flex-col min-h-screen bg-white">
+      <div className="flex flex-col min-h-screen bg-white vietnamese-text">
         <Header />
         <div className="flex flex-1 pt-16">
           <NavigationBar />
@@ -64,7 +65,7 @@ function Layout({ children }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white vietnamese-text">
       <Header />
       <div className="flex flex-1 pt-16">
         <NavigationBar />

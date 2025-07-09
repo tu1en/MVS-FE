@@ -6,11 +6,13 @@ import { toast } from 'react-toastify';
 import RegisterModal from '../components/RegisterModal';
 import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
 import { ROLE } from '../constants/constants';
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import authService from '../services/authService'; // Import the new authService
 import { loginSuccess } from '../store/slices/authSlice';
-import { getNormalizedRole } from '../utils/authUtils';
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
+  const { login, syncLoginState } = useAuth(); // Use the login function from AuthContext
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
   const [loi, setLoi] = useState(null);  const [dangDangNhap, setDangDangNhap] = useState(false);
@@ -23,97 +25,46 @@ export default function LoginScreen() {
     e.preventDefault();
     setLoi(null);
     setDangDangNhap(true);
-    console.log('Đang đăng nhập với:', email, 'URL:', 'http://localhost:8088/api/auth/login');
     
     try {
-      const res = await fetch('http://localhost:8088/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: email,
-          password: matKhau,
-        }),
-      });
+      const userData = await authService.login(email, matKhau);
       
-      console.log('Response status:', res.status);
+      // Store in AuthContext (this will also store in localStorage)
+      login(userData);
       
-      if (res.ok) {
-        const data = await res.json();
-        console.log('Login response data:', data);
-        
-        if (!data.token || !data.role) {
-          console.error('Missing token or role in response:', data);
-          setLoi('Đăng nhập thất bại: Thiếu thông tin từ server');
-          toast.error('Đăng nhập thất bại: Thiếu thông tin từ server');
-          return;
-        }
-        
-        // Normalize role for consistency
-        const normalizedRole = getNormalizedRole(data.role);
-        
-          localStorage.setItem('token', data.token);
-        localStorage.setItem('role', normalizedRole);
-        localStorage.setItem('userId', data.userId);
-        if (data.email || email) {
-          localStorage.setItem('email', data.email || email);
-        }
-        
-        // Dispatch to Redux with all available data
-        dispatch(loginSuccess({ 
-          token: data.token, 
-          role: normalizedRole, 
-          userId: data.userId,
-          email: data.email || email 
-        }));
-        
-        toast.success('Đăng nhập thành công!');
+      // Force a sync with localStorage to ensure state is up-to-date
+      syncLoginState();
 
-        console.log('Navigating based on role:', normalizedRole);
-        switch (normalizedRole) {
-          case ROLE.ADMIN: //ADMIN
-            navigate('/admin');
-            break;
-          case ROLE.TEACHER: //TEACHER
-            navigate('/teacher');
-            break;
-          case ROLE.STUDENT: //STUDENT
-            navigate('/student');
-            break;
-          case ROLE.MANAGER: //MANAGER
-            navigate('/manager');
-            break;
-          default:
-            console.warn('Unknown role:', normalizedRole);
-            navigate('/');
-        }
-      } else {
-        // Try to parse error response
-        try {
-          const errorData = await res.json();
-          console.error('Error response:', errorData);
-          setLoi(errorData.message || 'Tài khoản hoặc mật khẩu không đúng');
-          toast.error(errorData.message || 'Tài khoản hoặc mật khẩu không đúng!');
-        } catch (e) {
-          console.error('Failed to parse error response', e);
-          setLoi('Tài khoản hoặc mật khẩu không đúng');
-          toast.error('Tài khoản hoặc mật khẩu không đúng!');
-        }
-        setEmail('');
-        setMatKhau('');
-      }    } catch (err) {
-      console.error('Lỗi đăng nhập:', err);
+      // Also dispatch to Redux for components using Redux
+      dispatch(loginSuccess(userData));
       
-      // Handle different types of errors
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setLoi('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
-        toast.error('Lỗi kết nối mạng. Vui lòng thử lại sau.');
-      } else if (err.name === 'AbortError') {
-        setLoi('Yêu cầu đăng nhập bị hủy. Vui lòng thử lại.');
-        toast.error('Yêu cầu bị hủy. Vui lòng thử lại.');
-      } else {
-        setLoi('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
-        toast.error('Đã xảy ra lỗi khi đăng nhập!');
+      toast.success('Đăng nhập thành công!');
+
+      console.log('Navigating based on role:', userData.role);
+      switch (userData.role) {
+        case ROLE.ADMIN:
+          navigate('/admin');
+          break;
+        case ROLE.TEACHER:
+          navigate('/teacher');
+          break;
+        case ROLE.STUDENT:
+          navigate('/student');
+          break;
+        case ROLE.MANAGER:
+          navigate('/manager');
+          break;
+        default:
+          console.warn('Unknown role:', userData.role);
+          navigate('/');
       }
+    } catch (err) {
+      console.error('Lỗi đăng nhập:', err);
+      const errorMessage = err.message || 'Đã xảy ra lỗi khi đăng nhập.';
+      setLoi(errorMessage);
+      toast.error(errorMessage);
+      setEmail('');
+      setMatKhau('');
     } finally {
       setDangDangNhap(false);
     }
@@ -130,88 +81,55 @@ export default function LoginScreen() {
       const user = result.user;
       console.log('Google sign-in successful, user:', user.email);
       
-      // 2. Get and verify ID token
+      // 2. Get ID token
       const idToken = await user.getIdToken();
-      console.log('Obtained Google ID token:', idToken.substring(0, 20) + '...');
       
-      // 3. Send to backend for verification
-      console.log('Sending token to backend for verification...', 'http://localhost:8088/api/auth/google-login');
-      const res = await fetch('http://localhost:8088/api/auth/google-login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ 
-          idToken,
-          email: user.email,
-          name: user.displayName,
-          photoURL: user.photoURL
-        })
-      });
-  
-      console.log('Google login response status:', res.status);
-      const data = await res.json();
-      console.log('Backend response:', data);
+      // 3. Send to backend via authService
+      const userData = await authService.googleLogin(idToken, user);
+
+      // Store in AuthContext (this will also store in localStorage)
+      login(userData);
       
-      if (res.ok) {
-        // 4. Verify token and role in response
-        if (!data.token || !data.role) {
-          console.error('Missing token or role in response:', data);
-          toast.error('Đăng nhập thất bại: Thiếu thông tin từ server');
-          throw new Error('Missing token or role in response');
-        }
-        
-        // Normalize role for consistency
-        const normalizedRole = getNormalizedRole(data.role);
-        
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', normalizedRole);
-        localStorage.setItem('userId', data.userId);
-        localStorage.setItem('email', user.email); // Store email for form autofill
-        dispatch(loginSuccess({ token: data.token, role: normalizedRole, userId: data.userId }));
-        console.log('Token and role stored in localStorage');
-        
-        // 6. Verify navigation
-        console.log(`Navigating to ${normalizedRole} dashboard...`);
-        switch (normalizedRole) {
-          case ROLE.ADMIN: //ADMIN
-            navigate('/admin');
-            break;
-            case ROLE.MANAGER: //MANAGER
-            navigate('/manager');
-            break;
-          case ROLE.TEACHER: //TEACHER
-            navigate('/teacher');
-            break;
-          case ROLE.STUDENT: //STUDENT
-            navigate('/student');
-            break;
-          default:
-            navigate('/');
-        }
-      } else {
-        // Xử lý khi tài khoản không tồn tại
-        if (res.status === 404 && data.message) {
-          console.error('Account not registered:', data.message);
-          toast.error(data.message);
-          
-          // Lưu email Google để có thể sử dụng trong form đăng ký
-          if (data.email) {
-            setGoogleEmail(data.email);
-            setEmail(data.email); // Auto-fill the login form with Google email
-          }
-          
-          // Hiển thị modal đăng ký
-          setRegisterModalVisible(true);
-        } else {
-          console.error('Backend error:', data);
-          toast.error(`Đăng nhập Google thất bại: ${data.message || 'Lỗi không xác định'}`);
-        }
+      // Force a sync with localStorage to ensure state is up-to-date
+      syncLoginState();
+      
+      // Also dispatch to Redux for components using Redux
+      dispatch(loginSuccess(userData));
+      
+      console.log('Token and role stored in localStorage');
+      
+      // 6. Verify navigation
+      console.log(`Navigating to ${userData.role} dashboard...`);
+      switch (userData.role) {
+        case ROLE.ADMIN:
+          navigate('/admin');
+          break;
+        case ROLE.MANAGER:
+          navigate('/manager');
+          break;
+        case ROLE.TEACHER:
+          navigate('/teacher');
+          break;
+        case ROLE.STUDENT:
+          navigate('/student');
+          break;
+        default:
+          navigate('/');
       }
     } catch (error) {
-      console.error('Google login error:', error);
-      toast.error('Đăng nhập Google thất bại!');
+        // Handle specific error from googleLogin service
+        if (error.status === 404 && error.message) {
+            console.error('Account not registered:', error.message);
+            toast.error(error.message);
+            if (error.email) {
+                setGoogleEmail(error.email);
+                setEmail(error.email);
+            }
+            setRegisterModalVisible(true);
+        } else {
+            console.error('Google login error:', error);
+            toast.error(error.message || 'Đăng nhập Google thất bại!');
+        }
     } finally {
       setDangDangNhap(false);
     }

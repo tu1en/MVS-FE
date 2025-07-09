@@ -3,7 +3,7 @@ import { Alert, App, Avatar, Button, Card, Descriptions, List, Progress, Spin, T
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import WeeklyTimetable from '../components/WeeklyTimetable';
-import CourseService from '../services/courseService';
+import ClassroomService from '../services/classroomService';
 import MaterialService from '../services/materialService';
 
 const CourseDetails = () => {
@@ -70,85 +70,37 @@ const CourseDetails = () => {
   const [hasNetworkError, setHasNetworkError] = useState(false);
 
   useEffect(() => {
-    fetchCourseDetails();
-  }, [courseId]);
+    const fetchData = async () => {
+      try {
+        // Use ClassroomService to fetch classroom details
+        const courseData = await ClassroomService.getClassroomDetails(courseId);
+        setCourse(courseData);
 
-  const fetchCourseDetails = async () => {
-    try {
-      setLoading(true);
-      
-      // Check if courseId exists
-      if (!courseId) {
-        message.error('Course ID không được cung cấp');
+        // const materialsData = await ClassroomService.getCourseMaterials(courseId);
+        // setMaterials(materialsData);
+
+        // Fetch students instead of schedule
+        const studentsData = await ClassroomService.getStudentsInClassroom(courseId);
+        setSchedule(studentsData); // Temporarily putting students in schedule state for display
+
+      } catch (error) {
+        console.error("Error fetching course data:", error);
+      } finally {
         setLoading(false);
-        return;
       }
-      
-      console.log('Fetching course details for ID:', courseId);
-      
-      // Use CourseService to fetch course details
-      const courseData = await CourseService.getCourseDetails(courseId);
-      console.log('Course data received:', courseData);
-      setCourse(courseData);
+    };
 
-      // Fetch course materials - handle errors separately
-      try {
-        const materialsData = await CourseService.getCourseMaterials(courseId);
-        console.log('Materials data received:', materialsData);
-        setMaterials(materialsData);
-      } catch (materialError) {
-        console.warn('Could not fetch materials:', materialError);
-        setMaterials([]);
-      }
-
-      // Fetch course schedule - handle errors separately
-      try {
-        const scheduleData = await CourseService.getCourseSchedule(courseId);
-        console.log('Schedule data received:', scheduleData);
-        setSchedule(scheduleData);
-      } catch (scheduleError) {
-        console.warn('Could not fetch schedule:', scheduleError);
-        setSchedule([]);
-      }
-
-      // Calculate progress
-      setProgress(courseData.progress || 0);
-    } catch (error) {
-      console.error('Error fetching course details:', error);
-      
-      // Handle specific error types
-      if (error.response?.status === 404) {
-        message.error({
-          content: `Không tìm thấy khóa học với ID: ${courseId}. Vui lòng kiểm tra lại ID hoặc chọn khóa học khác.`,
-          duration: 5
-        });
-        setCourse(null);
-        setHasNetworkError(false);
-        // Fetch suggested courses for the user
-        fetchSuggestedCourses();
-      } else if (error.response?.status === 403) {
-        message.error('Bạn không có quyền truy cập khóa học này');
-        setHasNetworkError(false);
-      } else if (!error.response) {
-        // Network error
-        message.error('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.');
-        setHasNetworkError(true);
-      } else {
-        message.error('Không thể tải thông tin khóa học. Vui lòng thử lại sau.');
-        setHasNetworkError(true);
-      }
-    } finally {
-      setLoading(false);
+    if (courseId) {
+      fetchData();
     }
-  };
+  }, [courseId]);
 
   const fetchSuggestedCourses = async () => {
     try {
-      const coursesData = await CourseService.getMyMyCourses();
-      setSuggestedCourses(coursesData?.slice(0, 5) || []); // Show up to 5 courses
+      //  const coursesData = await ClassroomService.getMyMyCourses();
+       setSuggestedCourses([]); // Set to empty array as getMyMyCourses doesn't exist
     } catch (error) {
-      console.warn('Could not fetch suggested courses:', error);
-      setSuggestedCourses([]);
+      console.error('Error fetching suggested courses:', error);
     }
   };
 
@@ -201,7 +153,7 @@ const CourseDetails = () => {
               type="primary" 
               onClick={() => {
                 setHasNetworkError(false);
-                fetchCourseDetails();
+                fetchSuggestedCourses();
               }}
               style={{ marginRight: '10px' }}
             >
