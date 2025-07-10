@@ -88,7 +88,6 @@ const ClassroomCreationModal = ({ visible, onCancel, onSuccess }) => {
           {user && user.role === 'ROLE_TEACHER' ? 'Gửi Đề Xuất' : 'Tạo Lớp Học'}
         </Button>,
       ]}
-      destroyOnClose
       width={700}
     >
       <Spin spinning={loading}>

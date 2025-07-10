@@ -74,7 +74,9 @@ const TeacherSchedule = () => {
 
   const handleScheduleClick = (schedule) => {
     if (schedule && schedule.classroomId) {
-    navigate(`/teacher/attendance/take/${schedule.classroomId}/${schedule.id}`);
+      // Navigate to attendance page with only classroomId
+      // TakeAttendancePage will auto-select the appropriate lecture
+      navigate(`/teacher/attendance/take/${schedule.classroomId}`);
     } else {
       message.warning('Không thể mở lịch học này');
     }

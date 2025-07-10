@@ -1,72 +1,122 @@
-import { Modal, message } from 'antd';
+import { App, Button, Modal } from 'antd';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = false }) => {
   const navigate = useNavigate();
   const [lectures, setLectures] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [creatingData, setCreatingData] = useState(false);
+  const [lastLoadedCourseId, setLastLoadedCourseId] = useState(null);
 
-  useEffect(() => {
-    if (courseId) {
-      loadLectures();
-    }
-  }, [courseId]);
+  // Get message API from App context
+  const { message } = App.useApp();
 
-  const loadLectures = async () => {
+  // Memoize loadLectures to prevent unnecessary re-renders
+  const loadLectures = useCallback(async () => {
     try {
+      console.log(`📚 LectureList: Loading lectures for courseId: ${courseId}`);
       setLoading(true);
       setError(null);
+
+      const token = localStorage.getItem('token');
+      const endpoint = `http://localhost:8088/api/courses/${courseId}/lectures`;
+
+      console.log(`📡 LectureList: Fetching from ${endpoint}`);
+
+      // Fetch lectures
+      const response = await axios.get(endpoint, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`✅ LectureList: Response status: ${response.status}`);
+      console.log(`📊 LectureList: Response data:`, response.data);
+
+      // Mark this courseId as loaded to prevent duplicate calls
+      setLastLoadedCourseId(courseId);
       
+      // Process lectures data
+      const lecturesData = response.data || [];
+      console.log(`📋 LectureList: Processing ${lecturesData.length} lectures`);
+
+      // Verify data structure of first lecture
+      if (lecturesData.length > 0) {
+        const firstLecture = lecturesData[0];
+        console.log(`🔍 LectureList: Sample lecture structure:`, {
+          id: firstLecture.id,
+          title: firstLecture.title,
+          lectureDate: firstLecture.lectureDate,
+          hasContent: !!firstLecture.content,
+          contentLength: firstLecture.content ? firstLecture.content.length : 0,
+          hasMaterials: !!firstLecture.materials,
+          materialsCount: firstLecture.materials ? firstLecture.materials.length : 0
+        });
+      }
+
+      // For now, use lectures as-is without fetching additional materials
+      // This reduces API calls and improves performance
+      const lecturesWithMaterials = lecturesData.map(lecture => ({
+        ...lecture,
+        materials: lecture.materials || [] // Ensure materials is always an array
+      }));
+
+      console.log(`📋 LectureList: Final lectures ready (${lecturesWithMaterials.length} items)`);
+      setLectures(lecturesWithMaterials);
+    } catch (error) {
+      console.error('❌ LectureList: Error loading lectures:', error);
+      console.error('   Status:', error.response?.status);
+      console.error('   Data:', error.response?.data);
+      setError('Không thể tải danh sách bài giảng. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  }, [courseId, lastLoadedCourseId, message]);
+
+  // Optimized useEffect with proper dependencies and loading state check
+  useEffect(() => {
+    console.log(`[DEBUG] LectureList useEffect triggered. courseId: ${courseId}, lastLoadedCourseId: ${lastLoadedCourseId}, loading: ${loading}`);
+    // Only load if courseId is valid, different from last loaded, and not currently loading
+    if (courseId && courseId !== lastLoadedCourseId && !loading) {
+      console.log(`🔄 LectureList: CourseId changed from ${lastLoadedCourseId} to ${courseId}, loading lectures...`);
+      loadLectures();
+    } else if (courseId === lastLoadedCourseId) {
+      console.log(`⏭️ LectureList: CourseId ${courseId} already loaded, skipping duplicate call`);
+    } else if (!courseId) {
+      console.log(`⚠️ LectureList: No courseId provided, skipping load`);
+    } else if (loading) {
+      console.log(`⏳ LectureList: Already loading lectures for courseId ${courseId}, skipping duplicate call`);
+    }
+  }, [courseId, lastLoadedCourseId, loadLectures, loading]);
+
+  const createSampleLectures = async () => {
+    try {
+      setCreatingData(true);
       const token = localStorage.getItem('token');
       
-      // Fetch lectures
-      const response = await axios.get(`http://localhost:8088/api/courses/${courseId}/lectures`, {
+      // Gọi API để tạo bài giảng mẫu
+      await axios.post(`http://localhost:8088/api/courses/${courseId}/sample-lectures`, {}, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         }
       });
       
-      // Process lectures to ensure materials are properly included
-      const lecturesData = response.data || [];
+      // Tải lại danh sách bài giảng sau khi tạo
+      await loadLectures();
       
-      // If materials are not included in the response, fetch them separately
-      const lecturesWithMaterials = await Promise.all(lecturesData.map(async (lecture) => {
-        if (!lecture.materials || lecture.materials.length === 0) {
-          try {
-            // Try to fetch materials for this lecture
-            const materialsResponse = await axios.get(`http://localhost:8088/api/courses/${courseId}/lectures/${lecture.id}/materials`, {
-              headers: {
-                'Authorization': token ? `Bearer ${token}` : '',
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            // Return lecture with materials
-            return {
-              ...lecture,
-              materials: materialsResponse.data || []
-            };
-          } catch (materialError) {
-            console.warn(`Could not fetch materials for lecture ${lecture.id}:`, materialError);
-            return lecture; // Return lecture without materials if fetch fails
-          }
-        }
-        return lecture; // Return lecture as is if it already has materials
-      }));
-      
-      console.log('Lectures response:', lecturesWithMaterials);
-      setLectures(lecturesWithMaterials);
+      message.success('Đã tạo bài giảng mẫu thành công');
     } catch (error) {
-      console.error('Error loading lectures:', error);
-      setError('Không thể tải danh sách bài giảng. Vui lòng thử lại.');
+      console.error('Error creating sample lectures:', error);
+      message.error('Không thể tạo bài giảng mẫu: ' + (error.response?.data?.message || error.message));
     } finally {
-      setLoading(false);
+      setCreatingData(false);
     }
   };
 
@@ -214,6 +264,14 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
       {lectures.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500 mb-4">Chưa có bài giảng nào cho khóa học này.</p>
+          <Button
+            type="primary"
+            loading={creatingData}
+            onClick={createSampleLectures}
+            className="mt-4"
+          >
+            Tạo bài giảng mẫu
+          </Button>
         </div>
       ) : (
         <div className="space-y-6">

@@ -11,7 +11,7 @@ export const managerService = {
    */
   async getUsers(params = {}) {
     try {
-      const response = await apiClient.get('/api/manager/users', { params });
+      const response = await apiClient.get('/manager/users', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching users:', error);
