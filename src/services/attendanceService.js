@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 
-const API_URL = '/v1/attendance';
+// Since apiClient already has baseURL = 'http://localhost:8088/api',
+// we only need the relative path without '/api' prefix
+const API_URL = '/attendance';
 
 /**
  * Service for refactored attendance-related API calls (V2)
@@ -90,14 +92,14 @@ const attendanceService = {
    * Dùng cho giáo viên để xem lịch sử các buổi dạy đã được ghi nhận
    * @returns {Promise<Array>} Promise trả về danh sách các buổi học đã dạy
    */
-  getTeachingHistory: async () => {
+  getMyTeachingHistory: async () => {
     try {
-      console.log(`[attendanceService] Fetching teaching history from: ${API_URL}/teaching-history`);
-      const response = await apiClient.get(`${API_URL}/teaching-history`);
+      // API_URL is already prefixed in apiClient, so just use the relative path
+      console.log(`[attendanceService] Fetching teaching history from: /attendance/teaching-history`);
+      const response = await apiClient.get('/attendance/teaching-history');
       return response.data;
     } catch (error) {
-      console.error("Error fetching teaching history:", error);
-      // Let the caller handle the error by re-throwing it
+      console.error('Error fetching teaching history:', error);
       throw error;
     }
   },
@@ -108,9 +110,10 @@ const attendanceService = {
    * @param {number} teacherId ID của giáo viên
    * @returns {Promise<Array>} Promise trả về danh sách các buổi học đã dạy
    */
-  getTeachingHistoryForTeacher: async (teacherId) => {
+  getTeacherTeachingHistory: async (teacherId) => {
     try {
-      const response = await apiClient.get(`${API_URL}/teaching-history/${teacherId}`);
+      // API_URL is already prefixed in apiClient
+      const response = await apiClient.get(`/attendance/teaching-history/${teacherId}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching teaching history for teacher ${teacherId}:`, error);
@@ -125,7 +128,7 @@ const attendanceService = {
   getAllMyAttendanceHistory: async () => {
     try {
       // First get all enrolled classrooms
-      const classroomResponse = await apiClient.get('/api/classrooms/student/me');
+      const classroomResponse = await apiClient.get('/classrooms/student/me');
       const classrooms = Array.isArray(classroomResponse.data) ? classroomResponse.data : [];
       
       if (classrooms.length === 0) {
@@ -161,4 +164,6 @@ const attendanceService = {
   },
 };
 
+// Export both as default and named export
+export { attendanceService };
 export default attendanceService;

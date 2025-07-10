@@ -4,6 +4,8 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import ClassroomCreationModal from '../../components/teacher/ClassroomCreationModal';
 import CreateLectureModal from '../../components/teacher/CreateLectureModal';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { teacherClassroomService } from '../../services/teacherClassroomService';
 
 const TeacherCoursesSimple = () => {
@@ -15,6 +17,9 @@ const TeacherCoursesSimple = () => {
   const [showCreateLectureModal, setShowCreateLectureModal] = useState(false);
   const [showCreateClassroomModal, setShowCreateClassroomModal] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+
+  // Pagination hook - 6 courses per page
+  const pagination = usePagination(courses, 6);
 
   useEffect(() => {
     loadTeacherCourses();
@@ -158,7 +163,7 @@ const TeacherCoursesSimple = () => {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
+          {pagination.currentData.map((course) => (
             <div key={course.id} className="bg-white rounded-lg shadow-md p-6 border">
               <h3 className="text-xl font-semibold mb-2">{course.name}</h3>
               <p className="text-gray-600 mb-3">{course.description}</p>
@@ -178,28 +183,28 @@ const TeacherCoursesSimple = () => {
                 </div>
               </div>
               
-              <div className="mt-4 flex space-x-2">
-                <button 
+              <div className="course-action-buttons">
+                <button
                   onClick={() => handleViewDetail(course.id)}
-                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="course-action-button primary"
                 >
                   Xem chi tiết
                 </button>
-                <button 
+                <button
                   onClick={() => navigate(`/teacher/courses/${course.id}/edit`)}
-                  className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                  className="course-action-button success"
                 >
                   Chỉnh sửa
                 </button>
-                <button 
+                <button
                   onClick={() => navigate(`/teacher/courses/${course.id}/assignments`)}
-                  className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+                  className="course-action-button secondary"
                 >
                   Bài tập
                 </button>
-                <button 
+                <button
                   onClick={() => handleCreateLecture(course.id)}
-                  className="px-3 py-1 text-sm bg-orange-500 text-white rounded hover:bg-orange-600"
+                  className="course-action-button warning"
                 >
                   Tạo bài giảng
                 </button>
@@ -208,7 +213,25 @@ const TeacherCoursesSimple = () => {
           ))}
         </div>
       )}
-      
+
+      {/* Pagination */}
+      {courses.length > 0 && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageNumbers={pagination.pageNumbers}
+          onPageChange={pagination.goToPage}
+          onNextPage={pagination.goToNextPage}
+          onPreviousPage={pagination.goToPreviousPage}
+          hasNextPage={pagination.hasNextPage}
+          hasPreviousPage={pagination.hasPreviousPage}
+          itemName="khóa học"
+        />
+      )}
+
       {courses.length > 0 && (
         <div className="mt-8 bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Thống kê tổng quan</h3>
