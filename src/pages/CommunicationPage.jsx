@@ -146,11 +146,11 @@ function CommunicationPage() {
               allowClear
             />
             
-            {/* Only teachers can create announcements */}
-            {(userRole === '2' || userRole === 'TEACHER') && (
-              <Button 
-                type="default" 
-                icon={<BellOutlined />} 
+            {/* Only managers and admins can create announcements */}
+            {(userRole === '3' || userRole === 'MANAGER' || userRole === '0' || userRole === 'ADMIN') && (
+              <Button
+                type="default"
+                icon={<BellOutlined />}
                 onClick={() => setAnnouncementModalVisible(true)}
                 style={{ marginBottom: '16px', width: '100%' }}
               >

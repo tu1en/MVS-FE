@@ -59,17 +59,36 @@ function AssignmentsPageNew() {
   const [currentStudent, setCurrentStudent] = useState(null);
   const [grades, setGrades] = useState({});
 
+  // Load grades from localStorage when component mounts or selected assignment changes
+  useEffect(() => {
+    if (selectedAssignment) {
+      const localStorageKey = `assignment_grades_${selectedAssignment.id}`;
+      const savedGrades = localStorage.getItem(localStorageKey);
+      if (savedGrades) {
+        try {
+          const parsedGrades = JSON.parse(savedGrades);
+          console.log(`Loaded grades from localStorage for assignment ${selectedAssignment.id}:`, parsedGrades);
+          setGrades(parsedGrades);
+        } catch (error) {
+          console.error('Error parsing grades from localStorage:', error);
+        }
+      }
+    }
+  }, [selectedAssignment]);
+
   // Get user info from context, not localStorage
   const userId = user?.id;
   const userRole = user?.role?.replace('ROLE_', '') || localStorage.getItem('role')?.replace('ROLE_', '');
   const isAdmin = userRole === 'TEACHER' || userRole === 'ADMIN'; // Adjust role name as per your system
 
-  // Debug logging for role detection
-  console.log('AssignmentsPageNew - Role Debug:', {
-    userId,
-    userRole,
-    userFromContext: user
-  });
+  // Only log in development environment
+  if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_ROLES === 'true') {
+    console.log('AssignmentsPageNew - Role Debug:', {
+      userId,
+      userRole,
+      userFromContext: user
+    });
+  }
 
   useEffect(() => {
     // Use real API calls instead of mock data
@@ -321,11 +340,8 @@ function AssignmentsPageNew() {
         title: values.title,
         description: values.description,
         dueDate: values.dueDate.toISOString(),
-        maxScore: values.maxScore,
+        points: values.points || values.maxScore || 10, // Backend expects 'points', not 'maxScore'
         classroomId: finalClassroomId, // Use the extracted ID
-        // Hardcode other required fields for now
-        courseId: 1, // Example course ID
-        teacherId: userId, // Use the logged-in user's ID
       };
       
       console.log('Assignment data to send:', assignmentData);
@@ -445,35 +461,38 @@ function AssignmentsPageNew() {
     }
   };
 
+  const fetchSubmissionsList = async (assignmentId) => {
+    try {
+      console.log(`Fetching submissions for assignment ${assignmentId}`);
+      const fetchedSubmissions = await AssignmentService.getSubmissionsForAssignment(assignmentId);
+      console.log(`Received ${fetchedSubmissions.length} submissions for assignment ${assignmentId}`);
+      
+      // Initialize grades state from fetched submissions
+      const initialGrades = {};
+      fetchedSubmissions.forEach(submission => {
+        initialGrades[submission.id] = {
+          score: submission.grade,
+          feedback: submission.feedback
+        };
+      });
+      
+      setGrades(initialGrades);
+      setSubmissionsList(fetchedSubmissions);
+      return fetchedSubmissions;
+    } catch (error) {
+      console.error(`Error fetching submissions for assignment ${assignmentId}:`, error);
+      message.error('Không thể tải danh sách bài nộp');
+      return [];
+    }
+  };
+
   const handleGradeClick = async (assignment) => {
     console.log('Grading assignment:', assignment);
     setSelectedAssignment(assignment);
+    setIsGradeModalVisible(true);
     
-    try {
-      setLoading(true);
-      console.log(`Fetching submissions for assignment ID: ${assignment.id}`);
-      const token = localStorage.getItem('token');
-      console.log(`Using token: ${token?.substring(0, 20)}...`);
-      
-      const submissions = await AssignmentService.getSubmissionsForAssignment(assignment.id);
-      console.log(`Received ${submissions?.length || 0} submissions:`, submissions);
-      
-      // If no submissions, show message but open modal anyway to show empty state
-      if (!submissions || submissions.length === 0) {
-        message.info("Không có bài nộp nào cho bài tập này.");
-        console.log("No submissions found for this assignment");
-      }
-      
-      setSubmissionsList(submissions || []);
-      setIsGradeModalVisible(true);
-    } catch (error) {
-      message.error("Không thể tải danh sách bài nộp.");
-      console.error("Error fetching submissions for grading:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
-    } finally {
-      setLoading(false);
-    }
+    // Fetch submissions for this assignment
+    await fetchSubmissionsList(assignment.id);
   };
 
   const handleSubmitClick = (assignment) => {
@@ -953,48 +972,42 @@ function AssignmentsPageNew() {
 
   const handleSaveGrade = async (submissionId) => {
     console.log(`Starting grade save for submission ${submissionId}`);
+    setGrading(true);
+
+    const score = grades[submissionId]?.score;
+    const feedbackText = grades[submissionId]?.feedback;
+
+    const gradeData = {
+      score: score,
+      feedback: feedbackText
+    };
+    console.log(`Grade data for submission ${submissionId}:`, gradeData);
+
+    if (gradeData.score === undefined || gradeData.score === null) {
+      console.log(`Missing grade data for submission ${submissionId}`);
+      message.error('Vui lòng nhập điểm số.');
+      setGrading(false);
+      return;
+    }
+
     try {
-      setGrading(true);
-      const gradeData = grades[submissionId];
-      console.log(`Grade data for submission ${submissionId}:`, gradeData);
+      console.log(`Saving grade for assignment ${selectedAssignment.id}, submission ${submissionId}:`, gradeData);
+      await AssignmentService.gradeSubmission(selectedAssignment.id, submissionId, gradeData);
+      message.success('Đã lưu điểm thành công!');
       
-      if (!gradeData || gradeData.score === undefined) {
-        message.error("Vui lòng nhập điểm.");
-        console.error("Missing grade data for submission", submissionId);
-        return;
-      }
-
-      if (!selectedAssignment || !selectedAssignment.id) {
-        message.error("Không thể xác định bài tập cần chấm.");
-        console.error("Missing selectedAssignment.id in handleSaveGrade");
-        return;
-      }
-
-      console.log(`Saving grade for assignment ${selectedAssignment.id}, submission ${submissionId}:`, {
-        score: gradeData.score,
-        feedback: gradeData.feedback || ''
-      });
-
-      await AssignmentService.gradeSubmission(selectedAssignment.id, {
-        submissionId,
-        score: gradeData.score,
-        feedback: gradeData.feedback || '',
-      });
-
-      message.success("Chấm điểm thành công!");
-      console.log("Grade saved successfully");
-      
-      // Refresh submissions list
+      // Refresh submissions for the current assignment
       console.log(`Refreshing submissions for assignment ${selectedAssignment.id}`);
-      const updatedSubmissions = await AssignmentService.getSubmissionsForAssignment(selectedAssignment.id);
+      const updatedSubmissions = await fetchSubmissionsList(selectedAssignment.id);
       console.log(`Received ${updatedSubmissions.length} updated submissions after grading`);
-      setSubmissionsList(updatedSubmissions);
+      
+      // Store the grades in localStorage to persist across page refreshes
+      const localStorageKey = `assignment_grades_${selectedAssignment.id}`;
+      localStorage.setItem(localStorageKey, JSON.stringify(grades));
+      console.log(`Saved grades to localStorage with key: ${localStorageKey}`);
 
     } catch (error) {
-      message.error("Lỗi khi lưu điểm.");
-      console.error("Error saving grade:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
+      console.error('Error saving grade:', error);
+      message.error('Đã xảy ra lỗi khi lưu điểm.');
     } finally {
       setGrading(false);
     }
@@ -1173,8 +1186,9 @@ function AssignmentsPageNew() {
                   <InputNumber
                     min={0}
                     max={selectedAssignment?.points || 100}
-                    defaultValue={record.score}
+                    value={grades[record.id]?.score ?? record.score}
                     onChange={(value) => handleGradeChange(record.id, value)}
+                    placeholder="Nhập điểm"
                   />
                 ),
               },
@@ -1184,8 +1198,9 @@ function AssignmentsPageNew() {
                 render: (_, record) => (
                   <TextArea
                     rows={2}
-                    defaultValue={record.feedback}
+                    value={grades[record.id]?.feedback ?? record.feedback ?? ''}
                     onChange={(e) => handleFeedbackChange(record.id, e.target.value)}
+                    placeholder="Nhập nhận xét"
                   />
                 ),
               },
@@ -1257,12 +1272,14 @@ function AssignmentsPageNew() {
           <Form.Item
             name="dueDate"
             label="Hạn nộp"
+            rules={[{ required: true, message: 'Vui lòng chọn hạn nộp!' }]}
           >
-            <DatePicker 
-              showTime 
-              format="YYYY-MM-DD HH:mm:ss" 
+            <DatePicker
+              showTime
+              format="YYYY-MM-DD HH:mm:ss"
               placeholder="Chọn hạn nộp"
               style={{ width: '100%' }}
+              disabledDate={(current) => current && current < new Date().setHours(0,0,0,0)}
             />
           </Form.Item>
           
@@ -1270,8 +1287,9 @@ function AssignmentsPageNew() {
             name="points"
             label="Điểm tối đa"
             initialValue={10}
+            rules={[{ required: true, message: 'Vui lòng nhập điểm tối đa!' }]}
           >
-            <InputNumber min={1} max={100} />
+            <InputNumber min={1} max={100} placeholder="Nhập điểm tối đa" />
           </Form.Item>
           
           <Form.Item>

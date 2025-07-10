@@ -19,6 +19,7 @@ const StudentSchedule = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(dayjs());
+  const [lastLoadedMonth, setLastLoadedMonth] = useState(null);
 
   // Sử dụng useMemo để tối ưu hóa việc nhóm các sự kiện theo ngày
   const eventsByDate = useMemo(() => {
@@ -35,23 +36,44 @@ const StudentSchedule = () => {
 
   useEffect(() => {
     const fetchTimetable = async (date) => {
-    setLoading(true);
-    try {
+      const monthKey = date.format('YYYY-MM');
+
+      // Prevent duplicate calls for the same month
+      if (monthKey === lastLoadedMonth) {
+        console.log(`⏭️ StudentSchedule: Month ${monthKey} already loaded, skipping duplicate call`);
+        return;
+      }
+
+      if (loading) {
+        console.log(`⏳ StudentSchedule: Already loading timetable, skipping duplicate call`);
+        return;
+      }
+
+      console.log(`🔄 StudentSchedule: Loading timetable for month ${monthKey}`);
+      setLoading(true);
+
+      try {
         const startOfMonth = date.startOf('month').format('YYYY-MM-DD');
         const endOfMonth = date.endOf('month').format('YYYY-MM-DD');
+
+        console.log(`📅 StudentSchedule: Fetching timetable from ${startOfMonth} to ${endOfMonth}`);
         const data = await scheduleService.getMyTimetable(startOfMonth, endOfMonth);
+
+        console.log(`✅ StudentSchedule: Received ${Array.isArray(data) ? data.length : 0} events`);
         setEvents(data || []);
-    } catch (error) {
-      console.error("Failed to fetch timetable", error);
+        setLastLoadedMonth(monthKey);
+
+      } catch (error) {
+        console.error("❌ Failed to fetch timetable", error);
         message.error("Không thể tải lịch học. Vui lòng thử lại sau.");
         setEvents([]); // Đảm bảo events là một mảng trống khi có lỗi
-    } finally {
-      setLoading(false);
-    }
-  };
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchTimetable(currentDate);
-  }, [currentDate]);
+  }, [currentDate, lastLoadedMonth, loading]);
 
   // Hàm được truyền cho Ant Design Calendar để render nội dung cho mỗi ô ngày
   const dateCellRender = (date) => {

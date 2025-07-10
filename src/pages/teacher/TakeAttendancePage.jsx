@@ -1,54 +1,114 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import API_CONFIG from '../../config/api-config';
+import { useAuth } from '../../context/AuthContext';
 import { teacherAttendanceService } from '../../services/teacherAttendanceService';
 
 const TakeAttendancePage = () => {
-    const { classroomId, lectureId } = useParams(); // Get IDs from URL
+    const { classroomId, lectureId: urlLectureId } = useParams(); // Get IDs from URL
+    const navigate = useNavigate();
+    const { user, loading } = useAuth();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [debugInfo, setDebugInfo] = useState(null);
+    const [actualLectureId, setActualLectureId] = useState(null);
+    const [lectures, setLectures] = useState([]);
     const fetchAttempted = useRef(false);
+
+    // Authentication check
+    useEffect(() => {
+        if (loading) return; // Wait for auth to load
+
+        if (!user) {
+            console.log('TakeAttendancePage: No user found, redirecting to login');
+            navigate('/login');
+            return;
+        }
+
+        // Check if user has teacher role
+        const userRole = user.role?.replace('ROLE_', '');
+        if (userRole !== 'TEACHER') {
+            console.log('TakeAttendancePage: User is not a teacher, role:', userRole);
+            navigate('/login');
+            return;
+        }
+
+        console.log('TakeAttendancePage: Authentication check passed for teacher:', user.username);
+    }, [user, loading, navigate]);
 
     // Debug function to log API configuration
     const logDebugInfo = useCallback(() => {
         const info = {
             baseUrl: API_CONFIG.BASE_URL,
             classroomId,
-            lectureId,
+            lectureId: actualLectureId,
             attendanceEndpoints: {
                 attendance: API_CONFIG.ENDPOINTS.ATTENDANCE,
                 attendanceSessions: API_CONFIG.ENDPOINTS.ATTENDANCE_SESSIONS,
                 attendanceTeacher: API_CONFIG.ENDPOINTS.ATTENDANCE_TEACHER
             },
-            fullPath: `${API_CONFIG.BASE_URL}/attendance/lecture/${lectureId}`
+            fullPath: `${API_CONFIG.BASE_URL}/attendance/lecture/${actualLectureId}`
         };
         
         console.log('Debug Info:', info);
         setDebugInfo(info);
         return info;
-    }, [classroomId, lectureId]);
+    }, [classroomId, actualLectureId]);
+
+    // Fetch lectures for the classroom
+    const fetchLectures = useCallback(async () => {
+        if (!classroomId) return;
+
+        try {
+            console.log('TakeAttendancePage: Fetching lectures for classroom', classroomId);
+            const response = await fetch(`${API_CONFIG.BASE_URL}/lectures/classroom/${classroomId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const lecturesData = await response.json();
+            console.log('TakeAttendancePage: Fetched lectures:', lecturesData);
+            setLectures(lecturesData);
+
+            // Auto-select first lecture if no specific lecture ID provided or if provided ID doesn't belong to this classroom
+            if (lecturesData.length > 0) {
+                const validLecture = lecturesData.find(l => l.id.toString() === urlLectureId);
+                const selectedLecture = validLecture || lecturesData[0];
+                setActualLectureId(selectedLecture.id);
+                console.log('TakeAttendancePage: Selected lecture ID:', selectedLecture.id);
+            }
+        } catch (error) {
+            console.error('TakeAttendancePage: Error fetching lectures:', error);
+            setError('Không thể tải danh sách bài giảng');
+        }
+    }, [classroomId, urlLectureId]);
 
     const fetchAttendanceData = useCallback(async () => {
         // Prevent multiple fetch attempts
         if (fetchAttempted.current) return;
         
-        if (!lectureId || !classroomId) return; // Don't fetch if IDs are missing
+        if (!actualLectureId || !classroomId) return; // Don't fetch if IDs are missing
 
         fetchAttempted.current = true;
         setIsLoading(true);
         setError(null);
-        
+
         // Log debug info
         logDebugInfo();
-        console.log(`Attempting to fetch attendance data for lecture ID: ${lectureId} in classroom ID: ${classroomId}`);
-        
+        console.log(`Attempting to fetch attendance data for lecture ID: ${actualLectureId} in classroom ID: ${classroomId}`);
+
         try {
-            // Pass both lectureId and classroomId to the service method
-            const data = await teacherAttendanceService.getAttendanceForLecture(lectureId, classroomId);
+            // Pass both actualLectureId and classroomId to the service method
+            const data = await teacherAttendanceService.getAttendanceForLecture(actualLectureId, classroomId);
             console.log('Attendance data received:', data);
             
             if (!data || data.length === 0) {
@@ -89,18 +149,26 @@ const TakeAttendancePage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [lectureId, classroomId, logDebugInfo]);
+    }, [actualLectureId, classroomId, logDebugInfo]);
 
+    // Fetch lectures first
     useEffect(() => {
-        // Reset the fetch attempted flag when IDs change
-        fetchAttempted.current = false;
-        fetchAttendanceData();
-        
-        // Cleanup function to prevent state updates if component unmounts
-        return () => {
-            fetchAttempted.current = true; // Prevent any pending callbacks from updating state
-        };
-    }, [fetchAttendanceData]);
+        fetchLectures();
+    }, [fetchLectures]);
+
+    // Fetch attendance data when actualLectureId is available
+    useEffect(() => {
+        if (actualLectureId) {
+            // Reset the fetch attempted flag when IDs change
+            fetchAttempted.current = false;
+            fetchAttendanceData();
+
+            // Cleanup function to prevent state updates if component unmounts
+            return () => {
+                fetchAttempted.current = true; // Prevent any pending callbacks from updating state
+            };
+        }
+    }, [fetchAttendanceData, actualLectureId]);
 
     const handleStatusChange = (studentId, newStatus) => {
         setStudents(prevStudents =>
@@ -117,7 +185,7 @@ const TakeAttendancePage = () => {
         setSubmitSuccess(false);
 
         const attendanceData = {
-            lectureId: parseInt(lectureId, 10),
+            lectureId: parseInt(actualLectureId, 10),
             classroomId: parseInt(classroomId, 10),
             records: students.map(({ studentId, status }) => ({ studentId, status })),
         };
@@ -146,14 +214,27 @@ const TakeAttendancePage = () => {
         fetchAttendanceData();
     };
 
+    // Show loading while authentication is being checked
+    if (loading) {
+        return <div className="text-center p-8">Checking authentication...</div>;
+    }
+
+    // Show loading while data is being fetched
     if (isLoading) {
-        return <div className="text-center p-8">Loading...</div>;
+        return <div className="text-center p-8">Loading attendance data...</div>;
     }
 
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-4">Take Attendance</h1>
-            <h2 className="text-lg mb-2">Lecture ID: {lectureId} | Classroom ID: {classroomId}</h2>
+            <h2 className="text-lg mb-2">
+                Lecture ID: {actualLectureId || 'Loading...'} | Classroom ID: {classroomId}
+                {lectures.length > 0 && actualLectureId && (
+                    <span className="text-sm text-gray-600 ml-2">
+                        ({lectures.find(l => l.id === actualLectureId)?.title || 'Unknown Lecture'})
+                    </span>
+                )}
+            </h2>
             
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">

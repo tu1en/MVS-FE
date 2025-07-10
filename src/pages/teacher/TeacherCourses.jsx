@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Spin, Alert, Button, Tag, Avatar, Typography, Statistic } from 'antd';
-import { 
-  UserOutlined, 
-  BookOutlined, 
-  CalendarOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileTextOutlined,
-  UsergroupAddOutlined
+import {
+    BookOutlined,
+    CalendarOutlined,
+    EditOutlined,
+    EyeOutlined,
+    FileTextOutlined,
+    UsergroupAddOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import { Alert, Avatar, Button, Card, Col, Pagination, Row, Spin, Statistic, Tag, Typography } from 'antd';
 import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { usePagination } from '../../hooks/usePagination';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -17,6 +18,9 @@ const TeacherCourses = () => {
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState([]);
   const [error, setError] = useState(null);
+
+  // Pagination hook - 6 courses per page
+  const pagination = usePagination(courses, 6);
 
   useEffect(() => {
     loadTeacherCourses();
@@ -109,19 +113,34 @@ const TeacherCourses = () => {
         </Card>
       ) : (
         <Row gutter={[16, 16]}>
-          {courses.map((course) => (
+          {pagination.currentData.map((course) => (
             <Col xs={24} md={12} lg={8} key={course.id}>
               <Card
                 hoverable
                 className="h-full"
                 actions={[
-                  <Button type="text" icon={<EyeOutlined />}>
+                  <Button
+                    type="primary"
+                    icon={<EyeOutlined />}
+                    className="course-action-button primary"
+                    style={{ flex: 1, margin: '0 4px' }}
+                  >
                     Xem chi tiết
                   </Button>,
-                  <Button type="text" icon={<EditOutlined />}>
+                  <Button
+                    type="default"
+                    icon={<EditOutlined />}
+                    className="course-action-button success"
+                    style={{ flex: 1, margin: '0 4px', backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+                  >
                     Chỉnh sửa
                   </Button>,
-                  <Button type="text" icon={<FileTextOutlined />}>
+                  <Button
+                    type="default"
+                    icon={<FileTextOutlined />}
+                    className="course-action-button secondary"
+                    style={{ flex: 1, margin: '0 4px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', color: 'white' }}
+                  >
                     Bài tập
                   </Button>
                 ]}
@@ -184,6 +203,23 @@ const TeacherCourses = () => {
             </Col>
           ))}
         </Row>
+      )}
+
+      {/* Ant Design Pagination */}
+      {courses.length > 6 && (
+        <div className="mt-6 text-center">
+          <Pagination
+            current={pagination.currentPage}
+            total={pagination.totalItems}
+            pageSize={6}
+            onChange={pagination.goToPage}
+            showSizeChanger={false}
+            showQuickJumper
+            showTotal={(total, range) =>
+              `${range[0]}-${range[1]} trong tổng số ${total} khóa học`
+            }
+          />
+        </div>
       )}
 
       {courses.length > 0 && (

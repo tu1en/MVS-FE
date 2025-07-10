@@ -1,5 +1,5 @@
-import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Card, Col, Empty, Row, Tag, Typography } from 'antd';
+import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, PlusCircleOutlined, UserOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Empty, Row, Spin, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
@@ -10,6 +10,7 @@ const ScheduleTab = ({ schedule }) => {
   const [scheduleData, setScheduleData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [creatingData, setCreatingData] = useState(false);
   const { courseId } = useParams();
 
   useEffect(() => {
@@ -29,6 +30,25 @@ const ScheduleTab = ({ schedule }) => {
       setError('Không thể tải lịch học. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createSampleData = async () => {
+    try {
+      setCreatingData(true);
+      setError(null);
+      
+      // Gọi API để tạo dữ liệu mẫu cho lớp học hiện tại
+      await api.post(`/timetable/create-sample-data/${courseId}`);
+      
+      // Sau khi tạo dữ liệu mẫu, tải lại dữ liệu
+      await fetchScheduleData();
+      
+      setCreatingData(false);
+    } catch (err) {
+      console.error('Error creating sample data:', err);
+      setError('Không thể tạo dữ liệu mẫu. Vui lòng thử lại sau.');
+      setCreatingData(false);
     }
   };
 
@@ -116,6 +136,22 @@ const ScheduleTab = ({ schedule }) => {
           description="Chưa có lịch học nào được thiết lập"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
+        <div className="mt-4 flex justify-center">
+          <Button 
+            type="primary" 
+            icon={<PlusCircleOutlined />} 
+            onClick={createSampleData}
+            loading={creatingData}
+          >
+            Tạo dữ liệu lịch học mẫu
+          </Button>
+        </div>
+        {creatingData && (
+          <div className="mt-4 text-center">
+            <Spin />
+            <Text className="ml-2">Đang tạo dữ liệu mẫu...</Text>
+          </div>
+        )}
       </div>
     );
   }
