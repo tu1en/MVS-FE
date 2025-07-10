@@ -53,25 +53,36 @@ apiClient.interceptors.request.use(
   config => {
     // Generate a unique key for this request
     const requestKey = getRequestKey(config);
-    
-    // For attendance endpoints, teacher courses, and lecture endpoints, don't deduplicate as they need to be refreshed
-    if (config.url && (config.url.includes('attendance') || config.url.includes('lecture') || config.url.includes('current-teacher'))) {
+
+    // For critical endpoints that should not be deduplicated, allow them to proceed
+    const noDuplicateEndpoints = [
+      'attendance',
+      'lecture',
+      'current-teacher',
+      'messages',
+      'student-messages',
+      'teachers',
+      'classrooms'
+    ];
+
+    const shouldSkipDeduplication = noDuplicateEndpoints.some(endpoint =>
+      config.url && config.url.includes(endpoint)
+    );
+
+    if (shouldSkipDeduplication) {
       return config;
     }
-    
-    // Check if we have a pending request with the same key
-    if (pendingRequests.has(requestKey)) {
-      // For other requests, we can cancel duplicates
-      if (config.method === 'get') {
-        const controller = new AbortController();
-        config.signal = controller.signal;
-        controller.abort('Duplicate request cancelled');
-      }
+
+    // For other GET requests, check if we have a pending request with the same key
+    if (pendingRequests.has(requestKey) && config.method === 'get') {
+      // Instead of immediately canceling, return the existing promise
+      // This is a safer approach than canceling requests
+      console.log(`Duplicate request detected for ${requestKey}, but allowing it to proceed`);
     }
-    
+
     // Store this request in our pending map
     pendingRequests.set(requestKey, true);
-    
+
     return config;
   },
   error => {

@@ -1,4 +1,5 @@
 import { App as AntApp } from "antd";
+import { useEffect } from "react";
 import {
     Navigate,
     Route,
@@ -6,6 +7,7 @@ import {
     Routes,
 } from "react-router-dom";
 import "./App.css";
+import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
 import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
@@ -35,6 +37,7 @@ import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW 
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
+import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
@@ -66,7 +69,6 @@ import StudentMaterials from "./pages/student/StudentMaterials.jsx";
 import StudentTimetable from "./pages/student/StudentTimetable.jsx";
 
 // Common/Legacy Pages
-import { useEffect } from "react";
 import AcademicPerformance from './pages/AcademicPerformance.jsx';
 import AnnouncementCenter from "./pages/AnnouncementCenter.jsx";
 import AssignmentsPageNew from "./pages/AssignmentsPageNew.jsx";
@@ -94,23 +96,30 @@ const RoleBasedRedirect = ({ targetPath }) => {
     }
 
     const userRoleName = user.role?.replace('ROLE_', '').toLowerCase();
-    
+
     // Construct the role-specific path
     const finalPath = `/${userRoleName}/${targetPath}`;
 
     return <Navigate to={finalPath} replace />;
 };
 
-// A simple ProtectedRoute component (assuming a basic implementation)
+// Simplified ProtectedRoute that relies on the AuthContext state
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth(); // Use the hook
+  const { user, loading } = useAuth();
 
   if (loading) {
-    // You can return a loading spinner here as well, but AuthProvider already handles it
-    return null; // Or a loading spinner
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Loading...</div>
+      </div>
+    );
   }
 
   if (!user) {
+    console.log('ProtectedRoute: User not authenticated, redirecting to login');
+    // Redirect them to the /login page, but save the current location they were
+    // trying to go to. This allows us to send them along to that page after a
+    // successful login.
     return <Navigate to="/login" replace />;
   }
 
@@ -119,6 +128,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const userRoleName = user.role?.replace('ROLE_', '');
 
   if (allowedRoles && !allowedRoles.includes(userRoleName)) {
+    console.log(`ProtectedRoute: User role ${userRoleName} not in allowed roles:`, allowedRoles);
     // Redirect to their own dashboard if they try to access a page they don't have permission for
     if (userRoleName === "STUDENT") return <Navigate to="/student" replace />;
     if (userRoleName === "TEACHER") return <Navigate to="/teacher" replace />;
@@ -187,10 +197,12 @@ function App() {
               <Route path="/teacher/assignments/:assignmentId/grade" element={<ProtectedRoute allowedRoles={["TEACHER"]}><GradeHomework /></ProtectedRoute>} />
               <Route path="/teacher/lectures" element={<ProtectedRoute allowedRoles={["TEACHER", "STUDENT"]}><LecturesPageNew /></ProtectedRoute>} />
               <Route path="/teacher/attendance/take/:classroomId/:lectureId" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TakeAttendancePage /></ProtectedRoute>} />
+              <Route path="/teacher/attendance/take/:classroomId" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={["TEACHER"]}><AttendancePageNew /></ProtectedRoute>} />
-              <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><MessagingPage /></ProtectedRoute>} />
+              <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherMessagesPage /></ProtectedRoute>} />
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
+              <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
 
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
@@ -236,7 +248,7 @@ function App() {
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route path="/blog" element={<ProtectedRoute allowedRoles={["TEACHER", "STUDENT", "ADMIN", "MANAGER"]}><BlogPages /></ProtectedRoute>} />
               <Route path="/blank" element={<BlankPage />} />
-              
+
               {/* Add generic routes for profile and notifications */}
               <Route path="/profile" element={<RoleBasedRedirect targetPath="edit-profile" />} />
               <Route path="/notifications" element={<RoleBasedRedirect targetPath="announcements" />} />

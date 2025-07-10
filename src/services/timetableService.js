@@ -63,10 +63,14 @@ class TimetableService {
    */
   static async getMyTimetable(params = {}) {
     try {
-      const response = await apiClient.get('/schedule/my-timetable', { params });
+      console.log('📅 TimetableService.getMyTimetable: Fetching with params:', params);
+      const response = await apiClient.get('/timetable/my-timetable', { params });
+      console.log('📅 TimetableService.getMyTimetable: Response received:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching my timetable:', error);
+      console.error('❌ Error fetching my timetable:', error);
+      console.error('   Status:', error.response?.status);
+      console.error('   Data:', error.response?.data);
       throw error;
     }
   }

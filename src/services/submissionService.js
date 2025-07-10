@@ -40,6 +40,28 @@ class SubmissionService {
       return response.data;
     } catch (error) {
       console.error('Error submitting assignment:', error);
+
+      // Handle specific business logic errors
+      if (error.response?.status === 400) {
+        const errorMessage = error.response.data?.message || error.response.data;
+
+        if (typeof errorMessage === 'string' && errorMessage.includes('Assignment deadline has passed')) {
+          // Create a user-friendly error for deadline passed
+          const friendlyError = new Error('Đã quá hạn nộp bài. Không thể nộp bài sau deadline.');
+          friendlyError.code = 'DEADLINE_PASSED';
+          friendlyError.originalError = error;
+          throw friendlyError;
+        }
+
+        if (typeof errorMessage === 'string' && errorMessage.includes('Cannot update a graded submission')) {
+          // This shouldn't happen in submit, but just in case
+          const friendlyError = new Error('Bài nộp đã được chấm điểm. Vui lòng liên hệ giáo viên nếu cần thay đổi.');
+          friendlyError.code = 'GRADED_SUBMISSION_UPDATE_NOT_ALLOWED';
+          friendlyError.originalError = error;
+          throw friendlyError;
+        }
+      }
+
       throw error;
     }
   }
@@ -90,6 +112,28 @@ class SubmissionService {
       return response.data;
     } catch (error) {
       console.error('Error updating submission:', error);
+
+      // Handle specific business logic errors
+      if (error.response?.status === 400) {
+        const errorMessage = error.response.data?.message || error.response.data;
+
+        if (typeof errorMessage === 'string' && errorMessage.includes('Cannot update a graded submission')) {
+          // Create a user-friendly error for graded submissions
+          const friendlyError = new Error('Không thể cập nhật bài nộp đã được chấm điểm. Vui lòng liên hệ giáo viên nếu cần thay đổi.');
+          friendlyError.code = 'GRADED_SUBMISSION_UPDATE_NOT_ALLOWED';
+          friendlyError.originalError = error;
+          throw friendlyError;
+        }
+
+        if (typeof errorMessage === 'string' && errorMessage.includes('Assignment deadline has passed')) {
+          // Create a user-friendly error for deadline passed
+          const friendlyError = new Error('Đã quá hạn nộp bài. Không thể cập nhật bài nộp sau deadline.');
+          friendlyError.code = 'DEADLINE_PASSED';
+          friendlyError.originalError = error;
+          throw friendlyError;
+        }
+      }
+
       throw error;
     }
   }

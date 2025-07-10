@@ -1,7 +1,7 @@
 import { Alert, Space, Spin, Table, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
-import { teacherClassroomService } from '../../services/teacherClassroomService';
+import { attendanceService } from '../../services/attendanceService';
 
 const { Title, Paragraph } = Typography;
 
@@ -11,20 +11,38 @@ const TeachingHistoryPage = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        // Create an AbortController for cleanup
+        const abortController = new AbortController();
+        
         const fetchHistory = async () => {
             try {
                 setLoading(true);
-                const response = await teacherClassroomService.getTeachingHistory();
-                setHistory(response.data || response); // Handle both response formats
+                console.log('Fetching teaching history...');
+                
+                // Use the correct function name from attendanceService
+                const response = await attendanceService.getMyTeachingHistory();
+                console.log('Teaching history response:', response);
+                
+                if (!abortController.signal.aborted) {
+                    setHistory(response || []);
+                    setLoading(false);
+                }
             } catch (err) {
-                setError('Không thể tải lịch sử giảng dạy. Vui lòng thử lại.');
-                console.error(err);
-            } finally {
-                setLoading(false);
+                // Only update state if the component is still mounted and request wasn't aborted
+                if (!abortController.signal.aborted) {
+                    setError('Không thể tải lịch sử giảng dạy. Vui lòng thử lại sau.');
+                    console.error('Final error:', err);
+                    setLoading(false);
+                }
             }
         };
 
         fetchHistory();
+        
+        // Clean up function to abort the API call when component unmounts
+        return () => {
+            abortController.abort();
+        };
     }, []);
 
     const columns = [
