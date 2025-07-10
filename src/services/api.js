@@ -100,49 +100,23 @@ const api = {
   
   /**
    * Get users by role ID
-   * @param {number} roleId - The role ID to filter by (3 for students)
-   * @returns {Promise} Users with the specified role
+   * @param {number} roleId - The role ID to filter by (1 for students, 2 for teachers)
+   * @returns {Promise<Array<UserModel>>} Users with the specified role
    */
   GetUsersByRole: async (roleId) => {
     try {
-      console.log(`GetUsersByRole: Attempting to fetch users with role ID ${roleId}`);
+      // The backend endpoint is /api/users/role/{roleId}
+      // The apiClient has a baseURL of /api, so we just need to call /users/role/{roleId}
+      console.log(`GetUsersByRole: Fetching users with role ID ${roleId} using endpoint /users/role/${roleId}`);
+      const response = await apiClient.get(`/users/role/${roleId}`);
       
-      // Try the direct role endpoint if it exists
-      try {
-        console.log(`GetUsersByRole: Trying direct endpoint: /v1/users/role/${roleId}`);
-        const response = await apiClient.get(`/v1/users/role/${roleId}`);
-        console.log(`GetUsersByRole: Direct endpoint success. Found ${response.data.length} users`);
-        return response.data;
-      } catch (endpointError) {
-        console.log(`GetUsersByRole: Direct role endpoint failed: ${endpointError.message}`);
-        
-        // Fallback: get all users and filter by role
-        console.log('GetUsersByRole: Trying fallback to get all users');
-        const response = await apiClient.get('/v1/users');
-        let allUsers = [];
-        
-        if (Array.isArray(response.data)) {
-          allUsers = response.data;
-        } else if (response.data && response.data.content) {
-          allUsers = response.data.content;
-        } else if (response.data && response.data.data) {
-          allUsers = response.data.data;
-        }
-        
-        const filteredUsers = allUsers.filter(user => user.roleId === roleId || 
-          (user.role && (
-            (roleId === 3 && (user.role === 'STUDENT' || user.role.toLowerCase() === 'student')) || 
-            (roleId === 2 && (user.role === 'TEACHER' || user.role.toLowerCase() === 'teacher')) || 
-            (roleId === 1 && (user.role === 'ADMIN' || user.role.toLowerCase() === 'admin'))
-          ))
-        );
-        
-        console.log(`GetUsersByRole: Fallback found ${filteredUsers.length} users with role ${roleId}`);
-        return filteredUsers;
-      }
+      console.log(`GetUsersByRole: Successfully fetched ${response.data.length} users.`);
+      // Ensure the response is mapped to the UserModel
+      return response.data.map(user => new UserModel(user));
     } catch (error) {
-      console.error('GetUsersByRole: Error in final catch block:', error);
-      throw new Error(`Failed to fetch users by role: ${error.message}`);
+      console.error(`GetUsersByRole: Error fetching users with role ${roleId}:`, error);
+      // It's better to throw the error so the caller component (e.g., TeacherMessagesPage) can handle it
+      throw error;
     }
   },
   

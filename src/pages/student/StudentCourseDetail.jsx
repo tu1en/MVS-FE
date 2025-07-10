@@ -25,13 +25,22 @@ const StudentCourseDetail = () => {
 
   const loadCourseDetails = async () => {
     try {
+      console.log(`📚 Loading course details for courseId: ${courseId}`);
       setLoading(true);
       setError(null);
-      // We need a new service method to get details for a single course
-      const courseData = await ClassroomService.getClassroomDetails(courseId);
+
+      const response = await ClassroomService.getClassroomDetails(courseId);
+      console.log('✅ Course details response:', response);
+
+      // Extract data from response
+      const courseData = response.data || response;
+      console.log('📊 Course data:', courseData);
+
       setCourse(courseData);
     } catch (err) {
-      console.error('Error loading course details:', err);
+      console.error('❌ Error loading course details:', err);
+      console.error('   Status:', err.response?.status);
+      console.error('   Data:', err.response?.data);
       setError('Không thể tải thông tin chi tiết khóa học. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -43,6 +52,7 @@ const StudentCourseDetail = () => {
       case 'lectures':
         return <LectureList 
           courseId={courseId}
+          courseName={course?.name} // Add courseName prop
           isStudentView={true} // Pass a prop to indicate student view
         />;
       case 'schedule':
@@ -74,6 +84,10 @@ const StudentCourseDetail = () => {
     return (
       <div className="p-8 text-center">
         <Spin size="large" />
+        <div className="mt-4">
+          <p>Đang tải thông tin khóa học...</p>
+          <p className="text-sm text-gray-500">Course ID: {courseId}</p>
+        </div>
       </div>
     );
   }
@@ -81,13 +95,31 @@ const StudentCourseDetail = () => {
   if (error || !course) {
     return (
       <div className="p-8">
-        <Alert message={error || 'Không tìm thấy thông tin khóa học.'} type="error" showIcon />
-        <button 
-          onClick={() => navigate('/student/my-courses')}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Quay lại danh sách
-        </button>
+        <Alert
+          message={error || 'Không tìm thấy thông tin khóa học.'}
+          type="error"
+          showIcon
+          description={
+            <div>
+              <p>Course ID: {courseId}</p>
+              <p>Vui lòng kiểm tra lại đường dẫn hoặc liên hệ quản trị viên.</p>
+            </div>
+          }
+        />
+        <div className="mt-4 space-x-2">
+          <button
+            onClick={loadCourseDetails}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Thử lại
+          </button>
+          <button
+            onClick={() => navigate('/student/my-courses')}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Quay lại danh sách
+          </button>
+        </div>
       </div>
     );
   }
@@ -103,7 +135,9 @@ const StudentCourseDetail = () => {
           &larr; Quay lại danh sách khóa học
         </button>
         <Title level={2} className="mb-1">{course.name}</Title>
-        <Text type="secondary">Giáo viên: {course.teacherName}</Text>
+        <Text type="secondary">
+          Giáo viên: {course.teacher?.fullName || course.teacherName || 'Chưa có thông tin'}
+        </Text>
         <Paragraph className="mt-4">{course.description}</Paragraph>
       </div>
 

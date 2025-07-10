@@ -41,7 +41,7 @@ export const teacherLectureService = {
    */
   async createLecture(lectureData) {
     try {
-      const response = await apiClient.post('/api/lectures', lectureData);
+      const response = await apiClient.post('/lectures', lectureData);
       return response.data;
     } catch (error) {
       console.error('Error creating lecture:', error);
@@ -135,7 +135,7 @@ export const teacherLectureService = {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await apiClient.post('/api/files/upload', formData, {
+      const response = await apiClient.post('/files/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -185,7 +185,7 @@ export const teacherLectureService = {
    */
   async uploadLectureMaterials(formData) {
     try {
-      const response = await apiClient.post('/api/lectures/materials/upload', formData, {
+      const response = await apiClient.post('/lectures/materials/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
