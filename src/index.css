@@ -60,3 +60,193 @@ button, input, textarea, select {
   font-family: 'Inter', 'Roboto', sans-serif;
   font-feature-settings: "kern" 1;
 }
+
+/* Teacher Course Management - Responsive Button Styles */
+.course-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.course-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  min-height: 2.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.course-action-button:active {
+  transform: translateY(0);
+}
+
+.course-action-button.primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.course-action-button.primary:hover {
+  background-color: #2563eb;
+}
+
+.course-action-button.success {
+  background-color: #10b981;
+  color: white;
+}
+
+.course-action-button.success:hover {
+  background-color: #059669;
+}
+
+.course-action-button.warning {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.course-action-button.warning:hover {
+  background-color: #d97706;
+}
+
+.course-action-button.secondary {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.course-action-button.secondary:hover {
+  background-color: #7c3aed;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 640px) {
+  .course-action-buttons {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .course-action-button {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .course-action-buttons {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .course-action-buttons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .course-action-buttons {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+/* Pagination Styles */
+.course-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  min-width: 2.5rem;
+  height: 2.5rem;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-button.active {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.pagination-button.active:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.pagination-ellipsis {
+  padding: 0.5rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Responsive pagination */
+@media (max-width: 640px) {
+  .course-pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pagination-button {
+    min-width: 3rem;
+    height: 3rem;
+    font-size: 1rem;
+  }
+}

@@ -262,11 +262,24 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
     multiple: true,
     accept: '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.mp4,.avi,.mov,.wmv,.jpg,.jpeg,.png,.gif'
   };
-  return (    <Modal
+  return (
+    <Modal
       title={editingLecture ? "Chỉnh sửa bài giảng nâng cao" : "Thêm bài giảng mới"}
       open={open}
       onCancel={onCancel}
-      footer={null}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>
+          Hủy
+        </Button>,
+        <Button
+          key="submit"
+          type="primary"
+          loading={loading}
+          onClick={() => form.submit()}
+        >
+          {editingLecture ? "Cập nhật bài giảng" : "Thêm bài giảng"}
+        </Button>
+      ]}
       width={800}
       destroyOnHidden={true}
       maskClosable={false}
@@ -361,49 +374,47 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
 
                     <Upload {...uploadProps}>
                       <Button icon={<UploadOutlined />} loading={uploadProgress > 0 && uploadProgress < 100}>
-                        {uploadProgress > 0 && uploadProgress < 100 
+                        {uploadProgress > 0 && uploadProgress < 100
                           ? `Đang upload... ${Math.round(uploadProgress)}%`
                           : 'Chọn files để upload'
                         }
                       </Button>
                     </Upload>
 
-                    {/* Uploaded Files List */}
+                    {/* Display uploaded files */}
                     {uploadedFiles.length > 0 && (
-                      <div>
+                      <div style={{ marginTop: 16 }}>
                         <Title level={5}>Files đã upload:</Title>
                         <Space direction="vertical" style={{ width: '100%' }}>
                           {uploadedFiles.map((file, index) => (
-                            <Card size="small" key={index}>
-                              <Row justify="space-between" align="middle">
-                                <Col>
-                                  <Space>
-                                    <FileTextOutlined />
-                                    <div>
-                                      <div>{file.name}</div>
-                                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                                      </Text>
-                                    </div>
-                                  </Space>
-                                </Col>
-                                <Col>
-                                  <Button 
-                                    type="link" 
-                                    danger
-                                    onClick={() => handleRemoveFile(file)}
-                                  >
-                                    Xóa
-                                  </Button>
-                                </Col>
-                              </Row>
-                            </Card>
+                            <div key={index} style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 12px',
+                              border: '1px solid #d9d9d9',
+                              borderRadius: '6px',
+                              backgroundColor: '#fafafa'
+                            }}>
+                              <span>
+                                <CloudUploadOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                                {file.name}
+                              </span>
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                onClick={() => handleRemoveFile(file)}
+                              >
+                                Xóa
+                              </Button>
+                            </div>
                           ))}
                         </Space>
                       </div>
                     )}
                   </Space>
-                )
+                ),
               },
               {
                 key: 'youtube',
@@ -416,88 +427,58 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
                 children: (
                   <Space direction="vertical" style={{ width: '100%' }} size="middle">
                     <div>
-                      <Title level={5}>Nhúng video YouTube</Title>
+                      <Title level={5}>Video YouTube</Title>
                       <Text type="secondary">
-                        Video sẽ được phát trực tiếp trong ứng dụng, không chuyển hướng sang YouTube
+                        Nhập URL của video YouTube để tích hợp vào bài giảng.
                       </Text>
                     </div>
-
                     <Form.Item
                       name="youtubeUrl"
-                      label="URL YouTube"
-                      rules={[
-                        {
-                          validator: (_, value) => {
-                            if (!value || validateYouTubeUrl(value)) {
-                              return Promise.resolve();
-                            }
-                            return Promise.reject(new Error('URL YouTube không hợp lệ'));
-                          }
-                        }
-                      ]}
+                      label="URL Video YouTube"
+                      rules={[{ required: true, message: 'Vui lòng nhập URL video YouTube!' }]}
                     >
                       <Input
-                        prefix={<LinkOutlined />}
-                        placeholder="https://www.youtube.com/watch?v=..."
+                        placeholder="Ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                        addonAfter={<LinkOutlined />}
                         onChange={(e) => setYoutubeUrl(e.target.value)}
+                        onBlur={() => form.setFieldsValue({ youtubeUrl: youtubeUrl })}
                       />
-                    </Form.Item>                    {/* YouTube Preview */}
-                    {youtubeUrl && validateYouTubeUrl(youtubeUrl) && (
-                      <div>
-                        <Title level={5}>Xem trước:</Title>
-                        <div style={{ 
-                          position: 'relative', 
-                          paddingBottom: '56.25%', 
-                          height: 0,
-                          overflow: 'hidden',
-                          border: '1px solid #d9d9d9',
-                          borderRadius: '6px'
-                        }}>
-                          <iframe
-                            src={`https://www.youtube.com/embed/${extractYouTubeId(youtubeUrl)}?autoplay=0&rel=0&showinfo=0&controls=1&modestbranding=1&iv_load_policy=3`}
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%'
-                            }}
-                            frameBorder="0"
-                            allowFullScreen
-                            title="YouTube Preview"
-                            onError={() => {
-                              console.warn('YouTube iframe failed to load - this is expected with ad blockers');
-                            }}
-                          />
-                        </div>
-                        <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                          💡 Nếu không thấy video preview, đây có thể do ad blocker. Video vẫn sẽ hoạt động bình thường khi lưu.
-                        </Text>
-                      </div>
-                    )}
+                    </Form.Item>
                   </Space>
-                )
-              }
+                ),
+              },
+              {
+                key: 'content',
+                label: (
+                  <span>
+                    <FileTextOutlined />
+                    Nội dung bài giảng
+                  </span>
+                ),
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                    <div>
+                      <Title level={5}>Nội dung bài giảng</Title>
+                      <Text type="secondary">
+                        Nội dung chi tiết của bài giảng, có thể được định dạng bằng HTML.
+                      </Text>
+                    </div>
+                    <Form.Item
+                      name="content"
+                      label="Nội dung"
+                      rules={[{ required: true, message: 'Vui lòng nhập nội dung bài giảng!' }]}
+                    >
+                      <TextArea
+                        rows={10}
+                        placeholder="Nội dung bài giảng (có thể định dạng HTML)"
+                      />
+                    </Form.Item>
+                  </Space>
+                ),
+              },
             ]}
           />
         </Card>
-
-        {/* Form Actions */}
-        <div style={{ marginTop: 24, textAlign: 'right' }}>
-          <Space>
-            <Button onClick={onCancel}>
-              Hủy
-            </Button>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading}
-              icon={<CloudUploadOutlined />}
-            >
-              {editingLecture ? 'Cập nhật' : 'Thêm mới'}
-            </Button>
-          </Space>
-        </div>
       </Form>
     </Modal>
   );

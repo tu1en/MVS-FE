@@ -176,9 +176,9 @@ export const teacherAttendanceService = {
     try {
       // Use the correct path with v1 prefix and include the required classroomId parameter as a query param
       // This matches exactly what's in the backend AttendanceController
-      console.log(`Attempting endpoint: /v1/attendance/lecture/${lectureId}?classroomId=${classroomId}`);
+      console.log(`Attempting endpoint: /attendance/lecture/${lectureId}?classroomId=${classroomId}`);
       
-      const response = await apiClient.get(`/v1/attendance/lecture/${lectureId}`, {
+      const response = await apiClient.get(`/attendance/lecture/${lectureId}`, {
         params: {
           classroomId: classroomId
         },
@@ -221,7 +221,7 @@ export const teacherAttendanceService = {
   async submitAttendance(attendanceData) {
     try {
       // Use the correct API endpoint path that matches the backend controller
-      const response = await apiClient.post(`/v1/attendance/submit`, attendanceData);
+      const response = await apiClient.post(`/attendance/submit`, attendanceData);
       return response.data;
     } catch (error) {
       console.error('Error submitting attendance:', error);

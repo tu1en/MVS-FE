@@ -17,6 +17,7 @@ const API_CONFIG = {
     CURRENT_USER: "/users/me",
     USER_REGISTER: "/auth/register",
     USER_LOGIN: "/auth/login",
+    USER_VALIDATE: "/auth/validate",
 
     // Account management endpoints
     ACCOUNTS: "/v1/users",
@@ -53,7 +54,7 @@ const API_CONFIG = {
     ATTENDANCE_MARK: (sessionId) => `/v1/attendance/sessions/${sessionId}/mark`,
     
     // Teacher specific endpoints
-    TEACHER_SCHEDULE: "/schedule/my-timetable", // Updated to use the correct endpoint
+    TEACHER_SCHEDULE: "/timetable/my-timetable", // Fixed to use the correct endpoint
     TEACHER_COURSES: "/classrooms/current-teacher", 
     TEACHER_DASHBOARD_STATS: "/teacher/dashboard-stats",
     TEACHER_PROFILE: "/teacher/profile",    

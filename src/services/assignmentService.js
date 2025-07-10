@@ -463,56 +463,39 @@ class AssignmentService {
   /**
    * Grade a submission
    * @param {number} assignmentId - Assignment ID
-   * @param {Object} gradeData - Grade data
-   * @returns {Promise<Object>} Grade result
+   * @param {number} submissionId - Submission ID
+   * @param {Object} gradeData - Grade data (score, feedback)
+   * @returns {Promise<Object>} Graded submission data
    */
-  static async gradeSubmission(assignmentId, gradeData) {
+  static async gradeSubmission(assignmentId, submissionId, gradeData) {
     const operation = 'GRADE_SUBMISSION';
-    AssignmentDebugger.log(operation, `Starting grading for assignment ${assignmentId}`, {
-      assignmentId,
-      gradeData: {
-        submissionId: gradeData?.submissionId,
-        score: gradeData?.score,
-        hasFeedback: !!gradeData?.feedback,
-        feedbackLength: gradeData?.feedback?.length || 0
-      }
-    });
+    AssignmentDebugger.log(operation, `Starting grading for assignment ${assignmentId}, submission ${submissionId}`);
 
     try {
-      // Validate input data
-      if (!assignmentId || !gradeData) {
-        AssignmentDebugger.log(operation, 'Missing required parameters', 'error', {
-          hasAssignmentId: !!assignmentId,
-          hasGradeData: !!gradeData
-        });
-        throw new Error('Assignment ID and grade data are required');
+      if (!assignmentId || !submissionId) {
+        throw new Error('Assignment ID and Submission ID are required');
       }
 
-      if (gradeData.score === undefined || gradeData.score === null) {
-        AssignmentDebugger.log(operation, 'Missing score in gradeData', 'error');
-        throw new Error('Score is required');
-      }
+      // The new endpoint structure
+      const url = `/assignments/${assignmentId}/submissions/${submissionId}/grade`;
+      AssignmentDebugger.log(operation, 'Making API call to grade submission', {
+        url: url,
+        gradeData: gradeData
+      });
 
-      if (!gradeData.submissionId) {
-        AssignmentDebugger.log(operation, 'Missing submissionId in gradeData', 'error');
-        throw new Error('Submission ID is required');
-      }
-
-      const url = `/assignments/${assignmentId}/grade`;
       const response = await apiClient.post(url, gradeData);
       AssignmentDebugger.logApiCall('POST', url, gradeData, response);
 
-      AssignmentDebugger.log(operation, `Successfully graded submission for assignment ${assignmentId}`, {
-        assignmentId,
-        submissionId: gradeData.submissionId,
-        score: gradeData.score,
-        responseData: response.data
+      const responseData = response.data?.data || response.data;
+      AssignmentDebugger.logDataTransformation('RESPONSE_NORMALIZATION', response.data, responseData, {
+        operation,
+        hasNestedData: !!(response.data && response.data.data)
       });
-
-      return response.data;
+      
+      AssignmentDebugger.log(operation, `Successfully graded submission for assignment ${assignmentId}`);
+      return responseData;
     } catch (error) {
-      AssignmentDebugger.logApiCall('POST', `/assignments/${assignmentId}/grade`, gradeData, null, error);
-      AssignmentDebugger.log(operation, `Failed to grade submission for assignment ${assignmentId}`, 'error');
+      AssignmentDebugger.logApiCall('POST', `/assignments/${assignmentId}/submissions/${submissionId}/grade`, gradeData, null, error);
       throw error;
     }
   }

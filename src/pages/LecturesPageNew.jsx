@@ -62,9 +62,10 @@ function LecturesPageNew() {
   const userRole = user?.role?.replace('ROLE_', '');
 
   // Debug logging for role detection
-  console.log('LecturesPageNew - Role Debug (from Context):', { 
-    userId, 
+  console.log('LecturesPageNew - Role Debug (from Context):', {
+    userId,
     userRole,
+    originalRole: user?.role,
     userFromContext: user
   });
 
@@ -78,36 +79,42 @@ function LecturesPageNew() {
   // Add useEffect to fetch courses when component mounts
   useEffect(() => {
     const fetchCourses = async () => {
+      console.log('LecturesPageNew: Starting to fetch courses...', { userId, userRole });
+
       setIsLoadingCourses(true);
       setCourseError(null);
-      
+
       try {
         // The endpoint is now determined by the role from the context
         const endpoint = userRole === 'STUDENT'
           ? `classrooms/student/me`
           : `classrooms/current-teacher`;
-          
-        console.log(`Fetching courses from: /api/${endpoint}`);
+
+        console.log(`LecturesPageNew: Fetching courses from: /api/${endpoint}`);
         const response = await apiClient.get(endpoint, { timeout: 15000 });
-        
-        console.log('Courses fetched:', response.data);
+
+        console.log('LecturesPageNew: Courses fetched:', response.data);
         setCourses(response.data || []);
-        
+
         // Select first course automatically if available
         if (response.data && response.data.length > 0) {
+          console.log('LecturesPageNew: Auto-selecting first course:', response.data[0]);
           setSelectedCourse(response.data[0]);
         }
       } catch (error) {
-        console.error('Error fetching courses:', error);
-        setCourseError('Failed to load courses. Please try again later.');
+        console.error('LecturesPageNew: Error fetching courses:', error);
+        setCourseError('Không thể tải danh sách khóa học. Vui lòng thử lại.');
       } finally {
         setIsLoadingCourses(false);
       }
     };
-    
+
     // Fetch only if we have a valid user
     if (userId && userRole) {
+      console.log('LecturesPageNew: Valid user detected, fetching courses...');
       fetchCourses();
+    } else {
+      console.log('LecturesPageNew: No valid user, skipping course fetch', { userId, userRole });
     }
   }, [userId, userRole]);
 
@@ -950,8 +957,11 @@ function LecturesPageNew() {
 
   // Render appropriate view based on user role
   const renderMainContent = () => {
+    console.log('LecturesPageNew: Rendering main content with role:', userRole);
+
     // If no role is detected, show error message
     if (!userRole || !userId) {
+      console.log('LecturesPageNew: No role or userId detected', { userRole, userId });
       return (
         <div className="text-center p-8">
           <h2>⚠️ Lỗi phân quyền</h2>
@@ -965,25 +975,30 @@ function LecturesPageNew() {
 
     // Student view for role '1' or 'STUDENT'
     if (userRole === '1' || userRole === 'STUDENT') {
+      console.log('LecturesPageNew: Rendering student view');
       return renderStudentView();
     }
-    
-    // Teacher view for role '2' or 'TEACHER' 
+
+    // Teacher view for role '2' or 'TEACHER'
     if (userRole === '2' || userRole === 'TEACHER') {
+      console.log('LecturesPageNew: Rendering teacher view');
       return renderTeacherView();
     }
-    
+
     // Admin view for role '0' or 'ADMIN'
     if (userRole === '0' || userRole === 'ADMIN') {
+      console.log('LecturesPageNew: Rendering admin view (teacher interface)');
       return renderTeacherView(); // Admins can see teacher view
     }
-    
+
     // Manager view for role '3' or 'MANAGER'
     if (userRole === '3' || userRole === 'MANAGER') {
+      console.log('LecturesPageNew: Rendering manager view (teacher interface)');
       return renderTeacherView(); // Managers can see teacher view
     }
-    
+
     // If role is not recognized, show error
+    console.log('LecturesPageNew: Unrecognized role:', userRole);
     return (
       <div className="text-center p-8">
         <h2>⚠️ Vai trò không được hỗ trợ</h2>
