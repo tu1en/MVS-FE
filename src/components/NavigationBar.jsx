@@ -349,6 +349,11 @@ function NavigationBar() {
           name: 'Tài Khoản',
           path: '/teacher/account',
           icon: '👤'
+        },
+        {
+          name: 'Quản Lý Nghỉ Phép',
+          path: '/teacher/leave-requests',
+          icon: '🏖️'
         }
       ]
     }
@@ -373,6 +378,11 @@ function NavigationBar() {
           name: 'Quản Lý Yêu Cầu', 
           path: '/request-list',
           icon: '📋'
+        },
+        { 
+          name: 'Quản Lý Nghỉ Phép', 
+          path: '/manager/leave-management',
+          icon: '🏖️'
         },
         { 
           name: 'Quản Lý Giao Tiếp', 
