@@ -125,14 +125,22 @@ export const teacherClassroomService = {
 
   /**
    * Get teaching history for the current teacher
+   * @param {AbortSignal} signal - Optional AbortSignal for request cancellation
    * @returns {Promise<Array>} List of teaching history records
    */
-  async getTeachingHistory() {
+  async getTeachingHistory(signal) {
     try {
-      const response = await apiClient.get('/teachers/teaching-history');
+      const response = await apiClient.get('/attendance/teaching-history', {
+        signal: signal // Pass the AbortSignal to axios
+      });
       return response.data;
     } catch (error) {
-      console.error('Error fetching teaching history:', error);
+      // Check if the error is due to an aborted request
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        console.log('Teaching history request was cancelled');
+      } else {
+        console.error('Error fetching teaching history:', error);
+      }
       throw error;
     }
   }

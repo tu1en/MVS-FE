@@ -18,6 +18,7 @@ import {
     Typography
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 // Utility function to fix Vietnamese encoding issues
@@ -162,8 +163,18 @@ const TeacherMessagesPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
-  
-  const teacherId = localStorage.getItem('userId');
+
+  // Get teacher ID from AuthContext
+  const { user, loading: authLoading } = useAuth();
+  const teacherId = user?.id;
+
+  // Debug logging
+  console.log('TeacherMessagesPage - Auth Debug:', {
+    authLoading,
+    user,
+    teacherId,
+    userFromLocalStorage: localStorage.getItem('userId')
+  });
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -331,6 +342,25 @@ const TeacherMessagesPage = () => {
       />
     );
   };
+
+  // Show loading if auth is still loading
+  if (authLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <p>Đang tải thông tin người dùng...</p>
+      </div>
+    );
+  }
+
+  // Show error if no teacher ID found
+  if (!teacherId) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px', color: '#ff4d4f' }}>
+        <p>Không thể xác định thông tin giảng viên. Vui lòng đăng nhập lại.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

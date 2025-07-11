@@ -39,7 +39,6 @@ const EditClassroomModal = ({ visible, onCancel, onOk, classroom }) => {
             onCancel={onCancel}
             onOk={handleOk}
             confirmLoading={loading}
-            destroyOnClose
         >
             <Form form={form} layout="vertical" name="editClassroomForm">
                 <Form.Item name="name" label="Tên lớp học" rules={[{ required: true, message: 'Vui lòng nhập tên lớp!' }]}>
