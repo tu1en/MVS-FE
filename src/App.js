@@ -36,6 +36,7 @@ import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.j
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
+import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 
@@ -50,6 +51,7 @@ import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
 import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
 import RequestList from "./pages/RequestList.jsx";
+import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 
 // Student Pages
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -192,6 +194,7 @@ function App() {
               <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><MessagingPage /></ProtectedRoute>} />
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
+              <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
 
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
@@ -230,6 +233,7 @@ function App() {
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
               <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
+              <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
 
               {/* Test Upload Page */}
               <Route path="/test-upload" element={<TestUpload />} />
