@@ -36,7 +36,7 @@ const scheduleService = {
   getClassroomSchedule: async (classroomId) => {
     try {
       console.log(`📅 scheduleService.getClassroomSchedule: Fetching schedules for classroom ID ${classroomId}`);
-      const response = await apiClient.get(`/api/schedules/classroom/${classroomId}`);
+      const response = await apiClient.get(`/schedules/classroom/${classroomId}`);
       console.log(`📅 scheduleService.getClassroomSchedule: Response data:`, response.data);
       return response.data;
     } catch (error) {

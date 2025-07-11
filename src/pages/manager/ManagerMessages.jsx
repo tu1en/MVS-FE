@@ -21,10 +21,12 @@ const ManagerMessages = () => {
     try {
       setLoading(true);
       const data = await managerService.getMessages();
-      setMessages(data);
+      // Ensure data is always an array
+      setMessages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching messages:', error);
       message.error('Không thể tải danh sách tin nhắn');
+      setMessages([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
