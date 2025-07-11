@@ -302,14 +302,14 @@ const ManagerReports = () => {
                                 <Col span={8}>
                                     <Statistic 
                                         title="Tổng chi phí" 
-                                        value={reports.financial.data.totalExpense} 
+                                        value={reports.financial.data.totalExpenses} 
                                         formatter={(value) => formatCurrency(value)}
                                     />
                                 </Col>
                                 <Col span={8}>
                                     <Statistic 
                                         title="Lợi nhuận" 
-                                        value={reports.financial.data.profit} 
+                                        value={reports.financial.data.netProfit} 
                                         formatter={(value) => formatCurrency(value)}
                                         valueStyle={{ color: '#3f8600' }}
                                     />
@@ -322,7 +322,7 @@ const ManagerReports = () => {
                                     <ResponsiveContainer width="100%" height={300}>
                                         <PieChart>
                                             <Pie
-                                                data={reports.financial.data.expenseBreakdown}
+                                                data={reports.financial.data.expenseData || []}
                                                 cx="50%"
                                                 cy="50%"
                                                 labelLine={false}
@@ -332,7 +332,7 @@ const ManagerReports = () => {
                                                 nameKey="category"
                                                 label={({ category, percent }) => `${category}: ${(percent * 100).toFixed(0)}%`}
                                             >
-                                                {reports.financial.data.expenseBreakdown.map((entry, index) => (
+                                                {(reports.financial.data.expenseData || []).map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                 ))}
                                             </Pie>
@@ -343,7 +343,7 @@ const ManagerReports = () => {
                                 </Col>
                                 <Col span={12}>
                                     <Table 
-                                        dataSource={reports.financial.data.expenseBreakdown}
+                                        dataSource={reports.financial.data.expenseData || []}
                                         rowKey="category"
                                         pagination={false}
                                         columns={[
