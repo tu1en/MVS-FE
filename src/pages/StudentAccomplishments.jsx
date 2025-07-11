@@ -25,7 +25,6 @@ const AccomplishmentFormModal = ({ visible, onCancel, onFinish, initialData }) =
             open={visible}
             onCancel={onCancel}
             onOk={() => form.submit()}
-            destroyOnClose
         >
             <Form form={form} onFinish={onFinish} layout="vertical">
                 <Form.Item name="title" label="Tên thành tích/Chứng chỉ" rules={[{ required: true }]}>
