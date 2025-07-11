@@ -79,7 +79,7 @@ export default function StudentDashboard() {
       // Use Promise.allSettled instead of Promise.all to handle individual endpoint failures
       const [classroomsRes, attendanceRes, assignmentsRes, messagesRes] = await Promise.allSettled([
         api.get('/classrooms/student/me'), // Student's enrolled classrooms
-        api.get('/v1/attendance/my-history?classroomId=1'), // Fixed endpoint with required param
+        api.get('/attendance/my-history?classroomId=1'), // Sửa endpoint từ /v1/attendance/my-history thành /attendance/my-history
         api.get('/assignments/student/me'), // Alternative endpoint for student assignments  
         api.get('/messages/dashboard/unread-count') // Fixed endpoint for unread messages
       ]);

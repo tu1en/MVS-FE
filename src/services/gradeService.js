@@ -1,52 +1,29 @@
-import axios from 'axios';
+import axiosInstance from '../config/axiosInstance';
 
-const apiClient = axios.create({
-  timeout: 10000,
-});
-
-// Add axios interceptor to handle token
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
-// Add response interceptor for common error handling
-apiClient.interceptors.response.use((response) => {
-  return response;
-}, (error) => {
-  const { response } = error;
-  if (response && response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    window.location.href = '/login';
-  }
-  return Promise.reject(error);
-});
+// Use the configured axios instance instead of creating a new one
+const apiClient = axiosInstance;
 
 class GradeService {
   /**
    * Get all grades for current student across all classrooms
    * This combines assignment submissions and exam results
+   * @param {string|number} classroomId - Optional classroom ID to filter results
    * @returns {Promise<Array>} List of grade records
    */
-  static async getMyGrades() {
+  static async getMyGrades(classroomId = null) {
     try {
-      // Get student's assignments first
-      const assignmentResponse = await apiClient.get('/api/assignments/student');
-      const assignments = Array.isArray(assignmentResponse.data?.data) ? assignmentResponse.data.data : 
+      // Get student's assignments first - use the correct endpoint for current authenticated student
+      const assignmentResponse = await apiClient.get('/assignments/student/me');
+      const assignments = Array.isArray(assignmentResponse.data?.data) ? assignmentResponse.data.data :
                          Array.isArray(assignmentResponse.data) ? assignmentResponse.data : [];
 
       if (assignments.length === 0) {
+        console.info('No assignments found for current student');
         return [];
       }
 
       // Get current user ID from assignments or submissions
-      const userResponse = await apiClient.get('/api/classrooms/student/me');
+      const userResponse = await apiClient.get('/classrooms/student/me');
       const userInfo = userResponse.data?.[0]; // Get user info from first classroom
       
       if (!userInfo) {
@@ -58,7 +35,7 @@ class GradeService {
         try {
           // Try to get submission for this assignment - need to extract student ID
           // Since we don't have direct student ID, we'll use a different approach
-          const submissionResponse = await apiClient.get(`/api/submissions/assignment/${assignment.id}`);
+          const submissionResponse = await apiClient.get(`/submissions/assignment/${assignment.id}`);
           const submissions = Array.isArray(submissionResponse.data) ? submissionResponse.data : [];
           
           // Find current user's submission (this is a limitation - we need student ID)
@@ -68,6 +45,7 @@ class GradeService {
             type: 'assignment',
             title: assignment.title,
             description: assignment.description,
+            classroomId: assignment.classroomId,
             classroomName: assignment.classroomName,
             subject: assignment.subject,
             maxPoints: assignment.points || 0,
@@ -86,6 +64,7 @@ class GradeService {
             type: 'assignment',
             title: assignment.title,
             description: assignment.description,
+            classroomId: assignment.classroomId,
             classroomName: assignment.classroomName,
             subject: assignment.subject,
             maxPoints: assignment.points || 0,
@@ -101,10 +80,29 @@ class GradeService {
       });
 
       const grades = await Promise.all(gradePromises);
-      return grades.filter(grade => grade !== null);
+      const validGrades = grades.filter(grade => grade !== null);
+
+      // Filter by classroomId if provided
+      if (classroomId) {
+        return validGrades.filter(grade => grade.classroomId === parseInt(classroomId));
+      }
+
+      return validGrades;
       
     } catch (error) {
       console.error('Error fetching my grades:', error);
+
+      // Provide more specific error information
+      if (error.response?.status === 401) {
+        console.error('Authentication required - user may need to log in again');
+      } else if (error.response?.status === 403) {
+        console.error('Access denied - user may not have student permissions');
+      } else if (error.response?.status === 404) {
+        console.error('Assignments endpoint not found - check API configuration');
+      } else if (error.response?.status === 500) {
+        console.error('Server error - check backend logs for details');
+      }
+
       return [];
     }
   }

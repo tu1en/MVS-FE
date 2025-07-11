@@ -52,6 +52,10 @@ const TeacherAnnouncementsPage = () => {
   // Get teacher info from localStorage
   const teacherId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
+  const userRole = localStorage.getItem('role');
+
+  // Check if user can create announcements (only MANAGER and ADMIN)
+  const canCreateAnnouncements = userRole === 'MANAGER' || userRole === 'ADMIN' || userRole === '3' || userRole === '0';
 
   useEffect(() => {
     if (teacherId && token) {
@@ -234,13 +238,15 @@ const TeacherAnnouncementsPage = () => {
               Quản lý thông báo
             </Title>
             <Space>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={() => setIsModalVisible(true)}
-              >
-                Tạo thông báo mới
-              </Button>
+              {canCreateAnnouncements && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setIsModalVisible(true)}
+                >
+                  Tạo thông báo mới
+                </Button>
+              )}
               <Button 
                 icon={<ReloadOutlined />}
                 onClick={fetchAnnouncements}
@@ -251,6 +257,18 @@ const TeacherAnnouncementsPage = () => {
             </Space>
           </div>
         </Col>
+
+        {/* Notice for teachers */}
+        {!canCreateAnnouncements && (
+          <Col span={24}>
+            <Card size="small" style={{ backgroundColor: '#f6ffed', borderColor: '#b7eb8f' }}>
+              <Text type="secondary">
+                <BellOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                Bạn chỉ có thể xem và đọc thông báo. Chỉ có Quản lý và Quản trị viên mới có thể tạo thông báo mới.
+              </Text>
+            </Card>
+          </Col>
+        )}
 
         {/* Filters */}
         <Col span={24}>

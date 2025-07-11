@@ -10,7 +10,7 @@ export const teacherAssignmentService = {
    */
   async getMyAssignments() {
     try {
-      const response = await apiClient.get('/api/assignments/current-teacher');
+      const response = await apiClient.get('/assignments/current-teacher');
       return response.data;
     } catch (error) {
       console.error('Error fetching teacher assignments:', error);
@@ -55,7 +55,7 @@ export const teacherAssignmentService = {
    */
   async createAssignment(assignmentData) {
     try {
-      const response = await apiClient.post('/api/assignments', assignmentData);
+      const response = await apiClient.post('/assignments', assignmentData);
       return response.data;
     } catch (error) {
       console.error('Error creating assignment:', error);
@@ -146,7 +146,7 @@ export const teacherAssignmentService = {
    */
   async bulkGradeSubmissions(gradeData) {
     try {
-      const response = await apiClient.put('/api/submissions/bulk-grade', { grades: gradeData });
+      const response = await apiClient.put('/submissions/bulk-grade', { grades: gradeData });
       return response.data;
     } catch (error) {
       console.error('Error bulk grading submissions:', error);
