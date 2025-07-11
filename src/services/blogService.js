@@ -1,12 +1,27 @@
 import axios from 'axios';
+import API_CONFIG from '../config/api-config';
 
 // Tạo axios instance với URL server backend
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8088',
+  baseURL: API_CONFIG.BASE_URL.replace('/api', ''), // Remove /api suffix for blogs endpoint
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+// Add request interceptor to include auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 const API_URL = '/api/blogs';
 
