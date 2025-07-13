@@ -30,33 +30,49 @@ export const isUserLoggedIn = () => {
  * @returns {string} - Normalized role value
  */
 export const getNormalizedRole = (role) => {
-  if (role === undefined || role === null) return null;
-
-  // Convert to string and trim
-  let roleStr = String(role).trim();
-
-  // Accept both number and string, any case
-  switch (roleStr.toUpperCase()) {
-    case '4':
-    case 'ADMIN':
-      return 'ADMIN';
-    case '1':
-    case 'STUDENT':
-      return 'STUDENT';
-    case '2':
-    case 'TEACHER':
-      return 'TEACHER';
-    case '3':
-    case 'MANAGER':
-      return 'MANAGER';
-    case '5':
-    case 'ACCOUNTANT':
-      return 'ACCOUNTANT';
-    default:
-      // fallback for typo: accountant (lowercase)
-      if (roleStr.toLowerCase() === 'accountant') return 'ACCOUNTANT';
-      return null;
+  console.log('Raw role received:', role);
+  
+  if (role === undefined || role === null) {
+    console.warn('Role is undefined or null');
+    return null;
   }
+
+  // Convert to string, trim, and handle case sensitivity
+  const roleStr = String(role).trim().toUpperCase();
+  console.log('Processing role:', roleStr);
+
+  // Map all possible role values to their normalized form
+  const roleMap = {
+    // Number mappings
+    '1': 'STUDENT',
+    '2': 'TEACHER',
+    '3': 'MANAGER',
+    '4': 'ACCOUNTANT',
+    '5': 'ADMIN',
+    
+    // Direct string mappings (uppercase)
+    'STUDENT': 'STUDENT',
+    'TEACHER': 'TEACHER',
+    'MANAGER': 'MANAGER',
+    'ACCOUNTANT': 'ACCOUNTANT',
+    'ADMIN': 'ADMIN',
+    
+    // Common variations or typos
+    'ACCOUNTING': 'ACCOUNTANT',
+    'ADMINISTRATOR': 'ADMIN',
+    'ADMINISTRATION': 'ADMIN',
+    'ADMINISTRATIVE': 'ADMIN',
+  };
+
+  const normalizedRole = roleMap[roleStr] || null;
+  
+  if (!normalizedRole) {
+    console.warn('Unrecognized role:', roleStr);
+  } else {
+    console.log('Normalized role to:', normalizedRole);
+  }
+  
+  return normalizedRole;
 };
 
 /**

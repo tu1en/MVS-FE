@@ -69,11 +69,11 @@ function App() {
     }
 
     const roleMap = {
-      '4': 'ADMIN', 'ADMIN': '4',
       '1': 'STUDENT', 'STUDENT': '1',
-      '2': 'TEACHER', 'TEACHER': '2', 
+      '2': 'TEACHER', 'TEACHER': '2',
       '3': 'MANAGER', 'MANAGER': '3',
-      '5': 'ACCOUNTANT', 'ACCOUNTANT': '5'
+      '4': 'ACCOUNTANT', 'ACCOUNTANT': '4',
+      '5': 'ADMIN', 'ADMIN': '5'
     };
 
     const isRoleAllowed = (currentRole, allowedRoles) => {
@@ -88,8 +88,8 @@ function App() {
       '1': "/student",
       '2': "/teacher",
       '3': "/manager",
-      '4': "/admin",
-      '5': "/accounting/dashboard"
+      '4': "/accounting/dashboard",
+      '5': "/admin"
     };
 
     return <Navigate to={redirects[role] || "/login"} replace />;
@@ -106,11 +106,11 @@ function App() {
           <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={["1", "STUDENT"]}><AssignmentsPage /></ProtectedRoute>} />
           <Route path="/student/lectures" element={<ProtectedRoute allowedRoles={["1", "STUDENT"]}><BlankPage /></ProtectedRoute>} />
           <Route path="/lectures-new" element={<Navigate to="/student/lectures" replace />} />
-          <Route path="/accounting/dashboard" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
-          <Route path="/accounting/attendance-shift-report" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT"]}><AttendanceShiftReport /></ProtectedRoute>} />
-          <Route path="/accounting/attendance-explanation" element={<ProtectedRoute allowedRoles={["5", "ACCOUNTANT", "2", "TEACHER"]}><AttendanceExplanation /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={["4", "ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/user-management" element={<ProtectedRoute allowedRoles={["4", "ADMIN"]}><AdminUserManagement /></ProtectedRoute>} />
+          <Route path="/accounting/dashboard" element={<ProtectedRoute allowedRoles={["4", "ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
+          <Route path="/accounting/attendance-shift-report" element={<ProtectedRoute allowedRoles={["4", "ACCOUNTANT"]}><AttendanceShiftReport /></ProtectedRoute>} />
+          <Route path="/accounting/attendance-explanation" element={<ProtectedRoute allowedRoles={["4", "ACCOUNTANT", "2", "TEACHER"]}><AttendanceExplanation /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={["5", "ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/user-management" element={<ProtectedRoute allowedRoles={["5", "ADMIN"]}><AdminUserManagement /></ProtectedRoute>} />
           <Route path="/teacher" element={<ProtectedRoute allowedRoles={["2", "TEACHER"]}><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute allowedRoles={["3", "MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

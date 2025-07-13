@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
-import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
+import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
 import { loginSuccess } from '../store/slices/authSlice';
 import RegisterModal from '../components/RegisterModal';
+import { getNormalizedRole } from '../utils/authUtils';
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
@@ -55,29 +56,34 @@ export default function LoginScreen() {
         dispatch(loginSuccess({ token: data.token, role: data.role, userId: data.userId }));
         toast.success('Đăng nhập thành công!');
 
-        // Normalize role for navigation
-        const { getNormalizedRole } = require('../utils/authUtils');
+        // Get and log the normalized role
         const normalizedRole = getNormalizedRole(data.role);
         console.log('Navigating based on normalized role:', normalizedRole);
-        switch (normalizedRole) {
-          case ROLE.ADMIN: //ADMIN
-            navigate('/admin');
-            break;
-          case ROLE.TEACHER: //TEACHER
-            navigate('/teacher');
-            break;
-          case ROLE.STUDENT: //STUDENT
-            navigate('/student');
-            break;
-          case ROLE.MANAGER: //MANAGER
-            navigate('/manager');
-            break;
-          case ROLE.ACCOUNTANT: //ACCOUNTANT
-            navigate('/accounting/dashboard');
-            break;
-          default:
-            console.warn('Unknown role:', data.role);
-            navigate('/');
+        
+        // Handle redirection based on role
+        if (!normalizedRole) {
+          console.error('Invalid or unrecognized role:', data.role);
+          toast.error('Vai trò người dùng không hợp lệ');
+          return;
+        }
+        
+        // Define role-based redirects
+        const roleRedirects = {
+          [ROLE.ADMIN]: '/admin',
+          [ROLE.ACCOUNTANT]: '/accounting/dashboard',
+          [ROLE.TEACHER]: '/teacher',
+          [ROLE.STUDENT]: '/student',
+          [ROLE.MANAGER]: '/manager'
+        };
+        
+        const redirectPath = roleRedirects[normalizedRole];
+        
+        if (redirectPath) {
+          console.log(`Redirecting ${normalizedRole} to ${redirectPath}`);
+          navigate(redirectPath);
+        } else {
+          console.warn('No redirect path defined for role:', normalizedRole);
+          navigate('/');
         }
       } else {
         // Try to parse error response
