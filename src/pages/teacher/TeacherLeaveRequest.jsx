@@ -41,6 +41,8 @@ const TeacherLeaveRequest = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dateRange, setDateRange] = useState(null); // Thêm state để theo dõi dateRange
+  const [dateStrings, setDateStrings] = useState(null); // Thêm state để lưu date strings
 
   // Fetch leave requests
   const fetchLeaveRequests = useCallback(async () => {
@@ -61,37 +63,165 @@ const TeacherLeaveRequest = () => {
     fetchLeaveRequests();
   }, [fetchLeaveRequests]);
 
+  // Effect để tính toán số ngày nghỉ khi dateRange thay đổi
+  useEffect(() => {
+    if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
+      // Sử dụng dateStrings nếu có, nếu không thì sử dụng moment objects
+      let workingDays;
+      if (dateStrings && dateStrings.length === 2) {
+        console.log('Using dateStrings for calculation:', dateStrings);
+        workingDays = calculateWorkingDaysFromStrings(dateStrings[0], dateStrings[1]);
+      } else {
+        workingDays = calculateWorkingDaysAlternative(dateRange[0], dateRange[1]);
+      }
+      console.log('useEffect: Setting numberOfDays to:', workingDays);
+      form.setFieldsValue({
+        startDate: dateRange[0],
+        endDate: dateRange[1],
+        numberOfDays: workingDays
+      });
+    }
+  }, [dateRange, dateStrings, form]);
+
+  // Calculate working days from string dates (DD/MM/YYYY format)
+  const calculateWorkingDaysFromStrings = (startStr, endStr) => {
+    console.log('Calculating from strings:', startStr, 'to', endStr);
+    
+    if (!startStr || !endStr) {
+      console.log('Invalid string dates provided');
+      return 0;
+    }
+    
+    // Parse string dates (DD/MM/YYYY format)
+    const start = moment(startStr, 'DD/MM/YYYY');
+    const end = moment(endStr, 'DD/MM/YYYY');
+    
+    console.log('Parsed start:', start.format('YYYY-MM-DD'), 'Parsed end:', end.format('YYYY-MM-DD'));
+    
+    if (!start.isValid() || !end.isValid()) {
+      console.log('Invalid date format');
+      return 0;
+    }
+    
+    // Tính tổng số ngày
+    const totalDays = end.diff(start, 'days') + 1;
+    console.log('Total days:', totalDays);
+    
+    let workingDays = 0;
+    
+    // Kiểm tra từng ngày
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = start.clone().add(i, 'days');
+      const dayOfWeek = currentDate.day();
+      console.log(`Day ${i + 1}:`, currentDate.format('YYYY-MM-DD'), 'Day of week:', dayOfWeek);
+      
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        workingDays++;
+        console.log('Added working day, total now:', workingDays);
+      } else {
+        console.log('Skipped weekend day');
+      }
+    }
+    
+    console.log('Final working days count (from strings):', workingDays);
+    return workingDays;
+  };
+
+  // Calculate working days between two dates (excluding weekends) - Alternative method
+  const calculateWorkingDaysAlternative = (startDate, endDate) => {
+    console.log('Alternative method - Calculating working days between:', startDate, 'and', endDate);
+    
+    if (!startDate || !endDate) {
+      console.log('Invalid dates provided');
+      return 0;
+    }
+    
+    // Tạo moment objects mới từ string format để tránh vấn đề với object references
+    const startStr = moment(startDate).format('YYYY-MM-DD');
+    const endStr = moment(endDate).format('YYYY-MM-DD');
+    
+    const start = moment(startStr);
+    const end = moment(endStr);
+    
+    console.log('Start string:', startStr, 'End string:', endStr);
+    console.log('Start:', start.format('YYYY-MM-DD'), 'End:', end.format('YYYY-MM-DD'));
+    
+    // Tính tổng số ngày
+    const totalDays = end.diff(start, 'days') + 1;
+    console.log('Total days:', totalDays);
+    
+    let workingDays = 0;
+    
+    // Kiểm tra từng ngày
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = start.clone().add(i, 'days');
+      const dayOfWeek = currentDate.day();
+      console.log(`Day ${i + 1}:`, currentDate.format('YYYY-MM-DD'), 'Day of week:', dayOfWeek);
+      
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        workingDays++;
+        console.log('Added working day, total now:', workingDays);
+      } else {
+        console.log('Skipped weekend day');
+      }
+    }
+    
+    console.log('Final working days count (alternative):', workingDays);
+    return workingDays;
+  };
+
   // Calculate working days between two dates (excluding weekends)
   const calculateWorkingDays = (startDate, endDate) => {
-    let count = 0;
-    const start = moment(startDate);
-    const end = moment(endDate);
+    console.log('Calculating working days between:', startDate, 'and', endDate);
     
-    while (start.isSameOrBefore(end)) {
-      if (start.day() !== 0 && start.day() !== 6) { // Not Sunday (0) or Saturday (6)
-        count++;
-      }
-      start.add(1, 'day');
+    if (!startDate || !endDate) {
+      console.log('Invalid dates provided');
+      return 0;
     }
+    
+    let count = 0;
+    
+    // Chuyển đổi sang string format để tránh vấn đề với moment objects
+    const startStr = moment(startDate).format('YYYY-MM-DD');
+    const endStr = moment(endDate).format('YYYY-MM-DD');
+    
+    console.log('Start string:', startStr, 'End string:', endStr);
+    
+    // Tạo moment object cho ngày hiện tại
+    let current = moment(startStr);
+    const end = moment(endStr);
+    
+    console.log('Start moment:', current.format('YYYY-MM-DD'), 'End moment:', end.format('YYYY-MM-DD'));
+    
+    // Kiểm tra xem end có sau start không
+    if (!current.isSameOrBefore(end)) {
+      console.log('Start date is after end date');
+      return 0;
+    }
+    
+    while (current.isSameOrBefore(end)) {
+      const dayOfWeek = current.day();
+      const currentDateStr = current.format('YYYY-MM-DD');
+      console.log('Checking date:', currentDateStr, 'Day of week:', dayOfWeek);
+      
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
+        count++;
+        console.log('Added working day, count now:', count);
+      } else {
+        console.log('Skipped weekend day');
+      }
+      current.add(1, 'day');
+    }
+    
+    console.log('Final working days count:', count);
     return count;
   };
 
   // Handle date range change in form
-  const handleDateRangeChange = (dates) => {
-    if (dates && dates.length === 2) {
-      const workingDays = calculateWorkingDays(dates[0], dates[1]);
-      form.setFieldsValue({
-        startDate: dates[0],
-        endDate: dates[1],
-        numberOfDays: workingDays
-      });
-    } else {
-      form.setFieldsValue({
-        startDate: null,
-        endDate: null,
-        numberOfDays: null
-      });
-    }
+  const handleDateRangeChange = (dates, dateStrings) => {
+    console.log('Date range changed:', dates, dateStrings); // Debug log
+    setDateRange(dates); // Cập nhật state - useEffect sẽ xử lý phần còn lại
+    setDateStrings(dateStrings); // Lưu date strings
   };
 
   // Handle create leave request
@@ -109,6 +239,8 @@ const TeacherLeaveRequest = () => {
       message.success('Đơn xin nghỉ phép đã được gửi thành công');
       setCreateModalVisible(false);
       form.resetFields();
+      setDateRange(null); // Reset dateRange state
+      setDateStrings(null); // Reset dateStrings state
       fetchLeaveRequests();
     } catch (error) {
       console.error('Error creating leave request:', error);
@@ -208,7 +340,7 @@ const TeacherLeaveRequest = () => {
       onFilter: (value, record) => record.status === value,
     },
     {
-      title: 'Hành Động',
+      title: 'Chi Tiết',
       key: 'action',
       render: (_, record) => (
         <Tooltip title="Xem chi tiết">
@@ -303,6 +435,8 @@ const TeacherLeaveRequest = () => {
         onCancel={() => {
           setCreateModalVisible(false);
           form.resetFields();
+          setDateRange(null); // Reset dateRange state
+          setDateStrings(null); // Reset dateStrings state
         }}
         footer={null}
         width={600}
@@ -322,6 +456,7 @@ const TeacherLeaveRequest = () => {
               format="DD/MM/YYYY"
               placeholder={['Ngày bắt đầu', 'Ngày kết thúc']}
               onChange={handleDateRangeChange}
+              value={dateRange}
               disabledDate={(current) => current && current < moment().startOf('day')}
             />
           </Form.Item>
@@ -384,6 +519,8 @@ const TeacherLeaveRequest = () => {
               <Button onClick={() => {
                 setCreateModalVisible(false);
                 form.resetFields();
+                setDateRange(null); // Reset dateRange state
+                setDateStrings(null); // Reset dateStrings state
               }}>
                 Hủy
               </Button>
@@ -409,9 +546,6 @@ const TeacherLeaveRequest = () => {
       >
         {selectedRequest && (
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="Mã Đơn" span={2}>
-              #{selectedRequest.id}
-            </Descriptions.Item>
             <Descriptions.Item label="Ngày Bắt Đầu">
               {moment(selectedRequest.startDate).format('DD/MM/YYYY')}
             </Descriptions.Item>
