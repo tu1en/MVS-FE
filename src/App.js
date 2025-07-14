@@ -7,7 +7,10 @@ import {
     Routes,
 } from "react-router-dom";
 import "./App.css";
+import MessagingDebug from "./pages/MessagingDebug.jsx";
+import MessagingPage from "./pages/MessagingPage.jsx";
 import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
+import QuickMessagingTest from "./pages/QuickMessagingTest.jsx";
 import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
@@ -41,6 +44,10 @@ import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
+import UnifiedStudentMessaging from "./pages/UnifiedStudentMessaging.jsx";
+import UnifiedTeacherMessaging from "./pages/UnifiedTeacherMessaging.jsx";
+
+// Unified Messaging Pages
 
 // Manager Pages
 import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
@@ -77,9 +84,9 @@ import BlogPages from "./pages/BlogPages.jsx";
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import HomePage from "./pages/HomePage/index.jsx"; // Import a new page
 import LecturesPageNew from "./pages/LecturesPageNew.jsx";
-import MessagingPage from "./pages/MessagingPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx"; // Import a new page
 import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
+import TestPage from "./pages/TestPage.jsx";
 import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
@@ -164,6 +171,7 @@ const RootRedirect = () => {
 };
 
 
+
 function App() {
   useEffect(() => {
     ensureRoleConsistency();
@@ -199,7 +207,9 @@ function App() {
               <Route path="/teacher/attendance/take/:classroomId/:lectureId" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="/teacher/attendance/take/:classroomId" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={["TEACHER"]}><AttendancePageNew /></ProtectedRoute>} />
-              <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherMessagesPage /></ProtectedRoute>} />
+              <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><UnifiedTeacherMessaging /></ProtectedRoute>} />
+              <Route path="/teacher/messages-unified" element={<ProtectedRoute allowedRoles={["TEACHER"]}><UnifiedTeacherMessaging /></ProtectedRoute>} />
+              <Route path="/teacher/messages-old" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherMessagesPage /></ProtectedRoute>} />
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
@@ -221,7 +231,11 @@ function App() {
               <Route path="/student/lectures" element={<ProtectedRoute allowedRoles={["TEACHER", "STUDENT"]}><LecturesPageNew /></ProtectedRoute>} />
               <Route path="/student/academic-performance" element={<ProtectedRoute allowedRoles={["STUDENT"]}><AcademicPerformance /></ProtectedRoute>} />
               <Route path="/student/announcements" element={<ProtectedRoute allowedRoles={["STUDENT"]}><AnnouncementCenter /></ProtectedRoute>} />
-              <Route path="/student/messages" element={<ProtectedRoute allowedRoles={["STUDENT"]}><MessagingPage /></ProtectedRoute>} />
+              <Route path="/student/messages" element={<ProtectedRoute allowedRoles={["STUDENT"]}><UnifiedStudentMessaging /></ProtectedRoute>} />
+              <Route path="/student/messages-unified" element={<ProtectedRoute allowedRoles={["STUDENT"]}><UnifiedStudentMessaging /></ProtectedRoute>} />
+              <Route path="/student/messages-old" element={<ProtectedRoute allowedRoles={["STUDENT"]}><MessagingPage /></ProtectedRoute>} />
+              <Route path="/debug/messaging" element={<ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}><MessagingDebug /></ProtectedRoute>} />
+              <Route path="/debug/messaging-quick" element={<ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}><QuickMessagingTest /></ProtectedRoute>} />
               <Route path="/student/accomplishments" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentAccomplishments /></ProtectedRoute>} />
               <Route path="/student/account" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentEditProfile /></ProtectedRoute>} />
               <Route path="/courses/:courseId/exams/:examId/do" element={<ProtectedRoute allowedRoles={["STUDENT"]}><DoExamPage /></ProtectedRoute>} />
@@ -241,8 +255,9 @@ function App() {
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
 
-              {/* Test Upload Page */}
+              {/* Test Pages */}
               <Route path="/test-upload" element={<TestUpload />} />
+              <Route path="/test" element={<TestPage />} />
 
               {/* Generic and Fallback */}
               <Route path="/change-password" element={<ChangePasswordPage />} />

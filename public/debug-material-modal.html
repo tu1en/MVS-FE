@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Material Modal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; max-height: 300px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .material-item { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .material-item button { background: #1890ff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Material Modal</h1>
+    
+    <div class="section">
+        <h2>Test Material Modal Function</h2>
+        <button onclick="fetchAndTestMaterials()">Fetch Materials & Test Modal</button>
+        <button onclick="testSampleMaterials()">Test Sample Materials</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, type = 'info') {
+            const section = document.createElement('div');
+            section.className = 'section';
+            section.innerHTML = `
+                <h3 class="${type}">${title}</h3>
+                <pre>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Simulate the handleViewMaterial function
+        function simulateHandleViewMaterial(material) {
+            console.log("🔍 simulateHandleViewMaterial called with:", material);
+            
+            // Create a consistent material object regardless of the source format
+            const normalizedMaterial = {
+                id: material.id,
+                name: material.name || material.fileName || "Tài liệu",
+                type: material.type || (material.contentType?.includes('pdf') ? 'pdf' : 
+                       material.contentType?.includes('video') ? 'video' : 
+                       material.contentType?.includes('doc') ? 'doc' : 'link'),
+                url: material.url || material.downloadUrl,
+                downloadUrl: material.downloadUrl || material.url,
+                contentType: material.contentType,
+                viewed: material.viewed || false
+            };
+            
+            addResult('🎯 Material Click Simulation', {
+                original: material,
+                normalized: normalizedMaterial,
+                shouldOpenModal: true
+            }, 'info');
+            
+            // Check for potential issues
+            const issues = [];
+            if (!normalizedMaterial.url && !normalizedMaterial.downloadUrl) {
+                issues.push('No URL or downloadUrl found');
+            }
+            if (!normalizedMaterial.contentType) {
+                issues.push('No contentType specified');
+            }
+            if (!normalizedMaterial.name) {
+                issues.push('No name/fileName specified');
+            }
+            
+            if (issues.length > 0) {
+                addResult('⚠️ Potential Issues', issues, 'warning');
+            } else {
+                addResult('✅ Material data looks good', 'All required fields present', 'success');
+            }
+            
+            return normalizedMaterial;
+        }
+
+        async function fetchAndTestMaterials() {
+            clearResults();
+            addResult('🚀 Fetching real materials from API...', '', 'info');
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/courses/1/lectures`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const lectures = await response.json();
+                addResult('📚 Lectures fetched', `${lectures.length} lectures found`, 'success');
+
+                let totalMaterials = 0;
+                lectures.forEach((lecture, lectureIndex) => {
+                    if (lecture.materials && lecture.materials.length > 0) {
+                        totalMaterials += lecture.materials.length;
+                        
+                        addResult(`📖 Lecture ${lectureIndex + 1}: "${lecture.title}"`, 
+                                 `${lecture.materials.length} materials`, 'info');
+                        
+                        // Create interactive material buttons
+                        const materialsDiv = document.createElement('div');
+                        materialsDiv.className = 'section';
+                        materialsDiv.innerHTML = `<h4>Materials for "${lecture.title}":</h4>`;
+                        
+                        lecture.materials.forEach((material, materialIndex) => {
+                            const materialDiv = document.createElement('div');
+                            materialDiv.className = 'material-item';
+                            materialDiv.innerHTML = `
+                                <strong>${material.fileName || material.name || 'Unnamed'}</strong><br>
+                                <small>Type: ${material.contentType || 'Unknown'}</small><br>
+                                <small>URL: ${material.downloadUrl || material.url || 'No URL'}</small><br>
+                                <button onclick="testMaterial(${JSON.stringify(material).replace(/"/g, '&quot;')})">
+                                    Test "Xem" Button
+                                </button>
+                            `;
+                            materialsDiv.appendChild(materialDiv);
+                        });
+                        
+                        resultsDiv.appendChild(materialsDiv);
+                    }
+                });
+
+                addResult('📊 Summary', `Total materials found: ${totalMaterials}`, 
+                         totalMaterials > 0 ? 'success' : 'warning');
+
+            } catch (error) {
+                addResult('❌ Error fetching materials', error.message, 'error');
+            }
+        }
+
+        function testSampleMaterials() {
+            clearResults();
+            addResult('🧪 Testing with sample materials...', '', 'info');
+
+            const sampleMaterials = [
+                {
+                    id: 1,
+                    fileName: "sample.pdf",
+                    contentType: "application/pdf",
+                    downloadUrl: "http://localhost:8088/api/materials/download/1"
+                },
+                {
+                    id: 2,
+                    fileName: "YouTube Video",
+                    contentType: "video/youtube",
+                    downloadUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+                },
+                {
+                    id: 3,
+                    fileName: "document.docx",
+                    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    downloadUrl: "http://localhost:8088/api/materials/download/3"
+                }
+            ];
+
+            sampleMaterials.forEach((material, index) => {
+                const materialsDiv = document.createElement('div');
+                materialsDiv.className = 'section';
+                materialsDiv.innerHTML = `
+                    <h4>Sample Material ${index + 1}:</h4>
+                    <div class="material-item">
+                        <strong>${material.fileName}</strong><br>
+                        <small>Type: ${material.contentType}</small><br>
+                        <small>URL: ${material.downloadUrl}</small><br>
+                        <button onclick="testMaterial(${JSON.stringify(material).replace(/"/g, '&quot;')})">
+                            Test "Xem" Button
+                        </button>
+                    </div>
+                `;
+                resultsDiv.appendChild(materialsDiv);
+            });
+        }
+
+        // Global function to test individual materials
+        window.testMaterial = function(material) {
+            addResult(`🎯 Testing material: ${material.fileName || material.name}`, '', 'info');
+            simulateHandleViewMaterial(material);
+        };
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            addResult('🎯 Material Modal Debug Tool', 'Click buttons above to test material viewing functionality', 'info');
+        });
+    </script>
+</body>
+</html>

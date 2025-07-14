@@ -9,6 +9,7 @@ import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 import { useAuth } from '../context/AuthContext';
 import AssignmentService from '../services/assignmentService';
 import ClassroomService from '../services/classroomService';
+import { parseTimestamp } from '../utils/dateUtils';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -101,18 +102,31 @@ function AssignmentsPageNew() {
     try {
       const response = await ClassroomService.getClassroomsByCurrentTeacher();
       console.log('Fetched teacher classrooms:', response);
-      setTeacherClassrooms(response);
-      setClassrooms(response);
+
+      if (response && response.length > 0) {
+        setTeacherClassrooms(response);
+        setClassrooms(response);
+      } else {
+        console.warn('No classrooms found for current teacher');
+        setTeacherClassrooms([]);
+        setClassrooms([]);
+        message.warning('Bạn chưa được phân công dạy lớp nào. Vui lòng liên hệ quản trị viên.');
+      }
     } catch (error) {
       console.error('Error fetching teacher classrooms:', error);
-      // If error, set some mock classrooms for testing
-      const mockClassrooms = [
-        { id: 1, name: 'Lớp 10A1' },
-        { id: 2, name: 'Lớp 11A2' },
-        { id: 3, name: 'Lớp 12A3' }
-      ];
-      setTeacherClassrooms(mockClassrooms);
-      setClassrooms(mockClassrooms);
+      setTeacherClassrooms([]);
+      setClassrooms([]);
+
+      // Show appropriate error message based on error type
+      if (error.response?.status === 401) {
+        message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 403) {
+        message.error('Bạn không có quyền truy cập danh sách lớp học.');
+      } else if (error.response?.status >= 500) {
+        message.error('Lỗi máy chủ. Vui lòng thử lại sau.');
+      } else {
+        message.error('Không thể tải danh sách lớp học. Vui lòng kiểm tra kết nối mạng và thử lại.');
+      }
     }
   };
 
@@ -196,27 +210,14 @@ function AssignmentsPageNew() {
         }
         
         const upcoming = assignmentsData.filter(a => {
-          // Handle different date formats from backend (LocalDateTime)
+          // Handle different date formats using robust parseTimestamp utility
           let dueDate;
           if (a.dueDate) {
-            // Check if dueDate is an array (Java LocalDateTime serialization)
-            if (Array.isArray(a.dueDate)) {
-              // Format: [year, month, day, hour, minute, second, nanosecond]
-              // Note: month is 1-based in the array but 0-based in JavaScript Date
-              const [year, month, day, hour, minute, second] = a.dueDate;
-              dueDate = new Date(year, month - 1, day, hour, minute, second);
-            } else {
-              // Try to parse as ISO string or other format
-              dueDate = new Date(a.dueDate);
-            }
+            dueDate = parseTimestamp(a.dueDate);
           } else if (a.endDate) {
-            dueDate = Array.isArray(a.endDate) 
-              ? new Date(a.endDate[0], a.endDate[1] - 1, a.endDate[2], a.endDate[3], a.endDate[4], a.endDate[5])
-              : new Date(a.endDate);
+            dueDate = parseTimestamp(a.endDate);
           } else if (a.deadline) {
-            dueDate = Array.isArray(a.deadline) 
-              ? new Date(a.deadline[0], a.deadline[1] - 1, a.deadline[2], a.deadline[3], a.deadline[4], a.deadline[5])
-              : new Date(a.deadline);
+            dueDate = parseTimestamp(a.deadline);
           } else {
             console.warn('No valid date field found for assignment:', a);
             return false;
@@ -232,20 +233,11 @@ function AssignmentsPageNew() {
         const past = assignmentsData.filter(a => {
           let dueDate;
           if (a.dueDate) {
-            if (Array.isArray(a.dueDate)) {
-              const [year, month, day, hour, minute, second] = a.dueDate;
-              dueDate = new Date(year, month - 1, day, hour, minute, second);
-            } else {
-              dueDate = new Date(a.dueDate);
-            }
+            dueDate = parseTimestamp(a.dueDate);
           } else if (a.endDate) {
-            dueDate = Array.isArray(a.endDate) 
-              ? new Date(a.endDate[0], a.endDate[1] - 1, a.endDate[2], a.endDate[3], a.endDate[4], a.endDate[5])
-              : new Date(a.endDate);
+            dueDate = parseTimestamp(a.endDate);
           } else if (a.deadline) {
-            dueDate = Array.isArray(a.deadline) 
-              ? new Date(a.deadline[0], a.deadline[1] - 1, a.deadline[2], a.deadline[3], a.deadline[4], a.deadline[5])
-              : new Date(a.deadline);
+            dueDate = parseTimestamp(a.deadline);
           } else {
             return false;
           }
@@ -319,18 +311,18 @@ function AssignmentsPageNew() {
   };
 
   const handleCreateAssignment = async (values) => {
-    if (!classroomId) {
+    if (!values.classroomId) {
       message.error("Vui lòng chọn lớp học.");
       return;
     }
 
     // Convert classroomId from object to number if needed
-    const finalClassroomId = typeof classroomId === 'object' ? classroomId.id : classroomId;
-    
+    const finalClassroomId = typeof values.classroomId === 'object' ? values.classroomId.id : values.classroomId;
+
     // Check if finalClassroomId is a valid number
     if (isNaN(parseInt(finalClassroomId))) {
       message.error("Mã lớp học không hợp lệ.");
-      console.error("Invalid classroomId:", classroomId);
+      console.error("Invalid classroomId:", values.classroomId);
       return;
     }
 
@@ -1260,7 +1252,27 @@ function AssignmentsPageNew() {
             label="Lớp học"
             rules={[{ required: true, message: 'Vui lòng chọn lớp học!' }]}
           >
-            <Select placeholder="Chọn lớp học">
+            <Select
+              placeholder="Chọn lớp học"
+              loading={loading}
+              showSearch
+              filterOption={(input, option) =>
+                option?.children?.toLowerCase().includes(input.toLowerCase())
+              }
+              notFoundContent={
+                loading ? (
+                  <div style={{ textAlign: 'center', padding: '8px' }}>
+                    <Spin size="small" /> Đang tải...
+                  </div>
+                ) : classrooms.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '8px', color: '#999' }}>
+                    Không có lớp học nào
+                  </div>
+                ) : (
+                  'Không tìm thấy lớp học phù hợp'
+                )
+              }
+            >
               {classrooms.map(classroom => (
                 <Option key={classroom.id} value={classroom.id}>
                   {classroom.name}

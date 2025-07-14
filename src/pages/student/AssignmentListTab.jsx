@@ -8,6 +8,7 @@ const { Title, Text } = Typography;
 
 const AssignmentListTab = () => {
     const [assignments, setAssignments] = useState([]);
+    const [submissions, setSubmissions] = useState({}); // Store submissions by assignment ID
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const { courseId } = useParams();
@@ -19,15 +20,49 @@ const AssignmentListTab = () => {
         const fetchAssignments = async () => {
             setIsLoading(true);
             try {
-                console.log('Fetching assignments for courseId:', courseId);
+                console.log('🔍 DEBUG AssignmentListTab - Fetching assignments for courseId:', courseId);
                 console.log('Current URL:', window.location.href);
-                
+
                 const response = await AssignmentService.getAssignmentsByClassroom(courseId);
-                console.log('Assignment response:', response);
+                console.log('🔍 DEBUG AssignmentListTab - Assignment response:', response);
                 console.log('Assignment response type:', typeof response);
                 console.log('Is response array:', Array.isArray(response));
-                
+
                 setAssignments(response || []);
+
+                // Fetch submissions for each assignment
+                // Note: We'll use a hardcoded student ID for now since user context might not be available
+                const studentId = 1; // TODO: Get from user context
+                console.log('🔍 DEBUG AssignmentListTab - Fetching submissions for student:', studentId);
+
+                if (response && response.length > 0) {
+                    const submissionPromises = response.map(async (assignment) => {
+                        try {
+                            const submission = await SubmissionService.getStudentSubmission(assignment.id, studentId);
+                            return { assignmentId: assignment.id, submission };
+                        } catch (error) {
+                            console.log(`🔍 DEBUG AssignmentListTab - No submission for assignment ${assignment.id}:`, error.message);
+                            return { assignmentId: assignment.id, submission: null };
+                        }
+                    });
+
+                    const submissionResults = await Promise.allSettled(submissionPromises);
+                    const submissionsMap = {};
+
+                    submissionResults.forEach((result) => {
+                        if (result.status === 'fulfilled' && result.value) {
+                            const { assignmentId, submission } = result.value;
+                            if (submission) {
+                                submissionsMap[assignmentId] = submission;
+                                console.log(`🔍 DEBUG AssignmentListTab - Found submission for assignment ${assignmentId}:`, submission);
+                            }
+                        }
+                    });
+
+                    console.log('🔍 DEBUG AssignmentListTab - Final submissions map:', submissionsMap);
+                    setSubmissions(submissionsMap);
+                }
+
                 setError(null);
             } catch (err) {
                 console.error('Assignment fetch error:', err);
@@ -98,7 +133,8 @@ const AssignmentListTab = () => {
             
             {assignments.map((assignment) => {
                 const status = getAssignmentStatus(assignment.dueDate);
-                
+                const submission = submissions[assignment.id]; // Get submission for this assignment
+
                 return (
                     <Card 
                         key={assignment.id}
@@ -143,10 +179,15 @@ const AssignmentListTab = () => {
                                     Xem chi tiết
                                 </Button>
                                 
-                                {assignment.submitted && (
+                                {submission && (
                                     <div className="flex items-center gap-1 text-green-600 text-xs">
                                         <CheckCircleOutlined />
                                         <span>Đã nộp</span>
+                                        {submission.score !== null && (
+                                            <span className="ml-2 text-blue-600 font-semibold">
+                                                {submission.score}/{assignment.points || 100}
+                                            </span>
+                                        )}
                                     </div>
                                 )}
                             </div>

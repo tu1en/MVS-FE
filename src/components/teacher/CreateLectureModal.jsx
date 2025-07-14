@@ -210,6 +210,16 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
         content: values.description,
       };
 
+      // Add YouTube URL if provided
+      if (values.youtubeUrl && values.youtubeUrl.trim() !== '') {
+        const videoId = extractYouTubeId(values.youtubeUrl);
+        if (videoId) {
+          lectureData.youtubeUrl = values.youtubeUrl;
+          lectureData.youtubeVideoId = videoId;
+          lectureData.youtubeEmbedUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+
       // Xử lý tệp đã tải lên
       if (uploadedFiles && uploadedFiles.length > 0) {
         // Kiểm tra nếu có tệp cục bộ (do lỗi Firebase)

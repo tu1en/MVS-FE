@@ -117,35 +117,58 @@ class MaterialService {
    * @returns {Promise<Blob>} File blob
    */
   static async downloadMaterial(materialId) {
-    // Array of possible endpoint patterns to try
-    const endpointPatterns = [
-      `/materials/${materialId}/download`,
-      `/materials/download/${materialId}`,
-      `/mock-materials/${materialId}/download`,
-      `/mock-materials/download/${materialId}`,
-      `/materials-alt/${materialId}/download`,
-      `/materials-alt/download/${materialId}`
-    ];
-    
-    let lastError = null;
-    
-    // Try each endpoint pattern in sequence
-    for (const endpoint of endpointPatterns) {
-      try {
-        const response = await axiosInstance.get(endpoint, {
-          responseType: 'blob'
-        });
-        return response.data;
-      } catch (error) {
-        lastError = error;
-        console.log(`Tried endpoint ${endpoint}, failed with: ${error.message}`);
-        // Continue to next endpoint pattern
+    try {
+      console.log(`Đang tải xuống tài liệu ID: ${materialId}`);
+
+      // Sử dụng endpoint chính xác duy nhất
+      const response = await axiosInstance.get(`/materials/download/${materialId}`, {
+        responseType: 'blob',
+        timeout: 30000 // 30 seconds timeout for downloads
+      });
+
+      console.log(`Tải xuống thành công tài liệu ID: ${materialId}, kích thước: ${response.data.size} bytes`);
+
+      // Kiểm tra nếu response là blob rỗng
+      if (!response.data || response.data.size === 0) {
+        throw new Error('File tải xuống rỗng hoặc không có nội dung');
+      }
+
+      return response.data;
+
+    } catch (error) {
+      console.error('Lỗi tải xuống tài liệu:', error);
+
+      // Xử lý các loại lỗi khác nhau
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.headers['x-error-message'] || 'Lỗi không xác định';
+
+        console.error(`HTTP Error ${status}:`, errorMessage);
+
+        switch (status) {
+          case 404:
+            throw new Error('❌ Tài liệu không tồn tại hoặc đã bị xóa. Vui lòng liên hệ giáo viên để được hỗ trợ.');
+          case 403:
+            throw new Error('🔒 Bạn không có quyền truy cập tài liệu này. Vui lòng kiểm tra quyền truy cập.');
+          case 500:
+            throw new Error(`💥 Lỗi server: ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ quản trị viên.`);
+          case 413:
+            throw new Error('📁 File quá lớn để tải xuống. Vui lòng liên hệ giáo viên.');
+          case 429:
+            throw new Error('⏰ Quá nhiều yêu cầu tải xuống. Vui lòng đợi một chút rồi thử lại.');
+          default:
+            throw new Error(`❌ Lỗi tải xuống (Mã lỗi: ${status}): ${errorMessage}`);
+        }
+      } else if (error.request) {
+        console.error('Network error:', error.request);
+        throw new Error('🌐 Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('⏱️ Quá thời gian chờ tải xuống. File có thể quá lớn, vui lòng thử lại.');
+      } else {
+        console.error('Unknown error:', error.message);
+        throw new Error(`❓ Lỗi không xác định: ${error.message}. Vui lòng thử lại hoặc liên hệ hỗ trợ.`);
       }
     }
-    
-    // If we get here, all attempts failed
-    console.error('Error downloading material:', lastError);
-    throw lastError;
   }
 
   /**
@@ -156,33 +179,26 @@ class MaterialService {
    */
   static async getMaterialsByCourse(courseId, params = {}) {
     try {
-      // Array of possible endpoints to try in order
-      const endpoints = [
-        `/materials/course/${courseId}`,
-        `/mock-materials/course/${courseId}`,
-        `/materials-alt/course/${courseId}`
-      ];
-      
-      let lastError = null;
-      
-      // Try each endpoint in sequence
-      for (const endpoint of endpoints) {
-        try {
-          const response = await axiosInstance.get(endpoint, { params });
-          return response.data;
-        } catch (error) {
-          lastError = error;
-          console.log(`Tried endpoint ${endpoint}, failed with: ${error.message}`);
-          // Continue to next endpoint
-        }
-      }
-      
-      // If we get here, all attempts failed
-      console.error('All material endpoints failed:', lastError);
-      return []; // Return empty array for graceful degradation
+      console.log(`Đang lấy danh sách tài liệu cho khóa học ID: ${courseId}`);
+
+      // Sử dụng endpoint chính xác duy nhất
+      const response = await axiosInstance.get(`/materials/course/${courseId}`, { params });
+
+      console.log(`Lấy thành công ${response.data.length} tài liệu cho khóa học ID: ${courseId}`);
+      return response.data;
+
     } catch (error) {
-      console.error('Error fetching course materials:', error);
-      // In case of complete failure, return empty array for graceful degradation
+      console.error('Lỗi khi lấy danh sách tài liệu khóa học:', error);
+
+      // Xử lý lỗi và trả về mảng rỗng để tránh crash UI
+      if (error.response) {
+        const status = error.response.status;
+        console.error(`Lỗi HTTP ${status}: ${error.response.data?.message || 'Không xác định'}`);
+      } else if (error.request) {
+        console.error('Không thể kết nối đến server');
+      }
+
+      // Trả về mảng rỗng để UI có thể hiển thị "Không có tài liệu"
       return [];
     }
   }

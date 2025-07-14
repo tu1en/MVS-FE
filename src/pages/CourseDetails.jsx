@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import WeeklyTimetable from '../components/WeeklyTimetable';
 import ClassroomService from '../services/classroomService';
 import MaterialService from '../services/materialService';
+import { formatFullDateTime, parseTimestamp } from '../utils/dateUtils';
 
 const CourseDetails = () => {
   const { message } = App.useApp();
@@ -20,44 +21,10 @@ const CourseDetails = () => {
     return queryId || pathCourseId;
   };
   
-  // Format date time safely
+  // Use imported formatFullDateTime from utils
   const formatDateTime = (dateTime) => {
-    try {
-      if (!dateTime) return 'Chưa xác định';
-      
-      // Handle different date formats
-      let date;
-      if (typeof dateTime === 'string') {
-        // If it's a string, try to parse it
-        date = new Date(dateTime);
-      } else if (dateTime instanceof Date) {
-        // If it's already a Date object
-        date = dateTime;
-      } else if (typeof dateTime === 'number') {
-        // If it's a timestamp
-        date = new Date(dateTime);
-      } else {
-        return 'Định dạng thời gian không hợp lệ';
-      }
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return 'Thời gian không hợp lệ';
-      }
-      
-      // Format with Vietnamese locale
-      return date.toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh'
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Lỗi định dạng thời gian';
-    }
+    const parsed = parseTimestamp(dateTime);
+    return parsed ? formatFullDateTime(parsed) : 'Chưa xác định';
   };
   
   const courseId = getCourseId();

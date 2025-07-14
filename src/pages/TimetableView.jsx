@@ -1,35 +1,35 @@
 import {
-    ArrowLeftOutlined,
-    ArrowRightOutlined,
-    BookOutlined,
-    CalendarOutlined,
-    ClockCircleOutlined,
-    EnvironmentOutlined,
-    ExclamationCircleOutlined
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  EnvironmentOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import {
-    App,
-    Avatar,
-    Badge,
-    Button,
-    Calendar,
-    Card,
-    Col,
-    Descriptions,
-    List,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Tag,
-    Typography
+  App,
+  Avatar,
+  Badge,
+  Button,
+  Calendar,
+  Card,
+  Col,
+  Descriptions,
+  List,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Tag,
+  Typography
 } from 'antd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import weekday from 'dayjs/plugin/weekday';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import TimetableService from '../services/timetableService';
 
 const { Option } = Select;
@@ -51,33 +51,93 @@ const TimetableView = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Debug events state changes (only in development)
   useEffect(() => {
-    fetchSchedule();
-  }, [selectedDate, viewMode]);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [TimetableView] Events state changed:', {
+        eventsLength: events.length,
+        viewMode,
+        selectedDate: selectedDate.format('YYYY-MM-DD')
+      });
+    }
+  }, [events, viewMode, selectedDate]);
 
-  const fetchSchedule = async () => {
+  // Refs for managing requests and debouncing
+  const abortControllerRef = useRef(null);
+  const debounceTimeoutRef = useRef(null);
+  const cacheRef = useRef(new Map());
+
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchSchedule = useCallback(async (startDate, endDate, viewMode) => {
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // Check cache first
+    const cacheKey = `${startDate}-${endDate}-${viewMode}`;
+    if (cacheRef.current.has(cacheKey)) {
+      console.log('📅 Using cached data for:', cacheKey);
+      setEvents(cacheRef.current.get(cacheKey));
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      
-      const startDate = selectedDate.startOf(viewMode).format('YYYY-MM-DD');
-      const endDate = selectedDate.endOf(viewMode).format('YYYY-MM-DD');
-      
-      console.log('Fetching timetable for:', { startDate, endDate, viewMode });
-      
+
+      console.log('📅 Fetching timetable for:', { startDate, endDate, viewMode });
+
       // Use TimetableService to fetch my timetable (for students)
       const data = await TimetableService.getMyTimetable({
         startDate,
         endDate
       });
-      
-      console.log('Timetable data received:', data);
-      setEvents(Array.isArray(data) ? data : []);
-      
+
+      // Check if request was aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('📅 Request was aborted');
+        return;
+      }
+
+      console.log('📅 Timetable data received:', data);
+      const eventsData = Array.isArray(data) ? data : [];
+      console.log('🔍 DEBUG fetchSchedule - Processing events:', {
+        dataType: typeof data,
+        isArray: Array.isArray(data),
+        dataLength: data?.length,
+        eventsDataLength: eventsData.length,
+        viewMode,
+        cacheKey
+      });
+
+      // Cache the result
+      cacheRef.current.set(cacheKey, eventsData);
+      console.log('🔍 DEBUG fetchSchedule - Cached data:', { cacheKey, cachedLength: eventsData.length });
+
+      // Limit cache size to prevent memory leaks
+      if (cacheRef.current.size > 10) {
+        const firstKey = cacheRef.current.keys().next().value;
+        cacheRef.current.delete(firstKey);
+      }
+
+      console.log('🔍 DEBUG fetchSchedule - Setting events state:', { eventsDataLength: eventsData.length });
+      setEvents(eventsData);
+      console.log('🔍 DEBUG fetchSchedule - Events state set completed');
+
     } catch (error) {
-      console.error('Error fetching schedule:', error);
+      // Don't show error if request was aborted
+      if (error.name === 'AbortError' || abortControllerRef.current?.signal.aborted) {
+        console.log('📅 Request was aborted');
+        return;
+      }
+
+      console.error('❌ Error fetching schedule:', error);
       setError(error);
-      
+
       if (error.response?.status === 404) {
         message.warning('Không tìm thấy lịch học cho khoảng thời gian này');
         setEvents([]);
@@ -90,23 +150,128 @@ const TimetableView = () => {
       }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
-  };
+  }, [message]);
+
+  // Debounced effect to prevent rapid API calls
+  useEffect(() => {
+    console.log('🔍 DEBUG useEffect triggered:', {
+      selectedDate: selectedDate.format('YYYY-MM-DD'),
+      viewMode,
+      eventsLength: events.length
+    });
+
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout for debouncing
+    debounceTimeoutRef.current = setTimeout(() => {
+      const startDate = selectedDate.startOf(viewMode).format('YYYY-MM-DD');
+      const endDate = selectedDate.endOf(viewMode).format('YYYY-MM-DD');
+      console.log('🔍 DEBUG fetchSchedule called:', { startDate, endDate, viewMode });
+      fetchSchedule(startDate, endDate, viewMode);
+    }, 300); // 300ms debounce
+
+    // Cleanup function
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [selectedDate, viewMode, fetchSchedule]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Function to clear cache when needed (e.g., when data is updated)
+  const clearCache = useCallback(() => {
+    console.log('📅 Clearing timetable cache');
+    cacheRef.current.clear();
+  }, []);
+
+  // Function to refresh data (clear cache and refetch)
+  const refreshData = useCallback(() => {
+    clearCache();
+    const startDate = selectedDate.startOf(viewMode).format('YYYY-MM-DD');
+    const endDate = selectedDate.endOf(viewMode).format('YYYY-MM-DD');
+    fetchSchedule(startDate, endDate, viewMode);
+  }, [selectedDate, viewMode, fetchSchedule, clearCache]);
 
   const getListData = (value) => {
-    if (!Array.isArray(events) || events.length === 0) return [];
-    
+    const valueDate = value.format('YYYY-MM-DD');
+
+    // Debug log for July 14th specifically - check events array
+    if (valueDate === '2025-07-14') {
+      console.log('🔍 DEBUG getListData July 14th:', {
+        eventsIsArray: Array.isArray(events),
+        eventsLength: events ? events.length : 'null/undefined',
+        eventsData: events,
+        valueDate
+      });
+    }
+
+    if (!Array.isArray(events) || events.length === 0) {
+      if (valueDate === '2025-07-14') {
+        console.log('❌ DEBUG July 14th: Events array is empty or not array');
+      }
+      return [];
+    }
+
     const dateEvents = events.filter(event => {
-      if (!event.startDatetime) return false;
-      const eventDate = dayjs(event.startDatetime).format('YYYY-MM-DD');
-      return eventDate === value.format('YYYY-MM-DD');
+      // Check multiple possible field names for datetime (API inconsistency)
+      const eventDateTime = event.startDatetime || event.start_datetime || event.startTime;
+
+      if (!eventDateTime) {
+        if (valueDate === '2025-07-14') {
+          console.log('🔍 DEBUG July 14th - Event missing datetime:', {
+            eventTitle: event.title,
+            event: event
+          });
+        }
+        return false;
+      }
+
+      const eventDate = dayjs(eventDateTime).format('YYYY-MM-DD');
+
+      // Debug log for July 14th specifically
+      if (valueDate === '2025-07-14') {
+        console.log('🔍 DEBUG July 14th event filter:', {
+          eventTitle: event.title,
+          eventDateTime,
+          eventDate,
+          valueDate,
+          matches: eventDate === valueDate,
+          eventType: event.eventType
+        });
+      }
+
+      return eventDate === valueDate;
     });
-    
-    return dateEvents.map(event => ({
+
+    const result = dateEvents.map(event => ({
       type: getEventType(event.eventType),
       content: event.title || 'Không có tiêu đề',
       event: event
     }));
+
+    // Debug log for July 14th result
+    if (value.format('YYYY-MM-DD') === '2025-07-14') {
+      console.log('🔍 DEBUG July 14th result:', result);
+    }
+
+    return result;
   };
 
   const getEventType = (type) => {
@@ -166,20 +331,64 @@ const TimetableView = () => {
     }
   };
 
-  const cellRender = (current, info) => {
-    if (info.type !== 'date') return info.originNode;
-    
+  const showEventDetails = useCallback((event) => {
+    if (!event) {
+      console.warn('⚠️ Cannot show details for null/undefined event');
+      return;
+    }
+
+    console.log('📅 Showing event details:', event);
+    setSelectedEvent(event);
+    setModalVisible(true);
+  }, []);
+
+  const handleEventClick = useCallback((e, event) => {
+    // Prevent event bubbling to avoid conflicts
+    e.preventDefault();
+    e.stopPropagation();
+
+    console.log('📅 Event clicked:', event);
+
+    // Validate event data before showing details
+    if (!event) {
+      console.warn('⚠️ No event data provided');
+      message.warning('Không có thông tin sự kiện');
+      return;
+    }
+
+    showEventDetails(event);
+  }, [message, showEventDetails]);
+
+  const cellRender = useCallback((current) => {
+    // Ensure events is available before processing
+    if (!Array.isArray(events) || events.length === 0) {
+      return null;
+    }
+
     const listData = getListData(current);
+
+    // Debug log for July 14th specifically
+    if (current.format('YYYY-MM-DD') === '2025-07-14') {
+      console.log('🔍 DEBUG dateCellRender July 14th:', {
+        date: current.format('YYYY-MM-DD'),
+        eventsLength: events.length,
+        listDataLength: listData.length,
+        listData: listData
+      });
+    }
+
+    if (listData.length === 0) return null;
+
     return (
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {listData.map((item, index) => (
           <li key={index} style={{ marginBottom: '2px' }}>
-            <Badge 
-              status={item.type} 
+            <Badge
+              status={item.type}
               text={
-                <span 
-                  style={{ 
-                    fontSize: '10px', 
+                <span
+                  style={{
+                    fontSize: '10px',
                     cursor: 'pointer',
                     display: 'block',
                     whiteSpace: 'nowrap',
@@ -187,7 +396,7 @@ const TimetableView = () => {
                     textOverflow: 'ellipsis',
                     maxWidth: '80px'
                   }}
-                  onClick={() => showEventDetails(item.event)}
+                  onClick={(e) => handleEventClick(e, item.event)}
                 >
                   {item.content}
                 </span>
@@ -197,12 +406,7 @@ const TimetableView = () => {
         ))}
       </ul>
     );
-  };
-
-  const showEventDetails = (event) => {
-    setSelectedEvent(event);
-    setModalVisible(true);
-  };
+  }, [events, handleEventClick]);
 
   const getTodayEvents = () => {
     const today = dayjs().format('YYYY-MM-DD');
@@ -238,10 +442,38 @@ const TimetableView = () => {
     const endOfWeek = selectedDate.endOf('week');
     const days = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, 'day'));
 
+    console.log('🔍 DEBUG renderWeekView:', {
+      eventsLength: events.length,
+      startOfWeek: startOfWeek.format('YYYY-MM-DD'),
+      endOfWeek: endOfWeek.format('YYYY-MM-DD'),
+      events: events
+    });
+
     const eventsByDay = days.map(day => {
-      return events
-        .filter(event => dayjs(event.start_datetime || event.startTime).isSame(day, 'day'))
-        .sort((a, b) => dayjs(a.start_datetime || a.startTime).diff(dayjs(b.start_datetime || b.startTime)));
+      const dayEvents = events
+        .filter(event => {
+          // Check both possible field names for datetime
+          const eventDateTime = event.startDatetime || event.start_datetime || event.startTime;
+          const matches = dayjs(eventDateTime).isSame(day, 'day');
+
+          if (day.format('YYYY-MM-DD') === '2025-07-14') {
+            console.log('🔍 DEBUG Week view July 14th filter:', {
+              eventTitle: event.title,
+              eventDateTime,
+              dayFormatted: day.format('YYYY-MM-DD'),
+              matches
+            });
+          }
+
+          return matches;
+        })
+        .sort((a, b) => {
+          const aTime = a.startDatetime || a.start_datetime || a.startTime;
+          const bTime = b.startDatetime || b.start_datetime || b.startTime;
+          return dayjs(aTime).diff(dayjs(bTime));
+        });
+
+      return dayEvents;
     });
 
     return (
@@ -281,7 +513,17 @@ const TimetableView = () => {
                 }}
                 bodyStyle={{ minHeight: '200px', padding: '12px' }}
               >
-                {eventsByDay[index].length > 0 ? (
+                {(() => {
+                  const dayEventsCount = eventsByDay[index].length;
+                  if (day.format('YYYY-MM-DD') === '2025-07-14') {
+                    console.log('🔍 DEBUG Week view July 14th render:', {
+                      dayFormatted: day.format('YYYY-MM-DD'),
+                      dayEventsCount,
+                      dayEvents: eventsByDay[index]
+                    });
+                  }
+                  return dayEventsCount > 0;
+                })() ? (
                   eventsByDay[index].map(event => (
                     <Card 
                       key={event.id} 
@@ -291,7 +533,7 @@ const TimetableView = () => {
                         cursor: 'pointer',
                         borderColor: getEventColor(event.event_type || event.type)
                       }}
-                      onClick={() => showEventDetails(event)}
+                      onClick={(e) => handleEventClick(e, event)}
                     >
                       <Text strong>{event.title}</Text>
                       <div style={{ marginTop: '4px' }}>
@@ -343,7 +585,7 @@ const TimetableView = () => {
             loading={loading}
           >
             <Calendar
-              cellRender={cellRender}
+              dateCellRender={cellRender}
               value={selectedDate}
               onSelect={setSelectedDate}
               onPanelChange={(value, mode) => {
@@ -375,7 +617,7 @@ const TimetableView = () => {
               renderItem={item => (
                 <List.Item 
                   style={{ padding: '8px 0', cursor: 'pointer' }}
-                  onClick={() => showEventDetails(item)}
+                  onClick={(e) => handleEventClick(e, item)}
                 >
                   <List.Item.Meta
                     avatar={
@@ -418,7 +660,7 @@ const TimetableView = () => {
               renderItem={item => (
                 <List.Item 
                   style={{ padding: '8px 0', cursor: 'pointer' }}
-                  onClick={() => showEventDetails(item)}
+                  onClick={(e) => handleEventClick(e, item)}
                 >
                   <List.Item.Meta
                     avatar={

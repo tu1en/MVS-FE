@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspect Real Materials</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .material { margin: 10px 0; padding: 10px; border: 1px solid #eee; border-radius: 5px; background: #f9f9f9; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; max-height: 200px; }
+        button { padding: 8px 12px; margin: 5px; cursor: pointer; }
+        .material-details { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Inspect Real Materials Data</h1>
+    
+    <div class="section">
+        <h2>Controls</h2>
+        <button onclick="fetchRealMaterials()">Fetch Real Materials</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, type = 'info') {
+            const section = document.createElement('div');
+            section.className = `section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                ${typeof content === 'object' ? 
+                    `<pre>${JSON.stringify(content, null, 2)}</pre>` : 
+                    `<div>${content}</div>`}
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        function analyzeMaterial(material) {
+            const analysis = {
+                hasId: !!material.id,
+                hasFileName: !!material.fileName,
+                hasName: !!material.name,
+                hasContentType: !!material.contentType,
+                hasDownloadUrl: !!material.downloadUrl,
+                hasUrl: !!material.url,
+                
+                // Type detection logic (same as in LecturesPageNew)
+                detectedType: material.type || (
+                    material.contentType?.includes('pdf') ? 'pdf' : 
+                    material.contentType?.includes('video') ? 'video' : 
+                    material.contentType?.includes('doc') ? 'doc' : 'link'
+                ),
+                
+                // URL resolution
+                resolvedUrl: material.url || material.downloadUrl,
+                
+                // Name resolution
+                resolvedName: material.name || material.fileName || "Tài liệu",
+                
+                // YouTube detection
+                isYouTube: material.contentType === 'video/youtube'
+            };
+            
+            return analysis;
+        }
+
+        function createMaterialTestButton(material, analysis) {
+            const button = document.createElement('button');
+            button.textContent = 'Test Modal';
+            button.style.background = analysis.hasDownloadUrl || analysis.hasUrl ? '#52c41a' : '#ff4d4f';
+            button.style.color = 'white';
+            button.style.border = 'none';
+            button.style.borderRadius = '3px';
+            
+            button.onclick = () => {
+                // Simulate the exact same logic as LecturesPageNew
+                console.log("🔍 Testing material:", material);
+                
+                const normalizedMaterial = {
+                    id: material.id,
+                    name: material.name || material.fileName || "Tài liệu",
+                    type: material.type || (material.contentType?.includes('pdf') ? 'pdf' : 
+                           material.contentType?.includes('video') ? 'video' : 
+                           material.contentType?.includes('doc') ? 'doc' : 'link'),
+                    url: material.url || material.downloadUrl,
+                    downloadUrl: material.downloadUrl || material.url,
+                    contentType: material.contentType,
+                    viewed: material.viewed || false
+                };
+                
+                addResult(`🎯 Material Test: ${material.fileName || material.name}`, {
+                    original: material,
+                    normalized: normalizedMaterial,
+                    wouldOpenModal: !!(normalizedMaterial.url || normalizedMaterial.downloadUrl)
+                }, normalizedMaterial.url || normalizedMaterial.downloadUrl ? 'success' : 'error');
+            };
+            
+            return button;
+        }
+
+        async function fetchRealMaterials() {
+            clearResults();
+            addResult('🚀 Fetching real materials...', '', 'info');
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/courses/1/lectures`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const lectures = await response.json();
+                addResult('📚 API Response', `${lectures.length} lectures fetched`, 'success');
+
+                let totalMaterials = 0;
+                let materialsWithIssues = 0;
+
+                lectures.forEach((lecture, lectureIndex) => {
+                    if (lecture.materials && lecture.materials.length > 0) {
+                        totalMaterials += lecture.materials.length;
+                        
+                        const lectureDiv = document.createElement('div');
+                        lectureDiv.className = 'section info';
+                        lectureDiv.innerHTML = `<h3>📖 Lecture: "${lecture.title}" (${lecture.materials.length} materials)</h3>`;
+                        
+                        lecture.materials.forEach((material, materialIndex) => {
+                            const analysis = analyzeMaterial(material);
+                            
+                            if (!analysis.hasDownloadUrl && !analysis.hasUrl) {
+                                materialsWithIssues++;
+                            }
+                            
+                            const materialDiv = document.createElement('div');
+                            materialDiv.className = 'material';
+                            materialDiv.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <strong>${analysis.resolvedName}</strong>
+                                        <div class="material-details">
+                                            <div>ID: ${material.id || 'N/A'}</div>
+                                            <div>Content Type: ${material.contentType || 'N/A'}</div>
+                                            <div>Detected Type: ${analysis.detectedType}</div>
+                                            <div>Download URL: ${material.downloadUrl || 'N/A'}</div>
+                                            <div>URL: ${material.url || 'N/A'}</div>
+                                            <div>Resolved URL: ${analysis.resolvedUrl || 'N/A'}</div>
+                                            <div>Is YouTube: ${analysis.isYouTube}</div>
+                                        </div>
+                                    </div>
+                                    <div style="margin-left: 10px;">
+                                        ${createMaterialTestButton(material, analysis).outerHTML}
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Re-attach event listener
+                            const testButton = materialDiv.querySelector('button');
+                            testButton.onclick = () => {
+                                console.log("🔍 Testing material:", material);
+                                
+                                const normalizedMaterial = {
+                                    id: material.id,
+                                    name: material.name || material.fileName || "Tài liệu",
+                                    type: material.type || (material.contentType?.includes('pdf') ? 'pdf' : 
+                                           material.contentType?.includes('video') ? 'video' : 
+                                           material.contentType?.includes('doc') ? 'doc' : 'link'),
+                                    url: material.url || material.downloadUrl,
+                                    downloadUrl: material.downloadUrl || material.url,
+                                    contentType: material.contentType,
+                                    viewed: material.viewed || false
+                                };
+                                
+                                addResult(`🎯 Material Test: ${material.fileName || material.name}`, {
+                                    original: material,
+                                    normalized: normalizedMaterial,
+                                    wouldOpenModal: !!(normalizedMaterial.url || normalizedMaterial.downloadUrl)
+                                }, normalizedMaterial.url || normalizedMaterial.downloadUrl ? 'success' : 'error');
+                            };
+                            
+                            lectureDiv.appendChild(materialDiv);
+                        });
+                        
+                        resultsDiv.appendChild(lectureDiv);
+                    }
+                });
+
+                // Summary
+                addResult('📊 Analysis Summary', {
+                    totalLectures: lectures.length,
+                    totalMaterials: totalMaterials,
+                    materialsWithIssues: materialsWithIssues,
+                    materialsOK: totalMaterials - materialsWithIssues
+                }, materialsWithIssues > 0 ? 'warning' : 'success');
+
+            } catch (error) {
+                addResult('❌ Error', error.message, 'error');
+            }
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            addResult('🎯 Real Materials Inspector', 'Click "Fetch Real Materials" to analyze actual API data', 'info');
+        });
+    </script>
+</body>
+</html>

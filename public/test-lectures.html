@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Lectures API</title>
+</head>
+<body>
+    <h1>Test Lectures API</h1>
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+
+        async function testLecturesAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>🧪 Testing Lectures API endpoints for materials fix...</h2>';
+
+            try {
+                // Test 1: Health check
+                resultsDiv.innerHTML += '<h3>1. Testing health endpoint...</h3>';
+                const healthResponse = await fetch(`${BASE_URL}/api/health`);
+                const healthData = await healthResponse.json();
+                resultsDiv.innerHTML += `<p>✅ Health check: ${JSON.stringify(healthData)}</p>`;
+
+                // Test 2: Get classroom details (should include lectures with materials)
+                resultsDiv.innerHTML += '<h3>2. Testing classroom details endpoint...</h3>';
+                const classroomResponse = await fetch(`${BASE_URL}/api/classrooms/1/details`);
+                const classroom = await classroomResponse.json();
+                
+                resultsDiv.innerHTML += `<p>✅ Classroom details response status: ${classroomResponse.status}</p>`;
+                resultsDiv.innerHTML += `<p>📊 Classroom name: ${classroom.name}</p>`;
+                resultsDiv.innerHTML += `<p>📚 Number of lectures: ${classroom.lectures?.length || 0}</p>`;
+                
+                if (classroom.lectures && classroom.lectures.length > 0) {
+                    const firstLecture = classroom.lectures[0];
+                    resultsDiv.innerHTML += '<p>🔍 First lecture:</p>';
+                    resultsDiv.innerHTML += `<ul>
+                        <li>Title: ${firstLecture.title}</li>
+                        <li>Content length: ${firstLecture.content?.length || 0}</li>
+                        <li>Materials count: ${firstLecture.materials?.length || 0}</li>
+                    </ul>`;
+                    
+                    if (firstLecture.materials && firstLecture.materials.length > 0) {
+                        resultsDiv.innerHTML += `<p>First material: ${firstLecture.materials[0].fileName}</p>`;
+                        resultsDiv.innerHTML += `<p>Material type: ${firstLecture.materials[0].contentType}</p>`;
+                        resultsDiv.innerHTML += `<p>Download URL: ${firstLecture.materials[0].downloadUrl}</p>`;
+                    }
+                }
+
+                // Test 3: Get lectures via CourseController endpoint
+                resultsDiv.innerHTML += '<h3>3. Testing course lectures endpoint...</h3>';
+                const lecturesResponse = await fetch(`${BASE_URL}/api/courses/1/lectures`);
+                const lectures = await lecturesResponse.json();
+                
+                resultsDiv.innerHTML += `<p>✅ Course lectures response status: ${lecturesResponse.status}</p>`;
+                resultsDiv.innerHTML += `<p>📚 Number of lectures from course endpoint: ${lectures?.length || 0}</p>`;
+                
+                if (lectures && lectures.length > 0) {
+                    const firstLecture = lectures[0];
+                    resultsDiv.innerHTML += '<p>🔍 First lecture from course endpoint:</p>';
+                    resultsDiv.innerHTML += `<ul>
+                        <li>Title: ${firstLecture.title}</li>
+                        <li>Content length: ${firstLecture.content?.length || 0}</li>
+                        <li>Materials count: ${firstLecture.materials?.length || 0}</li>
+                    </ul>`;
+                    
+                    if (firstLecture.materials && firstLecture.materials.length > 0) {
+                        resultsDiv.innerHTML += `<p>First material: ${firstLecture.materials[0].fileName}</p>`;
+                    }
+                }
+
+                // Test 4: Get lectures via LectureController endpoint
+                resultsDiv.innerHTML += '<h3>4. Testing lecture classroom endpoint...</h3>';
+                const lectureClassroomResponse = await fetch(`${BASE_URL}/api/lectures/classroom/1`);
+                const lectureClassroom = await lectureClassroomResponse.json();
+                
+                resultsDiv.innerHTML += `<p>✅ Lecture classroom response status: ${lectureClassroomResponse.status}</p>`;
+                resultsDiv.innerHTML += `<p>📚 Number of lectures from lecture endpoint: ${lectureClassroom?.length || 0}</p>`;
+                
+                if (lectureClassroom && lectureClassroom.length > 0) {
+                    const firstLecture = lectureClassroom[0];
+                    resultsDiv.innerHTML += '<p>🔍 First lecture from lecture endpoint:</p>';
+                    resultsDiv.innerHTML += `<ul>
+                        <li>Title: ${firstLecture.title}</li>
+                        <li>Content length: ${firstLecture.content?.length || 0}</li>
+                        <li>Materials count: ${firstLecture.materials?.length || 0}</li>
+                    </ul>`;
+                    
+                    if (firstLecture.materials && firstLecture.materials.length > 0) {
+                        resultsDiv.innerHTML += `<p>First material: ${firstLecture.materials[0].fileName}</p>`;
+                    }
+                }
+
+                resultsDiv.innerHTML += '<h3>🎯 Summary:</h3>';
+                resultsDiv.innerHTML += '<p>All three endpoints should now return lectures with materials loaded.</p>';
+                resultsDiv.innerHTML += '<p>If materials count is 0 for all endpoints, check if there are materials in the database.</p>';
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<p style="color: red;">❌ Error testing API: ${error.message}</p>`;
+                console.error('Error testing API:', error);
+            }
+        }
+
+        // Auto-run test when page loads
+        window.addEventListener('load', testLecturesAPI);
+    </script>
+</body>
+</html>

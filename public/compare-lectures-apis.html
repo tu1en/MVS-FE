@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Lectures APIs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; max-height: 300px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .comparison { display: flex; gap: 20px; }
+        .comparison > div { flex: 1; }
+    </style>
+</head>
+<body>
+    <h1>🔍 So sánh APIs giữa Port 3000 và 3001</h1>
+    
+    <div class="section">
+        <h2>Test APIs</h2>
+        <button onclick="compareAllAPIs()">So sánh tất cả APIs</button>
+        <button onclick="testPort3000()">Test Port 3000 Only</button>
+        <button onclick="testPort3001()">Test Port 3001 Only</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL_BACKEND = 'http://localhost:8088';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, type = 'info') {
+            const section = document.createElement('div');
+            section.className = 'section';
+            section.innerHTML = `
+                <h3 class="${type}">${title}</h3>
+                <pre>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testAPI(endpoint, description) {
+            try {
+                const response = await fetch(`${BASE_URL_BACKEND}${endpoint}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return { success: true, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function compareAllAPIs() {
+            addResult('🚀 Bắt đầu so sánh APIs...', 'Testing all lecture endpoints', 'info');
+
+            const endpoints = [
+                { name: 'CourseController', endpoint: '/api/courses/1/lectures', description: 'Endpoint mà LecturesPageNew sử dụng' },
+                { name: 'LectureController', endpoint: '/api/lectures/classroom/1', description: 'Endpoint đã được fix' },
+                { name: 'ClassroomController', endpoint: '/api/classrooms/1/details', description: 'Endpoint cho CourseDetail' }
+            ];
+
+            for (const api of endpoints) {
+                const result = await testAPI(api.endpoint, api.description);
+                
+                if (result.success) {
+                    let lecturesData;
+                    if (api.name === 'ClassroomController') {
+                        lecturesData = result.data.lectures || [];
+                    } else {
+                        lecturesData = result.data;
+                    }
+
+                    const analysis = {
+                        endpoint: api.endpoint,
+                        description: api.description,
+                        status: result.status,
+                        lecturesCount: lecturesData.length,
+                        firstLecture: lecturesData[0] ? {
+                            id: lecturesData[0].id,
+                            title: lecturesData[0].title,
+                            hasContent: !!lecturesData[0].content,
+                            contentLength: lecturesData[0].content?.length || 0,
+                            hasMaterials: !!lecturesData[0].materials,
+                            materialsCount: lecturesData[0].materials?.length || 0,
+                            materialsPreview: lecturesData[0].materials?.slice(0, 2) || []
+                        } : null
+                    };
+
+                    addResult(`✅ ${api.name} Analysis`, analysis, 'success');
+
+                    // Show materials details if available
+                    if (lecturesData[0]?.materials?.length > 0) {
+                        addResult(`📎 ${api.name} Materials Details`, lecturesData[0].materials, 'info');
+                    } else {
+                        addResult(`⚠️ ${api.name} No Materials`, 'No materials found in response', 'warning');
+                    }
+                } else {
+                    addResult(`❌ ${api.name} Error`, result.error, 'error');
+                }
+            }
+
+            // Summary comparison
+            addResult('📊 Summary', 'Check if all endpoints return materials consistently', 'info');
+        }
+
+        async function testPort3000() {
+            addResult('🔄 Testing Port 3000 Frontend...', 'Checking what port 3000 receives', 'info');
+            
+            try {
+                // Simulate what LecturesPageNew does
+                const coursesResponse = await fetch(`${BASE_URL_BACKEND}/api/classrooms/current-teacher`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!coursesResponse.ok) {
+                    throw new Error(`Courses API failed: ${coursesResponse.status}`);
+                }
+
+                const courses = await coursesResponse.json();
+                addResult('📚 Port 3000 - Courses', courses, 'success');
+
+                if (courses && courses.length > 0) {
+                    const firstCourse = courses[0];
+                    
+                    // Test lectures endpoint that LecturesPageNew uses
+                    const lecturesResponse = await fetch(`${BASE_URL_BACKEND}/api/courses/${firstCourse.id}/lectures`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!lecturesResponse.ok) {
+                        throw new Error(`Lectures API failed: ${lecturesResponse.status}`);
+                    }
+
+                    const lectures = await lecturesResponse.json();
+                    addResult('📖 Port 3000 - Lectures Data', {
+                        courseId: firstCourse.id,
+                        courseName: firstCourse.name,
+                        lecturesCount: lectures.length,
+                        lectures: lectures
+                    }, 'success');
+                }
+            } catch (error) {
+                addResult('❌ Port 3000 Test Error', error.message, 'error');
+            }
+        }
+
+        async function testPort3001() {
+            addResult('🔄 Testing Port 3001 Equivalent...', 'Checking what port 3001 would receive', 'info');
+            
+            // Test the same endpoints that port 3001 uses
+            const result = await testAPI('/api/classrooms/1/details', 'Port 3001 CourseDetail endpoint');
+            
+            if (result.success) {
+                const classroom = result.data;
+                addResult('🏫 Port 3001 - Classroom Details', {
+                    id: classroom.id,
+                    name: classroom.name,
+                    lecturesCount: classroom.lectures?.length || 0,
+                    lectures: classroom.lectures || []
+                }, 'success');
+            } else {
+                addResult('❌ Port 3001 Test Error', result.error, 'error');
+            }
+        }
+
+        // Auto-run comparison on page load
+        window.addEventListener('load', () => {
+            addResult('🎯 Mục tiêu', 'So sánh dữ liệu giữa port 3000 và 3001 để tìm nguyên nhân materials không hiển thị', 'info');
+        });
+    </script>
+</body>
+</html>

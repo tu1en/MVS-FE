@@ -227,7 +227,7 @@ const CourseDetail = () => {
         {/* Course Info Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-600">{course.students?.length || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{course.totalStudents || 0}</div>
             <div className="text-sm text-blue-800">Học viên</div>
           </div>
           <div className="bg-green-100 p-4 rounded-lg text-center">
@@ -235,12 +235,12 @@ const CourseDetail = () => {
             <div className="text-sm text-green-800">Bài giảng</div>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{course.course?.subject}</div>
+            <div className="text-2xl font-bold text-purple-600">{course.subject || 'N/A'}</div>
             <div className="text-sm text-purple-800">Môn học</div>
           </div>
           <div className="bg-orange-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-orange-600">{course.course?.section}</div>
-            <div className="text-sm text-orange-800">Lớp</div>
+            <div className="text-2xl font-bold text-orange-600">{course.totalAssignments || 0}</div>
+            <div className="text-sm text-orange-800">Bài tập</div>
           </div>
         </div>
       </div>

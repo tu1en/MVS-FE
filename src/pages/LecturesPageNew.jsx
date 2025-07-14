@@ -1,25 +1,25 @@
 import {
-    CheckOutlined,
-    EyeOutlined,
-    LinkOutlined,
-    PlusOutlined,
-    UploadOutlined
+  CheckOutlined,
+  EyeOutlined,
+  LinkOutlined,
+  PlusOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import {
-    App,
-    Button,
-    Card,
-    Empty,
-    Form,
-    Input,
-    List,
-    Modal,
-    Select,
-    Space,
-    Spin,
-    Tag,
-    Typography,
-    Upload
+  App,
+  Button,
+  Card,
+  Empty,
+  Form,
+  Input,
+  List,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+  Upload
 } from 'antd';
 import { useEffect, useState } from 'react';
 import CreateLectureModal from '../components/teacher/CreateLectureModal';
@@ -51,6 +51,7 @@ function LecturesPageNew() {
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const [iframeError, setIframeError] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
   
   // Get App context for message and modal
   const { message, modal } = App.useApp();
@@ -60,6 +61,59 @@ function LecturesPageNew() {
   const userId = user?.id;
   // The role from context is prefixed (e.g., "ROLE_TEACHER"), so we extract the simple name.
   const userRole = user?.role?.replace('ROLE_', '');
+
+  // Helper function to preview file with JWT authentication
+  const previewFile = async (fileUrl, contentType, fileName = 'document') => {
+    try {
+      if (!fileUrl) {
+        message.error('Không có đường dẫn để mở tài liệu');
+        return;
+      }
+
+      console.log('🔄 Downloading file with authentication:', fileUrl);
+      
+      // Use the configured apiClient which already includes JWT token
+      const response = await apiClient.get(fileUrl, {
+        responseType: 'blob',
+        timeout: 30000 // 30 second timeout for large files
+      });
+
+      console.log('✅ File downloaded successfully, creating blob URL');
+      
+      // Create blob with correct content type
+      const blob = new Blob([response.data], { 
+        type: contentType || 'application/octet-stream' 
+      });
+      
+      // Create temporary URL and open in new tab
+      const blobUrl = URL.createObjectURL(blob);
+      const newWindow = window.open(blobUrl, '_blank');
+      
+      if (!newWindow) {
+        message.warning('Popup bị chặn. Vui lòng cho phép popup cho trang này.');
+        return;
+      }
+      
+      // Clean up blob URL after 10 seconds to free memory
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        console.log('🧹 Blob URL cleaned up');
+      }, 10000);
+      
+    } catch (error) {
+      console.error('❌ Error downloading file:', error);
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        message.error('Không có quyền truy cập tài liệu này. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 404) {
+        message.error('Không tìm thấy tài liệu. File có thể đã bị xóa.');
+      } else if (error.code === 'ECONNABORTED') {
+        message.error('Tải file quá lâu. Vui lòng thử lại.');
+      } else {
+        message.error('Không thể tải tài liệu. Vui lòng thử lại sau.');
+      }
+    }
+  };
 
   // Debug logging for role detection
   console.log('LecturesPageNew - Role Debug (from Context):', {
@@ -127,10 +181,24 @@ function LecturesPageNew() {
       setLectures([]);
       
       try {
+        console.log(`🔍 LecturesPageNew: Fetching lectures for course ${selectedCourse.id}`);
         const response = await apiClient.get(`/courses/${selectedCourse.id}/lectures`, { timeout: 15000 });
+        console.log(`📚 LecturesPageNew: Received ${response.data?.length || 0} lectures:`, response.data);
+
+        // Debug first lecture materials
+        if (response.data && response.data.length > 0) {
+          const firstLecture = response.data[0];
+          console.log(`🔍 First lecture materials:`, {
+            id: firstLecture.id,
+            title: firstLecture.title,
+            materialsCount: firstLecture.materials?.length || 0,
+            materials: firstLecture.materials
+          });
+        }
+
         setLectures(response.data || []);
       } catch (error) {
-        console.error('Error fetching lectures:', error);
+        console.error('❌ Error fetching lectures:', error);
         setLectures([]);
       } finally {
         setLoading(false);
@@ -353,34 +421,79 @@ function LecturesPageNew() {
 
   // View material
   const handleViewMaterial = (material) => {
-    console.log("Viewing material:", material);
-    
+    console.log("🔍 handleViewMaterial called with:", material);
+
     // Create a consistent material object regardless of the source format
     const normalizedMaterial = {
       id: material.id,
-      name: material.name || material.fileName || "Tài liệu",
-      type: material.type || (material.contentType?.includes('pdf') ? 'pdf' : 
-             material.contentType?.includes('video') ? 'video' : 
-             material.contentType?.includes('doc') ? 'doc' : 'link'),
-      url: material.url || material.downloadUrl,
-      downloadUrl: material.downloadUrl || material.url,
-      contentType: material.contentType,
+      name: material.name || material.fileName || material.title || "Tài liệu",
+      // ưu tiên loại do bạn đã set (pdf, doc, link, video), hoặc suy từ contentType/fileType
+      type: material.type 
+          || (material.fileType?.includes('pdf')      ? 'pdf'
+          : material.contentType?.includes('pdf')   ? 'pdf'
+          : material.fileType?.includes('doc')      ? 'doc'
+          : material.contentType?.includes('doc')   ? 'doc'
+          : material.fileType?.includes('video')    ? 'video'
+          : material.contentType?.includes('video') ? 'video'
+          : material.contentType?.startsWith('image/') ? 'image'
+          : material.fileType?.startsWith('image/')    ? 'image'
+          : 'link'),
+      // *** Enhanced fallback for multiple backend field names
+      url: material.url 
+         || material.downloadUrl
+         || material.fileUrl      // Spring Boot FileUploadResponse.fileUrl
+         || material.file_path    // Alternative field name
+         || material.filePath     // CamelCase variant
+         || material.attachment?.fileUrl  // Nested attachment object
+         || material.attachment?.url      // Nested attachment url
+         || (material.id ? `/files/download/${material.id}` : null), // Generate from ID - avoid /api duplication
+      downloadUrl: material.downloadUrl
+                || material.url
+                || material.fileUrl
+                || material.file_path
+                || material.filePath
+                || material.attachment?.fileUrl
+                || material.attachment?.url
+                || (material.id ? `/files/download/${material.id}` : null), // Avoid /api duplication
+      contentType: material.contentType
+               || material.fileType
+               || material.mimeType,   // Another common field name
       viewed: material.viewed || false
     };
-    
+
+    console.table(normalizedMaterial);
+    console.log("📋 Normalized material details:");
+    console.log("  - Name:", normalizedMaterial.name);
+    console.log("  - Type:", normalizedMaterial.type);
+    console.log("  - URL:", normalizedMaterial.url);
+    console.log("  - Content Type:", normalizedMaterial.contentType);
+    console.log("🎯 Setting viewMaterialVisible to true");
+
     setSelectedMaterial(normalizedMaterial);
     setViewMaterialVisible(true);
     setIframeError(false); // Reset iframe error state
-    
+    setForceUpdate(prev => prev + 1); // Force re-render
+
+    console.log("✅ Modal state should be updated");
+
+    // Additional debug - check if modal will render
+    setTimeout(() => {
+      console.log("🔍 Post-update check:", {
+        viewMaterialVisible: true,
+        selectedMaterial: normalizedMaterial,
+        forceUpdate: forceUpdate + 1
+      });
+    }, 100);
+
     // Mark as viewed in our local state
     if (!material.viewed) {
       const updatedLectures = lectures.map(lecture => ({
         ...lecture,
-        materials: lecture.materials.map(m => 
+        materials: lecture.materials.map(m =>
           m.id === material.id ? { ...m, viewed: true } : m
         )
       }));
-      
+
       setLectures(updatedLectures);
     }
   };
@@ -486,18 +599,18 @@ function LecturesPageNew() {
           
           {/* Create lecture buttons */}
           {selectedCourse && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
               <Space>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
                   onClick={() => setLectureModalVisible(true)}
                 >
                   Thêm bài giảng đơn giản
                 </Button>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
                   onClick={() => setShowAdvancedModal(true)}
                   style={{ background: '#52c41a', borderColor: '#52c41a' }}
                 >
@@ -531,7 +644,57 @@ function LecturesPageNew() {
                   >
                     <List.Item.Meta
                       title={lecture.title}
-                      description={lecture.description}
+                      description={
+                        <div>
+                          <div style={{ marginBottom: 12 }}>
+                            <MarkdownRenderer content={lecture.description || lecture.content} />
+                          </div>
+                          {lecture.materials && lecture.materials.length > 0 && (
+                            <div>
+                              <Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
+                                Tài liệu bài giảng ({lecture.materials.length}):
+                              </Title>
+                              <List
+                                size="small"
+                                dataSource={lecture.materials}
+                                renderItem={material => (
+                                  <List.Item
+                                    actions={[
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        icon={<EyeOutlined />}
+                                        onClick={() => handleViewMaterial(material)}
+                                      >
+                                        Xem
+                                      </Button>
+                                    ]}
+                                  >
+                                    <List.Item.Meta
+                                      avatar={
+                                        material.contentType?.includes('video') || material.type === 'video' ? (
+                                          <span style={{ fontSize: 20 }}>🎬</span>
+                                        ) : material.contentType?.includes('pdf') || material.type === 'pdf' ? (
+                                          <span style={{ fontSize: 20 }}>📄</span>
+                                        ) : material.type === 'link' ? (
+                                          <span style={{ fontSize: 20 }}>🔗</span>
+                                        ) : (
+                                          <span style={{ fontSize: 20 }}>📝</span>
+                                        )
+                                      }
+                                      title={material.fileName || material.name}
+                                      description={
+                                        material.contentType === 'video/youtube' ? 'Video YouTube' :
+                                        material.contentType || 'Tài liệu'
+                                      }
+                                    />
+                                  </List.Item>
+                                )}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      }
                     />
                   </List.Item>
                 )}
@@ -802,48 +965,101 @@ function LecturesPageNew() {
     );
   };
   const renderViewMaterialModal = () => {
-    if (!selectedMaterial) return null;
-    
+    console.log("🔺 renderViewMaterialModal — open:", viewMaterialVisible);
+    console.log("🎭 renderViewMaterialModal called");
+    console.log("📋 selectedMaterial:", selectedMaterial);
+    console.log("👁️ viewMaterialVisible:", viewMaterialVisible);
+
+    if (!selectedMaterial) {
+      console.log("❌ No selectedMaterial, returning null");
+      return null;
+    }
+
     const handleIframeError = () => {
       setIframeError(true);
       message.warning('Không thể hiển thị tài liệu trong cửa sổ này. Vui lòng mở trong tab mới.');
     };
-    
+
     // Check if the material is a YouTube video
     const isYoutubeVideo = selectedMaterial.contentType === 'video/youtube';
+    console.log("🎬 isYoutubeVideo:", isYoutubeVideo);
+
+    // Chỉ coi là markdown khi bạn thực sự muốn hiển thị mô tả text,
+    // không phải file:
+    const isMarkdownContent = selectedMaterial.type === 'markdown';
+
+    // PDF nhúng
+    const isPdf = selectedMaterial.type === 'pdf';
+    // Video YouTube
+    const isYoutube = selectedMaterial.contentType === 'video/youtube';
+    // Video file (mp4, mkv…)
+    const isVideo = selectedMaterial.type === 'video' && !isYoutube;
+    // Image files
+    const isImage = selectedMaterial.contentType?.startsWith('image/') || selectedMaterial.type === 'image';
     
-    // Special handling for markdown text content from lecture description
-    const isMarkdownContent = !selectedMaterial.contentType; 
+    console.log("📝 isMarkdownContent:", isMarkdownContent);
+    console.log("📄 isPdf:", isPdf);
+    console.log("🎬 isYoutube:", isYoutube);
+    console.log("🎥 isVideo:", isVideo);
+    console.log("🖼️ isImage:", isImage);
+    console.log("🏷️ Material type:", selectedMaterial.type);
+    console.log("🔗 Material URL:", selectedMaterial.url || selectedMaterial.downloadUrl);
 
     // Special handling for markdown text content from lecture description
     if (isMarkdownContent) {
+        console.log("📝 Rendering markdown modal");
         return (
             <Modal
                 title={selectedMaterial.title || "Nội dung bài giảng"}
                 open={viewMaterialVisible}
-                onCancel={() => setViewMaterialVisible(false)}
+                onCancel={() => {
+                  console.log("🚪 Markdown modal onCancel called");
+                  setViewMaterialVisible(false);
+                }}
                 footer={null}
                 width="80vw"
-                style={{ top: 20 }}
+                style={{ top: 20, zIndex: 1000 }}
+                maskStyle={{ zIndex: 999 }}
             >
                 <MarkdownRenderer content={selectedMaterial.description} />
             </Modal>
         );
     }
     
+    console.log("🎭 Rendering main modal with viewMaterialVisible:", viewMaterialVisible);
+
     return (      <Modal
         title={selectedMaterial.name}
         open={viewMaterialVisible}
         onCancel={() => {
+          console.log("🚪 Modal onCancel called");
           setViewMaterialVisible(false);
           setIframeError(false);
         }}
         width={800}
+        style={{ zIndex: 1000 }}
+        maskStyle={{ zIndex: 999 }}
         footer={[
-          <Button key="open-new" type="primary" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+          <Button key="open-new" type="primary" icon={<LinkOutlined />} onClick={() => {
+            const url = selectedMaterial.url || selectedMaterial.downloadUrl;
+            if (url) {
+              // For relative URLs starting with /api/ or /files/, use authenticated download
+              if (url.startsWith('/api/') || url.startsWith('/files/')) {
+                previewFile(url, selectedMaterial.contentType, selectedMaterial.name);
+              } else {
+                // For external URLs (http/https), open directly
+                const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+                console.log("🔗 Opening external URL:", fullUrl);
+                window.open(fullUrl, '_blank');
+              }
+            } else {
+              message.error('Không có đường dẫn để mở tài liệu');
+            }
+          }}>
             Mở trong tab mới
           </Button>,
           <Button key="close" onClick={() => {
+            console.log("🚪 Modal close button clicked");
             setViewMaterialVisible(false);
             setIframeError(false);
           }}>
@@ -852,7 +1068,7 @@ function LecturesPageNew() {
         ]}
       >
         <div style={{ textAlign: 'center' }}>
-          {selectedMaterial.type === 'pdf' && (
+          {isPdf && (
             <div>
               {!iframeError ? (
                 <iframe
@@ -879,8 +1095,17 @@ function LecturesPageNew() {
               ) : (
                 <div className="p-8">
                   <p className="mb-4">❌ Không thể hiển thị PDF trong cửa sổ này</p>
-                  <p className="mb-4">Tài liệu PDF không cho phép nhúng hoặc có hạn chế bảo mật.</p>
-                  <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+                  <p className="mb-4">Tài liệu PDF yêu cầu xác thực hoặc có hạn chế bảo mật.</p>
+                  <p className="mb-4">💡 <strong>Giải pháp:</strong> Sử dụng nút "Mở PDF trong tab mới" bên dưới để xem file với xác thực.</p>
+                  <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => {
+                    const url = selectedMaterial.url || selectedMaterial.downloadUrl;
+                    if (url?.startsWith('/api/') || url?.startsWith('/files/')) {
+                      previewFile(url, selectedMaterial.contentType, selectedMaterial.name);
+                    } else {
+                      const fullUrl = url?.startsWith('http') ? url : `${window.location.origin}${url}`;
+                      window.open(fullUrl, '_blank');
+                    }
+                  }}>
                     Mở PDF trong tab mới
                   </Button>
                 </div>
@@ -889,7 +1114,7 @@ function LecturesPageNew() {
           )}
           
           {/* Special case for YouTube videos */}
-          {isYoutubeVideo && (
+          {isYoutube && (
             <>
               <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 16 }}>
                 Nếu video không hiển thị, có thể do trình chặn quảng cáo. Vui lòng thử "Mở trong tab mới".
@@ -910,7 +1135,7 @@ function LecturesPageNew() {
           )}
           
           {/* Regular videos */}
-          {selectedMaterial.type === 'video' && !isYoutubeVideo && (
+          {isVideo && (
             <video
               src={selectedMaterial.url || selectedMaterial.downloadUrl}
               controls
@@ -923,11 +1148,33 @@ function LecturesPageNew() {
             />
           )}
           
+          {/* Image files */}
+          {isImage && (
+            <div>
+              <img
+                src={selectedMaterial.url || selectedMaterial.downloadUrl}
+                alt={selectedMaterial.name}
+                style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
+                onError={() => {
+                  message.error('Không thể tải hình ảnh. Vui lòng thử mở trong tab mới.');
+                }}
+              />
+            </div>
+          )}
+          
           {selectedMaterial.type === 'link' && (
             <div>
               <p>📄 Tài liệu trực tuyến</p>
               <p className="mb-4">Nhấn để mở tài liệu trong tab mới:</p>
-              <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+              <Button type="primary" size="large" icon={<LinkOutlined />} onClick={() => {
+                const url = selectedMaterial.url || selectedMaterial.downloadUrl;
+                if (url?.startsWith('/api/') || url?.startsWith('/files/')) {
+                  previewFile(url, selectedMaterial.contentType, selectedMaterial.name);
+                } else {
+                  const fullUrl = url?.startsWith('http') ? url : `${window.location.origin}${url}`;
+                  window.open(fullUrl, '_blank');
+                }
+              }}>
                 Mở liên kết
               </Button>
             </div>
@@ -937,7 +1184,15 @@ function LecturesPageNew() {
             <div>
               <p>📄 Tài liệu văn bản</p>
               <p className="mb-4">Nhấn để mở hoặc tải xuống tài liệu:</p>
-              <Button type="primary" size="large" icon={<UploadOutlined />} onClick={() => window.open(selectedMaterial.url || selectedMaterial.downloadUrl, '_blank')}>
+              <Button type="primary" size="large" icon={<UploadOutlined />} onClick={() => {
+                const url = selectedMaterial.url || selectedMaterial.downloadUrl;
+                if (url?.startsWith('/api/') || url?.startsWith('/files/')) {
+                  previewFile(url, selectedMaterial.contentType, selectedMaterial.name);
+                } else {
+                  const fullUrl = url?.startsWith('http') ? url : `${window.location.origin}${url}`;
+                  window.open(fullUrl, '_blank');
+                }
+              }}>
                 Mở tài liệu
               </Button>
             </div>
@@ -1010,11 +1265,20 @@ function LecturesPageNew() {
     );
   };
 
+  // Debug all modal states
+  console.log("🎭 All modal states:", {
+    viewMaterialVisible,
+    materialModalVisible,
+    lectureModalVisible,
+    showAdvancedModal,
+    selectedMaterial: !!selectedMaterial
+  });
+
   return (
     <div className="lectures-page">
       {/* Main content based on user role */}
       {renderMainContent()}
-      
+
       {/* Shared modals */}
       {renderLectureModal()}
       {renderMaterialModal()}

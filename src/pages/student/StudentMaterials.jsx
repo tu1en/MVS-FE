@@ -75,23 +75,96 @@ const StudentMaterials = () => {
   const handleDownload = async (material) => {
     try {
       setDownloadingIds(prev => new Set(prev).add(material.id));
-      
+
+      console.log('Bắt đầu tải xuống tài liệu:', {
+        id: material.id,
+        fileName: material.fileName,
+        originalFileName: material.originalFileName,
+        fileSize: material.fileSize
+      });
+
       // Download using the material service
       const blob = await MaterialService.downloadMaterial(material.id);
-      
+
+      // Validate blob
+      if (!blob || blob.size === 0) {
+        throw new Error('File tải xuống rỗng hoặc không có nội dung');
+      }
+
+      console.log('Tải xuống thành công, kích thước blob:', blob.size);
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = material.originalFileName || material.fileName || 'download';
+
+      // Use the best available filename
+      const fileName = material.originalFileName || material.fileName || `tai_lieu_${material.id}`;
+      link.download = fileName;
+
+      // Add to DOM, click, and cleanup
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
+      // Show success message
+      console.log(`Đã tải xuống thành công: ${fileName}`);
+
+      // Optional: Show a brief success notification
+      const successMsg = document.createElement('div');
+      successMsg.textContent = `✅ Đã tải xuống: ${fileName}`;
+      successMsg.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 9999;
+        background: #10b981; color: white; padding: 12px 20px;
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 14px; max-width: 300px;
+      `;
+      document.body.appendChild(successMsg);
+      setTimeout(() => {
+        if (successMsg.parentNode) {
+          successMsg.parentNode.removeChild(successMsg);
+        }
+      }, 3000);
+
     } catch (err) {
       console.error('Error downloading material:', err);
-      alert('Không thể tải tài liệu. Vui lòng thử lại.');
+
+      // Show detailed error message
+      const errorMsg = err.message || 'Không thể tải tài liệu. Vui lòng thử lại.';
+
+      // Create error notification
+      const errorNotification = document.createElement('div');
+      errorNotification.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 8px;">❌ Lỗi tải xuống tài liệu</div>
+        <div style="font-size: 13px; line-height: 1.4;">${errorMsg}</div>
+        <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
+          Tài liệu: ${material.fileName || material.originalFileName || 'Không xác định'}
+        </div>
+      `;
+      errorNotification.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 9999;
+        background: #ef4444; color: white; padding: 16px 20px;
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 14px; max-width: 350px; cursor: pointer;
+      `;
+
+      // Click to dismiss
+      errorNotification.onclick = () => {
+        if (errorNotification.parentNode) {
+          errorNotification.parentNode.removeChild(errorNotification);
+        }
+      };
+
+      document.body.appendChild(errorNotification);
+
+      // Auto dismiss after 8 seconds
+      setTimeout(() => {
+        if (errorNotification.parentNode) {
+          errorNotification.parentNode.removeChild(errorNotification);
+        }
+      }, 8000);
+
     } finally {
       setDownloadingIds(prev => {
         const newSet = new Set(prev);

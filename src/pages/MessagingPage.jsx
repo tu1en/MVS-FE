@@ -1,6 +1,6 @@
 import { MessageOutlined, SendOutlined, StarOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Empty, Input, List, message, Rate, Select, Space, Spin, Tabs, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
 
@@ -18,6 +18,12 @@ function MessagingPage() {
   const [teachers, setTeachers] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Debug loading state changes
+  const setLoadingWithLog = (value) => {
+    console.log(`🔄 Loading state change: ${loading} → ${value}`);
+    setLoading(value);
+  };
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState('messages');
   const [messagesTabKey, setMessagesTabKey] = useState('received');
@@ -66,35 +72,36 @@ function MessagingPage() {
   const userRole = user?.role;
 
   // Add ref to track if component is mounted
-  const isMountedRef = { current: true };
+  const isMountedRef = { current: true }; // Simple ref object
 
   useEffect(() => {
+    let timeoutId;
+
     if (userId) {
+      console.log(`🔄 useEffect triggered: userId=${userId}, retryCount=${retryCount}`);
       loadAllData();
 
       // Safety timeout to prevent infinite loading
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (isMountedRef.current && loading) {
           console.warn('⚠️ Loading timeout reached, forcing loading to false');
           setLoading(false);
           message.warning('Tải dữ liệu mất nhiều thời gian hơn dự kiến. Vui lòng làm mới trang nếu dữ liệu không hiển thị.');
-          
+
           // Hiển thị nút làm mới
           message.info({
             content: 'Bấm F5 hoặc làm mới trang để tải lại dữ liệu',
             duration: 5
           });
         }
-      }, 5000); // Giảm xuống 5 giây
-
-      return () => {
-        clearTimeout(timeoutId);
-        isMountedRef.current = false;
-      };
+      }, 10000); // Tăng lên 10 giây để đủ thời gian load
     }
 
     // Cleanup function
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       isMountedRef.current = false;
     };
   }, [userId, retryCount]);
@@ -102,18 +109,28 @@ function MessagingPage() {
   // Hàm thử lại nếu tải dữ liệu thất bại
   const retryLoading = () => {
     if (retryCount < 3) {
+      console.log(`🔄 Retry attempt ${retryCount + 1}/3`);
       message.info('Đang thử tải lại dữ liệu...');
       setRetryCount(prev => prev + 1);
     } else {
+      console.log('❌ Max retries reached');
       message.error('Đã thử tải lại nhiều lần nhưng không thành công. Vui lòng làm mới trang.');
     }
+  };
+
+  // Emergency function to force stop loading
+  const forceStopLoading = () => {
+    console.log('🚨 Force stopping loading state');
+    setLoadingWithLog(false);
+    message.info('Đã dừng trạng thái tải. Trang có thể hoạt động với dữ liệu hiện có.');
   };
 
   const loadAllData = async () => {
     if (!isMountedRef.current) return;
 
     console.log('🔄 MessagingPage: Starting to load data...');
-    setLoading(true);
+    console.log('🔄 Current loading state:', loading);
+    setLoadingWithLog(true);
 
     try {
       // Debug: Kiểm tra tài khoản người dùng
@@ -124,44 +141,109 @@ function MessagingPage() {
         console.error('❌ Không thể lấy thông tin người dùng:', userError);
       }
 
-      // Load all data sequentially to ensure data is set before turning off loading
-      await fetchMessages();
-      await fetchSentMessages(); // Thêm lấy tin nhắn đã gửi
-      await fetchTeachers();
-      await fetchCourses();
-      
-      console.log('✅ MessagingPage: Data loading completed');
-      
-      // Kiểm tra xem dữ liệu đã được tải thành công hay chưa
-      const dataCheck = {
-        messages: Array.isArray(messages),
-        sentMessages: Array.isArray(sentMessages),
-        teachers: Array.isArray(teachers),
-        courses: Array.isArray(courses)
+      // Load all data sequentially with individual error handling
+      const loadResults = {
+        messages: false,
+        sentMessages: false,
+        teachers: false,
+        courses: false
       };
-      
-      console.log('📊 Data check:', dataCheck);
-      
-      // Nếu có bất kỳ dữ liệu nào không đúng dạng mảng, thử tải lại
-      if (!dataCheck.messages || !dataCheck.sentMessages || !dataCheck.teachers || !dataCheck.courses) {
-        console.warn('⚠️ Dữ liệu chưa được tải đầy đủ, đang tải lại...');
-        if (retryCount < 3) {
-          setTimeout(() => retryLoading(), 1000);
-        }
+
+      // Load messages (critical)
+      try {
+        console.log('📨 Loading messages...');
+        await fetchMessages();
+        loadResults.messages = true;
+        console.log('✅ Messages loaded successfully');
+      } catch (error) {
+        console.error('❌ Failed to load messages:', error);
+        loadResults.messages = false;
       }
+
+      // Load sent messages (non-critical)
+      try {
+        console.log('📤 Loading sent messages...');
+        await fetchSentMessages();
+        loadResults.sentMessages = true;
+        console.log('✅ Sent messages loaded successfully');
+      } catch (error) {
+        console.error('❌ Failed to load sent messages:', error);
+        loadResults.sentMessages = false;
+      }
+
+      // Load teachers (critical for sending messages)
+      try {
+        console.log('👨‍🏫 Loading teachers...');
+        await fetchTeachers();
+        loadResults.teachers = true;
+        console.log('✅ Teachers loaded successfully');
+      } catch (error) {
+        console.error('❌ Failed to load teachers:', error);
+        loadResults.teachers = false;
+      }
+
+      // Load courses (non-critical)
+      try {
+        console.log('📚 Loading courses...');
+        await fetchCourses();
+        loadResults.courses = true;
+        console.log('✅ Courses loaded successfully');
+      } catch (error) {
+        console.error('❌ Failed to load courses:', error);
+        loadResults.courses = false;
+      }
+
+      console.log('📊 Loading results:', loadResults);
+
+      // Check if critical data loaded successfully
+      const criticalDataLoaded = loadResults.messages && loadResults.teachers;
+
+      console.log('🔍 Critical data check:', { criticalDataLoaded, loadResults });
+
+      // Emergency timeout to force stop loading
+      setTimeout(() => {
+        if (isMountedRef.current && loading) {
+          console.warn('🚨 Emergency timeout: Force stopping loading state');
+          setLoadingWithLog(false);
+        }
+      }, 1000);
+
+      if (criticalDataLoaded) {
+        console.log('✅ MessagingPage: Critical data loaded successfully');
+        console.log('🔄 MessagingPage: Setting loading to false after successful load');
+        setLoadingWithLog(false);
+      } else {
+        console.warn('⚠️ MessagingPage: Some critical data failed to load');
+        if (!loadResults.messages) {
+          message.warning('Không thể tải tin nhắn. Một số tính năng có thể không hoạt động.');
+        }
+        if (!loadResults.teachers) {
+          message.warning('Không thể tải danh sách giáo viên. Không thể gửi tin nhắn mới.');
+        }
+        console.log('🔄 MessagingPage: Setting loading to false after partial load');
+        setLoadingWithLog(false);
+      }
+
     } catch (error) {
-      console.error('💥 Error loading data:', error);
+      console.error('💥 Unexpected error in loadAllData:', error);
       if (isMountedRef.current) {
-        message.error('Có lỗi xảy ra khi tải dữ liệu');
-        // Tự động thử lại nếu có lỗi
-        if (retryCount < 2) {
-          setTimeout(() => retryLoading(), 2000);
+        // Only show generic error if we haven't shown specific errors above
+        message.error('Có lỗi không mong muốn xảy ra khi tải dữ liệu');
+
+        // Auto-retry only for unexpected errors, not individual API failures
+        if (retryCount < 1) { // Reduce retry attempts for unexpected errors
+          console.log(`🔄 Auto-retrying due to unexpected error... (${retryCount + 1}/2)`);
+          setTimeout(() => retryLoading(), 3000);
+          return; // Don't set loading to false if we're retrying
+        } else {
+          console.log('❌ Max retries reached, giving up');
+          message.error('Đã thử tải lại nhiều lần nhưng không thành công. Vui lòng làm mới trang.');
         }
       }
     } finally {
       if (isMountedRef.current) {
         console.log('✅ MessagingPage: Setting loading to false');
-        setLoading(false);
+        setLoadingWithLog(false);
       }
     }
   };
@@ -171,18 +253,24 @@ function MessagingPage() {
       console.log(`📨 Fetching messages for user ${userId}...`);
       const response = await apiClient.get(`/student-messages/student/${userId}`);
       if (isMountedRef.current) {
-        console.log(`✅ Messages fetched:`, response.data);
-        setMessages(response.data || []);
+        const messagesData = response.data || [];
+        console.log(`✅ Messages fetched: ${messagesData.length} messages`);
+        console.log('📊 Messages data:', messagesData);
+        setMessages(messagesData);
+        return messagesData; // Return data for verification
       }
     } catch (error) {
       if (isMountedRef.current) {
         console.error('❌ Error fetching messages:', error);
         console.error('   Status:', error.response?.status);
         console.error('   Data:', error.response?.data);
+        // Set empty array on error to prevent undefined state
+        setMessages([]);
         // Only show error if it's not a cancellation error
         if (error.code !== 'ERR_CANCELED') {
           message.error('Không thể tải tin nhắn');
         }
+        throw error; // Re-throw to let caller handle
       }
     }
   };
@@ -191,47 +279,47 @@ function MessagingPage() {
   const fetchSentMessages = async () => {
     try {
       console.log(`📤 Fetching sent messages for user ${userId}...`);
-      
-      // Phương án 1: Sử dụng endpoint có sẵn từ controller mới đã thêm vào
-      try {
-        const response = await apiClient.get(`/student-messages/by-sender/${userId}`);
-        if (isMountedRef.current) {
-          console.log(`✅ Sent messages fetched:`, response.data);
-          setSentMessages(response.data || []);
-          
-          // Lưu vào cache để sử dụng khi offline
-          try {
-            localStorage.setItem(`sentMessages_${userId}`, JSON.stringify(response.data || []));
-          } catch (cacheError) {
-            console.warn('⚠️ Error caching messages:', cacheError);
-          }
-          
-          return; // Nếu thành công thì không cần thực hiện các phương án sau
+
+      const response = await apiClient.get(`/student-messages/by-sender/${userId}`);
+      if (isMountedRef.current) {
+        const sentMessagesData = response.data || [];
+        console.log(`✅ Sent messages fetched: ${sentMessagesData.length} messages`);
+        setSentMessages(sentMessagesData);
+
+        // Cache for offline use
+        try {
+          localStorage.setItem(`sentMessages_${userId}`, JSON.stringify(sentMessagesData));
+        } catch (cacheError) {
+          console.warn('⚠️ Error caching sent messages:', cacheError);
         }
-      } catch (endpointError) {
-        console.warn('⚠️ Cannot fetch sent messages:', endpointError.message);
+
+        return sentMessagesData;
       }
-      
-      // Phương án 2: Kiểm tra từ cache
-      try {
-        const cachedSentMessages = localStorage.getItem(`sentMessages_${userId}`);
-        if (cachedSentMessages) {
-          const parsedMessages = JSON.parse(cachedSentMessages);
-          setSentMessages(parsedMessages);
-          console.log('✅ Retrieved sent messages from cache:', parsedMessages.length);
-          return;
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Error retrieving from cache:', cacheError.message);
-      }
-      
-      // Nếu tất cả đều thất bại, hiển thị mảng rỗng
-      setSentMessages([]);
-      
     } catch (error) {
-      console.error('❌ Error in fetchSentMessages:', error);
-      // Không hiển thị lỗi cho người dùng vì đây là tính năng phụ
-      setSentMessages([]);
+      console.error('❌ Error fetching sent messages:', error);
+
+      if (isMountedRef.current) {
+        // Try to load from cache as fallback
+        try {
+          const cachedSentMessages = localStorage.getItem(`sentMessages_${userId}`);
+          if (cachedSentMessages) {
+            const parsedMessages = JSON.parse(cachedSentMessages);
+            setSentMessages(parsedMessages);
+            console.log('✅ Retrieved sent messages from cache:', parsedMessages.length);
+            return parsedMessages;
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Error retrieving from cache:', cacheError);
+        }
+
+        // Set empty array as final fallback
+        setSentMessages([]);
+
+        // Only show error if it's not a cancellation error
+        if (error.code !== 'ERR_CANCELED') {
+          console.warn('⚠️ Could not load sent messages, using empty array');
+        }
+      }
     }
   };
 
@@ -240,18 +328,25 @@ function MessagingPage() {
       console.log('👨‍🏫 Fetching teachers...');
       const response = await apiClient.get('/users/teachers');
       if (isMountedRef.current) {
-        console.log(`✅ Teachers fetched:`, response.data);
-        setTeachers(response.data || []);
+        const teachersData = response.data || [];
+        console.log(`✅ Teachers fetched: ${teachersData.length} teachers`);
+        setTeachers(teachersData);
+        return teachersData;
       }
     } catch (error) {
       if (isMountedRef.current) {
         console.error('❌ Error fetching teachers:', error);
         console.error('   Status:', error.response?.status);
         console.error('   Data:', error.response?.data);
+
+        // Set empty array on error
+        setTeachers([]);
+
         // Only show error if it's not a cancellation error
         if (error.code !== 'ERR_CANCELED') {
           message.error('Không thể tải danh sách giáo viên');
         }
+        throw error;
       }
     }
   };
@@ -266,18 +361,25 @@ function MessagingPage() {
         response = await apiClient.get(`/classrooms/current-teacher`);
       }
       if (isMountedRef.current) {
-        console.log(`✅ Courses fetched:`, response.data);
-        setCourses(response.data || []);
+        const coursesData = response.data || [];
+        console.log(`✅ Courses fetched: ${coursesData.length} courses`);
+        setCourses(coursesData);
+        return coursesData;
       }
     } catch (error) {
       if (isMountedRef.current) {
         console.error('❌ Error fetching courses:', error);
         console.error('   Status:', error.response?.status);
         console.error('   Data:', error.response?.data);
+
+        // Set empty array on error
+        setCourses([]);
+
         // Only show error if it's not a cancellation error
         if (error.code !== 'ERR_CANCELED') {
           message.error('Không thể tải danh sách khóa học');
         }
+        throw error;
       }
     }
   };
@@ -627,7 +729,21 @@ function MessagingPage() {
     );
   }
 
+  // Debug loading state
+  console.log('🔄 MessagingPage render:', { loading, retryCount, userId });
+
   if (loading) {
+    console.log('🔄 MessagingPage: Rendering loading state', {
+      loading,
+      retryCount,
+      userId,
+      userRole,
+      messagesLength: messages.length,
+      sentMessagesLength: sentMessages.length,
+      teachersLength: teachers.length,
+      coursesLength: courses.length
+    });
+
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
@@ -635,13 +751,40 @@ function MessagingPage() {
         <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
           User ID: {userId} | Role: {userRole}
         </div>
-        <Button 
-          style={{ marginTop: 16 }} 
-          onClick={retryLoading}
-          disabled={retryCount >= 3}
-        >
-          Thử lại ({retryCount}/3)
-        </Button>
+        <div style={{ marginTop: 4, fontSize: '11px', color: '#999' }}>
+          Messages: {messages.length} | Sent: {sentMessages.length} | Teachers: {teachers.length} | Courses: {courses.length}
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <Button
+            onClick={retryLoading}
+            disabled={retryCount >= 3}
+            style={{ marginRight: 8 }}
+          >
+            Thử lại ({retryCount}/3)
+          </Button>
+          <Button
+            onClick={forceStopLoading}
+            type="dashed"
+            danger
+          >
+            Dừng tải
+          </Button>
+          <Button
+            onClick={() => {
+              console.log('🔍 Debug info:', { loading, retryCount, userId, userRole });
+              console.log('🔍 Data counts:', {
+                messages: messages.length,
+                sentMessages: sentMessages.length,
+                teachers: teachers.length,
+                courses: courses.length
+              });
+            }}
+            type="default"
+            size="small"
+          >
+            Debug Info
+          </Button>
+        </div>
       </div>
     );
   }

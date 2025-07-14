@@ -1,0 +1,404 @@
+/**
+ * Unified Messaging Styles
+ * 
+ * Consistent Vietnamese text rendering and styling for messaging interfaces
+ * Ensures proper font display, spacing, and visual hierarchy
+ */
+
+/* Vietnamese Font Stack */
+.messaging-vietnamese-text {
+  font-family: 
+    'Inter',
+    'Roboto', 
+    'Noto Sans', 
+    'Roboto Condensed',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Helvetica Neue',
+    Arial,
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    'Segoe UI Symbol';
+  
+  /* Vietnamese text rendering optimizations */
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Message Container Styles */
+.messaging-layout {
+  font-family: inherit;
+  background-color: #ffffff;
+}
+
+.messaging-layout * {
+  font-family: inherit;
+}
+
+/* Conversation List Styles */
+.conversation-list-container {
+  background-color: #fafafa;
+  border-right: 1px solid #f0f0f0;
+}
+
+.conversation-item {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.conversation-item:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.conversation-item.selected {
+  background-color: #e6f7ff !important;
+  border-left: 4px solid #1890ff !important;
+}
+
+.conversation-item .ant-list-item-meta-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.conversation-item .ant-list-item-meta-description {
+  font-size: 12px;
+  color: #8c8c8c;
+  line-height: 1.4;
+}
+
+/* Message Bubble Styles */
+.message-bubble-container {
+  margin-bottom: 12px;
+}
+
+.message-bubble-container .ant-card {
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  max-width: 70%;
+}
+
+.message-bubble-container .ant-card-body {
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Sent message (current user) */
+.message-bubble-container .message-sent .ant-card {
+  background-color: #1890ff;
+  color: white;
+  margin-left: auto;
+}
+
+.message-bubble-container .message-sent .ant-card-body {
+  color: white;
+}
+
+/* Received message */
+.message-bubble-container .message-received .ant-card {
+  background-color: #f5f5f5;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Message Header Styles */
+.message-header-container {
+  background-color: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 20px;
+}
+
+.message-header-container .ant-typography {
+  margin-bottom: 0;
+}
+
+.message-header-container .ant-avatar {
+  margin-right: 12px;
+}
+
+/* Message Input Styles */
+.message-input-container {
+  background-color: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  padding: 12px 16px;
+}
+
+.message-input-container .ant-input {
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.message-input-container .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Vietnamese Text Specific Styles */
+.vietnamese-message-content {
+  font-size: 14px;
+  line-height: 1.5;
+  word-spacing: 0.1em;
+  letter-spacing: 0.01em;
+}
+
+.vietnamese-timestamp {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 400;
+}
+
+.vietnamese-sender-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1890ff;
+  margin-bottom: 2px;
+}
+
+.vietnamese-subject {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+/* Status Indicators */
+.message-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.message-status-indicator.received {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Priority Tags */
+.priority-tag {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.priority-tag.high {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.priority-tag.urgent {
+  background-color: #eb2f96;
+  color: white;
+}
+
+.priority-tag.medium {
+  background-color: #1890ff;
+  color: white;
+}
+
+.priority-tag.low {
+  background-color: #52c41a;
+  color: white;
+}
+
+/* Unread Badge */
+.unread-badge {
+  background-color: #ff4d4f;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Date Divider */
+.message-date-divider {
+  text-align: center;
+  margin: 16px 0;
+  position: relative;
+}
+
+.message-date-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #f0f0f0;
+  z-index: 1;
+}
+
+.message-date-divider span {
+  background-color: white;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #8c8c8c;
+  position: relative;
+  z-index: 2;
+}
+
+/* Reply Styles */
+.message-reply {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+  border-left: 3px solid #1890ff;
+}
+
+.message-reply-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1890ff;
+  margin-bottom: 4px;
+}
+
+.message-reply-content {
+  font-size: 13px;
+  color: #262626;
+  line-height: 1.4;
+}
+
+.message-reply-timestamp {
+  font-size: 11px;
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+/* Empty State */
+.messaging-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #8c8c8c;
+}
+
+.messaging-empty-state .anticon {
+  font-size: 48px;
+  color: #d9d9d9;
+  margin-bottom: 16px;
+}
+
+.messaging-empty-state p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Loading State */
+.messaging-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+.messaging-loading .ant-spin {
+  margin-right: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .messaging-layout .ant-row {
+    flex-direction: column;
+  }
+  
+  .messaging-layout .ant-col:first-child {
+    height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .messaging-layout .ant-col:last-child {
+    height: 60vh;
+  }
+  
+  .message-bubble-container .ant-card {
+    max-width: 85%;
+  }
+  
+  .message-header-container {
+    padding: 8px 16px;
+  }
+  
+  .message-input-container {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-bubble-container .ant-card {
+    max-width: 90%;
+  }
+  
+  .message-bubble-container .ant-card-body {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .vietnamese-message-content {
+    font-size: 13px;
+  }
+  
+  .conversation-item .ant-list-item-meta-title {
+    font-size: 13px;
+  }
+  
+  .conversation-item .ant-list-item-meta-description {
+    font-size: 11px;
+  }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+  .messaging-layout {
+    background-color: #141414;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  
+  .conversation-list-container {
+    background-color: #1f1f1f;
+    border-right-color: #303030;
+  }
+  
+  .message-header-container {
+    background-color: #1f1f1f;
+    border-bottom-color: #303030;
+  }
+  
+  .message-input-container {
+    background-color: #1f1f1f;
+    border-top-color: #303030;
+  }
+  
+  .message-bubble-container .message-received .ant-card {
+    background-color: #262626;
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .message-input-container,
+  .message-header-container .ant-btn,
+  .conversation-list-container {
+    display: none !important;
+  }
+  
+  .message-bubble-container .ant-card {
+    box-shadow: none;
+    border: 1px solid #d9d9d9;
+  }
+}

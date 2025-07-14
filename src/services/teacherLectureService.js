@@ -11,7 +11,7 @@ export const teacherLectureService = {
    */
   async getClassroomLectures(classroomId) {
     try {
-      const response = await apiClient.get(`/api/lectures/classrooms/${classroomId}`);
+      const response = await apiClient.get(`/api/lectures/classroom/${classroomId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classroom lectures:', error);
@@ -41,7 +41,7 @@ export const teacherLectureService = {
    */
   async createLecture(lectureData) {
     try {
-      const response = await apiClient.post('/lectures', lectureData);
+      const response = await apiClient.post('/api/lectures', lectureData);
       return response.data;
     } catch (error) {
       console.error('Error creating lecture:', error);

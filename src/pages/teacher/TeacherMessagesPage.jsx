@@ -179,19 +179,53 @@ const TeacherMessagesPage = () => {
   const fetchStudents = useCallback(async () => {
     try {
       setLoadingStudents(true);
-      const studentsByRole = await api.GetUsersByRole(1); // Role ID 1 for students
-      if (studentsByRole && Array.isArray(studentsByRole)) {
-        const normalizedStudents = studentsByRole.map(student => ({
+      console.log('🔍 Fetching students for dropdown...');
+
+      // Try the direct students endpoint first (more reliable)
+      let studentsData = [];
+      try {
+        const response = await fetch('http://localhost:8088/api/users/students', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          studentsData = await response.json();
+          console.log('✅ Successfully fetched students from /api/users/students:', studentsData);
+        } else {
+          console.warn('⚠️ /api/users/students failed, trying GetUsersByRole...');
+          // Fallback to GetUsersByRole
+          studentsData = await api.GetUsersByRole(1);
+        }
+      } catch (directError) {
+        console.warn('⚠️ Direct API call failed, trying GetUsersByRole...', directError);
+        // Fallback to GetUsersByRole
+        studentsData = await api.GetUsersByRole(1);
+      }
+
+      if (studentsData && Array.isArray(studentsData)) {
+        const normalizedStudents = studentsData.map(student => ({
           id: student.id,
-          fullName: student.fullName,
-        })).filter(Boolean);
+          fullName: student.fullName || student.name || `Student ${student.id}`,
+        })).filter(student => student.id && student.fullName);
+
+        console.log('📋 Normalized students for dropdown:', normalizedStudents);
         setStudents(normalizedStudents);
+
+        if (normalizedStudents.length === 0) {
+          message.warning('Không tìm thấy học sinh nào trong hệ thống.');
+        }
       } else {
+        console.error('❌ Invalid students data format:', studentsData);
         setStudents([]);
+        message.error('Dữ liệu học sinh không hợp lệ.');
       }
     } catch (error) {
       message.error('Không thể tải danh sách học sinh.');
-      console.error('Error fetching students:', error);
+      console.error('❌ Error fetching students:', error);
+      setStudents([]);
     } finally {
       setLoadingStudents(false);
       setLoading(false);
@@ -204,7 +238,7 @@ const TeacherMessagesPage = () => {
     console.log(`Attempting to fetch conversation between teacher ${teacherId} and student ${student.id}`);
     setLoadingConversation(true);
     setSelectedStudent(student);
-    
+
     try {
       const conversationData = await api.GetConversation(teacherId, student.id);
       setConversation(conversationData || []);
@@ -217,9 +251,52 @@ const TeacherMessagesPage = () => {
     }
   }, [teacherId, message]);
 
+  // Optional: Fetch conversations list (if needed for future features)
+  const fetchConversationsList = useCallback(async () => {
+    if (!teacherId) return;
+
+    try {
+      console.log('🔍 Fetching conversations list for teacher:', teacherId);
+      const response = await fetch(`http://localhost:8088/api/student-messages/teacher/${teacherId}/conversations`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const conversationsData = await response.json();
+        console.log('✅ Conversations list fetched successfully:', conversationsData);
+        // You can store this in state if needed for future features
+        // setConversationsList(conversationsData);
+      } else {
+        console.warn('⚠️ Failed to fetch conversations list:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching conversations list:', error);
+    }
+  }, [teacherId]);
+
   useEffect(() => {
+    console.log('🚀 TeacherMessagesPage useEffect - Starting to fetch students...');
     fetchStudents();
   }, [fetchStudents]);
+
+  // Additional useEffect to ensure loading is set to false if teacherId is available
+  useEffect(() => {
+    if (teacherId && !authLoading) {
+      console.log('✅ Teacher ID available, ensuring loading state is managed properly');
+      // If we have teacherId but loading is still true after 5 seconds, force it to false
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          console.log('⚠️ Forcing loading to false after timeout');
+          setLoading(false);
+        }
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [teacherId, authLoading, loading]);
 
   const handleStudentSelect = (studentId) => {
     const student = students.find(s => s.id === studentId);
@@ -364,8 +441,28 @@ const TeacherMessagesPage = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <Spin size="large" />
+        <p style={{ marginTop: '16px', color: '#666' }}>
+          Đang tải trang tin nhắn...
+        </p>
+        <div style={{ marginTop: '8px', fontSize: '12px', color: '#999', textAlign: 'center' }}>
+          <div>Auth Loading: {authLoading ? 'Yes' : 'No'}</div>
+          <div>Teacher ID: {teacherId || 'Not found'}</div>
+          <div>Loading Students: {loadingStudents ? 'Yes' : 'No'}</div>
+          <div>Students Count: {students.length}</div>
+        </div>
+        <Button
+          type="link"
+          size="small"
+          style={{ marginTop: '16px' }}
+          onClick={() => {
+            console.log('🔄 Force refresh - setting loading to false');
+            setLoading(false);
+          }}
+        >
+          Bỏ qua loading (Debug)
+        </Button>
       </div>
     );
   }
@@ -441,7 +538,38 @@ const TeacherMessagesPage = () => {
             label="Gửi đến"
             rules={[{ required: true, message: 'Vui lòng chọn học sinh' }]}
           >
-            <Select placeholder="Chọn học sinh">
+            <Select
+              placeholder="Chọn học sinh"
+              loading={loadingStudents}
+              showSearch
+              filterOption={(input, option) =>
+                option?.children?.toLowerCase().includes(input.toLowerCase())
+              }
+              notFoundContent={
+                loadingStudents ? (
+                  <div style={{ textAlign: 'center', padding: '8px' }}>
+                    <Spin size="small" /> Đang tải danh sách học sinh...
+                  </div>
+                ) : students.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '8px', color: '#999' }}>
+                    Không có học sinh nào
+                    <br />
+                    <Button
+                      size="small"
+                      type="link"
+                      onClick={() => {
+                        console.log('🔄 Retrying fetch students...');
+                        fetchStudents();
+                      }}
+                    >
+                      Thử lại
+                    </Button>
+                  </div>
+                ) : (
+                  'Không tìm thấy học sinh phù hợp'
+                )
+              }
+            >
               {students.map((student) => (
                 <Option key={student.id} value={student.id}>
                   {student.fullName} (ID: {student.id})

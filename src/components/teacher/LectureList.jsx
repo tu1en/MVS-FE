@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import LectureDetailModal from './LectureDetailModal';
+import './LectureDetailModal.css';
 
 const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = false }) => {
   const navigate = useNavigate();
@@ -12,6 +14,8 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
   const [deletingId, setDeletingId] = useState(null);
   const [creatingData, setCreatingData] = useState(false);
   const [lastLoadedCourseId, setLastLoadedCourseId] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedLecture, setSelectedLecture] = useState(null);
 
   // Get message API from App context
   const { message } = App.useApp();
@@ -182,6 +186,85 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
       }
     });
   };
+
+  const handleViewLectureDetails = (lecture) => {
+    console.log('🔍 [DEBUG] Lecture Details:', {
+      id: lecture.id,
+      title: lecture.title,
+      content: lecture.content,
+      materials: lecture.materials,
+      materialsCount: lecture.materials?.length || 0,
+      youtubeUrl: lecture.youtubeUrl,
+      youtubeEmbedUrl: lecture.youtubeEmbedUrl,
+      lectureDate: lecture.lectureDate,
+      createdAt: lecture.createdAt,
+      fullLectureObject: lecture
+    });
+
+    setSelectedLecture(lecture);
+    setDetailModalVisible(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setDetailModalVisible(false);
+    setSelectedLecture(null);
+  };
+
+  // Old Modal.info implementation (keeping for reference)
+  const handleViewLectureDetailsOld = (lecture) => {
+    Modal.info({
+      title: `Chi tiết bài giảng: ${lecture.title}`,
+      width: 800,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold">Nội dung:</h4>
+            <p className="text-gray-700">{lecture.content || 'Không có nội dung'}</p>
+          </div>
+
+          <div>
+            <h4 className="font-semibold">Ngày giảng:</h4>
+            <p className="text-gray-700">{lecture.lectureDate || 'Chưa xác định'}</p>
+          </div>
+
+          <div>
+            <h4 className="font-semibold">Tài liệu ({lecture.materials?.length || 0}):</h4>
+            {lecture.materials && lecture.materials.length > 0 ? (
+              <ul className="list-disc list-inside space-y-1">
+                {lecture.materials.map((material, index) => (
+                  <li key={index} className="text-gray-700">
+                    {material.contentType === 'video/youtube' ? '🎥' : '📄'}
+                    {material.fileName}
+                    {material.contentType && ` (${material.contentType})`}
+                    {material.downloadUrl && (
+                      <a
+                        href={material.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-blue-500 hover:text-blue-700"
+                      >
+                        [Link]
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">Không có tài liệu</p>
+            )}
+          </div>
+
+          <div>
+            <h4 className="font-semibold">Debug Info:</h4>
+            <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
+              {JSON.stringify(lecture, null, 2)}
+            </pre>
+          </div>
+        </div>
+      ),
+      okText: 'Đóng'
+    });
+  };
   const handleEditLecture = (lecture) => {
     // Only allow editing in teacher view
     if (isStudentView) return;
@@ -344,17 +427,25 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
               {/* Actions - Only show for teacher view */}
               {!isStudentView && (
                 <div className="mt-4 flex space-x-2">
-                  <button 
+                  <button
+                    onClick={() => handleViewLectureDetails(lecture)}
+                    className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+                  >
+                    Xem chi tiết
+                  </button>
+                  <button
                     onClick={() => handleEditLecture(lecture)}
                     className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     Chỉnh sửa
-                  </button>                <button 
+                  </button>
+                  <button
                     onClick={() => handleStartLecture(lecture)}
                     className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
                   >
                     Bắt đầu
-                  </button><button 
+                  </button>
+                  <button
                     onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
                     disabled={deletingId === lecture.id}
                     className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400"
@@ -367,6 +458,14 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
           ))}
         </div>
       )}
+
+      {/* Lecture Detail Modal */}
+      <LectureDetailModal
+        visible={detailModalVisible}
+        onClose={handleCloseDetailModal}
+        lecture={selectedLecture}
+        currentUser={{ role: 'TEACHER' }} // You can pass actual user data here
+      />
     </div>
   );
 };
