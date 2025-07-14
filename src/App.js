@@ -27,6 +27,10 @@ import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
 import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
 import ExplanationReports from './pages/manager/ExplanationReports.jsx';
+import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
+import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
+import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
+import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
 
 // Teacher Pages
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -251,6 +255,10 @@ function App() {
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
               <Route path="/manager/explanation-reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ExplanationReports /></ProtectedRoute>} />
+              <Route path="/manager/teacher-attendance-status" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeacherAttendanceStatus /></ProtectedRoute>} />
+              <Route path="/manager/daily-shift-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><DailyShiftAttendance /></ProtectedRoute>} />
+              <Route path="/manager/all-staff-attendance-logs" element={<ProtectedRoute allowedRoles={["MANAGER"]}><AllStaffAttendanceLogs /></ProtectedRoute>} />
+              <Route path="/manager/personal-attendance-history" element={<ProtectedRoute allowedRoles={["MANAGER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
               <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
               <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
 
