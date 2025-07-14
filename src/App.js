@@ -25,6 +25,8 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
+import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
+import ExplanationReports from './pages/manager/ExplanationReports.jsx';
 
 // Teacher Pages
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -138,6 +140,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (userRoleName === "TEACHER") return <Navigate to="/teacher" replace />;
     if (userRoleName === "MANAGER") return <Navigate to="/manager" replace />;
     if (userRoleName === "ADMIN") return <Navigate to="/admin" replace />;
+    if (userRoleName === "ACCOUNTANT") return <Navigate to="/accountant" replace />;
     return <Navigate to="/login" replace />;
   }
 
@@ -163,6 +166,7 @@ const RootRedirect = () => {
         case "TEACHER": return <Navigate to="/teacher" replace />;
         case "MANAGER": return <Navigate to="/manager" replace />;
         case "ADMIN": return <Navigate to="/admin" replace />;
+        case "ACCOUNTANT": return <Navigate to="/accountant" replace />;
         default: return <Navigate to="/login" replace />;
     }
 };
@@ -246,8 +250,12 @@ function App() {
               <Route path="/manager/communications" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              <Route path="/manager/explanation-reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ExplanationReports /></ProtectedRoute>} />
               <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
               <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
+
+              {/* Accountant Routes */}
+              <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
 
               {/* Test Upload Page */}
               <Route path="/test-upload" element={<TestUpload />} />
