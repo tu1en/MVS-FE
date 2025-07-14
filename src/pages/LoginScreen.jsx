@@ -54,6 +54,10 @@ export default function LoginScreen() {
         case ROLE.MANAGER:
           navigate('/manager');
           break;
+        case ROLE.ACCOUNTANT:
+          console.log(`Navigating to ACCOUNTANT dashboard...`);
+          navigate('/accountant');
+          break;
         default:
           console.warn('Unknown role:', userData.role);
           navigate('/');
@@ -112,6 +116,10 @@ export default function LoginScreen() {
           break;
         case ROLE.STUDENT:
           navigate('/student');
+          break;
+        case ROLE.ACCOUNTANT:
+          console.log(`Navigating to ACCOUNTANT dashboard...`);
+          navigate('/accountant');
           break;
         default:
           navigate('/');

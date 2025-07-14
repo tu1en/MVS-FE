@@ -98,6 +98,17 @@ export default function ManagerDashboard() {
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Yêu cầu giải trình điểm danh</h2>
+          <p className="text-gray-600">Xem và quản lý các yêu cầu giải trình điểm danh trong hệ thống</p>
+          <button 
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/explanation-reports')}
+          >
+            Quản lý giải trình điểm danh
+          </button>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý nghỉ phép</h2>
           <p className="text-gray-600">Quản lý đơn xin nghỉ phép của giáo viên trong hệ thống</p>
           <button 
