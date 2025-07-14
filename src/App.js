@@ -58,6 +58,7 @@ import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 
 // Student Pages
 import NotFoundPage from "./pages/NotFoundPage.jsx";
+import AccountList from "./pages/AccountList.jsx";
 import AssignmentDetail from "./pages/student/AssignmentDetail.jsx";
 import DoExamPage from './pages/student/DoExamPage'; // Import the new DoExamPage
 import StudentEditProfile from "./pages/student/EditProfile.jsx";
@@ -231,6 +232,7 @@ function App() {
 
               {/* Admin and Manager stubs */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
+<Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
