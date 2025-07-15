@@ -65,6 +65,7 @@ function NavigationBar() {
           'STUDENT': ROLE.STUDENT,
           'TEACHER': ROLE.TEACHER,
           'MANAGER': ROLE.MANAGER,
+          'ACCOUNTANT': ROLE.ACCOUNTANT,
           'GUEST': ROLE.GUEST
         };
         
@@ -492,6 +493,22 @@ function NavigationBar() {
     }
   ];
 
+  // Define navigation items for ACCOUNTANT
+  const accountantNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { name: 'Trang Chủ/Dashboard', path: '/accountant', icon: '🏠' }
+      ]
+    },
+    {
+      category: "Nghỉ phép",
+      items: [
+        { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' }
+      ]
+    }
+  ];
+
   const getNavItems = () => {
     switch(userRole) {
       case ROLE.STUDENT:
@@ -502,6 +519,8 @@ function NavigationBar() {
         return adminNavItems;
       case ROLE.MANAGER:
         return managerNavItems;
+      case ROLE.ACCOUNTANT:
+        return accountantNavItems;
       default:
         return guestNavItems;
     }
