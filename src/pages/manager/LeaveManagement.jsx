@@ -60,7 +60,7 @@ const LeaveManagement = () => {
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await absenceService.getAllTeachersLeaveInfo();
+      const response = await absenceService.getAllEmployeesLeaveInfo();
       setEmployees(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching employees:', error);

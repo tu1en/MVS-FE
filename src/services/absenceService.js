@@ -46,6 +46,11 @@ const absenceService = {
     return api.post(`/manager/absences/requests/${absenceId}/reject`, reason, {
       headers: { 'Content-Type': 'text/plain' }
     });
+  },
+
+  // Manager operations - get all employees leave information (Teacher + Accountant)
+  getAllEmployeesLeaveInfo: () => {
+    return api.get('/manager/absences/employees');
   }
 };
 
