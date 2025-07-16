@@ -8,8 +8,9 @@ const adminService = {
     updateUserStatus: (userId, enabled) => {
         return api.put(`/admin/users/${userId}/status`, { enabled });
     },
-    updateUserRoles: (userId, roles) => {
-        return api.put(`/admin/users/${userId}/roles`, { roles });
+    updateUserRoles: (userId, role) => {
+        // Luôn gửi payload là { roles: [role] }
+        return api.put(`/admin/users/${userId}/roles`, { roles: [role] });
     }
 };
 

@@ -458,31 +458,6 @@ function NavigationBar() {
       ]
     },
     {
-      category: "Quản lý",
-      items: [
-        { 
-          name: 'Quản Lý Yêu Cầu', 
-          path: '/admin/requests', 
-          icon: '📋'
-        },
-        { 
-          name: 'Quản Lý Giao Tiếp', 
-          path: '/admin/communications', 
-          icon: '📢'
-        },
-        { 
-          name: 'Quản Lý Báo Cáo', 
-          path: '/admin/reports', 
-          icon: '📊'
-        },
-        {
-          name: 'Quản Lý Blog',
-          path: '/admin/blogs',
-          icon: '📝'
-        }
-      ]
-    },
-    {
       category: "Cá nhân",
       items: [
         {
@@ -569,18 +544,14 @@ function NavigationBar() {
               Thao Tác Nhanh
             </h3>
             <div className="space-y-2">
-              {(userRole === ROLE.TEACHER || userRole === ROLE.ADMIN) && (
+              {/* Chỉ cho phép giáo viên thao tác nhanh tạo lớp */}
+              {userRole === ROLE.TEACHER && (
                 <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
                   <span className="mr-3 text-xl">➕</span>
                   <span>Tạo Lớp Mới</span>
                 </button>
               )}
-              {userRole === ROLE.ADMIN && (
-                <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-                  <span className="mr-3 text-xl">📊</span>
-                  <span>Báo Cáo</span>
-                </button>
-              )}
+              {/* Ẩn Báo Cáo và Tạo Lớp Mới cho admin */}
               <button 
                 className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
                 onClick={() => navigate('/change-password')}

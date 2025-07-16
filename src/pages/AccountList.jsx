@@ -26,15 +26,17 @@ const AccountList = () => {
             size: params.pagination.pageSize,
             keyword: params.keyword,
         })
-            .then((data) => {
-                setUsers(data.content);
+            .then((response) => {
+                // Nếu response là object có .data thì unwrap
+                const data = response.data ? response.data : response;
+                setUsers(data.content || []);
                 setPagination({
                     ...params.pagination,
-                    total: data.totalElements,
+                    total: data.totalElements || 0,
                 });
             })
             .catch(() => {
-                message.error('Failed to fetch users');
+                message.error('Không thể tải danh sách người dùng');
             })
             .finally(() => {
                 setLoading(false);
@@ -57,30 +59,30 @@ const AccountList = () => {
     const handleStatusToggle = async (userId, currentStatus) => {
         try {
             await adminService.updateUserStatus(userId, !currentStatus);
-            message.success("User status updated");
+            message.success("Cập nhật trạng thái người dùng thành công");
             fetchUsers({ pagination, keyword });
         } catch (error) {
-            message.error("Failed to update user status");
+            message.error("Không thể cập nhật trạng thái người dùng");
         }
     };
 
     const handleRoleUpdate = async (userId, newRole) => {
         try {
-            await adminService.updateUserRole(userId, newRole);
-            message.success("User role updated");
+            await adminService.updateUserRoles(userId, newRole);
+            message.success("Cập nhật vai trò người dùng thành công");
             fetchUsers({ pagination, keyword });
         } catch (error) {
-            message.error("Failed to update user role");
+            message.error("Không thể cập nhật vai trò người dùng");
         }
     };
 
     const handleResetPassword = async (userId) => {
         try {
             await adminService.resetUserPassword(userId);
-            message.success("Password reset to default (123456789)");
+            message.success("Đặt lại mật khẩu về mặc định (123456789)");
             fetchUsers({ pagination, keyword });
         } catch (error) {
-            message.error("Failed to reset password");
+            message.error("Không thể đặt lại mật khẩu");
         }
     };
 
@@ -111,14 +113,40 @@ const AccountList = () => {
         setIsCreateModalVisible(false);
     };
 
+    // Danh sách role cho dropdown (bỏ ADMIN)
+    const roleOptions = [
+        { value: 'STUDENT', label: 'Học sinh' },
+        { value: 'TEACHER', label: 'Giáo viên' },
+        { value: 'MANAGER', label: 'Quản lý' },
+        { value: 'ACCOUNTANT', label: 'Kế toán viên' },
+    ];
+
+    // Hàm lấy label role
+    const getRoleLabel = (role) => {
+        switch (role) {
+            case 'STUDENT': return 'Học sinh';
+            case 'TEACHER': return 'Giáo viên';
+            case 'MANAGER': return 'Quản lý';
+            case 'ACCOUNTANT': return 'Kế toán viên';
+            case 'ADMIN': return 'Quản trị viên';
+            default: return role;
+        }
+    };
+
     const columns = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
+            title: '#',
+            key: 'index',
+            render: (text, record, index) => ((pagination.current - 1) * pagination.pageSize + index + 1),
+            width: 60,
         },
         {
-            title: 'Full Name',
+            title: 'Tên đăng nhập',
+            dataIndex: 'username',
+            key: 'username',
+        },
+        {
+            title: 'Họ và tên',
             dataIndex: 'fullName',
             key: 'fullName',
         },
@@ -128,64 +156,56 @@ const AccountList = () => {
             key: 'email',
         },
         {
-            title: 'Gender',
-            dataIndex: 'gender',
-            key: 'gender',
-        },
-        {
-            title: 'Date of Birth',
-            dataIndex: 'dateOfBirth',
-            key: 'dateOfBirth',
-            render: (date) => (date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A'),
-        },
-        {
-            title: 'Citizen ID',
-            dataIndex: 'citizenId',
-            key: 'citizenId',
-        },
-        {
-            title: 'Phone',
-            dataIndex: 'phoneNumber',
-            key: 'phoneNumber',
-        },
-        {
-            title: 'Status',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status, record) => (
-                <Switch
-                    checked={status === 'active'}
-                    onChange={() => handleStatusToggle(record.id, status === 'active')}
-                    checkedChildren="Active"
-                    unCheckedChildren="Locked"
-                />
-            ),
-        },
-        {
-            title: 'Role',
+            title: 'Vai trò',
             dataIndex: 'roles',
             key: 'roles',
-            render: (roles, record) => (
-                <Select
-                    defaultValue={roles && roles.length > 0 ? roles[0] : ''}
-                    style={{ width: 120 }}
-                    onChange={(value) => handleRoleUpdate(record.id, value)}
-                    options={
-                        ['ROLE_STUDENT', 'ROLE_TEACHER', 'ROLE_MANAGER', 'ROLE_ADMIN'].map(role => ({
-                            label: role.replace('ROLE_', ''),
-                            value: role
-                        }))
-                    }
+            render: (roles, record, index) => {
+                const role = Array.isArray(roles) && roles.length > 0 ? roles[0] : '';
+                // Nếu là admin (dòng đầu tiên), chỉ hiển thị label, không cho đổi
+                if (index === 0 && role === 'ADMIN') {
+                    return <span style={{ fontWeight: 'bold' }}>{getRoleLabel(role)}</span>;
+                }
+                return (
+                    <Select
+                        value={role}
+                        style={{ width: 140 }}
+                        onChange={(value) => handleRoleUpdate(record.id, value)}
+                        disabled={index === 0 && role === 'ADMIN'}
+                    >
+                        {roleOptions.map(option => (
+                            <Option key={option.value} value={option.value}>{option.label}</Option>
+                        ))}
+                    </Select>
+                );
+            },
+        },
+        {
+            title: 'Trạng thái',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status, record, index) => (
+                <Switch
+                    checked={record.enabled}
+                    onChange={() => handleStatusToggle(record.id, record.enabled)}
+                    checkedChildren="Hoạt động"
+                    unCheckedChildren="Tạm khóa"
+                    disabled={index === 0 && Array.isArray(record.roles) && record.roles[0] === 'ADMIN'}
                 />
             ),
         },
         {
-            title: 'Action',
+            title: 'Ngày tạo',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (createdAt) => createdAt ? new Date(createdAt[0], createdAt[1] - 1, createdAt[2], createdAt[3], createdAt[4], createdAt[5]).toLocaleString('vi-VN') : '',
+        },
+        {
+            title: 'Hành động',
             key: 'action',
-            render: (_, record) => (
+            render: (_, record, index) => (
                 <Space size="middle">
-                    <Button type="primary" size="small" onClick={() => handleResetPassword(record.id)}>
-                        Reset Password
+                    <Button type="primary" size="small" onClick={() => handleResetPassword(record.id)} disabled={index === 0 && Array.isArray(record.roles) && record.roles[0] === 'ADMIN'}>
+                        Đặt lại mật khẩu
                     </Button>
                 </Space>
             ),
@@ -196,18 +216,18 @@ const AccountList = () => {
         <div className="min-h-screen px-6 py-10 bg-gray-50">
             <div className="max-w-7xl mx-auto">
                 <Card bordered={false} className="shadow-lg rounded-xl">
-                    <Title level={2}>👥 User Account Management</Title>
-                    <Text type="secondary">View, search, and manage user accounts in the system.</Text>
+                    <Title level={2}>👥 Quản lý tài khoản người dùng</Title>
+                    <Text type="secondary">Xem, tìm kiếm và quản lý tài khoản người dùng trong hệ thống.</Text>
                     
                     <div className="flex justify-between mb-4 mt-4">
                         <Search
-                            placeholder="Search by name or email..."
+                            placeholder="Tìm kiếm theo tên hoặc email..."
                             allowClear
                             onSearch={handleSearch}
                             style={{ width: 200 }}
                         />
                         <Button type="primary" onClick={showCreateModal}>
-                            Add New User
+                            Thêm người dùng mới
                         </Button>
                     </div>
 
@@ -221,12 +241,12 @@ const AccountList = () => {
                     />
 
                     <Modal
-                        title="Add New User"
+                        title="Thêm người dùng mới"
                         open={isCreateModalVisible}
                         onOk={handleCreateOk}
                         onCancel={handleCreateCancel}
-                        okText="Create"
-                        cancelText="Cancel"
+                        okText="Tạo mới"
+                        cancelText="Hủy"
                         width={600}
                     >
                         <Form
@@ -236,8 +256,8 @@ const AccountList = () => {
                         >
                             <Form.Item
                                 name="fullName"
-                                label="Full Name"
-                                rules={[{ required: true, message: 'Please enter full name' }]}
+                                label="Họ và tên"
+                                rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
                             >
                                 <Input />
                             </Form.Item>
@@ -245,53 +265,53 @@ const AccountList = () => {
                             <Form.Item
                                 name="email"
                                 label="Email"
-                                rules={[{ required: true, message: 'Please enter email', type: 'email' }]}
+                                rules={[{ required: true, message: 'Vui lòng nhập email', type: 'email' }]}
                             >
                                 <Input />
                             </Form.Item>
 
                             <Form.Item
                                 name="gender"
-                                label="Gender"
-                                rules={[{ required: true, message: 'Please select gender' }]}
+                                label="Giới tính"
+                                rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
                             >
-                                <Select placeholder="Select gender">
-                                    <Option value="MALE">Male</Option>
-                                    <Option value="FEMALE">Female</Option>
-                                    <Option value="OTHER">Other</Option>
+                                <Select placeholder="Chọn giới tính">
+                                    <Option value="MALE">Nam</Option>
+                                    <Option value="FEMALE">Nữ</Option>
+                                    <Option value="OTHER">Khác</Option>
                                 </Select>
                             </Form.Item>
 
                             <Form.Item
                                 name="roles"
-                                label="Roles"
-                                rules={[{ required: true, message: 'Please select at least one role' }]}
+                                label="Vai trò"
+                                rules={[{ required: true, message: 'Vui lòng chọn ít nhất một vai trò' }]}
                             >
-                                <Select mode="multiple" placeholder="Select roles">
-                                    <Option value="ROLE_STUDENT">Student</Option>
-                                    <Option value="ROLE_TEACHER">Teacher</Option>
-                                    <Option value="ROLE_MANAGER">Manager</Option>
-                                    <Option value="ROLE_ADMIN">Admin</Option>
+                                <Select mode="multiple" placeholder="Chọn vai trò">
+                                    <Option value="ROLE_STUDENT">Học sinh</Option>
+                                    <Option value="ROLE_TEACHER">Giáo viên</Option>
+                                    <Option value="ROLE_MANAGER">Quản lý</Option>
+                                    <Option value="ROLE_ADMIN">Quản trị viên</Option>
                                 </Select>
                             </Form.Item>
 
                             <Form.Item
                                 name="dateOfBirth"
-                                label="Date of Birth"
+                                label="Ngày sinh"
                             >
                                 <DatePicker format="YYYY-MM-DD" />
                             </Form.Item>
 
                             <Form.Item
                                 name="citizenId"
-                                label="Citizen ID (CCCD)"
+                                label="CCCD"
                             >
                                 <Input />
                             </Form.Item>
 
                             <Form.Item
                                 name="phoneNumber"
-                                label="Phone Number"
+                                label="Số điện thoại"
                             >
                                 <Input />
                             </Form.Item>
