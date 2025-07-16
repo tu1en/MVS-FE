@@ -24,16 +24,16 @@ import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from './context/AuthContext.js'; // Import useAuth
 
 // Dashboards
+import AccountantDashboard from './pages/AccountantDashboard.jsx'; // Import AccountantDashboard
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
+import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
+import ExplanationReports from './pages/manager/ExplanationReports.jsx';
+import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
+import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
-import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
-import ExplanationReports from './pages/manager/ExplanationReports.jsx';
-import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
-import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
-import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
-import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
 
 // Teacher Pages
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -45,10 +45,10 @@ import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
+import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
-import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 import UnifiedStudentMessaging from "./pages/UnifiedStudentMessaging.jsx";
@@ -61,6 +61,7 @@ import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
 import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import HRManagementPage from "./pages/manager/HRManagementPage.jsx";
+import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
 import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
@@ -68,11 +69,10 @@ import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
 import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
 import RequestList from "./pages/RequestList.jsx";
-import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 
 // Student Pages
-import NotFoundPage from "./pages/NotFoundPage.jsx";
 import AccountList from "./pages/AccountList.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 import AssignmentDetail from "./pages/student/AssignmentDetail.jsx";
 import DoExamPage from './pages/student/DoExamPage'; // Import the new DoExamPage
 import StudentEditProfile from "./pages/student/EditProfile.jsx";
@@ -88,6 +88,7 @@ import StudentTimetable from "./pages/student/StudentTimetable.jsx";
 
 // Common/Legacy Pages
 import AcademicPerformance from './pages/AcademicPerformance.jsx';
+import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 import AnnouncementCenter from "./pages/AnnouncementCenter.jsx";
 import AssignmentsPageNew from "./pages/AssignmentsPageNew.jsx";
 import AttendancePageNew from "./pages/AttendancePageNew.jsx";
@@ -100,7 +101,6 @@ import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 import TestPage from "./pages/TestPage.jsx";
 import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
-import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
