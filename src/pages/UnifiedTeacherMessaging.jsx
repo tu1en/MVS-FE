@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
 import { message } from 'antd';
+import { useEffect } from 'react';
 import { MessagingLayout } from '../components/messaging';
 import useUnifiedMessaging from '../hooks/useUnifiedMessaging';
 import '../styles/messaging.css';

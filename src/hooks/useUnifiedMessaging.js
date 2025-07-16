@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { message } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import UnifiedMessagingService from '../services/unifiedMessagingService';
 
 /**

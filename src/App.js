@@ -53,6 +53,7 @@ import UnifiedTeacherMessaging from "./pages/UnifiedTeacherMessaging.jsx";
 import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
 import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
+import HRManagementPage from "./pages/manager/HRManagementPage.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
 import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
@@ -254,6 +255,10 @@ function App() {
               <Route path="/manager/messages" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+
+              {/* HR Management Routes - Only Manager and Admin */}
+              <Route path="/manager/hr" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><HRManagementPage /></ProtectedRoute>} />
+              <Route path="/admin/hr" element={<ProtectedRoute allowedRoles={["ADMIN"]}><HRManagementPage /></ProtectedRoute>} />
 
               {/* Test Pages */}
               <Route path="/test-upload" element={<TestUpload />} />

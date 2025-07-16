@@ -72,14 +72,23 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
-      console.log('Starting Google sign-in process...');
+      console.log('🚀 Starting Google sign-in process...');
       setDangDangNhap(true);
-      
+
+      // Check if Firebase is properly initialized
+      if (!auth) {
+        throw new Error('Firebase Auth not initialized');
+      }
+
       // 1. Sign in with Google
       const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+
+      console.log('📱 Opening Google sign-in popup...');
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log('Google sign-in successful, user:', user.email);
+      console.log('✅ Google sign-in successful, user:', user.email);
       
       // 2. Get ID token
       const idToken = await user.getIdToken();
@@ -117,8 +126,32 @@ export default function LoginScreen() {
           navigate('/');
       }
     } catch (error) {
-        // Handle specific error from googleLogin service
-        if (error.status === 404 && error.message) {
+        console.error('❌ Google login error:', error);
+
+        // Handle Firebase Auth errors specifically
+        if (error.code) {
+          switch (error.code) {
+            case 'auth/api-key-not-valid':
+              console.error('🔑 Firebase API key is invalid');
+              toast.error('Lỗi cấu hình Firebase. Vui lòng liên hệ quản trị viên.');
+              break;
+            case 'auth/popup-closed-by-user':
+              console.log('👤 User closed the popup');
+              toast.info('Đăng nhập bị hủy');
+              break;
+            case 'auth/popup-blocked':
+              console.error('🚫 Popup was blocked');
+              toast.error('Popup bị chặn. Vui lòng cho phép popup và thử lại.');
+              break;
+            case 'auth/cancelled-popup-request':
+              console.log('🔄 Popup request was cancelled');
+              break;
+            default:
+              console.error('🔥 Firebase Auth error:', error.code, error.message);
+              toast.error(`Lỗi Firebase: ${error.message}`);
+          }
+        } else if (error.status === 404 && error.message) {
+            // Handle specific error from googleLogin service
             console.error('Account not registered:', error.message);
             toast.error(error.message);
             if (error.email) {
@@ -127,7 +160,7 @@ export default function LoginScreen() {
             }
             setRegisterModalVisible(true);
         } else {
-            console.error('Google login error:', error);
+            console.error('General error:', error);
             toast.error(error.message || 'Đăng nhập Google thất bại!');
         }
     } finally {

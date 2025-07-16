@@ -1,5 +1,5 @@
-import API_CONFIG from '../config/api-config';
 import axios from 'axios';
+import API_CONFIG from '../config/api-config';
 import { ROLE } from '../constants/constants';
 
 const { BASE_URL, ENDPOINTS } = API_CONFIG;
@@ -9,7 +9,8 @@ const ROLE_ID_MAP = {
   1: ROLE.STUDENT,
   2: ROLE.TEACHER,
   3: ROLE.MANAGER,
-  4: ROLE.ADMIN
+  4: ROLE.ADMIN,
+  5: ROLE.ACCOUNTANT
 };
 
 export const accountService = {

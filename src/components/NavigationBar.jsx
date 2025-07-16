@@ -56,15 +56,17 @@ function NavigationBar() {
         // Otherwise, map numeric or string values to constants
         const roleMapping = {
           '0': ROLE.ADMIN, // Admin
-          '1': ROLE.STUDENT, // Student  
+          '1': ROLE.STUDENT, // Student
           '2': ROLE.TEACHER, // Teacher
           '3': ROLE.MANAGER, // Manager
           '4': ROLE.GUEST, // Guest (not logged in)
+          '5': ROLE.ACCOUNTANT, // Accountant
           // Also handle string values from backend
           'ADMIN': ROLE.ADMIN,
           'STUDENT': ROLE.STUDENT,
           'TEACHER': ROLE.TEACHER,
           'MANAGER': ROLE.MANAGER,
+          'ACCOUNTANT': ROLE.ACCOUNTANT,
           'GUEST': ROLE.GUEST
         };
         
