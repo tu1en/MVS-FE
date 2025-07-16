@@ -54,6 +54,10 @@ export default function LoginScreen() {
         case ROLE.MANAGER:
           navigate('/manager');
           break;
+        case ROLE.ACCOUNTANT:
+          console.log(`Navigating to ACCOUNTANT dashboard...`);
+          navigate('/accountant');
+          break;
         default:
           console.warn('Unknown role:', userData.role);
           navigate('/');
@@ -122,6 +126,10 @@ export default function LoginScreen() {
         case ROLE.STUDENT:
           navigate('/student');
           break;
+        case ROLE.ACCOUNTANT:
+          console.log(`Navigating to ACCOUNTANT dashboard...`);
+          navigate('/accountant');
+          break;
         default:
           navigate('/');
       }
@@ -177,13 +185,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 justify-center items-center px-4">
+    <div className="flex min-h-screen bg-gray-50 justify-center items-start pt-8 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <img
             alt="Logo"
-            src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-            className="mx-auto h-12 w-auto"
+            src={process.env.PUBLIC_URL + '/logo/mvs.jpg'}
+            className="mx-auto h-64 w-auto"
           />
           <h2 className="mt-6 text-2xl font-bold tracking-tight text-gray-900">
             Chào mừng bạn đến với Minh Việt Education

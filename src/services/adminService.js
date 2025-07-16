@@ -13,4 +13,24 @@ const adminService = {
     }
 };
 
+// Create a new user
+export const createUser = async (userData) => {
+  try {
+    const response = await api.post('/admin/users', userData);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to create user');
+  }
+};
+
+// Reset user password to default
+export const resetUserPassword = async (userId) => {
+  try {
+    const response = await api.post(`/admin/users/${userId}/reset-password`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to reset password');
+  }
+};
+
 export default adminService; 

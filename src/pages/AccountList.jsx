@@ -1,5 +1,5 @@
 import { CheckCircleOutlined, MinusCircleOutlined } from '@ant-design/icons';
-import { Card, Input, Select, Switch, Table, Tooltip, Typography, message } from 'antd';
+import { Card, Input, Select, Switch, Table, Tooltip, Typography, message, Modal, Form, Button, Space, DatePicker } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ROLE } from '../constants/constants';
@@ -16,6 +16,8 @@ const AccountList = () => {
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
     const [loading, setLoading] = useState(false);
     const [keyword, setKeyword] = useState('');
+    const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+    const [createForm] = Form.useForm();
 
     const fetchUsers = useCallback((params = {}) => {
         setLoading(true);
@@ -23,67 +25,102 @@ const AccountList = () => {
             page: params.pagination.current - 1,
             size: params.pagination.pageSize,
             keyword: params.keyword,
-            sort: params.sorter && params.sorter.field ? `${params.sorter.field},${params.sorter.order === 'ascend' ? 'asc' : 'desc'}` : 'fullName,asc',
-        }).then(res => {
-            setUsers(res.data.content);
-            setPagination(prev => ({
-                ...prev,
-                total: res.data.totalElements,
-                current: res.data.number + 1,
-            }));
-        }).catch(err => {
-            console.error("Failed to fetch users:", err);
-            message.error('Failed to load user list. Please try again.');
-        }).finally(() => {
-            setLoading(false);
-        });
+        })
+            .then((data) => {
+                setUsers(data.content);
+                setPagination({
+                    ...params.pagination,
+                    total: data.totalElements,
+                });
+            })
+            .catch(() => {
+                message.error('Failed to fetch users');
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }, []);
 
     useEffect(() => {
         fetchUsers({ pagination, keyword });
-    }, [fetchUsers]);
+    }, [fetchUsers, pagination.current, pagination.pageSize, keyword]);
 
-    const debouncedSearch = useCallback(debounce((value) => {
-        const newPagination = { ...pagination, current: 1 };
+    const handleTableChange = (newPagination) => {
+        setPagination(newPagination);
+    };
+
+    const handleSearch = (value) => {
         setKeyword(value);
-        fetchUsers({ pagination: newPagination, keyword: value });
-    }, 500), [fetchUsers, pagination]);
-
-    const handleTableChange = (newPagination, filters, sorter) => {
-        fetchUsers({ pagination: newPagination, keyword, sorter });
+        setPagination({ ...pagination, current: 1 });
     };
 
-    const handleStatusChange = (userId, checked) => {
-        adminService.updateUserStatus(userId, checked)
-            .then(() => {
-                message.success('User status updated successfully!');
-                setUsers(users.map(u => u.id === userId ? { ...u, enabled: checked } : u));
+    const handleStatusToggle = async (userId, currentStatus) => {
+        try {
+            await adminService.updateUserStatus(userId, !currentStatus);
+            message.success("User status updated");
+            fetchUsers({ pagination, keyword });
+        } catch (error) {
+            message.error("Failed to update user status");
+        }
+    };
+
+    const handleRoleUpdate = async (userId, newRole) => {
+        try {
+            await adminService.updateUserRole(userId, newRole);
+            message.success("User role updated");
+            fetchUsers({ pagination, keyword });
+        } catch (error) {
+            message.error("Failed to update user role");
+        }
+    };
+
+    const handleResetPassword = async (userId) => {
+        try {
+            await adminService.resetUserPassword(userId);
+            message.success("Password reset to default (123456789)");
+            fetchUsers({ pagination, keyword });
+        } catch (error) {
+            message.error("Failed to reset password");
+        }
+    };
+
+    const showCreateModal = () => {
+        setIsCreateModalVisible(true);
+    };
+
+    const handleCreateOk = () => {
+        createForm
+            .validateFields()
+            .then(async (values) => {
+                try {
+                    await adminService.createUser(values);
+                    setIsCreateModalVisible(false);
+                    createForm.resetFields();
+                    message.success("User created successfully");
+                    fetchUsers({ pagination, keyword });
+                } catch (error) {
+                    message.error("Failed to create user: " + error.message);
+                }
             })
-            .catch((err) => {
-                const errorMsg = err.response?.data?.message || 'Failed to update status!';
-                message.error(errorMsg);
+            .catch((info) => {
+                console.log("Validate Failed:", info);
             });
     };
 
-    const handleRoleChange = (userId, newRole) => {
-        adminService.updateUserRoles(userId, [newRole])
-            .then(() => {
-                message.success('User role updated successfully!');
-                setUsers(users.map(u => u.id === userId ? { ...u, roles: [newRole] } : u));
-            })
-            .catch((err) => {
-                const errorMsg = err.response?.data?.message || 'Failed to update role!';
-                message.error(errorMsg);
-            });
+    const handleCreateCancel = () => {
+        setIsCreateModalVisible(false);
     };
 
     const columns = [
         {
+            title: 'ID',
+            dataIndex: 'id',
+            key: 'id',
+        },
+        {
             title: 'Full Name',
-            dataIndex: 'name',
-            key: 'name',
-            sorter: true,
-            render: (text) => <span className="font-medium text-gray-800">{text}</span>,
+            dataIndex: 'fullName',
+            key: 'fullName',
         },
         {
             title: 'Email',
@@ -91,39 +128,66 @@ const AccountList = () => {
             key: 'email',
         },
         {
-            title: 'Roles',
-            dataIndex: 'roles',
-            key: 'roles',
-            render: (roles, record) => {
-                const currentRole = roles && roles.length > 0 ? roles[0] : null;
-                return (
-                    <Select
-                        value={currentRole}
-                        style={{ width: 120 }}
-                        onChange={(newRole) => handleRoleChange(record.id, newRole)}
-                        disabled={!record.enabled}
-                    >
-                        {assignableRoles.map(role => (
-                            <Option key={role} value={role}>{role}</Option>
-                        ))}
-                    </Select>
-                );
-            },
+            title: 'Gender',
+            dataIndex: 'gender',
+            key: 'gender',
+        },
+        {
+            title: 'Date of Birth',
+            dataIndex: 'dateOfBirth',
+            key: 'dateOfBirth',
+            render: (date) => (date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A'),
+        },
+        {
+            title: 'Citizen ID',
+            dataIndex: 'citizenId',
+            key: 'citizenId',
+        },
+        {
+            title: 'Phone',
+            dataIndex: 'phoneNumber',
+            key: 'phoneNumber',
         },
         {
             title: 'Status',
-            dataIndex: 'enabled',
-            key: 'enabled',
-            align: 'center',
-            render: (enabled, record) => (
-                <Tooltip title={enabled ? 'Active' : 'Disabled'}>
-                    <Switch
-                        checked={enabled}
-                        onChange={(checked) => handleStatusChange(record.id, checked)}
-                        checkedChildren={<CheckCircleOutlined />}
-                        unCheckedChildren={<MinusCircleOutlined />}
-                    />
-                </Tooltip>
+            dataIndex: 'status',
+            key: 'status',
+            render: (status, record) => (
+                <Switch
+                    checked={status === 'active'}
+                    onChange={() => handleStatusToggle(record.id, status === 'active')}
+                    checkedChildren="Active"
+                    unCheckedChildren="Locked"
+                />
+            ),
+        },
+        {
+            title: 'Role',
+            dataIndex: 'roles',
+            key: 'roles',
+            render: (roles, record) => (
+                <Select
+                    defaultValue={roles && roles.length > 0 ? roles[0] : ''}
+                    style={{ width: 120 }}
+                    onChange={(value) => handleRoleUpdate(record.id, value)}
+                    options={
+                        ['ROLE_STUDENT', 'ROLE_TEACHER', 'ROLE_MANAGER', 'ROLE_ADMIN'].map(role => ({
+                            label: role.replace('ROLE_', ''),
+                            value: role
+                        }))
+                    }
+                />
+            ),
+        },
+        {
+            title: 'Action',
+            key: 'action',
+            render: (_, record) => (
+                <Space size="middle">
+                    <Button type="primary" size="small" onClick={() => handleResetPassword(record.id)}>
+                        Reset Password
+                    </Button>
+                </Space>
             ),
         },
     ];
@@ -135,15 +199,17 @@ const AccountList = () => {
                     <Title level={2}>👥 User Account Management</Title>
                     <Text type="secondary">View, search, and manage user accounts in the system.</Text>
                     
-                    <Search
-                        placeholder="Search by name or email..."
-                        allowClear
-                        enterButton="Search"
-                        size="large"
-                        onSearch={(value) => debouncedSearch(value)}
-                        onChange={(e) => debouncedSearch(e.target.value)}
-                        style={{ margin: '24px 0', maxWidth: 400 }}
-                    />
+                    <div className="flex justify-between mb-4 mt-4">
+                        <Search
+                            placeholder="Search by name or email..."
+                            allowClear
+                            onSearch={handleSearch}
+                            style={{ width: 200 }}
+                        />
+                        <Button type="primary" onClick={showCreateModal}>
+                            Add New User
+                        </Button>
+                    </div>
 
                     <Table
                         columns={columns}
@@ -152,13 +218,89 @@ const AccountList = () => {
                         pagination={pagination}
                         loading={loading}
                         onChange={handleTableChange}
-                        locale={{ emptyText: 'No accounts found' }}
-                        scroll={{ x: 'max-content' }}
                     />
+
+                    <Modal
+                        title="Add New User"
+                        open={isCreateModalVisible}
+                        onOk={handleCreateOk}
+                        onCancel={handleCreateCancel}
+                        okText="Create"
+                        cancelText="Cancel"
+                        width={600}
+                    >
+                        <Form
+                            form={createForm}
+                            layout="vertical"
+                            name="createUserForm"
+                        >
+                            <Form.Item
+                                name="fullName"
+                                label="Full Name"
+                                rules={[{ required: true, message: 'Please enter full name' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="email"
+                                label="Email"
+                                rules={[{ required: true, message: 'Please enter email', type: 'email' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="gender"
+                                label="Gender"
+                                rules={[{ required: true, message: 'Please select gender' }]}
+                            >
+                                <Select placeholder="Select gender">
+                                    <Option value="MALE">Male</Option>
+                                    <Option value="FEMALE">Female</Option>
+                                    <Option value="OTHER">Other</Option>
+                                </Select>
+                            </Form.Item>
+
+                            <Form.Item
+                                name="roles"
+                                label="Roles"
+                                rules={[{ required: true, message: 'Please select at least one role' }]}
+                            >
+                                <Select mode="multiple" placeholder="Select roles">
+                                    <Option value="ROLE_STUDENT">Student</Option>
+                                    <Option value="ROLE_TEACHER">Teacher</Option>
+                                    <Option value="ROLE_MANAGER">Manager</Option>
+                                    <Option value="ROLE_ADMIN">Admin</Option>
+                                </Select>
+                            </Form.Item>
+
+                            <Form.Item
+                                name="dateOfBirth"
+                                label="Date of Birth"
+                            >
+                                <DatePicker format="YYYY-MM-DD" />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="citizenId"
+                                label="Citizen ID (CCCD)"
+                            >
+                                <Input />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="phoneNumber"
+                                label="Phone Number"
+                            >
+                                <Input />
+                            </Form.Item>
+                        </Form>
+                    </Modal>
                 </Card>
             </div>
         </div>
     );
 };
 
-export default AccountList; 
+export default AccountList;

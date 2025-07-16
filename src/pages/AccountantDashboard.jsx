@@ -1,185 +1,193 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Button, message, Spin } from 'antd';
-import {
-  DollarOutlined,
-  FileTextOutlined,
-  TeamOutlined,
-  CalendarOutlined,
-  TrendingUpOutlined,
-  BarChartOutlined
-} from '@ant-design/icons';
+import { CalendarOutlined, DollarOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
+import { Card, Col, message, Row, Statistic, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
+import api from '../utils/api.js';
 
-/**
- * Dashboard chính cho Accountant
- * Hiển thị thống kê tài chính và các chức năng kế toán
- */
+const { Title } = Typography;
+
 const AccountantDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalPayroll: 0,
-    pendingPayments: 0,
-    monthlyExpenses: 0,
-    totalEmployees: 0
+  const [dashboardData, setDashboardData] = useState({
+    financialStats: {
+      totalInvoices: 0,
+      paidInvoices: 0,
+      pendingPayments: 0,
+      overduePayments: 0
+    },
+    messageStats: {
+      unreadMessages: 0
+    }
   });
-  const [loading, setLoading] = useState(false);
+  const [leaveStats, setLeaveStats] = useState({
+    totalAbsences: 0,
+    pendingAbsences: 0,
+    approvedAbsences: 0,
+    annualLeaveBalance: 0
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const role = localStorage.getItem('role');
     if (role !== ROLE.ACCOUNTANT) {
       navigate('/');
+      return;
     }
-    fetchDashboardStats();
+
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const statsResponse = await api.get('/accountant/dashboard-stats');
+        if (statsResponse.data) {
+          setDashboardData({
+            financialStats: statsResponse.data.financialStats || { totalInvoices: 0, paidInvoices: 0, pendingPayments: 0, overduePayments: 0 },
+            messageStats: statsResponse.data.messageStats || { unreadMessages: 0 }
+          });
+          setLeaveStats(statsResponse.data.leaveStats || { totalAbsences: 0, pendingAbsences: 0, approvedAbsences: 0, annualLeaveBalance: 0 });
+        } else {
+          setDashboardData({
+            financialStats: { totalInvoices: 0, paidInvoices: 0, pendingPayments: 0, overduePayments: 0 },
+            messageStats: { unreadMessages: 0 }
+          });
+          setLeaveStats({ totalAbsences: 0, pendingAbsences: 0, approvedAbsences: 0, annualLeaveBalance: 0 });
+        }
+      } catch (error) {
+        message.error('Không thể tải dữ liệu dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
   }, [navigate]);
 
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      // TODO: Implement API call to get accountant dashboard stats
-      // const data = await accountantService.getDashboardStats();
-      // setStats(data);
-      
-      // Mock data for now
-      setStats({
-        totalPayroll: 125000000,
-        pendingPayments: 15,
-        monthlyExpenses: 45000000,
-        totalEmployees: 85
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      message.error('Không thể tải thống kê dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
+  const handleCardClick = (route) => {
+    navigate(route);
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Kế toán</h1>
+    <div style={{ padding: 24 }}>
+      <Title level={2} style={{ marginBottom: 24 }}>Accountant Dashboard</Title>
+
+      {/* Leave Statistics */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Tổng Đơn Nghỉ Phép" value={leaveStats?.totalAbsences ?? 0} prefix={<CalendarOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Đơn Chờ Duyệt" value={leaveStats?.pendingAbsences ?? 0} valueStyle={{ color: '#faad14' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Đơn Đã Duyệt" value={leaveStats?.approvedAbsences ?? 0} valueStyle={{ color: '#52c41a' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Số Ngày Phép Còn Lại" value={leaveStats?.annualLeaveBalance ?? 0} valueStyle={{ color: leaveStats?.annualLeaveBalance > 0 ? '#3f8600' : '#ff4d4f' }} />
+          </Card>
+        </Col>
+      </Row>
       
-      {/* Statistics Cards */}
-      <Row gutter={16} className="mb-8">
-        <Col span={6}>
-          <Card>
+      {/* Summary Statistics */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
             <Statistic
-              title="Tổng bảng lương tháng"
-              value={stats.totalPayroll}
-              prefix={<DollarOutlined />}
-              formatter={(value) => formatCurrency(value)}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Thanh toán chờ duyệt"
-              value={stats.pendingPayments}
+              title="Total Invoices"
+              value={dashboardData?.financialStats?.totalInvoices ?? 0}
               prefix={<FileTextOutlined />}
-              loading={loading}
+              valueStyle={{ color: '#3f8600' }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
             <Statistic
-              title="Chi phí tháng này"
-              value={stats.monthlyExpenses}
-              prefix={<TrendingUpOutlined />}
-              formatter={(value) => formatCurrency(value)}
-              loading={loading}
+              title="Paid Invoices"
+              value={dashboardData?.financialStats?.paidInvoices ?? 0}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
             <Statistic
-              title="Tổng nhân viên"
-              value={stats.totalEmployees}
+              title="Pending Payments"
+              value={dashboardData?.financialStats?.pendingPayments ?? 0}
+              prefix={<CalendarOutlined />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic
+              title="Overdue Payments"
+              value={dashboardData?.financialStats?.overduePayments ?? 0}
               prefix={<TeamOutlined />}
-              loading={loading}
+              valueStyle={{ color: '#ff4d4f' }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Management Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Quản lý bảng lương</h2>
-          <p className="text-gray-600">Tính toán và quản lý bảng lương nhân viên</p>
-          <button 
-            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/payroll')}
+      {/* Navigation Cards */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            hoverable
+            title="Invoice Management"
+            bordered={false}
+            style={{ textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/invoices')}
           >
-            Quản lý bảng lương
-          </button>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Báo cáo tài chính</h2>
-          <p className="text-gray-600">Xem và tạo các báo cáo tài chính</p>
-          <button 
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/reports')}
+            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Manage student invoices and payments</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            hoverable
+            title="Payment Tracking"
+            bordered={false}
+            style={{ textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/payments')}
           >
-            Xem báo cáo
-          </button>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Quản lý chi phí</h2>
-          <p className="text-gray-600">Theo dõi và quản lý các khoản chi phí</p>
-          <button 
-            className="mt-4 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/expenses')}
+            <DollarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Track payment status and history</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            hoverable
+            title="Financial Reports"
+            bordered={false}
+            style={{ textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/reports')}
           >
-            Quản lý chi phí
-          </button>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Thống kê tài chính</h2>
-          <p className="text-gray-600">Xem thống kê và phân tích tài chính</p>
-          <button 
-            className="mt-4 bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/statistics')}
+            <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Generate financial reports</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            hoverable
+            title="Student Accounts"
+            bordered={false}
+            style={{ textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/students')}
           >
-            Xem thống kê
-          </button>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Quản lý thuế</h2>
-          <p className="text-gray-600">Tính toán và quản lý các khoản thuế</p>
-          <button 
-            className="mt-4 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/taxes')}
-          >
-            Quản lý thuế
-          </button>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Cài đặt tài khoản</h2>
-          <p className="text-gray-600">Quản lý thông tin cá nhân và cài đặt</p>
-          <button 
-            className="mt-4 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/accountant/profile')}
-          >
-            Cài đặt
-          </button>
-        </div>
-      </div>
+            <TeamOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Manage student financial accounts</div>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };
