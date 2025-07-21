@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, message, Typography } from 'antd';
-import { DollarOutlined, FileTextOutlined, TeamOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, message, Typography, Divider } from 'antd';
+import { DollarOutlined, FileTextOutlined, TeamOutlined, CalendarOutlined, UserOutlined, StopOutlined } from '@ant-design/icons';
 import api from '../utils/api.js';
 
 const { Title } = Typography;
@@ -25,6 +25,12 @@ const AccountantDashboard = () => {
     approvedAbsences: 0,
     annualLeaveBalance: 0
   });
+  const [contractStats, setContractStats] = useState({
+    totalContracts: 0,
+    activeContracts: 0,
+    terminatedContracts: 0,
+    contractsExpiringSoon: 0
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +53,25 @@ const AccountantDashboard = () => {
           });
           setLeaveStats({ totalAbsences: 0, pendingAbsences: 0, approvedAbsences: 0, annualLeaveBalance: 0 });
         }
+        
+        // Fetch contract statistics
+        try {
+          const contractStatsResponse = await api.get('/contracts/statistics');
+          setContractStats(contractStatsResponse.data || {
+            totalContracts: 0,
+            activeContracts: 0,
+            terminatedContracts: 0,
+            contractsExpiringSoon: 0
+          });
+        } catch (error) {
+          console.error('Error fetching contract stats:', error);
+          setContractStats({
+            totalContracts: 0,
+            activeContracts: 0,
+            terminatedContracts: 0,
+            contractsExpiringSoon: 0
+          });
+        }
       } catch (error) {
         message.error('Không thể tải dữ liệu dashboard');
       } finally {
@@ -63,7 +88,52 @@ const AccountantDashboard = () => {
   return (
     <div style={{ padding: 24 }}>
       <Title level={2} style={{ marginBottom: 24 }}>Accountant Dashboard</Title>
-      {/* Leave Statistics */}
+      
+      {/* Contract Management Section */}
+      <Title level={3} style={{ marginBottom: 16 }}>Quản lý Hợp đồng</Title>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Tổng số hợp đồng" value={contractStats?.totalContracts ?? 0} prefix={<FileTextOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Hợp đồng đang hoạt động" value={contractStats?.activeContracts ?? 0} prefix={<UserOutlined />} valueStyle={{ color: '#52c41a' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Hợp đồng đã chấm dứt" value={contractStats?.terminatedContracts ?? 0} prefix={<StopOutlined />} valueStyle={{ color: '#ff4d4f' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading} bordered={false}>
+            <Statistic title="Sắp hết hạn (30 ngày)" value={contractStats?.contractsExpiringSoon ?? 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#faad14' }} />
+          </Card>
+        </Col>
+      </Row>
+      
+      {/* Contract Management Navigation */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Card
+            hoverable
+            title="Quản lý Hợp đồng"
+            bordered={false}
+            style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/contracts')}
+          >
+            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Tạo và quản lý hợp đồng lao động</div>
+          </Card>
+        </Col>
+      </Row>
+      
+      <Divider />
+      
+      {/* Leave Management Section */}
+      <Title level={3} style={{ marginBottom: 16 }}>Quản lý Nghỉ phép</Title>
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
@@ -87,7 +157,25 @@ const AccountantDashboard = () => {
         </Col>
       </Row>
       
-      {/* Summary Statistics */}
+      {/* Leave Management Navigation */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Card
+            hoverable
+            title="Quản lý Nghỉ phép"
+            bordered={false}
+            style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/leave-requests')}
+          >
+            <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Quản lý đơn nghỉ phép nhân viên</div>
+          </Card>
+        </Col>
+      </Row>
+      
+      <Divider />
+      
+      {/* Financial Summary Statistics */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false} style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
@@ -133,6 +221,18 @@ const AccountantDashboard = () => {
       
       {/* Navigation Cards */}
       <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            hoverable
+            title="Quản Lý Hợp Đồng"
+            bordered={false}
+            style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}
+            onClick={() => handleCardClick('/accountant/contracts')}
+          >
+            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Quản lý hợp đồng lao động</div>
+          </Card>
+        </Col>
         <Col xs={24} sm={12} md={6}>
           <Card
             hoverable
