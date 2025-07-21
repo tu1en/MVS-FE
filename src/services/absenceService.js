@@ -3,17 +3,17 @@ import api from '../config/axiosInstance';
 const absenceService = {
   // Teacher operations - submit leave request
   submitLeaveRequest: (data) => {
-    return api.post('/teacher/absences', data);
+    return api.post('/teacher/leave-requests', data);
   },
 
   // Teacher operations - get my leave requests
   getMyLeaveRequests: () => {
-    return api.get('/teacher/absences');
+    return api.get('/teacher/leave-requests');
   },
 
   // Teacher operations - get specific leave request
   getLeaveRequestById: (absenceId) => {
-    return api.get(`/teacher/absences/${absenceId}`);
+    return api.get(`/teacher/leave-requests/${absenceId}`);
   },
 
   // Manager operations - get all absence requests

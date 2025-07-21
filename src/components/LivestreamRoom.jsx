@@ -1,16 +1,24 @@
-import { JitsiMeeting } from '@jitsi/react-sdk';
-import { Alert, Button, Form, Input, message, Modal, Spin } from 'antd';
+import { Alert, Button, Form, Input, message, Modal, Spin, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 import livestreamService from '../services/livestreamService';
+import VideoConference from './VideoConference';
+import LivestreamBroadcaster from './LivestreamBroadcaster';
+import LivestreamViewer from './LivestreamViewer';
+import RecordingManager from './RecordingManager';
 
 const LivestreamRoom = ({ lectureId, isTeacher }) => {
   const [roomDetails, setRoomDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('livestream');
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const [recordingUrl, setRecordingUrl] = useState('');
   const [savingRecording, setSavingRecording] = useState(false);
   const [form] = Form.useForm();
+
+  // Get user info
+  const userId = localStorage.getItem('userId');
+  const userName = localStorage.getItem('username') || (isTeacher ? 'Giáo viên' : 'Học viên');
 
   useEffect(() => {
     const fetchOrCreateRoom = async () => {
@@ -42,32 +50,6 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
     fetchOrCreateRoom();
   }, [lectureId, isTeacher]);
 
-  const handleApiReady = (api) => {
-    // Xử lý sự kiện từ Jitsi Meet API
-    api.on('videoConferenceLeft', () => {
-      // Người dùng rời khỏi phòng
-      if (isTeacher && roomDetails) {
-        // Giáo viên kết thúc phiên học
-        livestreamService.endLivestream(roomDetails.id)
-          .then(() => {
-            // Hiển thị form để thêm liên kết ghi âm
-            setShowRecordingModal(true);
-          })
-          .catch(err => {
-            console.error('Error ending livestream session:', err);
-          });
-      }
-    });
-
-    // Thêm lớp CSS cho container Jitsi
-    const iframe = api.getIFrame();
-    if (iframe) {
-      iframe.style.height = '600px';
-      iframe.style.width = '100%';
-      iframe.style.border = 'none';
-    }
-  };
-  
   const handleRecordingSubmit = async () => {
     if (!recordingUrl) {
       message.error('Vui lòng nhập liên kết ghi âm');
@@ -87,6 +69,10 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
     }
   };
 
+  const handleLivestreamEnd = () => {
+    setShowRecordingModal(true);
+  };
+
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
       <Spin size="large" tip="Đang chuẩn bị phòng học trực tuyến..." />
@@ -104,43 +90,62 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
   
   if (!roomDetails) return null;
 
+  // Tab items
+  const tabItems = [
+    {
+      key: 'livestream',
+      label: isTeacher ? 'Phát trực tiếp' : 'Xem livestream',
+      children: isTeacher ? (
+        <LivestreamBroadcaster
+          lectureId={lectureId}
+          userId={userId}
+          userName={userName}
+          onEnd={handleLivestreamEnd}
+        />
+      ) : (
+        <LivestreamViewer
+          streamId={`lecture-${lectureId}`}
+          userId={userId}
+          userName={userName}
+          streamInfo={{
+            title: roomDetails.title || 'Buổi học trực tuyến',
+            description: roomDetails.description
+          }}
+        />
+      )
+    },
+    {
+      key: 'conference',
+      label: 'Video Conference',
+      children: (
+        <VideoConference
+          roomId={`conference-${lectureId}`}
+          userId={userId}
+          isTeacher={isTeacher}
+        />
+      )
+    },
+    {
+      key: 'recordings',
+      label: 'Bản ghi',
+      children: (
+        <RecordingManager
+          lectureId={lectureId}
+          isTeacher={isTeacher}
+        />
+      )
+    }
+  ];
+
   return (
     <>
       <div className="livestream-container">
-        <JitsiMeeting
-          domain="meet.jit.si"
-          roomName={roomDetails.roomName}
-          jwt={roomDetails.jwt}
-          configOverwrite={{
-            startWithAudioMuted: !isTeacher,
-            startWithVideoMuted: !isTeacher,
-            prejoinPageEnabled: false,
-            disableDeepLinking: true,
-            toolbarButtons: [
-              'microphone', 'camera', 'desktop', 'chat',
-              'raisehand', 'participants-pane', 'tileview',
-              ...(isTeacher ? ['livestreaming', 'recording'] : [])
-            ]
-          }}
-          interfaceConfigOverwrite={{
-            SHOW_JITSI_WATERMARK: false,
-            APP_NAME: 'Classroom Livestream',
-            NATIVE_APP_NAME: 'Classroom Livestream',
-            DEFAULT_BACKGROUND: '#ffffff',
-            DISABLE_VIDEO_BACKGROUND: true,
-          }}
-          userInfo={{
-            displayName: localStorage.getItem('username') || 'Học viên',
-            email: localStorage.getItem('email') || ''
-          }}
-          onApiReady={handleApiReady}
-          getIFrameRef={(node) => {
-            if (node) {
-              node.style.height = '600px';
-              node.style.width = '100%';
-              node.style.border = 'none';
-            }
-          }}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          size="large"
+          style={{ height: '100vh' }}
         />
       </div>
       
@@ -177,4 +182,4 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
   );
 };
 
-export default LivestreamRoom; 
+export default LivestreamRoom;

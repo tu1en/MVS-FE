@@ -1,61 +1,61 @@
 import {
-    BellOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    EyeOutlined,
-    NotificationOutlined,
-    PlusOutlined,
-    ReloadOutlined,
-    SearchOutlined
+  BellOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  NotificationOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Form,
-    Input,
-    List,
-    message,
-    Modal,
-    Popconfirm,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Switch,
-    Tag,
-    Typography
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  List,
+  message,
+  Modal,
+  Popconfirm,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Switch,
+  Tag,
+  Typography
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import AnnouncementService from '../../services/announcementService';
 import { ApiService } from '../../services/api';
+import teacherService from '../../services/teacherService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const TeacherAnnouncementsPage = () => {
-  // State management
   const [announcements, setAnnouncements] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [viewingAnnouncement, setViewingAnnouncement] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  
-  // Form for announcement
+
   const [form] = Form.useForm();
-  
-  // Get teacher info from localStorage
+
   const teacherId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('role');
 
-  // Check if user can create announcements (only MANAGER and ADMIN)
-  const canCreateAnnouncements = userRole === 'MANAGER' || userRole === 'ADMIN' || userRole === '3' || userRole === '0';
+  // Chỉ ADMIN, MANAGER được tạo/sửa/xóa
+  const canCreateAnnouncements =
+    userRole === 'MANAGER' || userRole === 'ADMIN' || userRole === '3' || userRole === '0';
 
   useEffect(() => {
     if (teacherId && token) {
@@ -67,15 +67,12 @@ const TeacherAnnouncementsPage = () => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const allAnnouncements = await AnnouncementService.getAnnouncements();
-      // Filter announcements created by this teacher
-      const teacherAnnouncements = allAnnouncements.filter(
-        announcement => announcement.createdBy === parseInt(teacherId)
-      );
-      setAnnouncements(teacherAnnouncements);
+      const response = await teacherService.getAnnouncements();
+      setAnnouncements(Array.isArray(response.data) ? response.data : response);
     } catch (error) {
-      console.error('Error fetching announcements:', error);
-      message.error('Không thể tải thông báo');
+      console.error('Error fetching teacher announcements:', error);
+      message.error('Không thể tải danh sách thông báo');
+      setAnnouncements([]);
     } finally {
       setLoading(false);
     }
@@ -84,9 +81,8 @@ const TeacherAnnouncementsPage = () => {
   const fetchClassrooms = async () => {
     try {
       const response = await ApiService.GetClasses();
-      // Filter classrooms for this teacher
       const teacherClassrooms = response.filter(
-        classroom => classroom.teacherId === parseInt(teacherId)
+        (classroom) => classroom.teacherId === parseInt(teacherId)
       );
       setClassrooms(teacherClassrooms);
     } catch (error) {
@@ -110,7 +106,6 @@ const TeacherAnnouncementsPage = () => {
       };
 
       await AnnouncementService.createAnnouncement(announcementData);
-
       message.success('Đã tạo thông báo thành công');
       setIsModalVisible(false);
       form.resetFields();
@@ -137,7 +132,6 @@ const TeacherAnnouncementsPage = () => {
       };
 
       await AnnouncementService.updateAnnouncement(editingAnnouncement.id, announcementData);
-
       message.success('Đã cập nhật thông báo thành công');
       setIsModalVisible(false);
       setEditingAnnouncement(null);
@@ -152,7 +146,6 @@ const TeacherAnnouncementsPage = () => {
   const deleteAnnouncement = async (announcementId) => {
     try {
       await AnnouncementService.deleteAnnouncement(announcementId);
-
       message.success('Đã xóa thông báo thành công');
       fetchAnnouncements();
     } catch (error) {
@@ -191,28 +184,55 @@ const TeacherAnnouncementsPage = () => {
     form.resetFields();
   };
 
-  // Filter announcements
-  const filteredAnnouncements = announcements.filter(announcement => {
-    const matchesSearch = 
+  const handleView = (announcement) => {
+    setViewingAnnouncement(announcement);
+  };
+
+  const handleCloseView = () => {
+    setViewingAnnouncement(null);
+  };
+
+  const filteredAnnouncements = announcements.filter((announcement) => {
+    const matchesSearch =
       announcement.title?.toLowerCase().includes(searchText.toLowerCase()) ||
       announcement.content?.toLowerCase().includes(searchText.toLowerCase());
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       filterStatus === 'all' ||
       (filterStatus === 'published' && announcement.status === 'ACTIVE') ||
       (filterStatus === 'draft' && announcement.status === 'ARCHIVED') ||
       (filterStatus === 'pinned' && announcement.isPinned);
-    
+
     return matchesSearch && matchesStatus;
   });
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'URGENT': return 'red';
-      case 'HIGH': return 'orange';
-      case 'NORMAL': return 'blue';
-      case 'LOW': return 'green';
-      default: return 'blue';
+      case 'URGENT':
+        return 'red';
+      case 'HIGH':
+        return 'orange';
+      case 'NORMAL':
+        return 'blue';
+      case 'LOW':
+        return 'green';
+      default:
+        return 'blue';
+    }
+  };
+
+  const getPriorityLabel = (priority) => {
+    switch (priority) {
+      case 'URGENT':
+        return 'Khẩn cấp';
+      case 'HIGH':
+        return 'Cao';
+      case 'NORMAL':
+        return 'Bình thường';
+      case 'LOW':
+        return 'Thấp';
+      default:
+        return 'Không xác định';
     }
   };
 
@@ -228,6 +248,19 @@ const TeacherAnnouncementsPage = () => {
     return 'Đã xuất bản';
   };
 
+  const getAudienceLabel = (audience) => {
+    switch (audience) {
+      case 'ALL':
+        return 'Tất cả';
+      case 'STUDENTS':
+        return 'Học sinh';
+      case 'TEACHERS':
+        return 'Giảng viên';
+      default:
+        return 'Không xác định';
+    }
+  };
+
   return (
     <div className="p-6">
       <Row gutter={[16, 16]}>
@@ -239,36 +272,16 @@ const TeacherAnnouncementsPage = () => {
             </Title>
             <Space>
               {canCreateAnnouncements && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setIsModalVisible(true)}
-                >
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
                   Tạo thông báo mới
                 </Button>
               )}
-              <Button 
-                icon={<ReloadOutlined />}
-                onClick={fetchAnnouncements}
-                loading={loading}
-              >
+              <Button icon={<ReloadOutlined />} onClick={fetchAnnouncements} loading={loading}>
                 Làm mới
               </Button>
             </Space>
           </div>
         </Col>
-
-        {/* Notice for teachers */}
-        {!canCreateAnnouncements && (
-          <Col span={24}>
-            <Card size="small" style={{ backgroundColor: '#f6ffed', borderColor: '#b7eb8f' }}>
-              <Text type="secondary">
-                <BellOutlined style={{ marginRight: 8, color: '#52c41a' }} />
-                Bạn chỉ có thể xem và đọc thông báo. Chỉ có Quản lý và Quản trị viên mới có thể tạo thông báo mới.
-              </Text>
-            </Card>
-          </Col>
-        )}
 
         {/* Filters */}
         <Col span={24}>
@@ -283,11 +296,7 @@ const TeacherAnnouncementsPage = () => {
                 />
               </Col>
               <Col span={6}>
-                <Select
-                  value={filterStatus}
-                  onChange={setFilterStatus}
-                  style={{ width: '100%' }}
-                >
+                <Select value={filterStatus} onChange={setFilterStatus} style={{ width: '100%' }}>
                   <Option value="all">Tất cả</Option>
                   <Option value="published">Đã xuất bản</Option>
                   <Option value="draft">Nháp</Option>
@@ -295,9 +304,7 @@ const TeacherAnnouncementsPage = () => {
                 </Select>
               </Col>
               <Col span={10}>
-                <Text type="secondary">
-                  Tổng cộng: {filteredAnnouncements.length} thông báo
-                </Text>
+                <Text type="secondary">Tổng cộng: {filteredAnnouncements.length} thông báo</Text>
               </Col>
             </Row>
           </Card>
@@ -314,20 +321,20 @@ const TeacherAnnouncementsPage = () => {
                   <Card
                     size="small"
                     actions={[
-                      <EyeOutlined key="view" title="Xem chi tiết" />,
-                      <EditOutlined 
-                        key="edit" 
-                        title="Chỉnh sửa"
-                        onClick={() => handleEdit(announcement)}
-                      />,
-                      <Popconfirm
-                        title="Bạn có chắc chắn muốn xóa thông báo này?"
-                        onConfirm={() => deleteAnnouncement(announcement.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                      >
-                        <DeleteOutlined key="delete" title="Xóa" />
-                      </Popconfirm>
+                      <EyeOutlined key="view" title="Xem chi tiết" onClick={() => handleView(announcement)} />,
+                      canCreateAnnouncements && (
+                        <EditOutlined key="edit" title="Chỉnh sửa" onClick={() => handleEdit(announcement)} />
+                      ),
+                      canCreateAnnouncements && (
+                        <Popconfirm
+                          title="Bạn có chắc chắn muốn xóa thông báo này?"
+                          onConfirm={() => deleteAnnouncement(announcement.id)}
+                          okText="Xóa"
+                          cancelText="Hủy"
+                        >
+                          <DeleteOutlined key="delete" title="Xóa" />
+                        </Popconfirm>
+                      )
                     ]}
                   >
                     <Card.Meta
@@ -337,45 +344,28 @@ const TeacherAnnouncementsPage = () => {
                             {announcement.title}
                           </Text>
                           <div className="flex flex-col gap-1 ml-2">
-                            <Tag color={getStatusColor(announcement)}>
-                              {getStatusText(announcement)}
-                            </Tag>
+                            <Tag color={getStatusColor(announcement)}>{getStatusText(announcement)}</Tag>
                             <Tag color={getPriorityColor(announcement.priority)}>
-                              {announcement.priority || 'NORMAL'}
+                              {getPriorityLabel(announcement.priority)}
                             </Tag>
                           </div>
                         </div>
                       }
                       description={
                         <div>
-                          <Paragraph 
+                          <Paragraph
                             ellipsis={{ rows: 3, expandable: true, symbol: 'Xem thêm' }}
                             className="mb-2"
                           >
                             {announcement.content}
                           </Paragraph>
-                          
                           <div className="text-xs text-gray-500 space-y-1">
                             <div>
                               <BellOutlined className="mr-1" />
-                              Lớp: {classrooms.find(c => c.id === announcement.classroomId)?.name || 'Tất cả'}
+                              Lớp: {classrooms.find((c) => c.id === announcement.classroomId)?.name || 'Tất cả'}
                             </div>
-                            <div>
-                              Đối tượng: {announcement.targetAudience || 'ALL'}
-                            </div>
-                            <div>
-                              Tạo: {new Date(announcement.createdAt).toLocaleString('vi-VN')}
-                            </div>
-                            {announcement.scheduledDate && (
-                              <div>
-                                Lên lịch: {new Date(announcement.scheduledDate).toLocaleString('vi-VN')}
-                              </div>
-                            )}
-                            {announcement.expiryDate && (
-                              <div>
-                                Hết hạn: {new Date(announcement.expiryDate).toLocaleString('vi-VN')}
-                              </div>
-                            )}
+                            <div>Đối tượng: {getAudienceLabel(announcement.targetAudience)}</div>
+                            <div>Tạo: {new Date(announcement.createdAt).toLocaleString('vi-VN')}</div>
                           </div>
                         </div>
                       }
@@ -415,15 +405,9 @@ const TeacherAnnouncementsPage = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="classroomId"
-                label="Lớp học"
-              >
-                <Select
-                  placeholder="Chọn lớp học (để trống nếu gửi cho tất cả)"
-                  allowClear
-                >
-                  {classrooms.map(classroom => (
+              <Form.Item name="classroomId" label="Lớp học">
+                <Select placeholder="Chọn lớp học (để trống nếu gửi cho tất cả)" allowClear>
+                  {classrooms.map((classroom) => (
                     <Option key={classroom.id} value={classroom.id}>
                       {classroom.name}
                     </Option>
@@ -432,41 +416,7 @@ const TeacherAnnouncementsPage = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="priority"
-                label="Mức độ ưu tiên"
-                initialValue="NORMAL"
-              >
-                <Select>
-                  <Option value="LOW">Thấp</Option>
-                  <Option value="NORMAL">Bình thường</Option>
-                  <Option value="MEDIUM">Trung bình</Option>
-                  <Option value="HIGH">Cao</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="targetAudience"
-                label="Đối tượng"
-                initialValue="ALL"
-              >
-                <Select>
-                  <Option value="ALL">Tất cả</Option>
-                  <Option value="STUDENTS">Học sinh</Option>
-                  <Option value="TEACHERS">Giảng viên</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="priority"
-                label="Mức độ ưu tiên"
-                initialValue="NORMAL"
-              >
+              <Form.Item name="priority" label="Mức độ ưu tiên" initialValue="NORMAL">
                 <Select>
                   <Option value="LOW">Thấp</Option>
                   <Option value="NORMAL">Bình thường</Option>
@@ -479,49 +429,34 @@ const TeacherAnnouncementsPage = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="scheduledDate"
-                label="Lên lịch xuất bản"
-              >
-                <DatePicker 
-                  showTime 
-                  style={{ width: '100%' }}
-                  placeholder="Chọn thời gian xuất bản"
-                />
+              <Form.Item name="targetAudience" label="Đối tượng" initialValue="ALL">
+                <Select>
+                  <Option value="ALL">Tất cả</Option>
+                  <Option value="STUDENTS">Học sinh</Option>
+                  <Option value="TEACHERS">Giảng viên</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="expiryDate"
-                label="Ngày hết hạn"
-              >
-                <DatePicker 
-                  showTime 
-                  style={{ width: '100%' }}
-                  placeholder="Chọn ngày hết hạn"
-                />
+              <Form.Item name="scheduledDate" label="Lên lịch xuất bản">
+                <DatePicker showTime style={{ width: '100%' }} placeholder="Chọn thời gian xuất bản" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="isPublished"
-                label="Xuất bản ngay"
-                valuePropName="checked"
-                initialValue={true}
-              >
+              <Form.Item name="expiryDate" label="Ngày hết hạn">
+                <DatePicker showTime style={{ width: '100%' }} placeholder="Chọn ngày hết hạn" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="isPublished" label="Xuất bản ngay" valuePropName="checked" initialValue={true}>
                 <Switch />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                name="isPinned"
-                label="Ghim thông báo"
-                valuePropName="checked"
-                initialValue={false}
-              >
+            <Col span={6}>
+              <Form.Item name="isPinned" label="Ghim thông báo" valuePropName="checked" initialValue={false}>
                 <Switch />
               </Form.Item>
             </Col>
@@ -529,15 +464,50 @@ const TeacherAnnouncementsPage = () => {
 
           <Form.Item className="mb-0 text-right">
             <Space>
-              <Button onClick={handleCancel}>
-                Hủy
-              </Button>
+              <Button onClick={handleCancel}>Hủy</Button>
               <Button type="primary" htmlType="submit">
                 {editingAnnouncement ? 'Cập nhật' : 'Tạo thông báo'}
               </Button>
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* View Details Modal */}
+      <Modal
+        title="Chi tiết thông báo"
+        open={!!viewingAnnouncement}
+        onCancel={handleCloseView}
+        footer={<Button onClick={handleCloseView}>Đóng</Button>}
+      >
+        {viewingAnnouncement && (
+          <div>
+            <h3>{viewingAnnouncement.title}</h3>
+            <p>{viewingAnnouncement.content}</p>
+            <p>
+              <strong>Trạng thái:</strong> {getStatusText(viewingAnnouncement)}
+            </p>
+            <p>
+              <strong>Mức độ ưu tiên:</strong> {getPriorityLabel(viewingAnnouncement.priority)}
+            </p>
+            <p>
+              <strong>Lớp:</strong>{' '}
+              {classrooms.find((c) => c.id === viewingAnnouncement.classroomId)?.name || 'Tất cả'}
+            </p>
+            <p>
+              <strong>Đối tượng:</strong> {getAudienceLabel(viewingAnnouncement.targetAudience)}
+            </p>
+            <p>
+              <strong>Ngày tạo:</strong> {new Date(viewingAnnouncement.createdAt).toLocaleString('vi-VN')}
+            </p>
+            {viewingAnnouncement.expiryDate && (
+              <p>
+                <strong>Hết hạn:</strong>{' '}
+                {new Date(viewingAnnouncement.expiryDate).toLocaleString('vi-VN')}
+              </p>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

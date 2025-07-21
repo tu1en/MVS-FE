@@ -280,7 +280,22 @@ const TeacherMessagesPage = () => {
   useEffect(() => {
     console.log('🚀 TeacherMessagesPage useEffect - Starting to fetch students...');
     fetchStudents();
+    // Also fetch teacher messages
+    fetchTeacherMessages();
   }, [fetchStudents]);
+
+  const fetchTeacherMessages = useCallback(async () => {
+    if (!teacherId) return;
+
+    try {
+      console.log('🔍 Fetching teacher messages...');
+      const response = await teacherService.getMessages();
+      console.log('✅ Teacher messages response:', response);
+      // Process messages if needed
+    } catch (error) {
+      console.error('❌ Error fetching teacher messages:', error);
+    }
+  }, [teacherId]);
 
   // Additional useEffect to ensure loading is set to false if teacherId is available
   useEffect(() => {

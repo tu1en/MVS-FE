@@ -144,7 +144,7 @@ class HRService {
    */
   async createShiftAssignments(assignmentData) {
     try {
-      const response = await apiClient.post('/hr/shift-assignments', assignmentData);
+      const response = await apiClient.post('/hr/user-shift-assignments', assignmentData);
       return response.data;
     } catch (error) {
       console.error('Error creating shift assignments:', error);
@@ -160,7 +160,7 @@ class HRService {
    */
   async updateShiftAssignment(id, assignmentData) {
     try {
-      const response = await apiClient.put(`/hr/shift-assignments/${id}`, assignmentData);
+      const response = await apiClient.put(`/hr/user-shift-assignments/${id}`, assignmentData);
       return response.data;
     } catch (error) {
       console.error('Error updating shift assignment:', error);
@@ -175,7 +175,7 @@ class HRService {
    */
   async getAssignmentById(id) {
     try {
-      const response = await apiClient.get(`/hr/shift-assignments/${id}`);
+      const response = await apiClient.get(`/hr/user-shift-assignments/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error getting shift assignment:', error);
@@ -190,7 +190,7 @@ class HRService {
    */
   async getAssignments(params = {}) {
     try {
-      const response = await apiClient.get('/hr/shift-assignments', { params });
+      const response = await apiClient.get('/hr/user-shift-assignments', { params });
       return response.data;
     } catch (error) {
       console.error('Error getting shift assignments:', error);
@@ -206,7 +206,7 @@ class HRService {
    */
   async getAssignmentsByUser(userId, activeOnly = true) {
     try {
-      const response = await apiClient.get(`/hr/shift-assignments/user/${userId}`, {
+      const response = await apiClient.get(`/hr/user-shift-assignments/user/${userId}`, {
         params: { activeOnly }
       });
       return response.data;
@@ -224,7 +224,7 @@ class HRService {
    */
   async getAssignmentsByShift(shiftId, activeOnly = true) {
     try {
-      const response = await apiClient.get(`/hr/shift-assignments/shift/${shiftId}`, {
+      const response = await apiClient.get(`/hr/user-shift-assignments/shift/${shiftId}`, {
         params: { activeOnly }
       });
       return response.data;
@@ -241,7 +241,7 @@ class HRService {
    */
   async getAssignmentsForDate(date) {
     try {
-      const response = await apiClient.get(`/hr/shift-assignments/date/${date}`);
+      const response = await apiClient.get(`/hr/user-shift-assignments/date/${date}`);
       return response.data;
     } catch (error) {
       console.error('Error getting assignments for date:', error);
@@ -255,7 +255,7 @@ class HRService {
    */
   async getEligibleUsers() {
     try {
-      const response = await apiClient.get('/hr/shift-assignments/eligible-users');
+      const response = await apiClient.get('/hr/user-shift-assignments/eligible-users');
       return response.data;
     } catch (error) {
       console.error('Error getting eligible users:', error);
@@ -276,7 +276,7 @@ class HRService {
       const params = { userId, startDate, endDate };
       if (excludeId) params.excludeId = excludeId;
       
-      const response = await apiClient.get('/hr/shift-assignments/check-overlap', { params });
+      const response = await apiClient.get('/hr/user-shift-assignments/check-overlap', { params });
       return response.data;
     } catch (error) {
       console.error('Error checking overlapping assignments:', error);
@@ -291,7 +291,7 @@ class HRService {
    */
   async deleteAssignment(id) {
     try {
-      const response = await apiClient.delete(`/hr/shift-assignments/${id}`);
+      const response = await apiClient.delete(`/hr/user-shift-assignments/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting shift assignment:', error);
@@ -307,7 +307,7 @@ class HRService {
    */
   async toggleAssignmentStatus(id, isActive) {
     try {
-      const response = await apiClient.patch(`/hr/shift-assignments/${id}/status`, null, {
+      const response = await apiClient.patch(`/hr/user-shift-assignments/${id}/status`, null, {
         params: { isActive }
       });
       return response.data;
