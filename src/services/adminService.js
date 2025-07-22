@@ -29,6 +29,15 @@ const adminService = {
         } catch (error) {
             throw new Error(error.response?.data?.message || 'Failed to reset password');
         }
+    },
+    // Check if email already exists
+    checkEmailExists: async (email) => {
+        try {
+            const response = await api.get('/admin/users/check-email', { params: { email } });
+            return response.data.exists;
+        } catch (error) {
+            throw new Error(error.response?.data?.message || 'Failed to check email');
+        }
     }
 };
 
