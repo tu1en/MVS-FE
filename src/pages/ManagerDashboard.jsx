@@ -208,30 +208,6 @@ export default function ManagerDashboard() {
           </button>
         </div>
 
-        {/* Quản lý chấm công giáo viên */}
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-          <h3 className="text-xl font-semibold mb-2">Chấm công giáo viên</h3>
-          <p className="text-gray-600">Xem trạng thái chấm công của giáo viên</p>
-          <button 
-            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/teacher-attendance-status')}
-          >
-            Xem chấm công giáo viên
-          </button>
-        </div>
-
-        {/* Quản lý chấm công theo ca */}
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-          <h3 className="text-xl font-semibold mb-2">Chấm công theo ca</h3>
-          <p className="text-gray-600">Xem log chấm công theo ca/ngày</p>
-          <button 
-            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/daily-shift-attendance')}
-          >
-            Xem chấm công theo ca
-          </button>
-        </div>
-
         {/* Quản lý toàn bộ chấm công */}
         <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
           <h3 className="text-xl font-semibold mb-2">Toàn bộ chấm công nhân viên</h3>
