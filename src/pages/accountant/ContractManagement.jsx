@@ -121,7 +121,7 @@ const ContractManagement = () => {
     setSubmitting(true);
     try {
       const contractData = {
-        userId: values.userId,
+        userId: 1, // Default user ID since employee selection was removed
         fullName: values.fullName,
         contractType: values.contractType,
         position: values.position,
@@ -379,194 +379,359 @@ const ContractManagement = () => {
 
       {/* Create Contract Modal */}
       <Modal
-        title="Tạo hợp đồng mới"
+        title={
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            fontSize: '18px', 
+            fontWeight: 'bold',
+            color: '#1890ff'
+          }}>
+            <FileTextOutlined style={{ marginRight: '8px' }} />
+            Tạo hợp đồng mới
+          </div>
+        }
         open={createModalVisible}
         onCancel={() => {
           setCreateModalVisible(false);
           form.resetFields();
         }}
         footer={null}
-        width={800}
+        width={900}
+        style={{ top: 20 }}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleCreateContract}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="userId"
-                label="Nhân viên"
-                rules={[{ required: true, message: 'Vui lòng chọn nhân viên' }]}
-              >
-                <Select
-                  placeholder="Chọn nhân viên"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {users.map(user => (
-                    <Option key={user.id} value={user.id}>
-                      {user.fullName} ({user.email})
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="fullName"
-                label="Tên nhân viên (tùy chọn)"
-              >
-                <Input placeholder="Nhập tên nhân viên để hiển thị nhanh" />
-              </Form.Item>
-            </Col>
-          </Row>
+        <div style={{ 
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          padding: '20px',
+          borderRadius: '8px',
+          marginBottom: '20px'
+        }}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleCreateContract}
+            style={{ 
+              background: 'white',
+              padding: '24px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            {/* Thông tin nhân viên */}
+            <div style={{ 
+              marginBottom: '24px',
+              padding: '16px',
+              background: '#f8f9fa',
+              borderRadius: '6px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 16px 0',
+                color: '#495057',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                <UserOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                Thông tin nhân viên
+              </h4>
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item
+                    name="fullName"
+                    label="Tên nhân viên"
+                    rules={[{ required: true, message: 'Vui lòng nhập tên nhân viên' }]}
+                  >
+                    <Input 
+                      placeholder="Nhập họ và tên nhân viên"
+                      prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                      style={{ borderRadius: '6px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="contractType"
-                label="Loại hợp đồng"
-                rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng' }]}
-              >
-                <Select placeholder="Chọn loại hợp đồng">
-                  <Option value="Thử việc">Thử việc</Option>
-                  <Option value="Chính thức">Chính thức</Option>
-                  <Option value="Thời vụ">Thời vụ</Option>
-                  <Option value="Bán thời gian">Bán thời gian</Option>
-                  <Option value="Hợp đồng có thời hạn">Hợp đồng có thời hạn</Option>
-                  <Option value="Hợp đồng không thời hạn">Hợp đồng không thời hạn</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
-                initialValue="ACTIVE"
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="ACTIVE">Đang hoạt động</Option>
-                  <Option value="PENDING">Chờ duyệt</Option>
-                  <Option value="TERMINATED">Đã chấm dứt</Option>
-                  <Option value="EXPIRED">Hết hạn</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+            {/* Thông tin hợp đồng */}
+            <div style={{ 
+              marginBottom: '24px',
+              padding: '16px',
+              background: '#f0f8ff',
+              borderRadius: '6px',
+              border: '1px solid #d6e4ff'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 16px 0',
+                color: '#495057',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                <FileTextOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                Thông tin hợp đồng
+              </h4>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="contractType"
+                    label="Loại hợp đồng"
+                    rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng' }]}
+                  >
+                    <Select 
+                      placeholder="Chọn loại hợp đồng"
+                      style={{ borderRadius: '6px' }}
+                    >
+                      <Option value="Thử việc">Thử việc</Option>
+                      <Option value="Chính thức">Chính thức</Option>
+                      <Option value="Thời vụ">Thời vụ</Option>
+                      <Option value="Bán thời gian">Bán thời gian</Option>
+                      <Option value="Hợp đồng có thời hạn">Hợp đồng có thời hạn</Option>
+                      <Option value="Hợp đồng không thời hạn">Hợp đồng không thời hạn</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="status"
+                    label="Trạng thái"
+                    rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+                    initialValue="ACTIVE"
+                  >
+                    <Select 
+                      placeholder="Chọn trạng thái"
+                      style={{ borderRadius: '6px' }}
+                    >
+                      <Option value="ACTIVE">Đang hoạt động</Option>
+                      <Option value="PENDING">Chờ duyệt</Option>
+                      <Option value="TERMINATED">Đã chấm dứt</Option>
+                      <Option value="EXPIRED">Hết hạn</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="position"
-                label="Vị trí"
-                rules={[{ required: true, message: 'Vui lòng nhập vị trí' }]}
-              >
-                <Input placeholder="Nhập vị trí công việc" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="Phòng ban"
-              >
-                <Input placeholder="Nhập phòng ban" />
-              </Form.Item>
-            </Col>
-          </Row>
+            {/* Thông tin công việc */}
+            <div style={{ 
+              marginBottom: '24px',
+              padding: '16px',
+              background: '#f6ffed',
+              borderRadius: '6px',
+              border: '1px solid #b7eb8f'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 16px 0',
+                color: '#495057',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                <CalendarOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                Thông tin công việc
+              </h4>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="position"
+                    label="Vị trí"
+                    rules={[{ required: true, message: 'Vui lòng nhập vị trí' }]}
+                  >
+                    <Input 
+                      placeholder="Nhập vị trí công việc"
+                      style={{ borderRadius: '6px' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="department"
+                    label="Phòng ban"
+                  >
+                    <Input 
+                      placeholder="Nhập phòng ban"
+                      style={{ borderRadius: '6px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="salary"
+                    label="Lương (VND)"
+                    rules={[{ required: true, message: 'Vui lòng nhập lương' }]}
+                  >
+                    <InputNumber
+                      style={{ width: '100%', borderRadius: '6px' }}
+                      placeholder="Nhập mức lương"
+                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                      min={0}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="workingHours"
+                    label="Thời gian làm việc"
+                    initialValue="Full-time, 8h/ngày"
+                  >
+                    <Input 
+                      placeholder="VD: Full-time, 8h/ngày"
+                      style={{ borderRadius: '6px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
+            {/* Thời gian và người duyệt */}
+            <div style={{ 
+              marginBottom: '24px',
+              padding: '16px',
+              background: '#fff7e6',
+              borderRadius: '6px',
+              border: '1px solid #ffd591'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 16px 0',
+                color: '#495057',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                <CalendarOutlined style={{ marginRight: '8px', color: '#fa8c16' }} />
+                Thời gian và người duyệt
+              </h4>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item
+                    name="startDate"
+                    label="Ngày bắt đầu"
+                    rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
+                  >
+                    <DatePicker 
+                      style={{ width: '100%', borderRadius: '6px' }} 
+                      format="DD/MM/YYYY" 
+                      placeholder="Chọn ngày bắt đầu"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="endDate"
+                    label="Ngày kết thúc (tùy chọn)"
+                  >
+                    <DatePicker 
+                      style={{ width: '100%', borderRadius: '6px' }} 
+                      format="DD/MM/YYYY" 
+                      placeholder="Chọn ngày kết thúc"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="createdBy"
+                    label="Người tạo/Duyệt"
+                  >
+                    <Input 
+                      placeholder="Nhập tên người tạo hoặc duyệt hợp đồng"
+                      style={{ borderRadius: '6px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Tệp đính kèm và ghi chú */}
+            <div style={{ 
+              marginBottom: '24px',
+              padding: '16px',
+              background: '#fafafa',
+              borderRadius: '6px',
+              border: '1px solid #d9d9d9'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 16px 0',
+                color: '#495057',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                <UploadOutlined style={{ marginRight: '8px', color: '#8c8c8c' }} />
+                Tài liệu và ghi chú
+              </h4>
+              
               <Form.Item
-                name="salary"
-                label="Lương (VND)"
-                rules={[{ required: true, message: 'Vui lòng nhập lương' }]}
+                name="attachmentPath"
+                label="Tệp đính kèm"
               >
-                <InputNumber
+                <Upload
+                  beforeUpload={() => false}
+                  maxCount={1}
+                  accept=".pdf,.doc,.docx"
                   style={{ width: '100%' }}
-                  placeholder="Nhập mức lương"
-                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                >
+                  <Button 
+                    icon={<UploadOutlined />}
+                    style={{ 
+                      borderRadius: '6px',
+                      borderStyle: 'dashed',
+                      height: '40px',
+                      width: '100%'
+                    }}
+                  >
+                    Tải lên tệp hợp đồng (PDF, DOC, DOCX)
+                  </Button>
+                </Upload>
+              </Form.Item>
+
+              <Form.Item
+                name="notes"
+                label="Ghi chú"
+              >
+                <TextArea 
+                  rows={4} 
+                  placeholder="Nhập ghi chú (tùy chọn)"
+                  style={{ borderRadius: '6px' }}
                 />
               </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="workingHours"
-                label="Thời gian làm việc"
-                initialValue="Full-time, 8h/ngày"
-              >
-                <Input placeholder="VD: Full-time, 8h/ngày" />
-              </Form.Item>
-            </Col>
-          </Row>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="startDate"
-                label="Ngày bắt đầu"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="endDate"
-                label="Ngày kết thúc (tùy chọn)"
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="createdBy"
-                label="Người tạo/Duyệt"
-              >
-                <Input placeholder="Nhập tên người tạo hoặc duyệt hợp đồng" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="attachmentPath"
-            label="Tệp đính kèm"
-          >
-            <Upload
-              beforeUpload={() => false}
-              maxCount={1}
-              accept=".pdf,.doc,.docx"
-            >
-              <Button icon={<UploadOutlined />}>Tải lên tệp hợp đồng (PDF, DOC, DOCX)</Button>
-            </Upload>
-          </Form.Item>
-
-          <Form.Item
-            name="notes"
-            label="Ghi chú"
-          >
-            <TextArea rows={4} placeholder="Nhập ghi chú (tùy chọn)" />
-          </Form.Item>
-
-          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
-            <Space>
-              <Button onClick={() => {
-                setCreateModalVisible(false);
-                form.resetFields();
-              }}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={submitting}>
-                Tạo hợp đồng
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+            {/* Nút hành động */}
+            <div style={{ 
+              textAlign: 'right',
+              marginTop: '32px',
+              paddingTop: '16px',
+              borderTop: '1px solid #f0f0f0'
+            }}>
+              <Space size="middle">
+                <Button 
+                  size="large"
+                  onClick={() => {
+                    setCreateModalVisible(false);
+                    form.resetFields();
+                  }}
+                  style={{ 
+                    borderRadius: '6px',
+                    minWidth: '100px'
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  loading={submitting}
+                  size="large"
+                  style={{ 
+                    borderRadius: '6px',
+                    minWidth: '120px',
+                    background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                    border: 'none'
+                  }}
+                >
+                  Tạo hợp đồng
+                </Button>
+              </Space>
+            </div>
+          </Form>
+        </div>
       </Modal>
 
       {/* Contract Details Modal */}
