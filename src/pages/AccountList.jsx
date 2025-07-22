@@ -95,7 +95,14 @@ const AccountList = () => {
             .validateFields()
             .then(async (values) => {
                 try {
-                    await adminService.createUser(values);
+                    // Format data to match backend expectations
+                    const userData = {
+                        ...values,
+                        name: values.fullName, // Backend expects 'name' field
+                        enabled: true, // Default to enabled
+                        roles: values.roles ? [values.roles] : ['ROLE_STUDENT'] // Convert single role to array
+                    };
+                    await adminService.createUser(userData);
                     setIsCreateModalVisible(false);
                     createForm.resetFields();
                     message.success("User created successfully");
@@ -255,6 +262,14 @@ const AccountList = () => {
                             name="createUserForm"
                         >
                             <Form.Item
+                                name="username"
+                                label="Tên đăng nhập"
+                                rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+
+                            <Form.Item
                                 name="fullName"
                                 label="Họ và tên"
                                 rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
@@ -285,9 +300,9 @@ const AccountList = () => {
                             <Form.Item
                                 name="roles"
                                 label="Vai trò"
-                                rules={[{ required: true, message: 'Vui lòng chọn ít nhất một vai trò' }]}
+                                rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
                             >
-                                <Select mode="multiple" placeholder="Chọn vai trò">
+                                <Select placeholder="Chọn vai trò">
                                     <Option value="ROLE_STUDENT">Học sinh</Option>
                                     <Option value="ROLE_TEACHER">Giáo viên</Option>
                                     <Option value="ROLE_MANAGER">Quản lý</Option>
@@ -305,15 +320,20 @@ const AccountList = () => {
                             <Form.Item
                                 name="citizenId"
                                 label="CCCD"
+                                rules={[{ required: true, message: 'Vui lòng nhập CCCD' }, { pattern: /^\d{13}$/, message: 'CCCD phải gồm đúng 13 số' }]}
                             >
-                                <Input />
+                                <Input maxLength={13} />
                             </Form.Item>
 
                             <Form.Item
                                 name="phoneNumber"
                                 label="Số điện thoại"
+                                rules={[
+                                    { required: true, message: 'Vui lòng nhập số điện thoại' },
+                                    { pattern: /^\d{10,11}$/, message: 'Số điện thoại phải gồm 10 hoặc 11 số' }
+                                ]}
                             >
-                                <Input />
+                                <Input maxLength={11} />
                             </Form.Item>
                         </Form>
                     </Modal>
