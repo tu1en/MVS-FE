@@ -58,9 +58,9 @@ import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
-import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
 import RequestList from "./pages/RequestList.jsx";
 import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
+import RecruitmentManagement from './pages/manager/RecruitmentManagement';
 
 // Student Pages
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -246,7 +246,6 @@ function App() {
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
-              <Route path="/manager/users" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageUserAccounts /></ProtectedRoute>} />
               <Route path="/manager/courses" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageCourses /></ProtectedRoute>} />
               <Route path="/manager/schedule" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageSchedule /></ProtectedRoute>} />
               <Route path="/manager/schedule/create" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CreateSchedulePage /></ProtectedRoute>} />
@@ -263,6 +262,7 @@ function App() {
               <Route path="/manager/personal-attendance-history" element={<ProtectedRoute allowedRoles={["MANAGER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
               <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
               <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
+              <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
