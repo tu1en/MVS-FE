@@ -1,15 +1,8 @@
 import { Modal, Tabs } from 'antd';
 import React, { useState } from 'react';
 import StudentRequestForm from './StudentRequestForm';
-import TeacherRequestForm from './TeacherRequestForm';
 
 const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
-  const [activeTab, setActiveTab] = useState('teacher');
-
-  const handleTabChange = (key) => {
-    setActiveTab(key);
-  };
-
   return (
     <Modal
       title="Đăng ký tài khoản"
@@ -31,23 +24,7 @@ const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
           Vui lòng điền thông tin để đăng ký tài khoản. Yêu cầu của bạn sẽ được xem xét và phản hồi qua email.
         </p>
         
-        <Tabs
-          activeKey={activeTab}
-          onChange={handleTabChange}
-          centered
-          items={[
-            {
-              key: 'teacher',
-              label: 'Đăng ký giáo viên',
-              children: <TeacherRequestForm onClose={onClose} initialEmail={initialEmail} />
-            },
-            {
-              key: 'student',
-              label: 'Đăng ký học sinh',
-              children: <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />
-            }
-          ]}
-        />
+        <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />
       </div>
     </Modal>
   );

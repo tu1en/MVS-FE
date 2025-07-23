@@ -404,9 +404,9 @@ function NavigationBar() {
           icon: '📢'
         },
         { 
-          name: 'Quản Lý Người Dùng', 
-          path: '/manager/users', 
-          icon: '👥'
+          name: 'Quản Lý Tuyển Dụng',
+          path: '/manager/recruitment',
+          icon: '🧑‍💼'
         },
         { 
           name: 'Báo cáo', 
