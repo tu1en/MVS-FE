@@ -1,4 +1,4 @@
-import { Tabs, Table, Button, Modal, Form, Input, message, Popconfirm, Tag, Calendar, Badge, Select } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, message, Popconfirm, Tag, Calendar, Badge, Select, InputNumber } from 'antd';
 import { useEffect, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import dayjs from 'dayjs';
@@ -142,7 +142,7 @@ const RecruitmentManagement = () => {
       message.success('Cập nhật thành công!');
     } else {
       await axiosInstance.post('/job-positions', values);
-      message.success('Thêm mới thành công!');
+      message.success('Cập nhật thành công!');
     }
     setShowPositionModal(false);
     fetchPositions();
@@ -231,8 +231,56 @@ const RecruitmentManagement = () => {
   // Table columns
   const positionColumns = [
     { title: 'Tên vị trí', dataIndex: 'title' },
-    { title: 'Mô tả', dataIndex: 'description' },
-    { title: 'Mức lương', dataIndex: 'salaryRange' },
+    { 
+      title: 'Mô tả', 
+      dataIndex: 'description',
+      render: (text, record) => (
+        <Input.TextArea
+          value={text}
+          onChange={(e) => {
+            const newPositions = positions.map(p => 
+              p.id === record.id ? { ...p, description: e.target.value } : p
+            );
+            setPositions(newPositions);
+          }}
+          onBlur={() => handlePositionSubmit({ ...record, description: record.description })}
+          autoSize={{ minRows: 2, maxRows: 4 }}
+        />
+      )
+    },
+    { 
+      title: 'Mức lương', 
+      dataIndex: 'salaryRange',
+      render: (text, record) => (
+        <Input
+          value={text}
+          onChange={(e) => {
+            const newPositions = positions.map(p => 
+              p.id === record.id ? { ...p, salaryRange: e.target.value } : p
+            );
+            setPositions(newPositions);
+          }}
+          onBlur={() => handlePositionSubmit({ ...record, salaryRange: record.salaryRange })}
+        />
+      )
+    },
+    { 
+      title: 'Số lượng tuyển dụng', 
+      dataIndex: 'quantity',
+      render: (text, record) => (
+        <InputNumber
+          value={text}
+          min={1}
+          onChange={(value) => {
+            const newPositions = positions.map(p => 
+              p.id === record.id ? { ...p, quantity: value } : p
+            );
+            setPositions(newPositions);
+          }}
+          onBlur={() => handlePositionSubmit({ ...record, quantity: record.quantity })}
+        />
+      )
+    },
     {
       title: 'Hành động',
       render: (_, record) => (
@@ -250,6 +298,8 @@ const RecruitmentManagement = () => {
     { title: 'Vị trí', dataIndex: 'jobTitle' },
     { title: 'Họ tên', dataIndex: 'fullName' },
     { title: 'Email', dataIndex: 'email' },
+    { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: v => v || '-' },
+    { title: 'Địa chỉ', dataIndex: 'address', render: v => v || '-' },
     { title: 'CV', dataIndex: 'cvUrl', render: url => url ? <a href={url} target="_blank" rel="noopener noreferrer">Xem CV</a> : '-' },
     { 
       title: 'Trạng thái', 
@@ -407,6 +457,7 @@ const RecruitmentManagement = () => {
               <Form.Item name="title" label="Tên vị trí" rules={[{ required: true, message: 'Nhập tên vị trí' }]}> <Input /> </Form.Item>
               <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Nhập mô tả' }]}> <Input.TextArea rows={3} /> </Form.Item>
               <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Nhập mức lương' }]}> <Input /> </Form.Item>
+              <Form.Item name="quantity" label="Số lượng tuyển dụng" rules={[{ required: true, message: 'Nhập số lượng' }]}> <InputNumber min={1} style={{ width: '100%' }} /> </Form.Item>
             </Form>
           </Modal>
         </Tabs.TabPane>
