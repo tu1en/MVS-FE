@@ -4,10 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
 import api from '../services/api';
+import { useBackButton } from '../hooks/useBackButton';
 
 export default function TeacherDashboard() {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  useBackButton(); // Thêm hook xử lý nút back
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     classStats: { totalClasses: 0, activeClasses: 0, totalStudents: 0 },
