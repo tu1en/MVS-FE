@@ -55,6 +55,8 @@ const RecruitmentModal = ({ open, onClose }) => {
       formData.append('jobPositionId', selectedJob.id);
       formData.append('email', values.email);
       formData.append('fullName', values.fullName);
+      formData.append('phoneNumber', values.phoneNumber);
+      formData.append('address', values.address);
       if (values.cv && values.cv.length > 0) {
         formData.append('cv', values.cv[0].originFileObj);
       }
@@ -86,8 +88,67 @@ const RecruitmentModal = ({ open, onClose }) => {
           <Button onClick={handleBack} className="mb-4">← Quay lại danh sách vị trí</Button>
           <h3 className="text-xl font-bold mb-2">{selectedJob.title}</h3>
           <p className="mb-2 text-gray-600">{selectedJob.description}</p>
-          <p className="mb-4 text-yellow-700 font-semibold">Mức lương: {selectedJob.salaryRange}</p>
-          <RecruitmentApplyForm job={selectedJob} onSuccess={() => { onClose(); setSelectedJob(null); }} />
+          <p className="mb-2 text-yellow-700 font-semibold">Mức lương: {selectedJob.salaryRange}</p>
+          <p className="mb-4 text-blue-600 font-semibold">Số lượng tuyển dụng: {selectedJob.quantity || 1}</p>
+          
+          <Form form={form} onFinish={handleFinish} layout="vertical">
+            <Form.Item
+              name="fullName"
+              label="Họ và tên"
+              rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+            >
+              <Input />
+            </Form.Item>
+
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: 'Vui lòng nhập email!' },
+                { type: 'email', message: 'Email không hợp lệ!' }
+              ]}
+            >
+              <Input />
+            </Form.Item>
+
+            <Form.Item
+              name="phoneNumber"
+              label="Số điện thoại"
+              rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+            >
+              <Input />
+            </Form.Item>
+
+            <Form.Item
+              name="address"
+              label="Địa chỉ"
+              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+            >
+              <Input.TextArea rows={3} />
+            </Form.Item>
+
+            <Form.Item
+              name="cv"
+              label="Tải lên CV"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+              rules={[{ required: true, message: 'Vui lòng tải lên CV!' }]}
+            >
+              <Upload
+                beforeUpload={() => false}
+                accept=".pdf,.doc,.docx"
+                maxCount={1}
+              >
+                <Button icon={<UploadOutlined />}>Chọn file CV</Button>
+              </Upload>
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={uploading} block>
+                Nộp đơn ứng tuyển
+              </Button>
+            </Form.Item>
+          </Form>
         </div>
       ) : (
         <List
@@ -100,6 +161,7 @@ const RecruitmentModal = ({ open, onClose }) => {
                 <div className="font-semibold text-base">{job.title}</div>
                 <div className="text-gray-600 text-sm">{job.description}</div>
                 <div className="text-yellow-700 font-medium">Mức lương: {job.salaryRange}</div>
+                <div className="text-blue-600 font-medium">Số lượng tuyển dụng: {job.quantity || 1}</div>
               </div>
             </List.Item>
           )}
