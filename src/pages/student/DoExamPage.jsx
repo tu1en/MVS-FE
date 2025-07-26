@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import examService from '../../services/examService';
 import examSubmissionService from '../../services/examSubmissionService';
+import { ROLE } from '../../constants/constants';
 
 const CountdownTimer = ({ expiryTimestamp, onTimeUp }) => {
     const calculateTimeLeft = useCallback(() => {
@@ -90,7 +91,33 @@ const DoExamPage = () => {
     };
 
     if (isLoading) return <div className="p-8">Initializing your exam...</div>;
-    if (error) return <div className="p-8 text-red-500">Error: {error} <button onClick={() => navigate(`/courses/${courseId}`)} className="text-blue-500">Go Back</button></div>;
+    if (error) return <div className="p-8 text-red-500">Error: {error} <button onClick={() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (!token) {
+        navigate('/');
+    } else {
+        switch (role) {
+            case ROLE.ADMIN:
+                navigate('/admin');
+                break;
+            case ROLE.TEACHER:
+                navigate('/teacher');
+                break;
+            case ROLE.MANAGER:
+                navigate('/manager');
+                break;
+            case ROLE.STUDENT:
+                navigate('/student');
+                break;
+            case ROLE.ACCOUNTANT:
+                navigate('/accountant');
+                break;
+            default:
+                navigate('/');
+        }
+    }
+}}>Quay lại</button></div>;
 
     return (
         <div className="container mx-auto p-8">

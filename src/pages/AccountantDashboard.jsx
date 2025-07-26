@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Statistic, message, Typography, Divider } from 'antd';
 import { DollarOutlined, FileTextOutlined, TeamOutlined, CalendarOutlined, UserOutlined, StopOutlined } from '@ant-design/icons';
 import api from '../utils/api.js';
+import { useBackButton } from '../hooks/useBackButton';
 
 const { Title } = Typography;
 
 const AccountantDashboard = () => {
   const navigate = useNavigate();
+  useBackButton(); // Thêm hook xử lý nút back
   const [dashboardData, setDashboardData] = useState({
     financialStats: {
       totalInvoices: 0,
