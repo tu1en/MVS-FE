@@ -9,6 +9,7 @@ import LectureList from '../../components/teacher/LectureList';
 import StudentListTab from '../../components/teacher/StudentListTab';
 import ClassroomService from '../../services/classroomService';
 import ExamManagementTab from './ExamManagementTab';
+import { ROLE } from '../../constants/constants';
 
 
 const CourseDetail = () => {
@@ -194,12 +195,33 @@ const CourseDetail = () => {
       <div className="mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <button 
-              onClick={() => navigate('/teacher/courses')}
-              className="text-blue-500 hover:text-blue-700 mb-2 flex items-center"
-            >
-              ← Quay lại danh sách khóa học
-            </button>
+            <button onClick={() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (!token) {
+        navigate('/');
+    } else {
+        switch (role) {
+            case ROLE.ADMIN:
+                navigate('/admin');
+                break;
+            case ROLE.TEACHER:
+                navigate('/teacher');
+                break;
+            case ROLE.MANAGER:
+                navigate('/manager');
+                break;
+            case ROLE.STUDENT:
+                navigate('/student');
+                break;
+            case ROLE.ACCOUNTANT:
+                navigate('/accountant');
+                break;
+            default:
+                navigate('/');
+        }
+    }
+}} className="text-blue-500 hover:text-blue-700 mb-2 flex items-center">← Quay lại danh sách khóa học</button>
             <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
             <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.name}</p>
           </div>

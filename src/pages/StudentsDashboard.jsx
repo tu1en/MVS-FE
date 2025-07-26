@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { ROLE } from "../constants/constants";
 import api from "../services/api";
 import ClassroomService from "../services/classroomService";
+import { useBackButton } from '../hooks/useBackButton';
 
 const { Title, Text } = Typography;
 
 export default function StudentDashboard() {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  useBackButton(); // Thêm hook xử lý nút back
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     assignmentStats: { total: 0, submitted: 0, pending: 0, graded: 0 },

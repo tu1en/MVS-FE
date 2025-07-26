@@ -251,7 +251,27 @@ const RecruitmentManagement = () => {
     { title: 'Họ tên', dataIndex: 'fullName' },
     { title: 'Email', dataIndex: 'email' },
     { title: 'CV', dataIndex: 'cvUrl', render: url => url ? <a href={url} target="_blank" rel="noopener noreferrer">Xem CV</a> : '-' },
-    { title: 'Trạng thái', dataIndex: 'status', render: s => <Tag color={s === 'PENDING' ? 'orange' : s === 'APPROVED' ? 'green' : s === 'REJECTED' ? 'red' : 'blue'}>{s}</Tag> },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'status', 
+      render: s => {
+        let color = 'default';
+        let text = s;
+        
+        if (s === 'PENDING') {
+          color = 'orange';
+          text = 'Chờ duyệt';
+        } else if (s === 'APPROVED') {
+          color = 'green';
+          text = 'Đã duyệt';
+        } else if (s === 'REJECTED') {
+          color = 'red';
+          text = 'Đã từ chối';
+        }
+        
+        return <Tag color={color}>{text}</Tag>;
+      }
+    },
     { title: 'Lý do từ chối', dataIndex: 'rejectReason', render: v => v || '-' },
     {
       title: 'Hành động',
@@ -267,12 +287,11 @@ const RecruitmentManagement = () => {
   // Render lịch phỏng vấn trên calendar
   const dateCellRender = (value) => {
     const dayInterviews = interviews.filter(i => dayjs(i.startTime).isSame(value, 'day'));
-    console.log('Render date', value.format('YYYY-MM-DD'), dayInterviews); // Debug log
     return (
       <ul className="events">
         {dayInterviews.map(item => (
           <li key={item.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-            <Badge status="processing" text={`${dayjs(item.startTime).format('HH:mm')} - ${item.applicantName}`} />
+            <Badge status="processing" text={item.applicantName} />
             <Button size="small" danger onClick={() => handleDeleteInterview(item.id)} style={{ marginLeft: 8 }}>
               Xoá lịch
             </Button>
@@ -326,12 +345,26 @@ const RecruitmentManagement = () => {
             { title: 'Thời gian', render: (_, r) => `${dayjs(r.startTime).format('DD/MM/YYYY HH:mm')} - ${dayjs(r.endTime).format('HH:mm')}` },
             { title: 'Trạng thái', dataIndex: 'status', render: s => {
               let color = 'default';
-              if (s === 'PENDING') color = 'orange';
-              else if (s === 'SCHEDULED') color = 'blue';
-              else if (s === 'ACCEPTED') color = 'green';
-              else if (s === 'REJECTED') color = 'red';
-              else if (s === 'DONE') color = 'purple';
-              return <Tag color={color}>{s || '---'}</Tag>;
+              let text = s || '---';
+              
+              if (s === 'PENDING') {
+                color = 'orange';
+                text = 'Chờ phỏng vấn';
+              } else if (s === 'SCHEDULED') {
+                color = 'blue';
+                text = 'Đã lên lịch';
+              } else if (s === 'ACCEPTED') {
+                color = 'green';
+                text = 'Đã chấp nhận';
+              } else if (s === 'REJECTED') {
+                color = 'red';
+                text = 'Đã từ chối';
+              } else if (s === 'DONE') {
+                color = 'purple';
+                text = 'Đã hoàn thành';
+              }
+              
+              return <Tag color={color}>{text}</Tag>;
             } },
             {
               title: 'Hành động',
