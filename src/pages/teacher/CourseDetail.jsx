@@ -200,7 +200,7 @@ const CourseDetail = () => {
             >
               ← Quay lại danh sách khóa học
             </button>
-            <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
+            <h1 className="text-3xl font-bold mb-2">{course.classroomName}</h1>
             <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.name}</p>
           </div>
           <div className="flex flex-col space-y-2">
@@ -235,7 +235,7 @@ const CourseDetail = () => {
             <div className="text-sm text-green-800">Bài giảng</div>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{course.subject || 'N/A'}</div>
+            <div className="text-2xl font-bold text-purple-600">{course.description || course.section || 'N/A'}</div>
             <div className="text-sm text-purple-800">Môn học</div>
           </div>
           <div className="bg-orange-100 p-4 rounded-lg text-center">
@@ -298,7 +298,7 @@ const CourseDetail = () => {
           <LectureList 
             lectures={course.lectures || []}
             courseId={courseId} 
-            courseName={course.name} 
+            courseName={course.classroomName} 
             onEditLecture={handleEditLecture}
           />
         )}
@@ -321,7 +321,7 @@ const CourseDetail = () => {
                 </label>
                 <input 
                   type="text" 
-                  defaultValue={course.name}
+                  defaultValue={course.classroomName}
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

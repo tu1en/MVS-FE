@@ -1,30 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Button, 
-  TextField, 
-  MenuItem, 
-  Select, 
-  FormControl, 
-  InputLabel, 
-  Grid, 
-  CircularProgress, 
-  Alert
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography
 } from '@mui/material';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import axios from 'axios';
 import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const ExplanationReports = () => {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ const ExplanationReports = () => {
         return;
       }
 
-      let url = `http://localhost:8080/api/attendance-explanations/report?page=${page}&size=${rowsPerPage}`;
+      let url = `http://localhost:8088/api/attendance-explanations/report?page=${page}&size=${rowsPerPage}`;
       if (startDate) url += `&startDate=${startDate.format('YYYY-MM-DD')}`;
       if (endDate) url += `&endDate=${endDate.format('YYYY-MM-DD')}`;
       if (status) url += `&status=${status}`;
@@ -82,8 +82,8 @@ const ExplanationReports = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      let reasonUrl = `http://localhost:8080/api/attendance-explanations/statistics/reason`;
-      let statusUrl = `http://localhost:8080/api/attendance-explanations/statistics/status`;
+      let reasonUrl = `http://localhost:8088/api/attendance-explanations/statistics/reason`;
+      let statusUrl = `http://localhost:8088/api/attendance-explanations/statistics/status`;
       if (startDate) {
         reasonUrl += `?startDate=${startDate.format('YYYY-MM-DD')}`;
         statusUrl += `?startDate=${startDate.format('YYYY-MM-DD')}`;
@@ -110,7 +110,7 @@ const ExplanationReports = () => {
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem('token');
-      let url = `http://localhost:8080/api/attendance-explanations/export/excel`;
+      let url = `http://localhost:8088/api/attendance-explanations/export/excel`;
       if (startDate) url += `?startDate=${startDate.format('YYYY-MM-DD')}`;
       if (endDate) url += `${startDate ? '&' : '?'}endDate=${endDate.format('YYYY-MM-DD')}`;
       if (status) url += `${startDate || endDate ? '&' : '?'}status=${status}`;
@@ -295,7 +295,7 @@ const ExplanationReports = () => {
                               try {
                                 const token = localStorage.getItem('token');
                                 const userId = JSON.parse(atob(token.split('.')[1])).id;
-                                await axios.put(`http://localhost:8080/api/attendance-explanations/${report.id}/approve?approverId=${userId}`, {}, {
+                                await axios.put(`http://localhost:8088/api/attendance-explanations/${report.id}/approve?approverId=${userId}`, {}, {
                                   headers: { 'Authorization': `Bearer ${token}` }
                                 });
                                 fetchReports();
@@ -315,7 +315,7 @@ const ExplanationReports = () => {
                               try {
                                 const token = localStorage.getItem('token');
                                 const userId = JSON.parse(atob(token.split('.')[1])).id;
-                                await axios.put(`http://localhost:8080/api/attendance-explanations/${report.id}/reject?approverId=${userId}`, {}, {
+                                await axios.put(`http://localhost:8088/api/attendance-explanations/${report.id}/reject?approverId=${userId}`, {}, {
                                   headers: { 'Authorization': `Bearer ${token}` }
                                 });
                                 fetchReports();

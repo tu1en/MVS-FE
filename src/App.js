@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import "./App.css";
 import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
+import TakeAttendancePage from './pages/teacher/TakeAttendancePage.jsx';
 import "./styles/vietnamese-fonts.css";
 
 import Layout from "./components/Layout.jsx";
@@ -18,15 +19,23 @@ import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from './context/AuthContext.js';
 
-import AccountantDashboard from './pages/AccountantDashboard.jsx';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest.jsx';
+import FinancialReports from './pages/accountant/FinancialReports.jsx';
+import InvoiceManagement from './pages/accountant/InvoiceManagement.jsx';
+import PaymentTracking from './pages/accountant/PaymentTracking.jsx';
+import StudentAccounts from './pages/accountant/StudentAccounts.jsx';
+import AccountantDashboard from './pages/AccountantDashboard.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 
-import SystemSettingsPage from './components/admin/SystemSettingsPage.jsx';
+// NEW: Admin components
+import SystemWorkflowEditor from './components/admin/SystemWorkflowEditor.jsx';
+import AdminSystemDashboard from './pages/Admin/AdminSystemDashboard.jsx';
+
 import AuditLogsPage from './pages/Admin/AuditLogsPage.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
-import TeacherDashboard from './pages/TeacherDashboard.jsx';
+import SystemSettingsPage from './pages/SystemSettingsPage.jsx';
+import TeacherDashboard from './pages/teacher/TeacherDashboard.jsx';
 
 import LiveClassroomPage from "./pages/LiveClassroomPage.jsx";
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -35,7 +44,6 @@ import TeacherEditProfile from "./pages/teacher/EditProfile.jsx";
 import GradeHomework from "./pages/teacher/GradeHomework.jsx";
 import RealtimeAttendancePage from './pages/teacher/RealtimeAttendancePage.jsx';
 import TeacherSchedule from "./pages/teacher/Schedule.jsx";
-import TakeAttendancePage from './pages/teacher/TakeAttendancePage.jsx';
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
@@ -46,22 +54,23 @@ import Whiteboard from './pages/teacher/Whiteboard.jsx';
 import UnifiedStudentMessaging from "./pages/UnifiedStudentMessaging.jsx";
 import UnifiedTeacherMessaging from "./pages/UnifiedTeacherMessaging.jsx";
 
-import ManagerReports from "./pages/manager/ManagerReports.js";
-import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
-import HRManagementPage from "./pages/manager/HRManagementPage.jsx";
 import AllStaffAttendanceLogs from "./pages/manager/AllStaffAttendanceLogs.jsx";
-import DailyShiftAttendance from "./pages/manager/DailyShiftAttendance.jsx";
-import ExplanationReports from "./pages/manager/ExplanationReports.jsx";
-import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
-import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
-import PersonalAttendanceHistory from "./pages/manager/PersonalAttendanceHistory.jsx";
-import TeacherAttendanceStatus from "./pages/manager/TeacherAttendanceStatus.jsx";
 import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
 import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
-import ManageCourses from "./pages/manager/ManageCourses.jsx";
-import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
+import DailyShiftAttendance from "./pages/manager/DailyShiftAttendance.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
+import ExplanationReports from "./pages/manager/ExplanationReports.jsx";
+import HRManagementPage from "./pages/manager/HRManagementPage.jsx";
+import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
+import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
+import ManageCourses from "./pages/manager/ManageCourses.jsx";
+import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
+import ManagerReports from "./pages/manager/ManagerReports.jsx";
+import ManagerShifts from "./pages/manager/ManagerShifts.jsx";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
+import ManageUserAccounts from "./pages/manager/ManageUserAccounts.jsx";
+import PersonalAttendanceHistory from "./pages/manager/PersonalAttendanceHistory.jsx";
+import TeacherAttendanceStatus from "./pages/manager/TeacherAttendanceStatus.jsx";
 
 import AccountList from "./pages/AccountList.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -73,7 +82,7 @@ import StudentAttendanceHub from "./pages/student/StudentAttendanceHub.jsx";
 import StudentCourseDetail from "./pages/student/StudentCourseDetail.jsx";
 import StudentGradesAttendance from "./pages/student/StudentGradesAttendance.jsx";
 
-import AssignmentsPageNew from "./pages/AssignmentsPageNew.jsx";
+import AssignmentsPageNew from "./pages/AssignmentsPage.jsx";
 import AttendancePageNew from "./pages/AttendancePageNew.jsx";
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import HomePage from "./pages/HomePage/index.jsx";
@@ -81,15 +90,15 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 // Additional page imports for missing routes
+import BlogPages from "./pages/BlogPages.jsx";
+import CommunicationPage from "./pages/CommunicationPage.jsx";
+import LecturesPageGeneral from "./pages/LecturesPage.jsx";
+import RequestList from "./pages/RequestList.jsx";
+import StudentSchedule from "./pages/student/Schedule.jsx";
 import StudentAssignments from "./pages/student/StudentAssignments.jsx";
 import StudentMaterials from "./pages/student/StudentMaterials.jsx";
-import StudentSchedule from "./pages/student/Schedule.jsx";
 import StudentAccomplishments from "./pages/StudentAccomplishments.jsx";
 import AssignHomework from "./pages/teacher/AssignHomework.jsx";
-import LecturesPageGeneral from "./pages/LecturesPage.jsx";
-import BlogPages from "./pages/BlogPages.jsx";
-import RequestList from "./pages/RequestList.jsx";
-import CommunicationPage from "./pages/CommunicationPage.jsx";
 
 const RoleBasedRedirect = ({ targetPath }) => {
   const { user, loading } = useAuth();
@@ -121,10 +130,15 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <AntApp>
-        <Router>
-          <Layout>
+    <AntApp>
+      <AuthProvider>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+            <Layout>
             <Routes>
               <Route path="/login" element={<LoginScreen />} />
               <Route path="/select-role" element={<SelectRoleLogin />} />
@@ -178,11 +192,20 @@ function App() {
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
               <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditLogsPage /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemSettingsPage /></ProtectedRoute>} />
-              
-              {/* Missing Admin Routes */}
+
+              {/* NEW: Workflow Editor Route */}
+              <Route path="/admin/workflows" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemWorkflowEditor /></ProtectedRoute>} />
+
+              {/* NEW: System Dashboard Route - Dashboard với monitoring chi tiết */}
+              <Route path="/admin/system-dashboard" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminSystemDashboard /></ProtectedRoute>} />
+
+              {/* Existing Admin Routes */}
               <Route path="/admin/courses" element={<ProtectedRoute allowedRoles={["ADMIN"]}><ManageCourses /></ProtectedRoute>} />
               <Route path="/admin/hr" element={<ProtectedRoute allowedRoles={["ADMIN"]}><HRManagementPage /></ProtectedRoute>} />
               <Route path="/admin/account" element={<ProtectedRoute allowedRoles={["ADMIN"]}><RoleBasedRedirect targetPath="edit-profile" /></ProtectedRoute>} />
+              
+              {/* Add ADMIN edit profile route */}
+              <Route path="/admin/edit-profile" element={<ProtectedRoute allowedRoles={["ADMIN"]}><ManagerEditProfile /></ProtectedRoute>} />
 
               {/* ---------------- MANAGER ROUTES ---------------- */}
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
@@ -211,14 +234,20 @@ function App() {
               <Route path="/manager/edit-profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
               <Route path="/manager/messages" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               
-              {/* Missing Manager Routes */}
-              <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
+              {/* Manager Shifts Management */}
+              <Route path="/manager/shifts" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><ManagerShifts /></ProtectedRoute>} />
+              
+              {/* Updated Manager Routes - removed duplicate request-list as it's covered in /manager/users */}
               <Route path="/manager/communications" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CommunicationPage /></ProtectedRoute>} />
               <Route path="/manager/account" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RoleBasedRedirect targetPath="edit-profile" /></ProtectedRoute>} />
 
               {/* ---------------- ACCOUNTANT ROUTES ---------------- */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
+              <Route path="/accountant/invoices" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><InvoiceManagement /></ProtectedRoute>} />
+              <Route path="/accountant/payments" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PaymentTracking /></ProtectedRoute>} />
+              <Route path="/accountant/reports" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><FinancialReports /></ProtectedRoute>} />
+              <Route path="/accountant/students" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><StudentAccounts /></ProtectedRoute>} />
 
               {/* GENERIC */}
               <Route path="/change-password" element={<ChangePasswordPage />} />
@@ -226,8 +255,8 @@ function App() {
             </Routes>
           </Layout>
         </Router>
-      </AntApp>
-    </AuthProvider>
+      </AuthProvider>
+    </AntApp>
   );
 }
 

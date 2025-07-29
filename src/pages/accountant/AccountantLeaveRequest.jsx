@@ -1,33 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Card, 
-  Tabs, 
-  Button, 
-  Table, 
-  Tag, 
-  Modal, 
-  Form, 
-  DatePicker, 
-  InputNumber, 
-  Input, 
-  message, 
-  Space,
-  Descriptions,
-  Tooltip,
-  Row,
-  Col,
-  Statistic
-} from 'antd';
-import { 
-  PlusOutlined, 
-  InfoCircleOutlined,
+import {
   CalendarOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  InfoCircleOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
-import api from '../../services/api';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Form,
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Row,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip
+} from 'antd';
 import moment from 'moment';
+import React, { useCallback, useEffect, useState } from 'react';
+import api from '../../services/api';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;

@@ -346,7 +346,7 @@ const StudentMaterials = () => {
         >
           {enrolledCourses.map((course) => (
             <option key={course.id} value={course.id.toString()}>
-              {course.name} - {course.teacherName}
+              {course.classroomName} - {course.teacherName}
             </option>
           ))}
         </select>
@@ -395,7 +395,7 @@ const StudentMaterials = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-blue-600" />
-                {selectedCourse.name}
+                {selectedCourse.classroomName}
               </CardTitle>
             </CardHeader>
             <CardContent>

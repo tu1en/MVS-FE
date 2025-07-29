@@ -58,6 +58,20 @@ class StudentService {
   }
 
   /**
+   * Get student dashboard statistics
+   * @returns {Promise<Object>} Dashboard statistics
+   */
+  static async getDashboardStats() {
+    try {
+      const response = await apiClient.get('/students/dashboard-stats');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get student timetable
    * @param {number} studentId - Student ID (optional)
    * @param {Object} params - Query parameters

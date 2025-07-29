@@ -1,28 +1,28 @@
 import {
-    BookOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    DownloadOutlined,
-    ExclamationCircleOutlined,
-    FileTextOutlined,
-    UploadOutlined
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Descriptions,
-    Divider,
-    Empty,
-    Form,
-    Input,
-    message,
-    Modal,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Typography,
-    Upload
+  Button,
+  Card,
+  Descriptions,
+  Divider,
+  Empty,
+  Form,
+  Input,
+  message,
+  Modal,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+  Upload
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
@@ -120,8 +120,14 @@ const StudentAssignments = () => {
     const dueDate = dayjs(assignment.dueDate);
     const submission = submissions[assignment.id];
     
-    if (submission) {
-      if (submission.isGraded) {
+    // Kiểm tra xem submission có nội dung thực tế không
+    const hasActualSubmit = submission && 
+      (submission.content?.trim().length > 0 || 
+       (submission.attachments && submission.attachments.length > 0) ||
+       submission.fileSubmissionUrl);
+    
+    if (submission && hasActualSubmit) {
+      if (submission.isGraded && submission.score !== null && submission.score !== undefined) {
         return <Tag color="blue" icon={<CheckCircleOutlined />}>Đã chấm điểm</Tag>;
       }
       
@@ -489,6 +495,8 @@ const StudentAssignments = () => {
                   </p>
                   <p className="ant-upload-hint">
                     Hỗ trợ các định dạng: PDF, DOC, DOCX, ZIP
+                    <br />
+                    Hỗ trợ file tối đa 10mb
                   </p>
                 </Dragger>
               </Form.Item>

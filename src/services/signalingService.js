@@ -36,7 +36,7 @@ class SignalingService {
       this.roomId = roomId;
       this.userId = userId;
 
-      const serverUrl = options.serverUrl || 'http://localhost:8088/ws';
+      const serverUrl = options.serverUrl || 'ws://localhost:8088/videochat';
       
       console.log(`🔌 Connecting to signaling server: ${serverUrl}`);
       console.log(`📍 Room: ${roomId}, User: ${userId}`);

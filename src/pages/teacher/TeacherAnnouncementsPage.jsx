@@ -80,11 +80,10 @@ const TeacherAnnouncementsPage = () => {
 
   const fetchClassrooms = async () => {
     try {
-      const response = await ApiService.GetClasses();
-      const teacherClassrooms = response.filter(
-        (classroom) => classroom.teacherId === parseInt(teacherId)
-      );
-      setClassrooms(teacherClassrooms);
+      const response = await ApiService.GetTeacherClasses();
+      // The GetTeacherClasses method already returns classrooms for the current teacher
+      // so we don't need to filter based on teacherId
+      setClassrooms(response);
     } catch (error) {
       console.error('Error fetching classrooms:', error);
     }

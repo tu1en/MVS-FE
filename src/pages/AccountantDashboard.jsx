@@ -3,7 +3,7 @@ import { Card, Col, message, Row, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import api from '../utils/api.js';
+import api from '../services/api.js';
 
 const { Title } = Typography;
 
@@ -67,9 +67,9 @@ const AccountantDashboard = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2} style={{ marginBottom: 24 }}>Accountant Dashboard</Title>
+      <Title level={2} style={{ marginBottom: 24 }}>Bảng Điều Khiển Kế Toán</Title>
 
-      {/* Leave Statistics */}
+      {/* Thống kê nghỉ phép */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
@@ -93,12 +93,12 @@ const AccountantDashboard = () => {
         </Col>
       </Row>
       
-      {/* Summary Statistics */}
+      {/* Thống kê tài chính */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
             <Statistic
-              title="Total Invoices"
+              title="Tổng Hóa Đơn"
               value={dashboardData?.financialStats?.totalInvoices ?? 0}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: '#3f8600' }}
@@ -108,7 +108,7 @@ const AccountantDashboard = () => {
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
             <Statistic
-              title="Paid Invoices"
+              title="Hóa Đơn Đã Thanh Toán"
               value={dashboardData?.financialStats?.paidInvoices ?? 0}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -118,7 +118,7 @@ const AccountantDashboard = () => {
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
             <Statistic
-              title="Pending Payments"
+              title="Thanh Toán Chờ Xử Lý"
               value={dashboardData?.financialStats?.pendingPayments ?? 0}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: '#faad14' }}
@@ -128,7 +128,7 @@ const AccountantDashboard = () => {
         <Col xs={24} sm={12} md={6}>
           <Card loading={loading} bordered={false}>
             <Statistic
-              title="Overdue Payments"
+              title="Thanh Toán Quá Hạn"
               value={dashboardData?.financialStats?.overduePayments ?? 0}
               prefix={<TeamOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
@@ -137,54 +137,54 @@ const AccountantDashboard = () => {
         </Col>
       </Row>
 
-      {/* Navigation Cards */}
+      {/* Thẻ điều hướng */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
           <Card
             hoverable
-            title="Invoice Management"
+            title="Quản Lý Hóa Đơn"
             bordered={false}
             style={{ textAlign: 'center' }}
             onClick={() => handleCardClick('/accountant/invoices')}
           >
             <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Manage student invoices and payments</div>
+            <div>Quản lý hóa đơn và thanh toán của học sinh</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card
             hoverable
-            title="Payment Tracking"
+            title="Theo Dõi Thanh Toán"
             bordered={false}
             style={{ textAlign: 'center' }}
             onClick={() => handleCardClick('/accountant/payments')}
           >
             <DollarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Track payment status and history</div>
+            <div>Theo dõi trạng thái và lịch sử thanh toán</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card
             hoverable
-            title="Financial Reports"
+            title="Báo Cáo Tài Chính"
             bordered={false}
             style={{ textAlign: 'center' }}
             onClick={() => handleCardClick('/accountant/reports')}
           >
             <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Generate financial reports</div>
+            <div>Tạo báo cáo tài chính</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card
             hoverable
-            title="Student Accounts"
+            title="Tài Khoản Học Sinh"
             bordered={false}
             style={{ textAlign: 'center' }}
             onClick={() => handleCardClick('/accountant/students')}
           >
             <TeamOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Manage student financial accounts</div>
+            <div>Quản lý tài khoản tài chính của học sinh</div>
           </Card>
         </Col>
       </Row>

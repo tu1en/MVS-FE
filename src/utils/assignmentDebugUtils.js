@@ -6,13 +6,12 @@
 import AssignmentService from '../services/assignmentService';
 
 class AssignmentDebugUtils {
-  static isDebugMode = true;
 
   /**
    * Test all assignment service methods with real API calls
    */
   static async runComprehensiveTest() {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('🚀 Starting comprehensive assignment functionality test...');
     
@@ -78,7 +77,7 @@ class AssignmentDebugUtils {
    * Test assignment creation with various data scenarios
    */
   static async testAssignmentCreation(classroomId) {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('🆕 Testing assignment creation scenarios...');
     
@@ -136,7 +135,7 @@ class AssignmentDebugUtils {
    * Test grading functionality with various scenarios
    */
   static async testGradingFunctionality(assignmentId, submissionId) {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('📊 Testing grading functionality...');
 
@@ -197,7 +196,7 @@ class AssignmentDebugUtils {
    * Analyze assignment data structure and identify potential issues
    */
   static analyzeAssignmentData(assignments) {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('🔍 Analyzing assignment data structure...');
 
@@ -266,7 +265,7 @@ class AssignmentDebugUtils {
    * Monitor assignment operations in real-time
    */
   static startOperationMonitoring() {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('👀 Starting assignment operation monitoring...');
 
@@ -325,7 +324,7 @@ class AssignmentDebugUtils {
    * Generate a comprehensive debug report
    */
   static async generateDebugReport() {
-    if (!this.isDebugMode) return;
+    if (!AssignmentDebugUtils.isDebugMode) return;
 
     console.log('📄 Generating comprehensive assignment debug report...');
 
@@ -353,6 +352,9 @@ class AssignmentDebugUtils {
     return report;
   }
 }
+
+// Set debug mode property
+AssignmentDebugUtils.isDebugMode = true;
 
 // Export for use in other files
 export default AssignmentDebugUtils;

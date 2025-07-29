@@ -1,381 +1,397 @@
-import axiosInstance from '../config/axiosInstance';
+import api from './api';
 
-/**
- * Material Service for handling course materials and file operations
- */
-class MaterialService {
-
+const MaterialService = {
+  
+  // ================= CORE CRUD OPERATIONS ================= //
+  
   /**
-   * Upload a new material
-   * @param {FormData} formData - File data with metadata
-   * @param {Function} onProgress - Progress callback function
-   * @returns {Promise<Object>} Upload result
+   * Get all materials with pagination
    */
-  static async uploadMaterial(formData, onProgress = null) {
+  async getAllMaterials(page = 0, size = 10) {
     try {
-      // Validate required parameters
-      const classroomId = formData.get('classroomId');
-      const uploadedBy = formData.get('uploadedBy');
-      const file = formData.get('file');
-      
-      console.log('Debug uploadMaterial params:', { 
-        classroomId: typeof classroomId === 'object' ? 'File object' : classroomId,
-        uploadedBy,
-        hasFile: !!file,
-        fileType: file ? file.type : 'N/A',
-        fileName: file ? file.name : 'N/A'
-      });
-      
-      // Validate file
-      if (!file) {
-        throw new Error('No file attached for upload');
-      }
-      
-      // Validate classroom ID
-      if (!classroomId) {
-        throw new Error('Missing classroomId parameter');
-      }
-      
-      const parsedClassroomId = parseInt(classroomId);
-      if (isNaN(parsedClassroomId)) {
-        throw new Error(`Invalid classroomId parameter: ${classroomId}`);
-      }
-      
-      // Validate user ID
-      if (!uploadedBy) {
-        throw new Error('Missing uploadedBy parameter');
-      }
-      
-      const parsedUploadedBy = parseInt(uploadedBy);
-      if (isNaN(parsedUploadedBy)) {
-        throw new Error(`Invalid uploadedBy parameter: ${uploadedBy}`);
-      }
-      
-      // Ensure values are integers in the FormData
-      formData.set('classroomId', parsedClassroomId);
-      formData.set('uploadedBy', parsedUploadedBy);
-      
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await api.get(`/materials?page=${page}&size=${size}`);
+      return {
+        data: response.data.content || response.data,
+        totalPages: response.data.totalPages || 1,
+        totalElements: response.data.totalElements || 0
       };
-
-      if (onProgress) {
-        config.onUploadProgress = (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(progress);
-        };
-      }
-
-      console.log('Making API request to upload material');
-      const response = await axiosInstance.post('/materials/upload', formData, config);
-      console.log('Upload response:', response.data);
-      return response.data;
     } catch (error) {
-      console.error('Error uploading material:', error);
-      if (error.response) {
-        console.error('Server error details:', error.response.data);
-      }
+      console.error('Error fetching all materials:', error);
       throw error;
     }
-  }
-
-  /**
-   * Get all materials with pagination and filtering
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Object>} Materials list with pagination
-   */
-  static async getMaterials(params = {}) {
-    try {
-      const response = await axiosInstance.get('/materials', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching materials:', error);
-      throw error;
-    }
-  }
+  },
 
   /**
    * Get material by ID
-   * @param {number} materialId - Material ID
-   * @returns {Promise<Object>} Material details
    */
-  static async getMaterialById(materialId) {
+  async getMaterialById(id) {
     try {
-      const response = await axiosInstance.get(`/materials/${materialId}`);
+      const response = await api.get(`/materials/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching material:', error);
+      console.error(`Error fetching material ${id}:`, error);
       throw error;
     }
-  }
+  },
 
   /**
-   * Download a material
-   * @param {number} materialId - Material ID
-   * @returns {Promise<Blob>} File blob
+   * **MAIN METHOD: Get materials by course/classroom ID**
+   * This is called by StudentMaterials.jsx
    */
-  static async downloadMaterial(materialId) {
+  async getMaterialsByCourse(courseId) {
     try {
-      console.log(`Đang tải xuống tài liệu ID: ${materialId}`);
-
-      // Sử dụng endpoint chính xác duy nhất
-      const response = await axiosInstance.get(`/materials/download/${materialId}`, {
-        responseType: 'blob',
-        timeout: 30000 // 30 seconds timeout for downloads
-      });
-
-      console.log(`Tải xuống thành công tài liệu ID: ${materialId}, kích thước: ${response.data.size} bytes`);
-
-      // Kiểm tra nếu response là blob rỗng
-      if (!response.data || response.data.size === 0) {
-        throw new Error('File tải xuống rỗng hoặc không có nội dung');
-      }
-
-      return response.data;
-
+      console.log(`📚 [MaterialService] Fetching materials for course: ${courseId}`);
+      
+      // Try main endpoint first
+      const response = await api.get(`/materials/classroom/${courseId}`);
+      console.log('📄 Materials response:', response.data);
+      
+      // Handle different response formats
+      let materials = Array.isArray(response.data) ? response.data : 
+                     response.data.data ? response.data.data : 
+                     response.data.content ? response.data.content : [];
+      
+      // Transform materials to ensure consistent format
+      const transformedMaterials = materials.map(material => ({
+        id: material.id,
+        title: material.title || material.name || 'Untitled Document',
+        description: material.description || '',
+        fileName: material.fileName || material.originalFileName || 'unknown_file',
+        originalFileName: material.originalFileName || material.fileName,
+        fileSize: material.fileSize || 0,
+        fileType: material.fileType || material.contentType || 'application/octet-stream',
+        downloadUrl: material.downloadUrl || material.fileUrl,
+        downloadCount: material.downloadCount || 0,
+        createdAt: material.createdAt || material.uploadedAt,
+        updatedAt: material.updatedAt,
+        classroomId: material.classroomId || courseId,
+        uploadedBy: material.uploadedBy || material.teacher,
+        isPublic: material.isPublic !== false, // Default to true
+        status: material.status || 'ACTIVE'
+      }));
+      
+      console.log(`✅ [MaterialService] Found ${transformedMaterials.length} materials for course ${courseId}`);
+      return transformedMaterials;
+      
     } catch (error) {
-      console.error('Lỗi tải xuống tài liệu:', error);
+      console.error(`❌ Error fetching materials for course ${courseId}:`, error);
+      
+      // Try alternative endpoints
+      try {
+        console.log('🔄 Trying alternative endpoint...');
+        const fallbackResponse = await api.get(`/classroom-management/classrooms/${courseId}/materials`);
+        const fallbackMaterials = Array.isArray(fallbackResponse.data) ? fallbackResponse.data : [];
+        
+        return fallbackMaterials.map(material => ({
+          id: material.id,
+          title: material.title || 'Untitled Document',
+          description: material.description || '',
+          fileName: material.fileName || 'unknown_file',
+          originalFileName: material.originalFileName || material.fileName,
+          fileSize: material.fileSize || 0,
+          fileType: material.fileType || 'application/octet-stream',
+          downloadUrl: material.downloadUrl,
+          downloadCount: material.downloadCount || 0,
+          createdAt: material.createdAt,
+          updatedAt: material.updatedAt,
+          classroomId: courseId,
+          uploadedBy: material.uploadedBy,
+          isPublic: material.isPublic !== false,
+          status: material.status || 'ACTIVE'
+        }));
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback endpoint also failed:', fallbackError);
+        // Return empty array instead of throwing to prevent component crash
+        return [];
+      }
+    }
+  },
 
-      // Xử lý các loại lỗi khác nhau
-      if (error.response) {
-        const status = error.response.status;
-        const errorMessage = error.response.headers['x-error-message'] || 'Lỗi không xác định';
-
-        console.error(`HTTP Error ${status}:`, errorMessage);
-
-        switch (status) {
-          case 404:
-            throw new Error('❌ Tài liệu không tồn tại hoặc đã bị xóa. Vui lòng liên hệ giáo viên để được hỗ trợ.');
-          case 403:
-            throw new Error('🔒 Bạn không có quyền truy cập tài liệu này. Vui lòng kiểm tra quyền truy cập.');
-          case 500:
-            throw new Error(`💥 Lỗi server: ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ quản trị viên.`);
-          case 413:
-            throw new Error('📁 File quá lớn để tải xuống. Vui lòng liên hệ giáo viên.');
-          case 429:
-            throw new Error('⏰ Quá nhiều yêu cầu tải xuống. Vui lòng đợi một chút rồi thử lại.');
-          default:
-            throw new Error(`❌ Lỗi tải xuống (Mã lỗi: ${status}): ${errorMessage}`);
+  /**
+   * Create new material
+   */
+  async createMaterial(materialData) {
+    try {
+      const response = await api.post('/materials', materialData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-      } else if (error.request) {
-        console.error('Network error:', error.request);
-        throw new Error('🌐 Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.');
-      } else if (error.code === 'ECONNABORTED') {
-        throw new Error('⏱️ Quá thời gian chờ tải xuống. File có thể quá lớn, vui lòng thử lại.');
-      } else {
-        console.error('Unknown error:', error.message);
-        throw new Error(`❓ Lỗi không xác định: ${error.message}. Vui lòng thử lại hoặc liên hệ hỗ trợ.`);
-      }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating material:', error);
+      throw error;
     }
-  }
+  },
 
   /**
-   * Get materials by course
-   * @param {number} courseId - Course ID
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Array>} Course materials
+   * Update material
    */
-  static async getMaterialsByCourse(courseId, params = {}) {
+  async updateMaterial(id, materialData) {
     try {
-      console.log(`Đang lấy danh sách tài liệu cho khóa học ID: ${courseId}`);
-
-      // Sử dụng endpoint chính xác duy nhất
-      const response = await axiosInstance.get(`/materials/course/${courseId}`, { params });
-
-      console.log(`Lấy thành công ${response.data.length} tài liệu cho khóa học ID: ${courseId}`);
+      const response = await api.put(`/materials/${id}`, materialData);
       return response.data;
-
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách tài liệu khóa học:', error);
-
-      // Xử lý lỗi và trả về mảng rỗng để tránh crash UI
-      if (error.response) {
-        const status = error.response.status;
-        console.error(`Lỗi HTTP ${status}: ${error.response.data?.message || 'Không xác định'}`);
-      } else if (error.request) {
-        console.error('Không thể kết nối đến server');
-      }
-
-      // Trả về mảng rỗng để UI có thể hiển thị "Không có tài liệu"
-      return [];
+      console.error(`Error updating material ${id}:`, error);
+      throw error;
     }
-  }
+  },
+
+  /**
+   * Delete material
+   */
+  async deleteMaterial(id) {
+    try {
+      await api.delete(`/materials/${id}`);
+      return { success: true };
+    } catch (error) {
+      console.error(`Error deleting material ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // ================= FILE OPERATIONS ================= //
+
+  /**
+   * **DOWNLOAD MATERIAL - Called by StudentMaterials.jsx**
+   */
+  async downloadMaterial(materialId) {
+    try {
+      console.log(`📥 [MaterialService] Starting download for material: ${materialId}`);
+      
+      const response = await api.get(`/materials/${materialId}/download`, {
+        responseType: 'blob',  // Important for file downloads
+        headers: {
+          'Accept': 'application/octet-stream'
+        }
+      });
+      
+      console.log(`✅ [MaterialService] Download successful, blob size: ${response.data.size}`);
+      return response.data; // Return the blob
+      
+    } catch (error) {
+      console.error(`❌ Error downloading material ${materialId}:`, error);
+      
+      // Try alternative download endpoint
+      try {
+        console.log('🔄 Trying alternative download endpoint...');
+        const fallbackResponse = await api.get(`/files/download/${materialId}`, {
+          responseType: 'blob'
+        });
+        
+        return fallbackResponse.data;
+        
+      } catch (fallbackError) {
+        console.error('❌ Alternative download also failed:', fallbackError);
+        throw new Error(`Không thể tải xuống tài liệu. ${error.response?.data?.message || error.message}`);
+      }
+    }
+  },
+
+  /**
+   * Upload file for material
+   */
+  async uploadFile(file, materialData = {}) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Add additional material data
+      Object.keys(materialData).forEach(key => {
+        if (materialData[key] !== null && materialData[key] !== undefined) {
+          formData.append(key, materialData[key]);
+        }
+      });
+      
+      const response = await api.post('/materials/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+  },
+
+  // ================= SEARCH & FILTER OPERATIONS ================= //
 
   /**
    * Search materials
-   * @param {string} query - Search query
-   * @param {Object} filters - Additional filters
-   * @returns {Promise<Array>} Search results
    */
-  static async searchMaterials(query, filters = {}) {
+  async searchMaterials(keyword, page = 0, size = 10) {
     try {
-      const params = { query, ...filters };
-      const response = await axiosInstance.get('/materials/search', { params });
-      return response.data;
+      const response = await api.get(`/materials/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`);
+      return {
+        data: response.data.content || response.data,
+        totalPages: response.data.totalPages || 1,
+        totalElements: response.data.totalElements || 0
+      };
     } catch (error) {
       console.error('Error searching materials:', error);
       throw error;
     }
-  }
+  },
 
   /**
-   * Update material metadata
-   * @param {number} materialId - Material ID
-   * @param {Object} updateData - Updated material data
-   * @returns {Promise<Object>} Updated material
+   * Get materials by teacher
    */
-  static async updateMaterial(materialId, updateData) {
+  async getMaterialsByTeacher(teacherId, page = 0, size = 10) {
     try {
-      const response = await axiosInstance.put(`/materials/${materialId}`, updateData);
-      return response.data;
+      const response = await api.get(`/materials/teacher/${teacherId}?page=${page}&size=${size}`);
+      return {
+        data: response.data.content || response.data,
+        totalPages: response.data.totalPages || 1,
+        totalElements: response.data.totalElements || 0
+      };
     } catch (error) {
-      console.error('Error updating material:', error);
+      console.error(`Error fetching materials for teacher ${teacherId}:`, error);
       throw error;
     }
-  }
+  },
 
   /**
-   * Delete a material
-   * @param {number} materialId - Material ID
-   * @returns {Promise<Object>} Deletion result
+   * Get materials by file type
    */
-  static async deleteMaterial(materialId) {
+  async getMaterialsByType(fileType, page = 0, size = 10) {
     try {
-      const response = await axiosInstance.delete(`/materials/${materialId}`);
-      return response.data;
+      const response = await api.get(`/materials/type/${fileType}?page=${page}&size=${size}`);
+      return {
+        data: response.data.content || response.data,
+        totalPages: response.data.totalPages || 1,
+        totalElements: response.data.totalElements || 0
+      };
     } catch (error) {
-      console.error('Error deleting material:', error);
+      console.error(`Error fetching materials by type ${fileType}:`, error);
       throw error;
     }
-  }
+  },
+
+  // ================= UTILITY METHODS ================= //
 
   /**
-   * Get material categories
-   * @returns {Promise<Array>} List of categories
+   * Get file icon class based on file extension
    */
-  static async getCategories() {
-    try {
-      const response = await axiosInstance.get('/materials/categories');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      throw error;
-    }
-  }
+  getFileIcon(fileName) {
+    if (!fileName) return 'file';
+    
+    const extension = fileName.split('.').pop().toLowerCase();
+    const iconMap = {
+      'pdf': 'file-pdf',
+      'doc': 'file-word',
+      'docx': 'file-word',
+      'xls': 'file-excel',
+      'xlsx': 'file-excel',
+      'ppt': 'file-powerpoint',
+      'pptx': 'file-powerpoint',
+      'jpg': 'file-image',
+      'jpeg': 'file-image',
+      'png': 'file-image',
+      'gif': 'file-image',
+      'mp4': 'file-video',
+      'avi': 'file-video',
+      'mov': 'file-video',
+      'mp3': 'file-audio',
+      'wav': 'file-audio',
+      'zip': 'file-archive',
+      'rar': 'file-archive',
+      '7z': 'file-archive'
+    };
+    
+    return iconMap[extension] || 'file';
+  },
 
   /**
-   * Create new category
-   * @param {Object} categoryData - Category data
-   * @returns {Promise<Object>} Created category
+   * Format file size for display
    */
-  static async createCategory(categoryData) {
-    try {
-      const response = await axiosInstance.post('/materials/categories', categoryData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating category:', error);
-      throw error;
-    }
-  }
+  formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  },
 
   /**
-   * Get materials by category
-   * @param {number} categoryId - Category ID
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Array>} Materials in category
+   * Validate file type
    */
-  static async getMaterialsByCategory(categoryId, params = {}) {
-    try {
-      const response = await axiosInstance.get(`/materials/category/${categoryId}`, { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching materials by category:', error);
-      throw error;
-    }
-  }
+  isValidFileType(fileName, allowedTypes = []) {
+    if (!fileName) return false;
+    if (allowedTypes.length === 0) return true; // No restrictions
+    
+    const extension = fileName.split('.').pop().toLowerCase();
+    return allowedTypes.includes(extension);
+  },
 
   /**
-   * Share material with users
-   * @param {number} materialId - Material ID
-   * @param {Array} userIds - List of user IDs to share with
-   * @returns {Promise<Object>} Share result
+   * Get MIME type from file extension
    */
-  static async shareMaterial(materialId, userIds) {
-    try {
-      const response = await axiosInstance.post(`/materials/${materialId}/share`, { userIds });
-      return response.data;
-    } catch (error) {
-      console.error('Error sharing material:', error);
-      throw error;
-    }
-  }
+  getMimeType(fileName) {
+    if (!fileName) return 'application/octet-stream';
+    
+    const extension = fileName.split('.').pop().toLowerCase();
+    const mimeTypes = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'mp4': 'video/mp4',
+      'avi': 'video/x-msvideo',
+      'mov': 'video/quicktime',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'zip': 'application/zip',
+      'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed'
+    };
+    
+    return mimeTypes[extension] || 'application/octet-stream';
+  },
+
+  // ================= ERROR HANDLING ================= //
 
   /**
-   * Get shared materials for current user
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Array>} Shared materials
+   * Handle API errors gracefully
    */
-  static async getSharedMaterials(params = {}) {
-    try {
-      const response = await axiosInstance.get('/materials/shared', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching shared materials:', error);
-      throw error;
+  handleApiError(error, defaultMessage = 'An error occurred') {
+    if (error.response) {
+      const status = error.response.status;
+      const message = error.response.data?.message || error.response.data?.error || defaultMessage;
+      
+      switch (status) {
+        case 401:
+          return 'Authentication required. Please log in again.';
+        case 403:
+          return 'You do not have permission to access this material.';
+        case 404:
+          return 'Material not found.';
+        case 413:
+          return 'File size too large.';
+        case 415:
+          return 'File type not supported.';
+        case 500:
+          return 'Server error. Please try again later.';
+        default:
+          return message;
+      }
+    } else if (error.request) {
+      return 'Network error. Please check your connection.';
+    } else {
+      return error.message || defaultMessage;
     }
   }
-
-  /**
-   * Get material usage statistics
-   * @param {number} materialId - Material ID
-   * @returns {Promise<Object>} Usage statistics
-   */
-  static async getMaterialStats(materialId) {
-    try {
-      const response = await axiosInstance.get(`/materials/${materialId}/stats`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching material stats:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create material version (for updates)
-   * @param {number} materialId - Original material ID
-   * @param {FormData} formData - New version file data
-   * @returns {Promise<Object>} New version result
-   */
-  static async createMaterialVersion(materialId, formData) {
-    try {
-      const response = await axiosInstance.post(`/materials/${materialId}/versions`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error creating material version:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get material versions
-   * @param {number} materialId - Material ID
-   * @returns {Promise<Array>} List of material versions
-   */
-  static async getMaterialVersions(materialId) {
-    try {
-      const response = await axiosInstance.get(`/materials/${materialId}/versions`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching material versions:', error);
-      throw error;
-    }
-  }
-}
+};
 
 export default MaterialService;

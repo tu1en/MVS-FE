@@ -1,3 +1,6 @@
+// File: StudentGradesAttendance.jsx
+// Sửa lỗi method không tồn tại trong classroomService
+
 import { AlertCircle, Award, Calendar, CheckCircle, Clock, TrendingUp, User, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
@@ -5,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Progress } from '../../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import attendanceService from '../../services/attendanceService';
-import classroomService from '../../services/classroomService';
+import classroomService from '../../services/classroomService'; // Fixed import name
 import gradeService from '../../services/gradeService';
 import DebugLogger from '../../utils/debugLogger';
 
@@ -31,12 +34,16 @@ const StudentGradesAttendance = () => {
   const fetchEnrolledCourses = async () => {
     try {
       DebugLogger.apiCall('/classrooms/student/me', 'GET', 'StudentGradesAttendance');
-      const courses = await classroomService.getEnrolledCourses();
+      
+      // ✅ FIX: Use the correct method name from ClassroomService
+      const response = await classroomService.getMyStudentCourses();
+      const courses = response.data || [];
+      
       DebugLogger.apiSuccess('/classrooms/student/me', courses.length, 'StudentGradesAttendance');
 
       setEnrolledCourses(courses);
       if (courses.length > 0) {
-        DebugLogger.info(`Auto-selecting first course: ${courses[0].name}`, null, 'StudentGradesAttendance');
+        DebugLogger.info(`Auto-selecting first course: ${courses[0].name || courses[0].classroomName}`, null, 'StudentGradesAttendance');
         setSelectedCourseId(courses[0].id.toString());
       }
     } catch (err) {
@@ -191,7 +198,8 @@ const StudentGradesAttendance = () => {
         >
           {enrolledCourses.map((course) => (
             <option key={course.id} value={course.id.toString()}>
-              {course.name} - {course.teacherName}
+              {/* ✅ FIX: Handle different property names from API */}
+              {course.classroomName || course.name} - {course.teacherName || 'Unknown Teacher'}
             </option>
           ))}
         </select>
@@ -237,7 +245,7 @@ const StudentGradesAttendance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold text-purple-600">
-              {selectedCourse?.name || 'Khóa học'}
+              {selectedCourse?.classroomName || selectedCourse?.name || 'Khóa học'}
             </div>
             <p className="text-xs text-muted-foreground">
               Giảng viên: {selectedCourse?.teacherName || 'N/A'}

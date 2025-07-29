@@ -134,7 +134,7 @@ const StudentCourseDetail = () => {
         >
           &larr; Quay lại danh sách khóa học
         </button>
-        <Title level={2} className="mb-1">{course.name}</Title>
+        <Title level={2} className="mb-1">{course.classroomName}</Title>
         <Text type="secondary">
           Giáo viên: {course.teacher?.fullName || course.teacherName || 'Chưa có thông tin'}
         </Text>

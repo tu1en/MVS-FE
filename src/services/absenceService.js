@@ -1,17 +1,17 @@
 import api from '../config/axiosInstance';
 
 const absenceService = {
-  // Teacher operations - submit leave request
+  // Teacher operations - submit leave request (đã sửa đường dẫn để phù hợp với backend)
   submitLeaveRequest: (data) => {
     return api.post('/teacher/leave-requests', data);
   },
 
-  // Teacher operations - get my leave requests
+  // Teacher operations - get my leave requests (đã sửa đường dẫn để phù hợp với backend)
   getMyLeaveRequests: () => {
     return api.get('/teacher/leave-requests');
   },
 
-  // Teacher operations - get specific leave request
+  // Teacher operations - get specific leave request (đã sửa đường dẫn để phù hợp với backend)
   getLeaveRequestById: (absenceId) => {
     return api.get(`/teacher/leave-requests/${absenceId}`);
   },
@@ -54,4 +54,4 @@ const absenceService = {
   }
 };
 
-export default absenceService; 
+export default absenceService;

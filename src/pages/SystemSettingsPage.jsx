@@ -21,11 +21,13 @@ import {
   Upload
 } from 'antd';
 import { useEffect, useState } from 'react';
-import adminService from '../../services/adminService';
+import { App } from 'antd'; // Import App for proper message context
+import adminService from '../services/adminService';
 
 const { TextArea } = Input;
 
 const SystemSettingsPage = () => {
+  const { message } = App.useApp(); // Get message from context
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,13 +55,13 @@ const SystemSettingsPage = () => {
           smtpAuth: settings.smtpAuth === 'true'
         };
         form.setFieldsValue(formData);
-        message.success('Tải cấu hình thành công');
+        message.success('Tải cấu hình thành công'); // Use context message
       } else {
         message.error(response.data.message || 'Không thể tải cấu hình');
       }
     } catch (error) {
-      console.error(error);
-      message.error('Lỗi khi tải cấu hình');
+      console.error('Error loading settings:', error);
+      message.error('Lỗi khi tải cấu hình'); // Use context message
     } finally {
       setLoading(false);
     }
@@ -80,13 +82,13 @@ const SystemSettingsPage = () => {
       };
       const response = await adminService.updateSystemSettings(settingsData);
       if (response.data.success) {
-        message.success('Lưu cấu hình thành công');
+        message.success('Lưu cấu hình thành công'); // Use context message
       } else {
         message.error(response.data.message || 'Lưu cấu hình thất bại');
       }
     } catch (error) {
-      console.error(error);
-      message.error('Lỗi khi lưu cấu hình');
+      console.error('Error saving settings:', error);
+      message.error('Lỗi khi lưu cấu hình'); // Use context message
     } finally {
       setSaving(false);
     }
@@ -97,13 +99,13 @@ const SystemSettingsPage = () => {
       setTestingSmtp(true);
       const response = await adminService.testSMTPConnection();
       if (response.data.success) {
-        message.success('Kết nối SMTP thành công!');
+        message.success('Kết nối SMTP thành công!'); // Use context message
       } else {
         message.error(response.data.message || 'Kết nối SMTP thất bại');
       }
     } catch (error) {
-      console.error(error);
-      message.error('Lỗi khi test SMTP');
+      console.error('Error testing SMTP:', error);
+      message.error('Lỗi khi test SMTP'); // Use context message
     } finally {
       setTestingSmtp(false);
     }

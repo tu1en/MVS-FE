@@ -165,12 +165,12 @@ const TeacherCoursesSimple = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {pagination.currentData.map((course) => (
             <div key={course.id} className="bg-white rounded-lg shadow-md p-6 border">
-              <h3 className="text-xl font-semibold mb-2">{course.name}</h3>
+              <h3 className="text-xl font-semibold mb-2">{course.classroomName}</h3>
               <p className="text-gray-600 mb-3">{course.description}</p>
               
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium">Môn học:</span> {course.subject}
+                  <span className="font-medium">Môn học:</span> {course.description || course.section || 'N/A'}
                 </div>
                 <div>
                   <span className="font-medium">Lớp:</span> {course.section}

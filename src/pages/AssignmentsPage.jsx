@@ -1,223 +1,256 @@
-import { useState } from 'react';
+import {
+  ClockCircleOutlined,
+  FileTextOutlined,
+  PlusOutlined
+} from '@ant-design/icons';
+import {
+  App,
+  Button,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Table
+} from 'antd';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import AssignmentService from '../services/assignmentService';
+import ClassroomService from '../services/classroomService';
 
-/**
- * AssignmentsPage component for managing assignments
- * @returns {JSX.Element} AssignmentsPage component
- */
-function AssignmentsPage() {
-  // States for the assignment management functionality
+const { Option } = Select;
+const { TextArea } = Input;
+
+export default function AssignmentsPage() {
+  const { message } = App.useApp();
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userRole = user?.role?.replace('ROLE_', '');
+  const isTeacher = userRole === 'TEACHER';
+  const isStudent = userRole === 'STUDENT';
+
   const [assignments, setAssignments] = useState([]);
-  const [classes] = useState(['Lớp 12A1', 'Lớp 12B2', 'Lớp 12C3']);
+  const [submissions, setSubmissions] = useState({});
+  const [classrooms, setClassrooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [classroomLoading, setClassroomLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
-  // State for new assignment form
-  const [newAssignment, setNewAssignment] = useState({ 
-    title: '', 
-    description: '', 
-    class: '', 
-    dueDate: '' 
-  });
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [filter, setFilter] = useState('all');
+  // Fetch classrooms for teacher
+  useEffect(() => {
+    if (isTeacher) {
+      const fetchClassrooms = async () => {
+        try {
+          setClassroomLoading(true);
+          const data = await ClassroomService.getClassroomsByCurrentTeacher();
+          // Extra safety: ensure data is array and has valid structure
+          const validClassrooms = Array.isArray(data) ? data.filter(cls => cls && cls.id) : [];
+          setClassrooms(validClassrooms);
+        } catch (error) {
+          console.error('Error fetching classrooms:', error);
+          setClassrooms([]); // Ensure always an array
+          message.error('Không thể tải danh sách lớp học.');
+        } finally {
+          setClassroomLoading(false);
+        }
+      };
+      
+      fetchClassrooms();
+    }
+  }, [isTeacher, message]);
 
-  /**
-   * Handles input change in the form
-   * @param {Event} e - Input change event
-   */
-  const HandleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewAssignment({ ...newAssignment, [name]: value });
-  };
-
-  /**
-   * Handles form submission to add a new assignment
-   * @param {Event} e - Form submission event
-   */
-  const HandleSubmit = (e) => {
-    e.preventDefault();
-    const newId = assignments.length > 0 ? Math.max(...assignments.map(a => a.id)) + 1 : 1;
-    const assignmentToAdd = {
-      id: newId,
-      ...newAssignment,
-      status: 'đang mở'
+  // Fetch assignments
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        let data = [];
+        if (isTeacher) {
+          data = await AssignmentService.getCurrentTeacherAssignments();
+        } else if (isStudent) {
+          data = await AssignmentService.getUpcomingAssignments(userId);
+        }
+        // Ensure data is always an array with valid structure
+        const validAssignments = Array.isArray(data) ? data.filter(assignment => assignment && assignment.id) : [];
+        setAssignments(validAssignments);
+      } catch (error) {
+        console.error('Error fetching assignments:', error);
+        setAssignments([]); // Ensure always an array
+        message.error('Lỗi khi tải danh sách bài tập.');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    setAssignments([...assignments, assignmentToAdd]);
-    setNewAssignment({ title: '', description: '', class: '', dueDate: '' });
-    setIsFormVisible(false);
-  };
-
-  /**
-   * Handles assignment deletion
-   * @param {number} id - ID of the assignment to delete
-   */
-  const HandleDelete = (id) => {
-    setAssignments(assignments.filter(a => a.id !== id));
-  };
-
-  /**
-   * Formats the date to a more readable format
-   * @param {string} dateString - Date string in YYYY-MM-DD format
-   * @returns {string} Formatted date string
-   */
-  const FormatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('vi-VN', options);
-  };
-
-  /**
-   * Filters assignments based on the selected filter
-   * @returns {Array} Filtered assignments
-   */
-  const GetFilteredAssignments = () => {
-    if (filter === 'all') {
-      return assignments;
+    if (userId) {
+      fetchData();
     }
-    // Use filter to get assignments by class
-    return assignments.filter(a => a.class === filter);
+  }, [isTeacher, isStudent, userId, message]);
+
+  const handleCreate = async (values) => {
+    try {
+      const payload = {
+        ...values,
+        dueDate: values.dueDate.toISOString(),
+        points: values.points || 10
+      };
+      await AssignmentService.createAssignment(payload);
+      message.success('Tạo bài tập thành công!');
+      setIsModalVisible(false);
+      form.resetFields();
+      
+      // Refresh assignments after creating new one
+      if (isTeacher) {
+        const updatedAssignments = await AssignmentService.getCurrentTeacherAssignments();
+        setAssignments(Array.isArray(updatedAssignments) ? updatedAssignments : []);
+      }
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      message.error('Không thể tạo bài tập.');
+    }
   };
+
+  const columns = [
+    {
+      title: 'Tên bài tập',
+      dataIndex: 'title',
+      key: 'title',
+      render: (text) => (
+        <Space>
+          <FileTextOutlined />
+          <strong>{text || 'Chưa có tiêu đề'}</strong>
+        </Space>
+      )
+    },
+    {
+      title: 'Hạn nộp',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
+      render: (date) => {
+        if (!date) return 'Không có hạn';
+        const dueDate = new Date(date);
+        const isOverdue = new Date() > dueDate;
+        return (
+          <Space>
+            <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
+            <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
+              {dueDate.toLocaleDateString('vi-VN')}
+            </span>
+          </Space>
+        );
+      }
+    },
+    {
+      title: 'Điểm',
+      dataIndex: 'points',
+      key: 'points',
+      render: (points) => `${points || 10} điểm`
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          {isStudent && (
+            <Button type="primary" size="small">
+              Nộp bài
+            </Button>
+          )}
+          {isTeacher && (
+            <>
+              <Button size="small">Chấm bài</Button>
+              <Button size="small">Sửa</Button>
+            </>
+          )}
+        </Space>
+      )
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Quản Lý Bài Tập</h2>
-        <button 
-          onClick={() => setIsFormVisible(!isFormVisible)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          {isFormVisible ? 'Hủy' : 'Tạo Bài Tập'}
-        </button>
+    <div style={{ padding: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2>Quản lý bài tập</h2>
+        {isTeacher && (
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => setIsModalVisible(true)}
+            disabled={classroomLoading}
+          >
+            Tạo bài tập
+          </Button>
+        )}
       </div>
 
-      {/* Filter controls */}
-      <div className="flex items-center space-x-4">
-        <label htmlFor="filter" className="font-medium text-gray-700">Lọc theo Lớp:</label>
-        <select
-          id="filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">Tất Cả Lớp</option>
-          {classes.map((cls, index) => (
-            <option key={index} value={cls}>{cls}</option>
-          ))}
-        </select>
-      </div>
+      <Table
+        columns={columns}
+        dataSource={assignments}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 10 }}
+        locale={{
+          emptyText: loading ? 'Đang tải...' : 'Không có bài tập nào'
+        }}
+      />
 
-      {/* New Assignment Form */}
-      {isFormVisible && (
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Tạo Bài Tập Mới</h3>
-          <form onSubmit={HandleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="title" className="block mb-1 font-medium">Tiêu Đề:</label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={newAssignment.title}
-                onChange={HandleInputChange}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="description" className="block mb-1 font-medium">Mô Tả:</label>
-              <textarea
-                id="description"
-                name="description"
-                value={newAssignment.description}
-                onChange={HandleInputChange}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="3"
-                required
-              ></textarea>
-            </div>
-            
-            <div>
-              <label htmlFor="class" className="block mb-1 font-medium">Lớp Học:</label>
-              <select
-                id="class"
-                name="class"
-                value={newAssignment.class}
-                onChange={HandleInputChange}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Chọn lớp học</option>
-                {classes.map((cls, index) => (
-                  <option key={index} value={cls}>{cls}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label htmlFor="dueDate" className="block mb-1 font-medium">Hạn Nộp:</label>
-              <input
-                type="date"
-                id="dueDate"
-                name="dueDate"
-                value={newAssignment.dueDate}
-                onChange={HandleInputChange}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                Tạo Bài Tập
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Modal tạo bài tập */}
+      <Modal
+        title="Tạo bài tập mới"
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreate}>
+          <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}>
+            <Input placeholder="Nhập tiêu đề bài tập" />
+          </Form.Item>
 
-      {/* Assignments List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {GetFilteredAssignments().map(assignment => (
-          <div key={assignment.id} className="bg-white p-4 rounded-lg shadow-md">
-            <div className="flex justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">{assignment.title}</h3>
-              <div className="space-x-2">
-                <button 
-                  className="text-blue-600 hover:text-blue-800"
-                  onClick={() => alert(`Chỉnh sửa ${assignment.title}`)}
-                >
-                  Sửa
-                </button>
-                <button 
-                  className="text-red-600 hover:text-red-800"
-                  onClick={() => HandleDelete(assignment.id)}
-                >
-                  Xóa
-                </button>
-              </div>
-            </div>
-            <p className="text-sm mt-1 text-blue-600">{assignment.class}</p>
-            <p className="mt-2 text-gray-700">{assignment.description}</p>
-            <div className="mt-4 flex justify-between items-center">
-              <span className="text-sm text-gray-500">Hạn nộp: {FormatDate(assignment.dueDate)}</span>
-              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                {assignment.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {/* Show message when no assignments match the filter */}
-      {GetFilteredAssignments().length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          Không tìm thấy bài tập nào cho lớp đã chọn.
-        </div>
-      )}
+          <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}>
+            <TextArea rows={4} placeholder="Nhập mô tả bài tập" />
+          </Form.Item>
+
+          <Form.Item name="classroomId" label="Lớp học" rules={[{ required: true, message: 'Vui lòng chọn lớp học' }]}>
+            <Select 
+              placeholder="Chọn lớp học"
+              loading={classroomLoading}
+              notFoundContent={classroomLoading ? 'Đang tải...' : 'Không có lớp học nào'}
+            >
+              {/* Extra safety check with optional chaining */}
+              {classrooms?.map((cls) => (
+                <Option key={cls?.id} value={cls?.id}>
+                  {cls?.name || `Lớp ${cls?.id}` || 'Lớp không tên'}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="dueDate" label="Hạn nộp" rules={[{ required: true, message: 'Vui lòng chọn hạn nộp' }]}>
+            <DatePicker 
+              showTime 
+              format="YYYY-MM-DD HH:mm:ss" 
+              style={{ width: '100%' }}
+              placeholder="Chọn ngày và giờ"
+            />
+          </Form.Item>
+
+          <Form.Item name="points" label="Điểm tối đa" initialValue={10}>
+            <InputNumber min={1} max={100} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" style={{ width: '100%' }}>
+              Tạo bài tập
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
-
-export default AssignmentsPage;

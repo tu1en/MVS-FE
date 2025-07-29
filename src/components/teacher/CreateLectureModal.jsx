@@ -44,7 +44,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
       const token = localStorage.getItem('token');
       
       // Using fetch instead of axios for better error handling
-      const response = await fetch('http://localhost:8088/api/classrooms/current-teacher', {
+      const response = await fetch('http://localhost:8088/api/teacher/courses', {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
@@ -338,7 +338,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
                     >
                         {availableCourses.map(course => (
                             <Option key={course.id} value={course.id}>
-                                {course.name} ({course.subject})
+                                {course.classroomName} {course.description && `(${course.description})`}
                             </Option>
                         ))}
                     </Select>

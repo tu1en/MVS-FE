@@ -134,5 +134,3 @@ const AdminModulesDemo = () => {
 };
 
 export default AdminModulesDemo;
-
-export default AdminModulesDemo;

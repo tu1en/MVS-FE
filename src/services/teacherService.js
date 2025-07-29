@@ -1,35 +1,34 @@
 import api from '../config/axiosInstance';
 
 const teacherService = {
-  // Get teacher messages
-  getMessages: () => {
-    return api.get('/teacher/messages');
+  // ✅ Lấy danh sách lớp học của giảng viên
+  getClasses: (signal) => {
+    if (signal) {
+      return api.get('/teacher/courses', { signal });
+    }
+    return api.get('/teacher/courses');
   },
 
-  // Get teacher teaching history
-  getTeachingHistory: () => {
-    return api.get('/teacher/teaching-history');
-  },
+  // ✅ Lấy lịch sử giảng dạy
+  getTeachingHistory: () => api.get('/teacher/teaching-history'),
 
-  // Get teacher announcements
-  getAnnouncements: () => {
-    return api.get('/teacher/announcements');
-  },
+  // ✅ Lấy thông báo của giảng viên
+  getAnnouncements: () => api.get('/teacher/announcements'),
 
-  // Get teacher leave requests
-  getLeaveRequests: () => {
-    return api.get('/teacher/leave-requests');
-  },
+  // ✅ Lấy yêu cầu nghỉ phép của giảng viên
+  getLeaveRequests: () => api.get('/teacher/leave-requests'),
 
-  // Send message to student
-  sendMessage: (data) => {
-    return api.post('/teacher/messages', data);
-  },
+  // ✅ Gửi tin nhắn cho sinh viên
+  sendMessage: (data) => api.post('/messages/teacher', data),
 
-  // Get teacher dashboard stats
-  getDashboardStats: () => {
-    return api.get('/teacher/dashboard-stats');
-  }
+  // ✅ Thống kê dashboard
+  getDashboardStats: () => api.get('/teacher/dashboard-stats'),
+
+  // ✅ Lấy tin nhắn của giảng viên
+  getMessages: () => api.get('/teacher/messages'),
+
+  // ✅ Lấy lịch giảng dạy
+  getSchedules: () => api.get('/teacher/schedules')
 };
 
 export default teacherService;

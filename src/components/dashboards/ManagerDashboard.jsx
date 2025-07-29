@@ -317,7 +317,7 @@ const ManagerDashboard = () => {
                 extra={
                   <Button 
                     type="link"
-                    onClick={() => window.location.href = '/manager/violations'}
+                    onClick={() => navigate('/manager/attendance/teacher-status')}
                   >
                     Xem tất cả
                   </Button>

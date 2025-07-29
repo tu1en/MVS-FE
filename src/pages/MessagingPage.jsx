@@ -358,7 +358,7 @@ function MessagingPage() {
       if (userRole === 'STUDENT') {
         response = await apiClient.get(`/classrooms/student/${userId}`);
       } else {
-        response = await apiClient.get(`/classrooms/current-teacher`);
+        response = await apiClient.get(`/classroom-management/current-teacher`);
       }
       if (isMountedRef.current) {
         const coursesData = response.data || [];

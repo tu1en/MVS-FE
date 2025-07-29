@@ -1,30 +1,30 @@
 import {
-    DownloadOutlined,
-    ExclamationCircleOutlined,
-    EyeOutlined,
-    FileTextOutlined,
-    MoreOutlined
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import {
-    App,
-    Button,
-    Card,
-    Col,
-    Dropdown,
-    Form,
-    Input,
-    InputNumber,
-    Menu,
-    Modal,
-    Progress,
-    Row,
-    Select,
-    Space,
-    Statistic,
-    Table,
-    Tabs,
-    Tag,
-    Tooltip
+  App,
+  Button,
+  Card,
+  Col,
+  Dropdown,
+  Form,
+  Input,
+  InputNumber,
+  Menu,
+  Modal,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip
 } from 'antd';
 import { ArcElement, CategoryScale, Chart as ChartJS, Tooltip as ChartTooltip, Legend, LinearScale } from 'chart.js';
 import { useEffect, useState } from 'react';
@@ -424,7 +424,17 @@ const AdvancedGrading = () => {
         </Col>
         <Col span={12}>
           <Card title="Phân bố điểm">
-            <Doughnut data={gradeDistributionData} />
+            <Doughnut data={gradeDistributionData} options={{
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                },
+                tooltip: {
+                  position: 'nearest',
+                },
+              },
+            }} />
           </Card>
         </Col>
         <Col span={12}>

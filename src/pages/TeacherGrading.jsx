@@ -57,7 +57,7 @@ export default function TeacherGrading() {
       setLoading(true);
       const [assignmentsRes, classroomsRes, submissionsRes] = await Promise.all([
         api.get('/assignments/current-teacher'),
-        api.get('/classrooms/current-teacher'),
+        api.get('/classroom-management/current-teacher'),
         api.get('/api/submissions/teacher')
       ]);
 

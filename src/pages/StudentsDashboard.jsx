@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROLE } from "../constants/constants";
 import api from "../services/api";
-import ClassroomService from "../services/classroomService";
 
 const { Title, Text } = Typography;
 
@@ -44,8 +43,9 @@ export default function StudentDashboard() {
   const loadMyCourses = async () => {
     try {
       setCoursesLoading(true);
-      const coursesData = await ClassroomService.getMyStudentCourses();
-      // Lấy chỉ 3 khóa học đầu tiên để hiển thị trong widget
+      
+      // ✅ Đường dẫn mới - gọi API trực tiếp
+      const coursesData = await api.get('/classroom-management/classrooms/student/me');
       setMyCourses((coursesData.data || []).slice(0, 3));
     } catch (error) {
       console.error('Error loading my courses:', error);
@@ -78,8 +78,8 @@ export default function StudentDashboard() {
       
       // Use Promise.allSettled instead of Promise.all to handle individual endpoint failures
       const [classroomsRes, attendanceRes, assignmentsRes, messagesRes] = await Promise.allSettled([
-        api.get('/classrooms/student/me'), // Student's enrolled classrooms
-        api.get('/attendance/my-history?classroomId=1'), // Sửa endpoint từ /v1/attendance/my-history thành /attendance/my-history
+        api.get('/classroom-management/classrooms/student/me'), // ✅ Đường dẫn mới - ĐÚNG
+        api.get('/attendance/my-history?classroomId=1'),
         api.get('/assignments/student/me'), // Alternative endpoint for student assignments  
         api.get('/messages/dashboard/unread-count') // Fixed endpoint for unread messages
       ]);

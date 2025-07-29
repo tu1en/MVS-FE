@@ -3,7 +3,6 @@ import {
   Table,
   Button,
   Space,
-  message,
   Popconfirm,
   Input,
   Card,
@@ -66,11 +65,11 @@ const ShiftManagement = () => {
           total: response.totalItems
         });
       } else {
-        message.error(response.message || 'Không thể tải danh sách ca làm việc');
+        console.error('Không thể tải danh sách ca làm việc:', response.message);
       }
     } catch (error) {
       console.error('Error loading shifts:', error);
-      message.error('Có lỗi xảy ra khi tải danh sách ca làm việc');
+      console.log('Có lỗi xảy ra khi tải danh sách ca làm việc:', error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
@@ -112,14 +111,14 @@ const ShiftManagement = () => {
       const response = await hrService.deleteShift(shiftId);
       
       if (response.success) {
-        message.success('Ca làm việc đã được xóa thành công');
+        console.log('Ca làm việc đã được xóa thành công');
         loadShifts(pagination.current, pagination.pageSize, searchText);
       } else {
-        message.error(response.message || 'Không thể xóa ca làm việc');
+        console.error('Không thể xóa ca làm việc:', response.message);
       }
     } catch (error) {
       console.error('Error deleting shift:', error);
-      message.error('Có lỗi xảy ra khi xóa ca làm việc');
+      console.log('Có lỗi xảy ra khi xóa ca làm việc');
     }
   };
 
@@ -129,14 +128,14 @@ const ShiftManagement = () => {
       const response = await hrService.toggleShiftStatus(shiftId, !currentStatus);
       
       if (response.success) {
-        message.success(response.message);
+        console.log(response.message);
         loadShifts(pagination.current, pagination.pageSize, searchText);
       } else {
-        message.error(response.message || 'Không thể thay đổi trạng thái ca làm việc');
+        console.error('Không thể thay đổi trạng thái ca làm việc:', response.message);
       }
     } catch (error) {
       console.error('Error toggling shift status:', error);
-      message.error('Có lỗi xảy ra khi thay đổi trạng thái ca làm việc');
+      console.log('Có lỗi xảy ra khi thay đổi trạng thái ca làm việc');
     }
   };
 

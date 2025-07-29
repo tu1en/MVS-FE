@@ -11,7 +11,7 @@ export const teacherLectureService = {
    */
   async getClassroomLectures(classroomId) {
     try {
-      const response = await apiClient.get(`/api/lectures/classroom/${classroomId}`);
+      const response = await apiClient.get(`/lectures/classroom/${classroomId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classroom lectures:', error);
@@ -26,7 +26,7 @@ export const teacherLectureService = {
    */
   async getLectureDetails(lectureId) {
     try {
-      const response = await apiClient.get(`/api/lectures/${lectureId}`);
+      const response = await apiClient.get(`/lectures/${lectureId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching lecture details:', error);
@@ -41,7 +41,7 @@ export const teacherLectureService = {
    */
   async createLecture(lectureData) {
     try {
-      const response = await apiClient.post('/api/lectures', lectureData);
+      const response = await apiClient.post('/lectures', lectureData);
       return response.data;
     } catch (error) {
       console.error('Error creating lecture:', error);
@@ -57,7 +57,7 @@ export const teacherLectureService = {
    */
   async updateLecture(lectureId, lectureData) {
     try {
-      const response = await apiClient.put(`/api/lectures/${lectureId}`, lectureData);
+      const response = await apiClient.put(`/lectures/${lectureId}`, lectureData);
       return response.data;
     } catch (error) {
       console.error('Error updating lecture:', error);
@@ -72,7 +72,7 @@ export const teacherLectureService = {
    */
   async deleteLecture(lectureId) {
     try {
-      await apiClient.delete(`/api/lectures/${lectureId}`);
+      await apiClient.delete(`/lectures/${lectureId}`);
     } catch (error) {
       console.error('Error deleting lecture:', error);
       throw error;
@@ -86,7 +86,7 @@ export const teacherLectureService = {
    */
   async getLectureMaterials(lectureId) {
     try {
-      const response = await apiClient.get(`/api/lectures/${lectureId}/materials`);
+      const response = await apiClient.get(`/lectures/${lectureId}/materials`);
       return response.data;
     } catch (error) {
       console.error('Error fetching lecture materials:', error);
@@ -102,7 +102,7 @@ export const teacherLectureService = {
    */
   async addMaterialsToLecture(lectureId, materials) {
     try {
-      await apiClient.post(`/api/lectures/${lectureId}/materials`, { materials });
+      await apiClient.post(`/lectures/${lectureId}/materials`, { materials });
     } catch (error) {
       console.error('Error adding materials to lecture:', error);
       throw error;
@@ -117,7 +117,7 @@ export const teacherLectureService = {
    */
   async deleteLectureMaterial(lectureId, materialId) {
     try {
-      await apiClient.delete(`/api/lectures/${lectureId}/materials/${materialId}`);
+      await apiClient.delete(`/lectures/${lectureId}/materials/${materialId}`);
     } catch (error) {
       console.error('Error deleting lecture material:', error);
       throw error;
@@ -156,7 +156,7 @@ export const teacherLectureService = {
    */
   async startLivestream(lectureId) {
     try {
-      const response = await apiClient.post(`/api/lectures/${lectureId}/livestream/start`);
+      const response = await apiClient.post(`/lectures/${lectureId}/livestream/start`);
       return response.data;
     } catch (error) {
       console.error('Error starting livestream:', error);
@@ -171,7 +171,7 @@ export const teacherLectureService = {
    */
   async stopLivestream(lectureId) {
     try {
-      await apiClient.post(`/api/lectures/${lectureId}/livestream/stop`);
+      await apiClient.post(`/lectures/${lectureId}/livestream/stop`);
     } catch (error) {
       console.error('Error stopping livestream:', error);
       throw error;
@@ -204,7 +204,7 @@ export const teacherLectureService = {
    */
   async getLivestreamStatus(lectureId) {
     try {
-      const response = await apiClient.get(`/api/lectures/${lectureId}/livestream/status`);
+      const response = await apiClient.get(`/lectures/${lectureId}/livestream/status`);
       return response.data;
     } catch (error) {
       console.error('Error fetching livestream status:', error);

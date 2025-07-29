@@ -30,8 +30,8 @@ const ManageCourses = () => {
   const columns = [
     {
       title: 'Tên Khóa Học',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'classroomName',
+      key: 'classroomName',
     },
     {
       title: 'Mô Tả',
@@ -82,7 +82,7 @@ const ManageCourses = () => {
   const handleDelete = async (course) => {
     Modal.confirm({
       title: 'Xác nhận xóa khóa học',
-      content: 'Bạn có chắc chắn muốn xóa khóa học "' + course.name + '"?',
+      content: 'Bạn có chắc chắn muốn xóa khóa học "' + course.classroomName + '"?',
       onOk: async () => {
         try {
           await managerService.deleteClassroom(course.id);

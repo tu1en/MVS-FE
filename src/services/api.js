@@ -94,8 +94,7 @@ const api = {
    */
   patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
   // High-level API methods
-  getTeacherCourses: () => ApiService.GetTeacherCourses(),
-  getStudentAttendance: () => ApiService.GetStudentAttendance(),
+  getTeacherDashboardStats: () => apiClient.get('/teacher/dashboard-stats'), // Thêm phương thức mới
   getAttendanceByUser: (userId) => ApiService.GetAttendanceByUser(userId),
   
   /**
@@ -144,7 +143,8 @@ const api = {
    */
   GetReceivedMessages: async (recipientId) => {
     try {
-      const response = await apiClient.get(API_CONFIG.ENDPOINTS.MESSAGES_RECEIVED(recipientId));
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
+      const response = await apiClient.get(`/messages/received/${recipientId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching received messages:', error);
@@ -158,7 +158,8 @@ const api = {
    */
   GetClassroomsByTeacher: async (teacherId) => {
     try {
-      const response = await apiClient.get(`/classrooms/current-teacher`);
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
+      const response = await apiClient.get(`/teacher/courses`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);
@@ -485,7 +486,7 @@ class ApiService {
    */
   static async GetClassroomsByTeacher(teacherId) {
     try {
-      const response = await apiClient.get(`/classrooms/current-teacher`);
+      const response = await apiClient.get(`/teacher/courses`);
       
       let classrooms = [];
       if (Array.isArray(response.data)) {
@@ -817,7 +818,8 @@ class ApiService {
    */
   static async GetTeacherCourses() {
     try {
-      const response = await apiClient.get('/classrooms/current-teacher');
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
+      const response = await apiClient.get('/teacher/courses');
       
       // Log để debug
       console.log('GetTeacherCourses response:', response.data);
@@ -838,12 +840,43 @@ class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Lấy danh sách lớp học của giảng viên hiện tại
+   * @returns {Promise<Array<ClassroomModel>>} Danh sách lớp học của giảng viên hiện tại
+   */
+  static async GetTeacherClasses() {
+    try {
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
+      const response = await apiClient.get('/classroom-management/classrooms/current-teacher');
+      
+      // Log để debug
+      console.log('GetTeacherClasses response:', response.data);
+      
+      let classrooms = [];
+      if (Array.isArray(response.data)) {
+        classrooms = response.data;
+      } else if (response.data && response.data.content) {
+        classrooms = response.data.content;
+      } else if (response.data && response.data.data) {
+        classrooms = response.data.data;
+      }
+      
+      return ClassroomModel.fromApiArray(classrooms);
+    } catch (error) {
+      console.error('Error in GetTeacherClasses:', error);
+      this.HandleError(error);
+      throw error;
+    }
+  }
+
   /**
    * Lấy danh sách tin nhắn đã nhận cho người dùng
    * @param {number} recipientId - ID của người nhận tin nhắn
    * @returns {Promise} Dữ liệu tin nhắn
    */  static async GetReceivedMessages(recipientId) {
     try {
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
       const response = await apiClient.get(`/messages/received/${recipientId}`);
       return response.data;
     } catch (error) {
@@ -858,7 +891,8 @@ class ApiService {
    */
   static async GetClassroomsByTeacher(teacherId) {
     try {
-      const response = await apiClient.get(`/classrooms/current-teacher`);
+      // Sửa đường dẫn, loại bỏ /api/ duplicate
+      const response = await apiClient.get(`/teacher/courses`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);

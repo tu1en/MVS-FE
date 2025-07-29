@@ -32,13 +32,13 @@ export default function NavigationMenu() {
       key: 'assignments',
       icon: <FileTextOutlined />,
       label: 'Bài tập',
-      onClick: () => navigate('/assignments-new')
+      onClick: () => navigate('/student/assignments')
     },
     {
       key: 'lectures',
       icon: <VideoCameraOutlined />,
       label: 'Bài giảng',
-      onClick: () => navigate('/lectures')
+      onClick: () => navigate('/student/lectures')
     },
     {
       key: 'materials',
@@ -77,25 +77,25 @@ export default function NavigationMenu() {
       key: 'classes',
       icon: <BookOutlined />,
       label: 'Lớp học',
-      onClick: () => navigate('/classes')
+      onClick: () => navigate('/teacher/courses')
     },
     {
       key: 'assignments',
       icon: <FileTextOutlined />,
       label: 'Bài tập',
-      onClick: () => navigate('/assignments-new')
+      onClick: () => navigate('/teacher/assignments')
     },
     {
       key: 'grading',
       icon: <FileTextOutlined />,
       label: 'Chấm điểm',
-      onClick: () => navigate('/teacher/grading')
+      onClick: () => navigate('/teacher/assignments')
     },
     {
       key: 'lectures',
       icon: <VideoCameraOutlined />,
       label: 'Bài giảng',
-      onClick: () => navigate('/lectures')
+      onClick: () => navigate('/teacher/lectures')
     },
     {
       key: 'attendance',
@@ -107,7 +107,7 @@ export default function NavigationMenu() {
       key: 'messaging',
       icon: <MessageOutlined />,
       label: 'Tin nhắn',
-      onClick: () => navigate('/messaging')
+      onClick: () => navigate('/teacher/messages')
     }
   ];
 

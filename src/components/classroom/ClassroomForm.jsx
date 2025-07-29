@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
 import {
-  Form,
-  Input,
-  Button,
-  Card,
-  Space,
-  message,
-  Select,
-  Row,
-  Col,
-  Divider
-} from 'antd';
-import {
-  SaveOutlined,
   ArrowLeftOutlined,
+  SaveOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import {
+  Button,
+  Card,
+  Col,
+  Divider,
+  Form,
+  Input,
+  message,
+  Row,
+  Select,
+  Space
+} from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import classroomService from '../../services/classroomService';
 import userService from '../../services/userService';
@@ -149,8 +149,7 @@ const ClassroomForm = ({ mode = 'create' }) => {
             >
               <Input
                 placeholder="Nhập tên lớp học..."
-                showCount
-                maxLength={100}
+                size="large"
               />
             </Form.Item>
 
@@ -160,15 +159,14 @@ const ClassroomForm = ({ mode = 'create' }) => {
               rules={[
                 {
                   max: 500,
-                  message: 'Mô tả không được vượt quá 500 ký tự',
+                  message: 'Mô tả không được quá 500 ký tự',
                 },
               ]}
             >
               <TextArea
-                placeholder="Nhập mô tả lớp học..."
+                placeholder="Nhập mô tả về lớp học..."
                 rows={4}
-                showCount
-                maxLength={500}
+                size="large"
               />
             </Form.Item>
 

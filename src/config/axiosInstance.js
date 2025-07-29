@@ -1,69 +1,121 @@
 import axios from 'axios';
 import API_CONFIG from './api-config';
 
-// Create an Axios instance with default configurations
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json; charset=utf-8',
     'Accept': 'application/json; charset=utf-8',
   },
-  timeout: 15000, // 15 seconds timeout
   responseType: 'json',
   responseEncoding: 'utf8',
 });
 
-// Add a request interceptor to include the auth token in every request
+const pendingRequests = new Map();
+
+const getRequestKey = (config) => {
+  const params = { ...config.params };
+  delete params._t;
+  return `${config.method}:${config.url}:${JSON.stringify(params)}`;
+};
+
+const cleanupExpiredRequests = () => {
+  const now = Date.now();
+  for (const [key, timestamp] of pendingRequests.entries()) {
+    if (now - timestamp > 5000) {
+      pendingRequests.delete(key);
+    }
+  }
+};
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+//     if (config.method === 'get') {
+//       config.params = { ...config.params, _t: Date.now() };
+
+//       const requestKey = getRequestKey(config);
+//       cleanupExpiredRequests();
+
+//    // Thay vì cancel request, implement proper deduplication
+// if (config.method === 'get') {
+//   config.params = { ...config.params, _t: Date.now() };
+  
+//   const requestKey = getRequestKey(config);
+//   cleanupExpiredRequests();
+  
+//   // Chỉ warn thay vì cancel - let request proceed
+//   if (pendingRequests.has(requestKey)) {
+//     const existingTimestamp = pendingRequests.get(requestKey);
+//     if (Date.now() - existingTimestamp < 1000) {
+//       console.warn(`Duplicate GET detected but allowing: ${requestKey}`);
+//       // Don't cancel - just log and proceed
+//     }
+//   }
+//   pendingRequests.set(requestKey, Date.now());
+// }
+//       pendingRequests.set(requestKey, Date.now());
+//     }
+
     return config;
   },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add a response interceptor for global error handling
 axiosInstance.interceptors.response.use(
   (response) => {
+    if (response.config && response.config.method === 'get') {
+      const requestKey = getRequestKey(response.config);
+      pendingRequests.delete(requestKey);
+    }
     return response;
   },
   (error) => {
-    // Handle different types of errors
-    if (!error.response) {
-      console.error('Network error or server not reachable:', error.message);
-      // Handle network errors
-    } else if (error.response.status === 401) {
-      // Unauthorized - token expired or invalid
-      console.error('Authentication error (401):', error.response.data);
-      
-      // Clear authentication data
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-      localStorage.removeItem('username');
-      
-      // Redirect to login unless already there
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    } else if (error.response.status === 403) {
-      console.error('Permission denied (403):', error.response.data);
-      // Handle forbidden errors
-    } else if (error.response.status === 404) {
-      console.error('Resource not found (404):', error.response.data);
-      // Handle not found errors
-    } else {
-      console.error(`API error (${error.response.status}):`, error.response.data);
+    if (error.config && error.config.method === 'get') {
+      const requestKey = getRequestKey(error.config);
+      pendingRequests.delete(requestKey);
     }
-    
+
+    if (axios.isCancel(error)) {
+      // Don't treat canceled request as an error
+      return Promise.reject(error);
+    }
+
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(error);
+    }
+
+    const { status, data } = error.response;
+    switch (status) {
+      case 401:
+        console.error('Unauthorized:', data);
+        ['token', 'user', 'role', 'username', 'userId'].forEach((key) =>
+          localStorage.removeItem(key)
+        );
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        break;
+      case 403:
+        console.error('Forbidden:', data);
+        break;
+      case 404:
+        console.error('Not Found:', error.config?.url);
+        break;
+      case 500:
+        console.error('Server Error:', data);
+        break;
+      default:
+        console.error(`API error (${status}):`, data);
+    }
     return Promise.reject(error);
   }
 );
 
-export default axiosInstance; 
+export default axiosInstance;

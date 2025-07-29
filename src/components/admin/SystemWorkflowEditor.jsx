@@ -1,29 +1,29 @@
 import {
-    CodeOutlined,
-    CopyOutlined,
-    DeleteOutlined,
-    DownloadOutlined,
-    EditOutlined,
-    PlayCircleOutlined,
-    PlusOutlined,
-    SaveOutlined
+  CodeOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  SaveOutlined
 } from '@ant-design/icons';
 import {
-    Alert,
-    Button,
-    Card,
-    Drawer,
-    Form,
-    Input,
-    message,
-    Modal,
-    Popconfirm,
-    Space,
-    Table,
-    Tag,
-    Tooltip
+  Alert,
+  Button,
+  Card,
+  Drawer,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tag,
+  Tooltip
 } from 'antd';
 import { useEffect, useState } from 'react';
+import { App } from 'antd'; // Import App for proper message context
 import adminService from '../../services/adminService';
 
 const { TextArea } = Input;
@@ -33,6 +33,7 @@ const { TextArea } = Input;
  * Hỗ trợ CRUD operations và JSON validation
  */
 const SystemWorkflowEditor = () => {
+  const { message } = App.useApp(); // Get message from context
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
