@@ -6,6 +6,7 @@ import WeeklyTimetable from '../components/WeeklyTimetable';
 import ClassroomService from '../services/classroomService';
 import MaterialService from '../services/materialService';
 import { formatFullDateTime, parseTimestamp } from '../utils/dateUtils';
+import { ROLE } from '../constants/constants';
 
 const CourseDetails = () => {
   const { message } = App.useApp();
@@ -126,9 +127,33 @@ const CourseDetails = () => {
             >
               Thử lại
             </Button>
-            <Button onClick={() => navigate(-1)}>
-              Quay lại
-            </Button>
+            <Button onClick={() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (!token) {
+        navigate('/');
+    } else {
+        switch (role) {
+            case ROLE.ADMIN:
+                navigate('/admin');
+                break;
+            case ROLE.TEACHER:
+                navigate('/teacher');
+                break;
+            case ROLE.MANAGER:
+                navigate('/manager');
+                break;
+            case ROLE.STUDENT:
+                navigate('/student');
+                break;
+            case ROLE.ACCOUNTANT:
+                navigate('/accountant');
+                break;
+            default:
+                navigate('/');
+        }
+    }
+}}>Quay lại</Button>
           </div>
         </Card>
       </div>
@@ -201,9 +226,33 @@ const CourseDetails = () => {
             >
               Tất cả khóa học
             </Button>
-            <Button onClick={() => navigate(-1)}>
-              Quay lại
-            </Button>
+            <Button onClick={() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (!token) {
+        navigate('/');
+    } else {
+        switch (role) {
+            case ROLE.ADMIN:
+                navigate('/admin');
+                break;
+            case ROLE.TEACHER:
+                navigate('/teacher');
+                break;
+            case ROLE.MANAGER:
+                navigate('/manager');
+                break;
+            case ROLE.STUDENT:
+                navigate('/student');
+                break;
+            case ROLE.ACCOUNTANT:
+                navigate('/accountant');
+                break;
+            default:
+                navigate('/');
+        }
+    }
+}}>Quay lại</Button>
           </div>
         </Card>
       </div>

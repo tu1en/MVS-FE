@@ -6,6 +6,7 @@ import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
 import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
 import { clearAuthData, isUserLoggedIn } from '../utils/authUtils';
+import api from '../services/api'; // Added import for api
 
 /**
  * NavigationBar component that provides sidebar navigation based on user role
@@ -24,7 +25,9 @@ function NavigationBar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   // User role state
   const [userRole, setUserRole] = useState(null);
-  
+  // Thêm hàm kiểm tra hợp đồng chính thức cho teacher
+  const [hasOfficialContract, setHasOfficialContract] = useState(false);
+
   // Get role from Redux and localStorage, and convert to role constant
   useEffect(() => {
     // First sync Redux state with localStorage
@@ -104,6 +107,16 @@ function NavigationBar() {
       }
     }
   }, [dispatch, reduxRole, isLogin]);
+
+  // Thêm hàm kiểm tra hợp đồng chính thức cho teacher
+  useEffect(() => {
+    if (userRole === ROLE.TEACHER) {
+      // Gọi API kiểm tra hợp đồng chính thức
+      api.get('/teacher/official-contract-status').then(res => {
+        setHasOfficialContract(res.data.hasOfficialContract);
+      }).catch(() => setHasOfficialContract(false));
+    }
+  }, [userRole]);
 
   // Close sidebar when screen size changes to desktop
   useEffect(() => {
@@ -352,12 +365,12 @@ function NavigationBar() {
           path: '/teacher/account',
           icon: '👤'
         },
-        {
+        hasOfficialContract && {
           name: 'Quản Lý Nghỉ Phép',
           path: '/teacher/leave-requests',
           icon: '🏖️'
         }
-      ]
+      ].filter(Boolean)
     }
   ];
 
@@ -394,6 +407,16 @@ function NavigationBar() {
         { 
           name: 'Phân Ca Giảng Dạy', 
           path: '/manager/schedules', 
+          icon: '📅'
+        },
+        { 
+          name: 'Quản Lý Tuyển Dụng',
+          path: '/manager/recruitment',
+          icon: '🧑‍💼'
+        },
+        { 
+          name: 'Báo cáo', 
+          path: '/manager/reports', 
           icon: '📊'
         },
         { 

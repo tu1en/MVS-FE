@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import SubmissionService from '../../services/submissionService';
 import UTF8EncodingFixer from '../../utils/utf8EncodingFixer';
+import { ROLE } from '../../constants/constants';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -194,7 +195,33 @@ const AssignmentDetail = () => {
             <div className="p-8">
                 <Button
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => navigate(-1)}
+                    onClick={() => {
+                        const token = localStorage.getItem('token');
+                        const role = localStorage.getItem('role');
+                        if (!token) {
+                            navigate('/');
+                        } else {
+                            switch (role) {
+                                case ROLE.ADMIN:
+                                    navigate('/admin');
+                                    break;
+                                case ROLE.TEACHER:
+                                    navigate('/teacher');
+                                    break;
+                                case ROLE.MANAGER:
+                                    navigate('/manager');
+                                    break;
+                                case ROLE.STUDENT:
+                                    navigate('/student');
+                                    break;
+                                case ROLE.ACCOUNTANT:
+                                    navigate('/accountant');
+                                    break;
+                                default:
+                                    navigate('/');
+                            }
+                        }
+                    }}
                     className="mb-4"
                 >
                     Quay lại
@@ -218,7 +245,33 @@ const AssignmentDetail = () => {
             <div className="mb-6">
                 <Button
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => navigate(-1)}
+                    onClick={() => {
+                        const token = localStorage.getItem('token');
+                        const role = localStorage.getItem('role');
+                        if (!token) {
+                            navigate('/');
+                        } else {
+                            switch (role) {
+                                case ROLE.ADMIN:
+                                    navigate('/admin');
+                                    break;
+                                case ROLE.TEACHER:
+                                    navigate('/teacher');
+                                    break;
+                                case ROLE.MANAGER:
+                                    navigate('/manager');
+                                    break;
+                                case ROLE.STUDENT:
+                                    navigate('/student');
+                                    break;
+                                case ROLE.ACCOUNTANT:
+                                    navigate('/accountant');
+                                    break;
+                                default:
+                                    navigate('/');
+                            }
+                        }
+                    }}
                     className="mb-4"
                 >
                     Quay lại

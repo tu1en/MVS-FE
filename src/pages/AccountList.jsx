@@ -11,6 +11,15 @@ const { Option } = Select;
 
 const assignableRoles = Object.values(ROLE).filter(r => r !== ROLE.GUEST);
 
+// Define role options for dropdown with proper structure
+const roleOptions = [
+    { value: 'ROLE_STUDENT', label: 'Học sinh' },
+    { value: 'ROLE_TEACHER', label: 'Giáo viên' },
+    { value: 'ROLE_MANAGER', label: 'Quản lý' },
+    { value: 'ROLE_ACCOUNTANT', label: 'Kế toán viên' },
+    { value: 'ROLE_ADMIN', label: 'Quản trị viên' }
+];
+
 const AccountList = () => {
     const [users, setUsers] = useState([]);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -95,7 +104,14 @@ const AccountList = () => {
             .validateFields()
             .then(async (values) => {
                 try {
-                    await adminService.createUser(values);
+                    // Format data to match backend expectations
+                    const userData = {
+                        ...values,
+                        name: values.fullName, // Backend expects 'name' field
+                        enabled: true, // Default to enabled
+                        roles: values.roles ? [values.roles] : ['ROLE_STUDENT'] // Convert single role to array
+                    };
+                    await adminService.createUser(userData);
                     setIsCreateModalVisible(false);
                     createForm.resetFields();
                     message.success("User created successfully");
@@ -124,11 +140,16 @@ const AccountList = () => {
     // Hàm lấy label role
     const getRoleLabel = (role) => {
         switch (role) {
-            case 'STUDENT': return 'Học sinh';
-            case 'TEACHER': return 'Giáo viên';
-            case 'MANAGER': return 'Quản lý';
-            case 'ACCOUNTANT': return 'Kế toán viên';
-            case 'ADMIN': return 'Quản trị viên';
+            case 'STUDENT':
+            case 'ROLE_STUDENT': return 'Học sinh';
+            case 'TEACHER':
+            case 'ROLE_TEACHER': return 'Giáo viên';
+            case 'MANAGER':
+            case 'ROLE_MANAGER': return 'Quản lý';
+            case 'ACCOUNTANT':
+            case 'ROLE_ACCOUNTANT': return 'Kế toán viên';
+            case 'ADMIN':
+            case 'ROLE_ADMIN': return 'Quản trị viên';
             default: return role;
         }
     };
@@ -255,6 +276,14 @@ const AccountList = () => {
                             name="createUserForm"
                         >
                             <Form.Item
+                                name="username"
+                                label="Tên đăng nhập"
+                                rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+
+                            <Form.Item
                                 name="fullName"
                                 label="Họ và tên"
                                 rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
@@ -265,7 +294,25 @@ const AccountList = () => {
                             <Form.Item
                                 name="email"
                                 label="Email"
-                                rules={[{ required: true, message: 'Vui lòng nhập email', type: 'email' }]}
+                                rules={[
+                                    { required: true, message: 'Vui lòng nhập email' },
+                                    { type: 'email', message: 'Email không hợp lệ' },
+                                    {
+                                        validator: async (_, value) => {
+                                            if (!value) return Promise.resolve();
+                                            try {
+                                                const exists = await adminService.checkEmailExists(value);
+                                                if (exists) {
+                                                    return Promise.reject(new Error('Email này đã được sử dụng'));
+                                                }
+                                                return Promise.resolve();
+                                            } catch (error) {
+                                                console.error('Error checking email:', error);
+                                                return Promise.resolve(); // Don't block form if API fails
+                                            }
+                                        }
+                                    }
+                                ]}
                             >
                                 <Input />
                             </Form.Item>
@@ -285,13 +332,13 @@ const AccountList = () => {
                             <Form.Item
                                 name="roles"
                                 label="Vai trò"
-                                rules={[{ required: true, message: 'Vui lòng chọn ít nhất một vai trò' }]}
+                                rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
                             >
-                                <Select mode="multiple" placeholder="Chọn vai trò">
+                                <Select placeholder="Chọn vai trò">
                                     <Option value="ROLE_STUDENT">Học sinh</Option>
                                     <Option value="ROLE_TEACHER">Giáo viên</Option>
                                     <Option value="ROLE_MANAGER">Quản lý</Option>
-                                    <Option value="ROLE_ADMIN">Quản trị viên</Option>
+                                    <Option value="ROLE_ACCOUNTANT">Kế toán viên</Option>
                                 </Select>
                             </Form.Item>
 
@@ -305,15 +352,20 @@ const AccountList = () => {
                             <Form.Item
                                 name="citizenId"
                                 label="CCCD"
+                                rules={[{ required: true, message: 'Vui lòng nhập CCCD' }, { pattern: /^\d{13}$/, message: 'CCCD phải gồm đúng 13 số' }]}
                             >
-                                <Input />
+                                <Input maxLength={13} />
                             </Form.Item>
 
                             <Form.Item
                                 name="phoneNumber"
                                 label="Số điện thoại"
+                                rules={[
+                                    { required: true, message: 'Vui lòng nhập số điện thoại' },
+                                    { pattern: /^\d{10,11}$/, message: 'Số điện thoại phải gồm 10 hoặc 11 số' }
+                                ]}
                             >
-                                <Input />
+                                <Input maxLength={11} />
                             </Form.Item>
                         </Form>
                     </Modal>
