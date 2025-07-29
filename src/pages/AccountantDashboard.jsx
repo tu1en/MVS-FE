@@ -1,12 +1,10 @@
-import { CalendarOutlined, DollarOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
-import { Card, Col, message, Row, Statistic, Typography } from 'antd';
+import { CalendarOutlined, DollarOutlined, FileTextOutlined, StopOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import api from '../services/api.js';
-import { Divider } from 'antd';
-import { UserOutlined, StopOutlined } from '@ant-design/icons';
 import { useBackButton } from '../hooks/useBackButton';
+import api from '../services/api.js';
 
 const { Title } = Typography;
 
