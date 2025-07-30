@@ -1,479 +1,592 @@
-import { Tabs, Table, Button, Modal, Form, Input, message, Popconfirm, Tag, Calendar, Badge, Select, InputNumber } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, DatePicker, InputNumber, Tag, message, Popconfirm, Select, Space } from 'antd';
 import { useEffect, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import dayjs from 'dayjs';
+import RecruitmentPlanManagement from './RecruitmentPlanManagement';
+
+const { RangePicker } = DatePicker;
 
 const RecruitmentManagement = () => {
-  // Job positions state
+  const [plans, setPlans] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [loadingPositions, setLoadingPositions] = useState(false);
-  const [showPositionModal, setShowPositionModal] = useState(false);
-  const [editingPosition, setEditingPosition] = useState(null);
-  const [positionForm] = Form.useForm();
-
-  // Applications state
   const [applications, setApplications] = useState([]);
-  const [loadingApps, setLoadingApps] = useState(false);
-
-  // Modal từ chối
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectingApp, setRejectingApp] = useState(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  // State cho lịch phỏng vấn
   const [approvedApps, setApprovedApps] = useState([]);
   const [interviews, setInterviews] = useState([]);
-  const [loadingInterviews, setLoadingInterviews] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [selectedAppId, setSelectedAppId] = useState(null);
-
-  // State cho kết quả phỏng vấn
   const [pendingInterviews, setPendingInterviews] = useState([]);
-  const [loadingPending, setLoadingPending] = useState(false);
-  const [resultModal, setResultModal] = useState({ open: false, interview: null, status: '', reason: '' });
-
-  // Helper: chuyển LocalDateTime array về string ISO
-  const parseDateTimeArray = arr => {
-    if (!Array.isArray(arr) || arr.length < 6) return '';
-    // [year, month, day, hour, minute, second, nano]
-    const [y, m, d, h, min, s] = arr;
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  // Fetch job positions
-  const fetchPositions = async () => {
-    setLoadingPositions(true);
-    try {
-      const res = await axiosInstance.get('/job-positions');
-      setPositions(res.data);
-    } catch {
-      message.error('Không thể tải danh sách vị trí!');
-    } finally {
-      setLoadingPositions(false);
-    }
-  };
-
-  // Fetch applications
-  const fetchApplications = async () => {
-    setLoadingApps(true);
-    try {
-      const res = await axiosInstance.get('/recruitments');
-      setApplications(res.data);
-    } catch {
-      message.error('Không thể tải danh sách ứng viên!');
-    } finally {
-      setLoadingApps(false);
-    }
-  };
-
-  // Fetch ứng viên đã duyệt
-  const fetchApprovedApps = async () => {
-    try {
-      const res = await axiosInstance.get('/recruitments');
-      setApprovedApps(res.data.filter(a => a.status === 'APPROVED'));
-    } catch {}
-  };
-  // Fetch lịch phỏng vấn
-  const fetchInterviews = async () => {
-    setLoadingInterviews(true);
-    try {
-      const res = await axiosInstance.get('/interview-schedules');
-      // Parse lại startTime/endTime nếu là array
-      const data = res.data.map(i => ({
-        ...i,
-        startTime: Array.isArray(i.startTime) ? parseDateTimeArray(i.startTime) : i.startTime,
-        endTime: Array.isArray(i.endTime) ? parseDateTimeArray(i.endTime) : i.endTime,
-      }));
-      setInterviews(data);
-      console.log('Fetched interviews:', data); // Debug log
-    } catch {}
-    setLoadingInterviews(false);
-  };
-
-  // Fetch pending interviews
-  const fetchPendingInterviews = async () => {
-    setLoadingPending(true);
-    try {
-      const res = await axiosInstance.get('/interview-schedules/pending');
-      setPendingInterviews(res.data);
-    } catch {}
-    setLoadingPending(false);
-  };
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [activeTab, setActiveTab] = useState('plans');
+  const [showPositionModal, setShowPositionModal] = useState(false);
+  const [editingPosition, setEditingPosition] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [scheduleForm] = Form.useForm();
 
   useEffect(() => {
-    fetchPositions();
-    fetchApplications();
-    fetchApprovedApps();
-    fetchInterviews();
-    fetchPendingInterviews();
+    fetchPlans();
   }, []);
 
-  // Khi interviews thay đổi, reset selectedAppId nếu ứng viên đã được xếp lịch
   useEffect(() => {
-    if (selectedAppId && interviews.some(i => i.applicationId === selectedAppId)) {
-      setSelectedAppId(null);
+    if (selectedPlan) {
+      fetchPositions();
     }
-  }, [interviews]);
+  }, [selectedPlan]);
 
-  // Khi interviews thay đổi, cập nhật lại pendingInterviews (nếu cần)
   useEffect(() => {
-    fetchPendingInterviews();
-  }, [interviews]);
+    if (selectedPlan && positions.length > 0) {
+      fetchApplications();
+      fetchApprovedApps();
+    }
+  }, [selectedPlan, positions]);
 
-  // CRUD Job Position
+  useEffect(() => {
+    if (selectedPlan && applications.length > 0) {
+      fetchInterviews();
+      fetchPendingInterviews();
+    }
+  }, [selectedPlan, applications]);
+
+  const fetchPlans = async () => {
+    try {
+      const res = await axiosInstance.get('/recruitment-plans');
+      setPlans(res.data);
+    } catch (err) {
+      message.error('Không thể tải danh sách kế hoạch!');
+    }
+  };
+
+  const fetchPositions = async () => {
+    if (!selectedPlan) return;
+    try {
+      const res = await axiosInstance.get(`/job-positions?recruitmentPlanId=${selectedPlan.id}`);
+      setPositions(res.data);
+    } catch (err) {
+      message.error('Không thể tải danh sách vị trí!');
+    }
+  };
+
+  const fetchApplications = async () => {
+    if (!selectedPlan) return;
+    try {
+      const res = await axiosInstance.get('/recruitment-applications');
+      // Lọc theo job positions thuộc recruitment plan
+      const filtered = res.data.filter(app => 
+        positions.some(pos => pos.id === app.jobPositionId)
+      );
+      setApplications(filtered);
+    } catch (err) {
+      message.error('Không thể tải danh sách đơn ứng tuyển!');
+    }
+  };
+
+  const fetchApprovedApps = async () => {
+    if (!selectedPlan) return;
+    try {
+      const res = await axiosInstance.get('/recruitment-applications/approved');
+      // Lọc theo job positions thuộc recruitment plan
+      const filtered = res.data.filter(app => 
+        positions.some(pos => pos.id === app.jobPositionId)
+      );
+      setApprovedApps(filtered);
+    } catch (err) {
+      message.error('Không thể tải danh sách ứng viên đã duyệt!');
+    }
+  };
+
+  const fetchInterviews = async () => {
+    if (!selectedPlan) return;
+    try {
+      const res = await axiosInstance.get('/interview-schedules');
+      // Lọc theo applications thuộc recruitment plan
+      const filtered = res.data.filter(interview => 
+        applications.some(app => app.id === interview.applicationId)
+      );
+      setInterviews(filtered);
+    } catch (err) {
+      message.error('Không thể tải danh sách lịch phỏng vấn!');
+    }
+  };
+
+  const fetchPendingInterviews = async () => {
+    if (!selectedPlan) return;
+    try {
+      const res = await axiosInstance.get('/interview-schedules/pending');
+      console.log('All pending interviews from API:', res.data);
+      
+      // Lọc theo applications thuộc recruitment plan
+      const filtered = res.data.filter(interview => {
+        // Tìm application tương ứng trong tất cả applications
+        const application = applications.find(app => app.id === interview.applicationId);
+        if (application) {
+          // Kiểm tra xem application có thuộc job position của recruitment plan không
+          const belongsToPlan = positions.some(pos => pos.id === application.jobPositionId);
+          console.log(`Interview ${interview.id} for application ${interview.applicationId}: belongsToPlan = ${belongsToPlan}`);
+          console.log(`Interview ${interview.id} startTime:`, interview.startTime, 'Type:', typeof interview.startTime);
+          return belongsToPlan;
+        }
+        console.log(`Interview ${interview.id}: no application found`);
+        return false;
+      });
+      console.log('Pending interviews filtered:', filtered);
+      setPendingInterviews(filtered);
+    } catch (err) {
+      console.error('Error fetching pending interviews:', err);
+      message.error('Không thể tải danh sách phỏng vấn chờ!');
+    }
+  };
+
+  const handlePlanSelect = (plan) => {
+    setSelectedPlan(plan);
+    setActiveTab('positions');
+  };
+
   const openAddPosition = () => {
     setEditingPosition(null);
-    positionForm.resetFields();
     setShowPositionModal(true);
   };
+
   const openEditPosition = (record) => {
     setEditingPosition(record);
-    positionForm.setFieldsValue(record);
     setShowPositionModal(true);
   };
-  const handleDeletePosition = async (id) => {
-    await axiosInstance.delete(`/job-positions/${id}`);
-    message.success('Đã xoá vị trí!');
-    fetchPositions();
+
+  const handlePlanChange = (planId) => {
+    const plan = plans.find(p => p.id === planId);
+    if (plan) {
+      setEditingPosition({ ...editingPosition, recruitmentPlanId: planId });
+    }
   };
+
   const handlePositionSubmit = async (values) => {
-    if (editingPosition) {
-      await axiosInstance.put(`/job-positions/${editingPosition.id}`, values);
-      message.success('Cập nhật thành công!');
-    } else {
-      await axiosInstance.post('/job-positions', values);
-      message.success('Cập nhật thành công!');
+    try {
+      if (editingPosition) {
+        await axiosInstance.put(`/job-positions/${editingPosition.id}`, values);
+        message.success('Cập nhật vị trí thành công!');
+      } else {
+        await axiosInstance.post('/job-positions', { ...values, recruitmentPlanId: selectedPlan.id });
+        message.success('Tạo vị trí thành công!');
+      }
+      setShowPositionModal(false);
+      fetchPositions();
+    } catch (err) {
+      message.error('Có lỗi xảy ra!');
     }
-    setShowPositionModal(false);
-    fetchPositions();
   };
 
-  // Duyệt CV
-  const handleApprove = async (record) => {
-    await axiosInstance.post(`/recruitments/${record.id}/approve`);
-    message.success('Đã duyệt CV!');
-    fetchApplications();
-    fetchApprovedApps(); // Cập nhật ngay danh sách ứng viên đã duyệt
-  };
-  // Từ chối CV
-  const handleReject = async () => {
-    if (!rejectingApp) return;
-    await axiosInstance.post(`/recruitments/${rejectingApp.id}/reject`, { reason: rejectReason });
-    message.success('Đã từ chối CV!');
-    setShowRejectModal(false);
-    setRejectingApp(null);
-    setRejectReason('');
-    fetchApplications();
+  const handleDeletePosition = async (id) => {
+    try {
+      await axiosInstance.delete(`/job-positions/${id}`);
+      message.success('Xóa vị trí thành công!');
+      fetchPositions();
+    } catch (err) {
+      message.error('Không thể xóa vị trí!');
+    }
   };
 
-  // Thêm lịch phỏng vấn
-  const handleAddInterview = async (appId, date) => {
-    // Không cho phép lên lịch trong quá khứ
-    if (dayjs(date).isBefore(dayjs(), 'day')) {
-      message.error('Không thể lên lịch phỏng vấn trong quá khứ!');
-      return;
+  const handleApplicationStatusChange = async (id, status) => {
+    try {
+      if (status === 'APPROVED') {
+        await axiosInstance.post(`/recruitment-applications/${id}/approve`);
+      } else if (status === 'REJECTED') {
+        await axiosInstance.post(`/recruitment-applications/${id}/reject`);
+      }
+      message.success('Cập nhật trạng thái thành công!');
+      fetchApplications();
+      fetchApprovedApps();
+    } catch (err) {
+      message.error('Không thể cập nhật trạng thái!');
     }
-    // Kiểm tra ứng viên đã có lịch phỏng vấn chưa
-    if (interviews.some(i => i.applicationId === appId)) {
-      message.error('Ứng viên này đã có lịch phỏng vấn!');
-      return;
-    }
-    // Kiểm tra ứng viên đã có lịch phỏng vấn trong ngày này chưa
-    if (interviews.some(i => i.applicationId === appId && dayjs(i.startTime).isSame(date, 'day'))) {
-      message.error('Ứng viên này đã có lịch phỏng vấn trong ngày này!');
-      return;
-    }
-    // Tìm slot giờ trống trong ngày (không trùng)
-    const dayInterviews = interviews.filter(i => dayjs(i.startTime).isSame(date, 'day'));
-    let startHour = 8;
-    let found = false;
-    for (; startHour <= 16; startHour++) {
-      const slotTaken = dayInterviews.some(i => dayjs(i.startTime).hour() === startHour);
-      if (!slotTaken) { found = true; break; }
-    }
-    if (!found) {
-      message.error('Hết slot phỏng vấn trong ngày này!');
-      return;
-    }
-    const start = dayjs(date).hour(startHour).minute(0).second(0);
-    const end = start.add(1, 'hour');
-    await axiosInstance.post('/interview-schedules', {
-      applicationId: appId,
-      startTime: start.toISOString(),
-      endTime: end.toISOString()
-    }, { params: { applicationId: appId, startTime: start.toISOString(), endTime: end.toISOString() } });
-    message.success('Đã lên lịch phỏng vấn!');
-    await fetchInterviews(); // Đảm bảo cập nhật lịch ngay
-    await fetchPendingInterviews();
-    setSelectedAppId(null); // Reset sau khi lên lịch thành công
   };
-  // Xoá lịch phỏng vấn
+
+  const handleDeleteApplication = async (id) => {
+    try {
+      await axiosInstance.delete(`/recruitment-applications/${id}`);
+      message.success('Xóa đơn ứng tuyển thành công!');
+      fetchApplications();
+    } catch (err) {
+      message.error('Không thể xóa đơn ứng tuyển!');
+    }
+  };
+
+  const openScheduleModal = (application) => {
+    setSelectedApplication(application);
+    scheduleForm.resetFields();
+    setShowScheduleModal(true);
+  };
+
+  const handleScheduleSubmit = async (values) => {
+    try {
+      const [startTime, endTime] = values.interviewTime;
+      console.log('Scheduling interview for application:', selectedApplication.id);
+      console.log('Start time:', startTime.format('YYYY-MM-DDTHH:mm:ss'));
+      console.log('End time:', endTime.format('YYYY-MM-DDTHH:mm:ss'));
+      
+      // Kiểm tra không cho phép xếp lịch trong quá khứ
+      const now = dayjs();
+      if (startTime.isBefore(now)) {
+        message.error('Không thể xếp lịch phỏng vấn trong quá khứ!');
+        return;
+      }
+      
+      const startTimeStr = startTime.format('YYYY-MM-DDTHH:mm:ss');
+      const endTimeStr = endTime.format('YYYY-MM-DDTHH:mm:ss');
+
+      // Kiểm tra trùng lịch
+      const conflictCheck = await axiosInstance.post('/interview-schedules/check-conflict', null, {
+        params: { startTime: startTimeStr, endTime: endTimeStr }
+      });
+
+      if (conflictCheck.data) {
+        message.error('Thời gian này đã có lịch phỏng vấn khác!');
+        return;
+      }
+
+      const response = await axiosInstance.post('/interview-schedules', null, {
+        params: {
+          applicationId: selectedApplication.id,
+          startTime: startTimeStr,
+          endTime: endTimeStr
+        }
+      });
+      console.log('Interview created:', response.data);
+
+      message.success('Lên lịch phỏng vấn thành công!');
+      setShowScheduleModal(false);
+      
+      // Refresh tất cả dữ liệu
+      console.log('Refreshing data...');
+      await fetchApprovedApps();
+      await fetchInterviews();
+      await fetchPendingInterviews();
+      console.log('Data refresh complete');
+    } catch (err) {
+      console.error('Error scheduling interview:', err);
+      message.error('Không thể lên lịch phỏng vấn!');
+    }
+  };
+
+  const handleInterviewStatusChange = async (id, status, result) => {
+    try {
+      await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+      message.success('Cập nhật kết quả phỏng vấn thành công!');
+      fetchPendingInterviews();
+    } catch (err) {
+      message.error('Không thể cập nhật kết quả phỏng vấn!');
+    }
+  };
+
   const handleDeleteInterview = async (id) => {
-    await axiosInstance.delete(`/interview-schedules/${id}`);
-    message.success('Đã xoá lịch phỏng vấn!');
-    fetchInterviews();
+    try {
+      await axiosInstance.delete(`/interview-schedules/${id}`);
+      message.success('Xóa lịch phỏng vấn thành công!');
+      fetchInterviews();
+      fetchPendingInterviews();
+    } catch (err) {
+      message.error('Không thể xóa lịch phỏng vấn!');
+    }
   };
 
-  // Xử lý kết quả phỏng vấn
-  const handleSetResult = async () => {
-    if (!resultModal.interview) return;
-    await axiosInstance.put(`/interview-schedules/${resultModal.interview.id}/result`, {
-      status: resultModal.status,
-      result: resultModal.reason
-    });
-    message.success('Đã cập nhật kết quả phỏng vấn!');
-    setResultModal({ open: false, interview: null, status: '', reason: '' });
-    fetchPendingInterviews();
-    fetchApprovedApps();
-    fetchInterviews();
-  };
+  const openPlans = plans.filter(p => p.status === 'OPEN');
 
-  // Table columns
   const positionColumns = [
-    { title: 'Tên vị trí', dataIndex: 'title' },
-    { 
-      title: 'Mô tả', 
-      dataIndex: 'description',
-      render: (text, record) => (
-        <Input.TextArea
-          value={text}
-          onChange={(e) => {
-            const newPositions = positions.map(p => 
-              p.id === record.id ? { ...p, description: e.target.value } : p
-            );
-            setPositions(newPositions);
-          }}
-          onBlur={() => handlePositionSubmit({ ...record, description: record.description })}
-          autoSize={{ minRows: 2, maxRows: 4 }}
-        />
-      )
-    },
-    { 
-      title: 'Mức lương', 
-      dataIndex: 'salaryRange',
-      render: (text, record) => (
-        <Input
-          value={text}
-          onChange={(e) => {
-            const newPositions = positions.map(p => 
-              p.id === record.id ? { ...p, salaryRange: e.target.value } : p
-            );
-            setPositions(newPositions);
-          }}
-          onBlur={() => handlePositionSubmit({ ...record, salaryRange: record.salaryRange })}
-        />
-      )
-    },
-    { 
-      title: 'Số lượng tuyển dụng', 
-      dataIndex: 'quantity',
-      render: (text, record) => (
-        <InputNumber
-          value={text}
-          min={1}
-          onChange={(value) => {
-            const newPositions = positions.map(p => 
-              p.id === record.id ? { ...p, quantity: value } : p
-            );
-            setPositions(newPositions);
-          }}
-          onBlur={() => handlePositionSubmit({ ...record, quantity: record.quantity })}
-        />
-      )
-    },
+    { title: 'Vị trí', dataIndex: 'title' },
+    { title: 'Mô tả', dataIndex: 'description' },
+    { title: 'Mức lương', dataIndex: 'salaryRange' },
+    { title: 'Số lượng', dataIndex: 'quantity' },
     {
-      title: 'Hành động',
+      title: 'Thao tác',
       render: (_, record) => (
-        <>
+        <div className="space-x-2">
           <Button size="small" onClick={() => openEditPosition(record)}>Sửa</Button>
-          <Popconfirm title="Xoá vị trí này?" onConfirm={() => handleDeletePosition(record.id)} okText="Xoá" cancelText="Huỷ">
-            <Button size="small" danger className="ml-2">Xoá</Button>
+          <Popconfirm title="Xóa vị trí này?" onConfirm={() => handleDeletePosition(record.id)} okText="Xóa" cancelText="Hủy">
+            <Button size="small" danger>Xóa</Button>
           </Popconfirm>
-        </>
+        </div>
       )
     }
   ];
 
-  const appColumns = [
-    { title: 'Vị trí', dataIndex: 'jobTitle' },
+  const applicationColumns = [
     { title: 'Họ tên', dataIndex: 'fullName' },
     { title: 'Email', dataIndex: 'email' },
-    { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: v => v || '-' },
-    { title: 'Địa chỉ', dataIndex: 'address', render: v => v || '-' },
-    { title: 'CV', dataIndex: 'cvUrl', render: url => url ? <a href={url} target="_blank" rel="noopener noreferrer">Xem CV</a> : '-' },
-    { 
-      title: 'Trạng thái', 
-      dataIndex: 'status', 
-      render: s => {
-        let color = 'default';
-        let text = s;
-        
-        if (s === 'PENDING') {
-          color = 'orange';
-          text = 'Chờ duyệt';
-        } else if (s === 'APPROVED') {
-          color = 'green';
-          text = 'Đã duyệt';
-        } else if (s === 'REJECTED') {
-          color = 'red';
-          text = 'Đã từ chối';
-        }
-        
-        return <Tag color={color}>{text}</Tag>;
-      }
-    },
-    { title: 'Lý do từ chối', dataIndex: 'rejectReason', render: v => v || '-' },
+    { title: 'Số điện thoại', dataIndex: 'phoneNumber' },
+    { title: 'Vị trí', dataIndex: 'jobPosition' },
     {
-      title: 'Hành động',
-      render: (_, record) => record.status === 'PENDING' && (
-        <>
-          <Button size="small" type="primary" onClick={() => handleApprove(record)}>Duyệt</Button>
-          <Button size="small" danger className="ml-2" onClick={() => { setRejectingApp(record); setShowRejectModal(true); }}>Từ chối</Button>
-        </>
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      render: (status) => (
+        <Tag color={status === 'APPROVED' ? 'green' : status === 'REJECTED' ? 'red' : 'orange'}>
+          {status === 'APPROVED' ? 'Đã duyệt' : status === 'REJECTED' ? 'Từ chối' : 'Chờ duyệt'}
+        </Tag>
+      )
+    },
+    {
+      title: 'Thao tác',
+      render: (_, record) => (
+        <div className="space-x-2">
+          {record.status === 'PENDING' && (
+            <>
+              <Button 
+                type="primary" 
+                size="small" 
+                onClick={() => handleApplicationStatusChange(record.id, 'APPROVED')}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              >
+                ✓ Duyệt
+              </Button>
+              <Button 
+                type="primary" 
+                size="small" 
+                danger
+                onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
+              >
+                ✗ Từ chối
+              </Button>
+            </>
+          )}
+          <Popconfirm title="Xóa đơn này?" onConfirm={() => handleDeleteApplication(record.id)} okText="Xóa" cancelText="Hủy">
+            <Button size="small" danger>Xóa</Button>
+          </Popconfirm>
+        </div>
       )
     }
   ];
 
-  // Render lịch phỏng vấn trên calendar
-  const dateCellRender = (value) => {
-    const dayInterviews = interviews.filter(i => dayjs(i.startTime).isSame(value, 'day'));
-    return (
-      <ul className="events">
-        {dayInterviews.map(item => (
-          <li key={item.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-            <Badge status="processing" text={item.applicantName} />
-            <Button size="small" danger onClick={() => handleDeleteInterview(item.id)} style={{ marginLeft: 8 }}>
-              Xoá lịch
-            </Button>
-          </li>
-        ))}
-      </ul>
-    );
-  };
+  // Gộp danh sách ứng viên đã duyệt và lịch phỏng vấn
+  const scheduleColumns = [
+    { title: 'Họ tên', dataIndex: 'fullName' },
+    { title: 'Email', dataIndex: 'email' },
+    { title: 'Vị trí', dataIndex: 'jobPosition' },
+    {
+      title: 'Trạng thái lịch',
+      dataIndex: 'hasSchedule',
+      render: (_, record) => {
+        const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
+        return (
+          <Tag color={hasSchedule ? 'green' : 'orange'}>
+            {hasSchedule ? 'Đã lên lịch' : 'Chưa lên lịch'}
+          </Tag>
+        );
+      }
+    },
+    {
+      title: 'Thời gian phỏng vấn',
+      dataIndex: 'interviewTime',
+      render: (_, record) => {
+        const interview = interviews.find(i => i.applicationId === record.id);
+        console.log('Interview data for record', record.id, ':', interview);
+        if (interview && interview.startTime && interview.endTime) {
+          try {
+            console.log('Start time:', interview.startTime, 'Type:', typeof interview.startTime);
+            console.log('End time:', interview.endTime, 'Type:', typeof interview.endTime);
+            // Parse startTime và endTime từ ISO format
+            const startTime = dayjs(interview.startTime);
+            const endTime = dayjs(interview.endTime);
+            console.log('Parsed startTime:', startTime.format('YYYY-MM-DD HH:mm:ss'));
+            console.log('Parsed endTime:', endTime.format('YYYY-MM-DD HH:mm:ss'));
+            return `${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`;
+          } catch (error) {
+            console.error('Error formatting date:', interview.startTime, interview.endTime, error);
+            return 'Lỗi định dạng';
+          }
+        }
+        return '-';
+      }
+    },
+    {
+      title: 'Thao tác',
+      render: (_, record) => {
+        const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
+        return (
+          <div className="space-x-2">
+            {!hasSchedule && (
+              <Button 
+                type="primary" 
+                size="small" 
+                onClick={() => openScheduleModal(record)}
+              >
+                Lên lịch
+              </Button>
+            )}
+            {hasSchedule && (
+              <Button 
+                size="small" 
+                onClick={() => openScheduleModal(record)}
+              >
+                Sửa lịch
+              </Button>
+            )}
+          </div>
+        );
+      }
+    }
+  ];
 
-  // Tab CV đã duyệt
-  const ApprovedTab = () => {
-    // Lọc chỉ các ứng viên đã duyệt nhưng chưa có lịch phỏng vấn
-    const availableApps = approvedApps.filter(app => !interviews.some(i => i.applicationId === app.id));
-    return (
-      <div>
-        <div className="mb-4">
-          <Select
-            showSearch
-            placeholder="Chọn ứng viên để lên lịch phỏng vấn"
-            optionFilterProp="children"
-            style={{ width: 300 }}
-            onChange={setSelectedAppId}
-            value={selectedAppId}
+  const pendingInterviewColumns = [
+    { title: 'Họ tên', dataIndex: 'applicantName' },
+    { title: 'Vị trí', dataIndex: 'jobTitle' },
+    { 
+      title: 'Ngày phỏng vấn', 
+      dataIndex: 'startTime', 
+      render: (date, record) => {
+        try {
+          console.log('Pending interview startTime:', date, 'Type:', typeof date);
+          console.log('Pending interview endTime:', record.endTime, 'Type:', typeof record.endTime);
+          const startTime = dayjs(date);
+          const endTime = dayjs(record.endTime);
+          return `${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`;
+        } catch (error) {
+          console.error('Error formatting pending interview date:', date, record.endTime, error);
+          return 'Lỗi định dạng';
+        }
+      }
+    },
+    { title: 'Địa điểm', dataIndex: 'location' },
+    {
+      title: 'Thao tác',
+      render: (_, record) => (
+        <div className="space-x-2">
+          <Button 
+            type="primary" 
+            size="small" 
+            onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
           >
-            {availableApps.map(app => (
-              <Select.Option key={app.id} value={app.id}>{app.fullName} - {app.jobTitle}</Select.Option>
-            ))}
-          </Select>
-          <Button type="primary" className="ml-2" disabled={!selectedAppId} onClick={() => handleAddInterview(selectedAppId, selectedDate)}>
-            Lên lịch phỏng vấn ngày {selectedDate.format('DD/MM/YYYY')}
+            ✓ Đỗ
           </Button>
+          <Button 
+            type="primary" 
+            size="small" 
+            danger
+            onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
+          >
+            ✗ Trượt
+          </Button>
+          <Popconfirm title="Xóa lịch này?" onConfirm={() => handleDeleteInterview(record.id)} okText="Xóa" cancelText="Hủy">
+            <Button size="small" danger>Xóa</Button>
+          </Popconfirm>
         </div>
-        <Calendar value={selectedDate} onSelect={setSelectedDate} dateCellRender={dateCellRender} />
-      </div>
-    );
-  };
-
-  // Tab kết quả phỏng vấn
-  const InterviewResultTab = () => {
-    // Hiển thị tất cả lịch phỏng vấn, không filter trạng thái
-    return (
-      <div>
-        <Table
-          dataSource={interviews}
-          rowKey="id"
-          loading={loadingInterviews}
-          columns={[
-            { title: 'Ứng viên', dataIndex: 'applicantName' },
-            { title: 'Email', dataIndex: 'applicantEmail' },
-            { title: 'Vị trí', dataIndex: 'jobTitle' },
-            { title: 'Thời gian', render: (_, r) => `${dayjs(r.startTime).format('DD/MM/YYYY HH:mm')} - ${dayjs(r.endTime).format('HH:mm')}` },
-            { title: 'Trạng thái', dataIndex: 'status', render: s => {
-              let color = 'default';
-              let text = s || '---';
-              
-              if (s === 'PENDING') {
-                color = 'orange';
-                text = 'Chờ phỏng vấn';
-              } else if (s === 'SCHEDULED') {
-                color = 'blue';
-                text = 'Đã lên lịch';
-              } else if (s === 'ACCEPTED') {
-                color = 'green';
-                text = 'Đã chấp nhận';
-              } else if (s === 'REJECTED') {
-                color = 'red';
-                text = 'Đã từ chối';
-              } else if (s === 'DONE') {
-                color = 'purple';
-                text = 'Đã hoàn thành';
-              }
-              
-              return <Tag color={color}>{text}</Tag>;
-            } },
-            {
-              title: 'Hành động',
-              render: (_, record) => (record.status === 'PENDING' || record.status === 'SCHEDULED') && (
-                <>
-                  <Button type="primary" size="small" onClick={() => setResultModal({ open: true, interview: record, status: 'ACCEPTED', reason: '' })}>Chấp nhận</Button>
-                  <Button danger size="small" className="ml-2" onClick={() => setResultModal({ open: true, interview: record, status: 'REJECTED', reason: '' })}>Từ chối</Button>
-                </>
-              )
-            }
-          ]}
-        />
-        <Modal
-          open={resultModal.open}
-          onCancel={() => setResultModal({ open: false, interview: null, status: '', reason: '' })}
-          onOk={handleSetResult}
-          okText={resultModal.status === 'ACCEPTED' ? 'Chấp nhận' : 'Từ chối'}
-          title={resultModal.status === 'ACCEPTED' ? 'Chấp nhận ứng viên' : 'Từ chối ứng viên'}
-        >
-          {resultModal.status === 'REJECTED' && (
-            <Input.TextArea rows={3} value={resultModal.reason} onChange={e => setResultModal({ ...resultModal, reason: e.target.value })} placeholder="Nhập lý do từ chối" />
-          )}
-          {resultModal.status === 'ACCEPTED' && (
-            <div>Bạn chắc chắn muốn chấp nhận ứng viên này? Ứng viên sẽ được thêm vào hệ thống với trạng thái chưa có hợp đồng.</div>
-          )}
-        </Modal>
-      </div>
-    );
-  };
+      )
+    }
+  ];
 
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Quản Lý Tuyển Dụng</h2>
-      <Tabs defaultActiveKey="positions">
-        <Tabs.TabPane tab="Vị trí tuyển dụng" key="positions">
-          <Button type="primary" className="mb-4" onClick={openAddPosition}>Thêm vị trí mới</Button>
-          <Table columns={positionColumns} dataSource={positions} rowKey="id" loading={loadingPositions} />
-          <Modal open={showPositionModal} onCancel={() => setShowPositionModal(false)} title={editingPosition ? 'Cập nhật vị trí' : 'Thêm vị trí mới'} onOk={() => positionForm.submit()} okText={editingPosition ? 'Cập nhật' : 'Thêm mới'}>
-            <Form form={positionForm} layout="vertical" onFinish={handlePositionSubmit}>
-              <Form.Item name="title" label="Tên vị trí" rules={[{ required: true, message: 'Nhập tên vị trí' }]}> <Input /> </Form.Item>
-              <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Nhập mô tả' }]}> <Input.TextArea rows={3} /> </Form.Item>
-              <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Nhập mức lương' }]}> <Input /> </Form.Item>
-              <Form.Item name="quantity" label="Số lượng tuyển dụng" rules={[{ required: true, message: 'Nhập số lượng' }]}> <InputNumber min={1} style={{ width: '100%' }} /> </Form.Item>
-            </Form>
-          </Modal>
+      
+      {selectedPlan && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
+          <h3 className="text-lg font-semibold text-blue-800">Kế hoạch đang quản lý: {selectedPlan.title}</h3>
+          <p className="text-blue-600">
+            Thời gian: {dayjs(selectedPlan.startDate).format('DD/MM/YYYY')} - {dayjs(selectedPlan.endDate).format('DD/MM/YYYY')} | 
+            Số lượng: {selectedPlan.totalQuantity} | 
+            Trạng thái: <Tag color={selectedPlan.status === 'OPEN' ? 'green' : 'red'}>
+              {selectedPlan.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+            </Tag>
+          </p>
+          <Button 
+            type="link" 
+            onClick={() => {
+              setSelectedPlan(null);
+              setActiveTab('plans');
+            }}
+            className="p-0 text-blue-600"
+          >
+            ← Chọn kế hoạch khác
+          </Button>
+        </div>
+      )}
+
+      <Tabs activeKey={activeTab} onChange={(key) => {
+        if (selectedPlan || key === 'plans') {
+          setActiveTab(key);
+        } else {
+          message.warning('Vui lòng chọn một kế hoạch tuyển dụng trước!');
+        }
+      }}>
+        <Tabs.TabPane tab="Kế hoạch tuyển dụng" key="plans">
+          <RecruitmentPlanManagement onPlanSelect={handlePlanSelect} />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="Ứng viên nộp CV" key="applications">
-          <Table columns={appColumns} dataSource={applications} rowKey="id" loading={loadingApps} />
-          <Modal open={showRejectModal} onCancel={() => setShowRejectModal(false)} title="Lý do từ chối" onOk={handleReject} okText="Từ chối">
-            <Input.TextArea rows={3} value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Nhập lý do từ chối" />
-          </Modal>
+        
+        <Tabs.TabPane tab="Vị trí tuyển dụng" key="positions" disabled={!selectedPlan}>
+          <div className="mb-4">
+            <Button type="primary" onClick={openAddPosition}>Thêm vị trí</Button>
+          </div>
+          <Table columns={positionColumns} dataSource={positions} rowKey="id" />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="CV đã duyệt & Lịch phỏng vấn" key="approved">
-          <ApprovedTab />
+        
+        <Tabs.TabPane tab="Đơn ứng tuyển" key="applications" disabled={!selectedPlan}>
+          <Table columns={applicationColumns} dataSource={applications} rowKey="id" />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="Kết quả phỏng vấn" key="interview-result">
-          <InterviewResultTab />
+        
+        <Tabs.TabPane tab="Lên lịch" key="schedule" disabled={!selectedPlan}>
+          <Table columns={scheduleColumns} dataSource={approvedApps} rowKey="id" />
+        </Tabs.TabPane>
+        
+        <Tabs.TabPane tab="Phỏng vấn chờ" key="pending" disabled={!selectedPlan}>
+          <Table columns={pendingInterviewColumns} dataSource={pendingInterviews} rowKey="id" />
         </Tabs.TabPane>
       </Tabs>
+
+      {/* Modal tạo/sửa vị trí */}
+      <Modal
+        title={editingPosition ? 'Sửa vị trí' : 'Thêm vị trí'}
+        open={showPositionModal}
+        onCancel={() => setShowPositionModal(false)}
+        footer={null}
+      >
+        <Form layout="vertical" onFinish={handlePositionSubmit}>
+          <Form.Item name="title" label="Tên vị trí" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label="Mô tả" rules={[{ required: true }]}>
+            <Input.TextArea />
+          </Form.Item>
+          <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="quantity" label="Số lượng" rules={[{ required: true }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex justify-end space-x-2">
+              <Button onClick={() => setShowPositionModal(false)}>Hủy</Button>
+              <Button type="primary" htmlType="submit">
+                {editingPosition ? 'Cập nhật' : 'Tạo'}
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal lên lịch phỏng vấn */}
+      <Modal
+        title="Lên lịch phỏng vấn"
+        open={showScheduleModal}
+        onCancel={() => setShowScheduleModal(false)}
+        footer={null}
+      >
+        <Form layout="vertical" form={scheduleForm} onFinish={handleScheduleSubmit}>
+          <Form.Item 
+            name="interviewTime" 
+            label="Thời gian phỏng vấn" 
+            rules={[{ required: true, message: 'Vui lòng chọn thời gian phỏng vấn!' }]}
+          >
+            <RangePicker 
+              showTime 
+              format="YYYY-MM-DD HH:mm"
+              placeholder={['Bắt đầu', 'Kết thúc']}
+            />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex justify-end space-x-2">
+              <Button onClick={() => setShowScheduleModal(false)}>Hủy</Button>
+              <Button type="primary" htmlType="submit">
+                Lên lịch
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
