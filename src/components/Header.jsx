@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
+import { performLogout } from '../utils/authUtils';
 import RegisterModal from './RegisterModal';
 
 /**
@@ -40,8 +41,8 @@ function Header() {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
+    // Sử dụng function logout chung
+    performLogout(dispatch, navigate);
     setShowSettingsMenu(false);
   };
 

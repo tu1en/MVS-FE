@@ -5,7 +5,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
 import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
-import { clearAuthData, isUserLoggedIn } from '../utils/authUtils';
+import { clearAuthData, isUserLoggedIn, performLogout } from '../utils/authUtils';
 import api from '../services/api'; // Added import for api
 
 /**
@@ -171,29 +171,8 @@ function NavigationBar() {
   } md:translate-x-0`;
 
   const handleLogout = () => {
-    // 1. Reset user role immediately
-    setUserRole(ROLE.GUEST);
-    
-    // 2. Clear all auth data using utility function
-    clearAuthData();
-    
-    // 3. Dispatch logout action to Redux
-    dispatch(logout());
-    
-    // 4. Đăng xuất khỏi Firebase
-    signOut(auth).then(() => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Đã đăng xuất khỏi Firebase thành công');
-      }
-    }).catch((error) => {
-      console.error('Lỗi khi đăng xuất khỏi Firebase:', error);
-    });
-    
-    // 5. Chuyển hướng về trang đăng nhập
-    navigate('/');
-    
-    // 6. Tải lại trang để đảm bảo xóa sạch state
-    window.location.reload();
+    // Sử dụng function logout chung
+    performLogout(dispatch, navigate, signOut, auth);
   };
 
   // Define navigation items for GUEST (not logged in)
