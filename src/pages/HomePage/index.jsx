@@ -36,8 +36,8 @@ export default function HomePage() {
         <FeatureSection />
       </div>
       {!isLogin && <Footer />}
-      {/* Modal tuyển dụng sẽ được thêm sau */}
-      <RecruitmentModal open={showRecruitModal} onClose={closeRecruitModal} />
+      {/* Modal tuyển dụng */}
+      <RecruitmentModal visible={showRecruitModal} onCancel={closeRecruitModal} />
     </div>
   );
 }
