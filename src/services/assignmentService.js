@@ -5,10 +5,8 @@ const apiClient = axiosInstance;
 
 // Enhanced debugging utility for assignment operations
 class AssignmentDebugger {
-  static isDebugEnabled = true; // Set to false to disable debugging
-
   static log(operation, data, level = 'info') {
-    if (!this.isDebugEnabled) return;
+    if (!AssignmentDebugger.isDebugEnabled) return;
 
     const timestamp = new Date().toISOString();
     const prefix = `[ASSIGNMENT-DEBUG ${timestamp}] ${operation}:`;
@@ -103,6 +101,9 @@ class AssignmentDebugger {
     });
   }
 }
+
+// Set debug enabled property
+AssignmentDebugger.isDebugEnabled = true;
 
 class AssignmentService {
   /**

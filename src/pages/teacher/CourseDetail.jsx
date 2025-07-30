@@ -195,34 +195,39 @@ const CourseDetail = () => {
       <div className="mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <button onClick={() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    if (!token) {
-        navigate('/');
-    } else {
-        switch (role) {
-            case ROLE.ADMIN:
-                navigate('/admin');
-                break;
-            case ROLE.TEACHER:
-                navigate('/teacher');
-                break;
-            case ROLE.MANAGER:
-                navigate('/manager');
-                break;
-            case ROLE.STUDENT:
-                navigate('/student');
-                break;
-            case ROLE.ACCOUNTANT:
-                navigate('/accountant');
-                break;
-            default:
-                navigate('/');
-        }
-    }
-}} className="text-blue-500 hover:text-blue-700 mb-2 flex items-center">← Quay lại danh sách khóa học</button>
-            <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
+            <button 
+              onClick={() => {
+                const token = localStorage.getItem('token');
+                const role = localStorage.getItem('role');
+                if (!token) {
+                  navigate('/');
+                } else {
+                  switch (role) {
+                    case ROLE.ADMIN:
+                      navigate('/admin');
+                      break;
+                    case ROLE.TEACHER:
+                      navigate('/teacher');
+                      break;
+                    case ROLE.MANAGER:
+                      navigate('/manager');
+                      break;
+                    case ROLE.STUDENT:
+                      navigate('/student');
+                      break;
+                    case ROLE.ACCOUNTANT:
+                      navigate('/accountant');
+                      break;
+                    default:
+                      navigate('/');
+                  }
+                }
+              }}
+              className="text-blue-500 hover:text-blue-700 mb-2 flex items-center"
+            >
+              ← Quay lại danh sách khóa học
+            </button>
+            <h1 className="text-3xl font-bold mb-2">{course.classroomName || course.name}</h1>
             <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.name}</p>
           </div>
           <div className="flex flex-col space-y-2">
@@ -249,7 +254,7 @@ const CourseDetail = () => {
         {/* Course Info Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-600">{course.students?.length || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{course.totalStudents || 0}</div>
             <div className="text-sm text-blue-800">Học viên</div>
           </div>
           <div className="bg-green-100 p-4 rounded-lg text-center">
@@ -257,12 +262,12 @@ const CourseDetail = () => {
             <div className="text-sm text-green-800">Bài giảng</div>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{course.course?.subject}</div>
+            <div className="text-2xl font-bold text-purple-600">{course.description || course.section || 'N/A'}</div>
             <div className="text-sm text-purple-800">Môn học</div>
           </div>
           <div className="bg-orange-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-orange-600">{course.course?.section}</div>
-            <div className="text-sm text-orange-800">Lớp</div>
+            <div className="text-2xl font-bold text-orange-600">{course.totalAssignments || 0}</div>
+            <div className="text-sm text-orange-800">Bài tập</div>
           </div>
         </div>
       </div>
@@ -320,7 +325,7 @@ const CourseDetail = () => {
           <LectureList 
             lectures={course.lectures || []}
             courseId={courseId} 
-            courseName={course.name} 
+            courseName={course.classroomName} 
             onEditLecture={handleEditLecture}
           />
         )}
@@ -343,7 +348,7 @@ const CourseDetail = () => {
                 </label>
                 <input 
                   type="text" 
-                  defaultValue={course.name}
+                  defaultValue={course.classroomName}
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

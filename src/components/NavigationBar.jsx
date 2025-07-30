@@ -59,10 +59,11 @@ function NavigationBar() {
         // Otherwise, map numeric or string values to constants
         const roleMapping = {
           '0': ROLE.ADMIN, // Admin
-          '1': ROLE.STUDENT, // Student  
+          '1': ROLE.STUDENT, // Student
           '2': ROLE.TEACHER, // Teacher
           '3': ROLE.MANAGER, // Manager
           '4': ROLE.GUEST, // Guest (not logged in)
+          '5': ROLE.ACCOUNTANT, // Accountant
           // Also handle string values from backend
           'ADMIN': ROLE.ADMIN,
           'STUDENT': ROLE.STUDENT,
@@ -390,7 +391,7 @@ function NavigationBar() {
       items: [
         { 
           name: 'Quản Lý Yêu Cầu', 
-          path: '/request-list',
+          path: '/manager/users',
           icon: '📋'
         },
         { 
@@ -399,9 +400,14 @@ function NavigationBar() {
           icon: '🏖️'
         },
         { 
-          name: 'Quản Lý Giao Tiếp', 
-          path: '/manager/communications', 
-          icon: '📢'
+          name: 'Quản Lý Ca Làm Việc', 
+          path: '/manager/shifts', 
+          icon: '⏰'
+        },
+        { 
+          name: 'Phân Ca Giảng Dạy', 
+          path: '/manager/schedules', 
+          icon: '📅'
         },
         { 
           name: 'Quản Lý Tuyển Dụng',
@@ -412,16 +418,16 @@ function NavigationBar() {
           name: 'Báo cáo', 
           path: '/manager/reports', 
           icon: '📊'
-        }
-      ]
-    },
-    {
-      category: "Giao tiếp",
-      items: [
+        },
         { 
-          name: 'Tin Nhắn', 
-          path: '/manager/messages', 
-          icon: '💬'
+          name: 'Duyệt Giải Trình', 
+          path: '/manager/reports/explanation', 
+          icon: '📝'
+        },
+        { 
+          name: 'Điểm Danh Giảng Viên', 
+          path: '/manager/attendance/teacher-status', 
+          icon: '✅'
         }
       ]
     },
@@ -430,20 +436,20 @@ function NavigationBar() {
       items: [
         {
           name: 'Tài Khoản',
-          path: '/manager/account',
+          path: '/manager/edit-profile',
           icon: '👤'
         }
       ]
     }
   ];
 
-  // Define navigation items for ADMIN (includes all Manager options plus system admin options)
+  // Define navigation items for ADMIN (đồng bộ với route thực tế)
   const adminNavItems = [
     {
       category: "Chính",
       items: [
         { 
-          name: 'Trang Chủ/Dashboard', 
+          name: 'Dashboard Admin', 
           path: '/admin', 
           icon: '🏠'
         }
@@ -466,6 +472,21 @@ function NavigationBar() {
           name: 'Cấu Hình Hệ Thống', 
           path: '/admin/settings', 
           icon: '⚙️'
+        },
+        { 
+          name: 'System Dashboard', 
+          path: '/admin/system-dashboard', 
+          icon: '📊'
+        },
+        { 
+          name: 'Audit Logs', 
+          path: '/admin/audit-logs', 
+          icon: '📝'
+        },
+        { 
+          name: 'Workflow Editor', 
+          path: '/admin/workflows', 
+          icon: '🔧'
         }
       ]
     },
@@ -474,7 +495,7 @@ function NavigationBar() {
       items: [
         {
           name: 'Tài Khoản',
-          path: '/admin/account',
+          path: '/admin/edit-profile',
           icon: '👤'
         }
       ]
@@ -490,7 +511,16 @@ function NavigationBar() {
       ]
     },
     {
-      category: "Nghỉ phép",
+      category: "Kế Toán",
+      items: [
+        { name: 'Quản Lý Hóa Đơn', path: '/accountant/invoices', icon: '📄' },
+        { name: 'Theo Dõi Thanh Toán', path: '/accountant/payments', icon: '💳' },
+        { name: 'Báo Cáo Tài Chính', path: '/accountant/reports', icon: '📊' },
+        { name: 'Tài Khoản Sinh Viên', path: '/accountant/students', icon: '👥' }
+      ]
+    },
+    {
+      category: "Nghỉ Phép",
       items: [
         { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' }
       ]

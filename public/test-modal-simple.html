@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Simple</title>
+    <link href="https://cdn.jsdelivr.net/npm/antd@5.0.0/dist/reset.css" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/antd@5.0.0/dist/antd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        const { Button, Modal, Typography } = antd;
+        const { Title } = Typography;
+
+        function TestModalApp() {
+            const [modalVisible, setModalVisible] = useState(false);
+            const [selectedMaterial, setSelectedMaterial] = useState(null);
+
+            const testMaterials = [
+                {
+                    id: 1,
+                    fileName: "Test PDF Document",
+                    contentType: "application/pdf",
+                    downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+                },
+                {
+                    id: 2,
+                    fileName: "YouTube Video",
+                    contentType: "video/youtube",
+                    downloadUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+                },
+                {
+                    id: 3,
+                    fileName: "Word Document",
+                    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    downloadUrl: "http://localhost:8088/api/materials/download/3"
+                }
+            ];
+
+            const handleViewMaterial = (material) => {
+                console.log("🔍 Test handleViewMaterial called with:", material);
+                setSelectedMaterial(material);
+                setModalVisible(true);
+                console.log("✅ Modal should be visible now");
+            };
+
+            const renderMaterialContent = () => {
+                if (!selectedMaterial) return null;
+
+                const isYoutubeVideo = selectedMaterial.contentType === 'video/youtube';
+
+                if (isYoutubeVideo) {
+                    return (
+                        <div style={{ textAlign: 'center' }}>
+                            <iframe
+                                width="100%"
+                                height="450px"
+                                style={{ border: 'none' }}
+                                allowFullScreen
+                                src={selectedMaterial.downloadUrl}
+                                title={selectedMaterial.fileName}
+                            />
+                        </div>
+                    );
+                }
+
+                if (selectedMaterial.contentType === 'application/pdf') {
+                    return (
+                        <div style={{ textAlign: 'center' }}>
+                            <iframe
+                                src={selectedMaterial.downloadUrl}
+                                title={selectedMaterial.fileName}
+                                width="100%"
+                                height="500px"
+                                style={{ border: 'none' }}
+                            />
+                        </div>
+                    );
+                }
+
+                return (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                        <p>📄 {selectedMaterial.fileName}</p>
+                        <p>Type: {selectedMaterial.contentType}</p>
+                        <Button 
+                            type="primary" 
+                            onClick={() => window.open(selectedMaterial.downloadUrl, '_blank')}
+                        >
+                            Mở trong tab mới
+                        </Button>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="test-container">
+                    <Title level={2}>🧪 Test Material Modal</Title>
+                    
+                    <div className="test-section">
+                        <Title level={4}>Test Materials:</Title>
+                        {testMaterials.map(material => (
+                            <div key={material.id} style={{ margin: '10px 0', padding: '10px', border: '1px solid #eee', borderRadius: '5px' }}>
+                                <strong>{material.fileName}</strong><br />
+                                <small>Type: {material.contentType}</small><br />
+                                <Button 
+                                    type="primary" 
+                                    style={{ marginTop: '5px' }}
+                                    onClick={() => handleViewMaterial(material)}
+                                >
+                                    Xem
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="test-section">
+                        <Title level={4}>Modal State:</Title>
+                        <p>Modal Visible: {modalVisible ? 'true' : 'false'}</p>
+                        <p>Selected Material: {selectedMaterial ? selectedMaterial.fileName : 'none'}</p>
+                        <Button onClick={() => setModalVisible(true)}>Force Open Modal</Button>
+                        <Button onClick={() => setModalVisible(false)} style={{ marginLeft: '10px' }}>Force Close Modal</Button>
+                    </div>
+
+                    <Modal
+                        title={selectedMaterial?.fileName || "Test Material"}
+                        open={modalVisible}
+                        onCancel={() => {
+                            console.log("🚪 Modal onCancel called");
+                            setModalVisible(false);
+                        }}
+                        width={800}
+                        footer={[
+                            <Button key="close" onClick={() => setModalVisible(false)}>
+                                Đóng
+                            </Button>
+                        ]}
+                    >
+                        {renderMaterialContent()}
+                    </Modal>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<TestModalApp />, document.getElementById('root'));
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>

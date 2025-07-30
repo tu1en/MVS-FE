@@ -1,34 +1,35 @@
 import {
-    BookOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    DownloadOutlined,
-    ExclamationCircleOutlined,
-    FileTextOutlined,
-    UploadOutlined
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Descriptions,
-    Divider,
-    Empty,
-    Form,
-    Input,
-    message,
-    Modal,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Typography,
-    Upload
+  Button,
+  Card,
+  Descriptions,
+  Divider,
+  Empty,
+  Form,
+  Input,
+  message,
+  Modal,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+  Upload
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import SubmissionService from '../../services/submissionService';
+import DebugLogger from '../../utils/debugLogger';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -50,38 +51,67 @@ const StudentAssignments = () => {
   const [fileList, setFileList] = useState([]);
   const [form] = Form.useForm();
 
+  // Ref to prevent duplicate API calls
+  const fetchingRef = useRef(false);
+
   useEffect(() => {
-    fetchAssignments();
-  }, []);
+    // Only fetch assignments when user is available
+    if (user?.id) {
+      fetchAssignments();
+    }
+  }, [user?.id]); // Add user.id as dependency
 
   const fetchAssignments = async () => {
+    // Prevent duplicate calls
+    if (fetchingRef.current) {
+      DebugLogger.warn('Already fetching, skipping duplicate call', null, 'StudentAssignments');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
+      DebugLogger.apiCall('/assignments/student/me', 'GET', 'StudentAssignments');
+
       const data = await AssignmentService.getCurrentStudentAssignments();
+      DebugLogger.apiSuccess('/assignments/student/me', data.length, 'StudentAssignments');
       setAssignments(data);
-      
+
       // Fetch submissions for each assignment
       if (user?.id && data.length > 0) {
-        const submissionPromises = data.map(assignment => 
+        DebugLogger.debug(`Fetching submissions for ${data.length} assignments`, null, 'StudentAssignments');
+        const submissionPromises = data.map(assignment =>
           SubmissionService.getStudentSubmission(assignment.id, user.id)
         );
-        
+
         const submissionResults = await Promise.allSettled(submissionPromises);
+
         const submissionsMap = {};
-        
+        let foundSubmissions = 0;
+
         submissionResults.forEach((result, index) => {
           if (result.status === 'fulfilled' && result.value) {
             submissionsMap[data[index].id] = result.value;
+            foundSubmissions++;
+          } else if (result.status === 'rejected') {
+            DebugLogger.debug(`No submission for assignment ${data[index].id}`, result.reason, 'StudentAssignments');
           }
         });
-        
+
+        DebugLogger.info(`Found ${foundSubmissions} submissions out of ${data.length} assignments`, null, 'StudentAssignments');
         setSubmissions(submissionsMap);
+      } else {
+        DebugLogger.warn('Skipping submissions fetch', {
+          hasUserId: !!user?.id,
+          assignmentsLength: data.length
+        }, 'StudentAssignments');
       }
     } catch (error) {
-      console.error('Error fetching assignments:', error);
+      DebugLogger.apiError('/assignments/student/me', error, 'StudentAssignments');
       message.error('Không thể tải danh sách bài tập');
     } finally {
       setLoading(false);
+      fetchingRef.current = false; // Reset fetching flag
     }
   };
 
@@ -90,8 +120,14 @@ const StudentAssignments = () => {
     const dueDate = dayjs(assignment.dueDate);
     const submission = submissions[assignment.id];
     
-    if (submission) {
-      if (submission.isGraded) {
+    // Kiểm tra xem submission có nội dung thực tế không
+    const hasActualSubmit = submission && 
+      (submission.content?.trim().length > 0 || 
+       (submission.attachments && submission.attachments.length > 0) ||
+       submission.fileSubmissionUrl);
+    
+    if (submission && hasActualSubmit) {
+      if (submission.isGraded && submission.score !== null && submission.score !== undefined) {
         return <Tag color="blue" icon={<CheckCircleOutlined />}>Đã chấm điểm</Tag>;
       }
       
@@ -257,11 +293,35 @@ const StudentAssignments = () => {
               </Button>
             )}
             {submission && (
-              <Button 
+              <Button
                 size="small"
                 onClick={() => {
-                  // TODO: Show submission details
-                  message.info('Xem chi tiết bài nộp');
+                  console.log('🔍 DEBUG - Viewing submission details:', {
+                    assignmentId: record.id,
+                    submissionId: submission.id,
+                    submission
+                  });
+                  // Navigate to submission detail page
+                  // For now, we'll create a simple modal to show submission details
+                  Modal.info({
+                    title: 'Chi tiết bài nộp',
+                    width: 600,
+                    content: (
+                      <div>
+                        <p><strong>Bài tập:</strong> {record.title}</p>
+                        <p><strong>Ngày nộp:</strong> {submission.submittedAt ? new Date(submission.submittedAt).toLocaleString('vi-VN') : 'N/A'}</p>
+                        <p><strong>Điểm:</strong> {submission.score !== null ? `${submission.score}/${record.points}` : 'Chưa chấm điểm'}</p>
+                        <p><strong>Nhận xét:</strong> {submission.feedback || 'Chưa có nhận xét'}</p>
+                        <p><strong>Ghi chú của sinh viên:</strong> {submission.comment || 'Không có ghi chú'}</p>
+                        {submission.fileSubmissionUrl && (
+                          <p><strong>File nộp:</strong> <a href={submission.fileSubmissionUrl} target="_blank" rel="noopener noreferrer">Tải xuống</a></p>
+                        )}
+                      </div>
+                    ),
+                    onOk() {
+                      console.log('Submission detail modal closed');
+                    },
+                  });
                 }}
               >
                 Xem bài nộp
@@ -435,6 +495,8 @@ const StudentAssignments = () => {
                   </p>
                   <p className="ant-upload-hint">
                     Hỗ trợ các định dạng: PDF, DOC, DOCX, ZIP
+                    <br />
+                    Hỗ trợ file tối đa 10mb
                   </p>
                 </Dragger>
               </Form.Item>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Lectures Port 3000</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Lectures API cho Port 3000</h1>
+    
+    <div class="section">
+        <h2>1. Test API Endpoints</h2>
+        <button onclick="testCoursesAPI()">Test Courses API</button>
+        <button onclick="testLecturesAPI()">Test Lectures API</button>
+        <button onclick="testSpecificLecture()">Test Specific Lecture</button>
+        <button onclick="compareEndpoints()">Compare All Endpoints</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, type = 'info') {
+            const section = document.createElement('div');
+            section.className = 'section';
+            section.innerHTML = `
+                <h3 class="${type}">${title}</h3>
+                <pre>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        async function testCoursesAPI() {
+            try {
+                addResult('🔄 Testing Courses API...', 'Fetching teacher courses', 'info');
+                
+                const response = await fetch(`${BASE_URL}/api/classrooms/current-teacher`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const courses = await response.json();
+                addResult('✅ Courses API Response', courses, 'success');
+                
+                if (courses && courses.length > 0) {
+                    addResult('📊 First Course Info', {
+                        id: courses[0].id,
+                        name: courses[0].name,
+                        description: courses[0].description
+                    }, 'info');
+                }
+            } catch (error) {
+                addResult('❌ Courses API Error', error.message, 'error');
+            }
+        }
+
+        async function testLecturesAPI() {
+            try {
+                addResult('🔄 Testing Lectures API...', 'Fetching lectures for course 1', 'info');
+                
+                // Test the endpoint that LecturesPageNew uses
+                const response = await fetch(`${BASE_URL}/api/courses/1/lectures`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const lectures = await response.json();
+                addResult('✅ Lectures API Response (/api/courses/1/lectures)', lectures, 'success');
+                
+                if (lectures && lectures.length > 0) {
+                    const firstLecture = lectures[0];
+                    addResult('🔍 First Lecture Analysis', {
+                        id: firstLecture.id,
+                        title: firstLecture.title,
+                        hasContent: !!firstLecture.content,
+                        contentLength: firstLecture.content?.length || 0,
+                        hasMaterials: !!firstLecture.materials,
+                        materialsCount: firstLecture.materials?.length || 0,
+                        materials: firstLecture.materials || []
+                    }, 'info');
+                }
+            } catch (error) {
+                addResult('❌ Lectures API Error', error.message, 'error');
+            }
+        }
+
+        async function testSpecificLecture() {
+            try {
+                addResult('🔄 Testing Specific Lecture...', 'Fetching lecture details', 'info');
+                
+                const response = await fetch(`${BASE_URL}/api/lectures/1`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const lecture = await response.json();
+                addResult('✅ Specific Lecture Response (/api/lectures/1)', lecture, 'success');
+            } catch (error) {
+                addResult('❌ Specific Lecture Error', error.message, 'error');
+            }
+        }
+
+        async function compareEndpoints() {
+            addResult('🔄 Comparing All Endpoints...', 'Testing multiple endpoints for consistency', 'info');
+            
+            const endpoints = [
+                { name: 'CourseController', url: `${BASE_URL}/api/courses/1/lectures` },
+                { name: 'LectureController', url: `${BASE_URL}/api/lectures/classroom/1` },
+                { name: 'ClassroomController', url: `${BASE_URL}/api/classrooms/1/details` }
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint.url, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    let lecturesData;
+                    if (endpoint.name === 'ClassroomController') {
+                        lecturesData = data.lectures || [];
+                    } else {
+                        lecturesData = data;
+                    }
+
+                    const analysis = {
+                        endpoint: endpoint.name,
+                        url: endpoint.url,
+                        lecturesCount: lecturesData.length,
+                        firstLectureMaterials: lecturesData[0]?.materials?.length || 0,
+                        hasContent: !!lecturesData[0]?.content,
+                        contentPreview: lecturesData[0]?.content?.substring(0, 100) || 'No content'
+                    };
+
+                    addResult(`📊 ${endpoint.name} Analysis`, analysis, 'success');
+                } catch (error) {
+                    addResult(`❌ ${endpoint.name} Error`, error.message, 'error');
+                }
+            }
+        }
+
+        // Auto-run basic tests on page load
+        window.addEventListener('load', () => {
+            addResult('🚀 Debug Session Started', 'Ready to test APIs. Click buttons above to run tests.', 'info');
+        });
+    </script>
+</body>
+</html>

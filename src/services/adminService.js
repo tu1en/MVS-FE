@@ -1,6 +1,7 @@
-import api from '../config/axiosInstance';
+import api from './api';
 
 const adminService = {
+    // =================== USER MANAGEMENT METHODS ===================
     getUsers: (params) => {
         // params = { page: 0, size: 10, sort: 'fullName,asc', keyword: '...' }
         return api.get('/admin/users', { params });

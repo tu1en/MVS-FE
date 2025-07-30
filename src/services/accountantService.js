@@ -1,4 +1,4 @@
-import apiClient from '../utils/api';
+import apiClient from './api';
 
 /**
  * Accountant Service - Handles API calls for accountant-related functionality

@@ -81,8 +81,8 @@ const EnrolledCourses = () => {
               }
             >
               <div className="flex flex-col h-full">
-                <Title level={4} className="mb-2" ellipsis={{ tooltip: course.name }}>
-                  {course.name}
+                <Title level={4} className="mb-2" ellipsis={{ tooltip: course.classroomName }}>
+                  {course.classroomName}
                 </Title>
                 
                 <Text type="secondary" className="mb-3 block flex-1" ellipsis={{ rows: 2 }}>

@@ -216,7 +216,7 @@ function CommunicationPage() {
       if (userRole === '1') { // Student
         endpoint = `/classrooms/student/${userId}`;
       } else if (userRole === '2') { // Teacher
-        endpoint = `/classrooms/current-teacher`;
+        endpoint = `/classroom-management/current-teacher`;
       }
       
       const response = await apiClient.get(endpoint);

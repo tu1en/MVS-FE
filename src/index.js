@@ -1,4 +1,4 @@
-import { ConfigProvider } from "antd";
+import { App as AntApp, ConfigProvider } from "antd";
 import "antd/dist/reset.css";
 import viVN from "antd/locale/vi_VN";
 import React from "react";
@@ -24,9 +24,12 @@ root.render(
           fontSize: 14, 
         },
       }}
-    >      <Provider store={store}>
-        <App />
-      </Provider>
+    >
+      <AntApp>
+        <Provider store={store}>
+          <App />
+        </Provider>
+      </AntApp>
       <ToastContainer 
         position="bottom-right" 
         autoClose={2000} 

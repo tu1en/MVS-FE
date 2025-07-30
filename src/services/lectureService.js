@@ -96,7 +96,7 @@ class LectureService {
    */
   static async getLecturesByCourse(courseId, params = {}) {
     try {
-      const response = await apiClient.get(`/lectures/classrooms/${courseId}`, { params });
+      const response = await apiClient.get(`/lectures/classroom/${courseId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching course lectures:', error);

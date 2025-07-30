@@ -1,3 +1,6 @@
+// File: StudentGradesAttendance.jsx
+// Sửa lỗi method không tồn tại trong classroomService
+
 import { AlertCircle, Award, Calendar, CheckCircle, Clock, TrendingUp, User, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
@@ -5,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Progress } from '../../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import attendanceService from '../../services/attendanceService';
-import classroomService from '../../services/classroomService';
+import classroomService from '../../services/classroomService'; // Fixed import name
 import gradeService from '../../services/gradeService';
+import DebugLogger from '../../utils/debugLogger';
 
 const StudentGradesAttendance = () => {
   const [grades, setGrades] = useState([]);
@@ -29,13 +33,21 @@ const StudentGradesAttendance = () => {
 
   const fetchEnrolledCourses = async () => {
     try {
-      const courses = await classroomService.getEnrolledCourses();
+      DebugLogger.apiCall('/classrooms/student/me', 'GET', 'StudentGradesAttendance');
+      
+      // ✅ FIX: Use the correct method name from ClassroomService
+      const response = await classroomService.getMyStudentCourses();
+      const courses = response.data || [];
+      
+      DebugLogger.apiSuccess('/classrooms/student/me', courses.length, 'StudentGradesAttendance');
+
       setEnrolledCourses(courses);
       if (courses.length > 0) {
+        DebugLogger.info(`Auto-selecting first course: ${courses[0].name || courses[0].classroomName}`, null, 'StudentGradesAttendance');
         setSelectedCourseId(courses[0].id.toString());
       }
     } catch (err) {
-      console.error('Error fetching enrolled courses:', err);
+      DebugLogger.apiError('/classrooms/student/me', err, 'StudentGradesAttendance');
       setError('Không thể tải danh sách khóa học');
     }
   };
@@ -43,15 +55,19 @@ const StudentGradesAttendance = () => {
   const fetchGradesAndAttendance = async () => {
     setLoading(true);
     try {
+      DebugLogger.debug(`Fetching grades and attendance for course: ${selectedCourseId}`, null, 'StudentGradesAttendance');
+
       const [gradesData, attendanceData] = await Promise.all([
         gradeService.getMyGrades(selectedCourseId),
         attendanceService.getMyAttendanceHistory(selectedCourseId)
       ]);
-      
+
+      DebugLogger.info(`Loaded ${gradesData.length} grades and ${attendanceData.length} attendance records`, null, 'StudentGradesAttendance');
+
       setGrades(gradesData);
       setAttendanceHistory(attendanceData);
     } catch (err) {
-      console.error('Error fetching grades and attendance:', err);
+      DebugLogger.apiError('grades/attendance', err, 'StudentGradesAttendance');
       setError('Không thể tải dữ liệu điểm số và điểm danh');
     } finally {
       setLoading(false);
@@ -91,14 +107,23 @@ const StudentGradesAttendance = () => {
 
   const calculateGradeStats = () => {
     if (!grades.length) return { average: 0, total: 0, passed: 0 };
-    
+
     const validGrades = grades.filter(grade => grade.score !== null && grade.score !== undefined);
     if (!validGrades.length) return { average: 0, total: grades.length, passed: 0 };
-    
+
+    // Use normalized scores (already on 10-point scale) for calculation
     const total = validGrades.reduce((sum, grade) => sum + grade.score, 0);
     const average = Math.round((total / validGrades.length) * 100) / 100;
     const passed = validGrades.filter(grade => grade.score >= 5).length;
-    
+
+    console.log('📊 [StudentGradesAttendance] Grade stats calculation:', {
+      validGrades: validGrades.length,
+      totalScore: total,
+      average,
+      passed,
+      scores: validGrades.map(g => ({ title: g.assignmentTitle, score: g.score, rawScore: g.rawScore }))
+    });
+
     return { average, total: validGrades.length, passed };
   };
 
@@ -173,7 +198,8 @@ const StudentGradesAttendance = () => {
         >
           {enrolledCourses.map((course) => (
             <option key={course.id} value={course.id.toString()}>
-              {course.name} - {course.teacherName}
+              {/* ✅ FIX: Handle different property names from API */}
+              {course.classroomName || course.name} - {course.teacherName || 'Unknown Teacher'}
             </option>
           ))}
         </select>
@@ -219,7 +245,7 @@ const StudentGradesAttendance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold text-purple-600">
-              {selectedCourse?.name || 'Khóa học'}
+              {selectedCourse?.classroomName || selectedCourse?.name || 'Khóa học'}
             </div>
             <p className="text-xs text-muted-foreground">
               Giảng viên: {selectedCourse?.teacherName || 'N/A'}
@@ -266,8 +292,8 @@ const StudentGradesAttendance = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {grades.map((grade) => (
-                        <tr key={grade.id} className="hover:bg-gray-50">
+                      {grades.map((grade, index) => (
+                        <tr key={grade.id || `grade-${index}`} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-4 py-2">
                             {grade.assignmentTitle || `Bài tập ${grade.id}`}
                           </td>
@@ -282,6 +308,12 @@ const StudentGradesAttendance = () => {
                               </span>
                             ) : (
                               <span className="text-gray-400">Chưa chấm</span>
+                            )}
+                            {/* Debug info for score normalization */}
+                            {grade.rawScore && grade.maxPoints && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                ({grade.rawScore}/{grade.maxPoints})
+                              </div>
                             )}
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-center">
@@ -339,8 +371,8 @@ const StudentGradesAttendance = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {attendanceHistory.map((record) => (
-                        <tr key={record.id} className="hover:bg-gray-50">
+                      {attendanceHistory.map((record, index) => (
+                        <tr key={record.id || `attendance-${index}`} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-4 py-2">
                             {new Date(record.date).toLocaleDateString('vi-VN')}
                           </td>

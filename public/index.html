@@ -23,13 +23,41 @@
     <title>Hệ thống quản lý lớp học</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <script>
+      // Force enable JavaScript detection
+      window.React = { createElement: (type, props, children) => ({ type, props, children }) };
+      console.log('JavaScript is enabled - Teacher Portal Ready');
+    </script>
+    <noscript>
+      <style>
+        .noscript-warning {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #fff;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          font-family: Arial, sans-serif;
+          text-align: center;
+          padding: 20px;
+        }
+        .noscript-warning h1 { color: #ff4d4f; margin-bottom: 16px; }
+        .noscript-warning p { color: #666; line-height: 1.6; }
+      </style>
+      <div class="noscript-warning">
+        <h1>JavaScript is Disabled</h1>
+        <p>Vui lòng bật JavaScript trong trình duyệt để sử dụng chức năng giáo viên</p>
+        <p>Please enable JavaScript to use teacher functionality</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     
-    <!-- Debug helpers for development -->
-    <script src="%PUBLIC_URL%/debug-assignments.js"></script>
-    <script src="%PUBLIC_URL%/test-auth.js"></script>
-    
+
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

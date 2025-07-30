@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Test Materials</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Quick Test Materials API</h1>
+    
+    <button onclick="testMaterials()">Test Materials API</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = typeof content === 'object' ? 
+                `<pre>${JSON.stringify(content, null, 2)}</pre>` : 
+                content;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testMaterials() {
+            clearResults();
+            addResult('🚀 Testing materials API...', 'info');
+
+            try {
+                // Test the exact endpoint that LecturesPageNew uses
+                const response = await fetch(`${BASE_URL}/api/courses/1/lectures`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'YOUR_TOKEN_HERE'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const lectures = await response.json();
+                addResult(`✅ API Response: ${lectures.length} lectures found`, 'success');
+
+                if (lectures.length > 0) {
+                    lectures.forEach((lecture, index) => {
+                        const materialsCount = lecture.materials?.length || 0;
+                        addResult(`📚 Lecture ${index + 1}: "${lecture.title}" - ${materialsCount} materials`, 
+                                 materialsCount > 0 ? 'success' : 'error');
+                        
+                        if (materialsCount > 0) {
+                            addResult({
+                                lectureId: lecture.id,
+                                title: lecture.title,
+                                materials: lecture.materials
+                            }, 'info');
+                        }
+                    });
+
+                    // Summary
+                    const totalMaterials = lectures.reduce((sum, lecture) => sum + (lecture.materials?.length || 0), 0);
+                    addResult(`📊 Summary: ${totalMaterials} total materials across all lectures`, 
+                             totalMaterials > 0 ? 'success' : 'error');
+                } else {
+                    addResult('⚠️ No lectures found', 'error');
+                }
+
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run test
+        window.addEventListener('load', () => {
+            addResult('Ready to test. Click "Test Materials API" button.', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -44,7 +44,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
       const token = localStorage.getItem('token');
       
       // Using fetch instead of axios for better error handling
-      const response = await fetch('http://localhost:8088/api/classrooms/current-teacher', {
+      const response = await fetch('http://localhost:8088/api/teacher/courses', {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
@@ -210,6 +210,16 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
         content: values.description,
       };
 
+      // Add YouTube URL if provided
+      if (values.youtubeUrl && values.youtubeUrl.trim() !== '') {
+        const videoId = extractYouTubeId(values.youtubeUrl);
+        if (videoId) {
+          lectureData.youtubeUrl = values.youtubeUrl;
+          lectureData.youtubeVideoId = videoId;
+          lectureData.youtubeEmbedUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+
       // Xử lý tệp đã tải lên
       if (uploadedFiles && uploadedFiles.length > 0) {
         // Kiểm tra nếu có tệp cục bộ (do lỗi Firebase)
@@ -328,7 +338,7 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
                     >
                         {availableCourses.map(course => (
                             <Option key={course.id} value={course.id}>
-                                {course.name} ({course.subject})
+                                {course.classroomName} {course.description && `(${course.description})`}
                             </Option>
                         ))}
                     </Select>

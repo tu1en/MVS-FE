@@ -25,7 +25,7 @@ export const teacherAssignmentService = {
    */
   async getClassroomAssignments(classroomId) {
     try {
-      const response = await apiClient.get(`/api/assignments/classroom/${classroomId}`);
+      const response = await apiClient.get(`/assignments/classroom/${classroomId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching classroom assignments:', error);
@@ -40,7 +40,7 @@ export const teacherAssignmentService = {
    */
   async getAssignmentDetails(assignmentId) {
     try {
-      const response = await apiClient.get(`/api/assignments/${assignmentId}`);
+      const response = await apiClient.get(`/assignments/${assignmentId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching assignment details:', error);
@@ -71,7 +71,7 @@ export const teacherAssignmentService = {
    */
   async updateAssignment(assignmentId, assignmentData) {
     try {
-      const response = await apiClient.put(`/api/assignments/${assignmentId}`, assignmentData);
+      const response = await apiClient.put(`/assignments/${assignmentId}`, assignmentData);
       return response.data;
     } catch (error) {
       console.error('Error updating assignment:', error);
@@ -86,7 +86,7 @@ export const teacherAssignmentService = {
    */
   async deleteAssignment(assignmentId) {
     try {
-      await apiClient.delete(`/api/assignments/${assignmentId}`);
+      await apiClient.delete(`/assignments/${assignmentId}`);
     } catch (error) {
       console.error('Error deleting assignment:', error);
       throw error;
@@ -100,7 +100,7 @@ export const teacherAssignmentService = {
    */
   async getAssignmentSubmissions(assignmentId) {
     try {
-      const response = await apiClient.get(`/api/assignments/${assignmentId}/submissions`);
+      const response = await apiClient.get(`/assignments/${assignmentId}/submissions`);
       return response.data;
     } catch (error) {
       console.error('Error fetching assignment submissions:', error);
@@ -115,7 +115,7 @@ export const teacherAssignmentService = {
    */
   async getSubmissionDetails(submissionId) {
     try {
-      const response = await apiClient.get(`/api/submissions/${submissionId}`);
+      const response = await apiClient.get(`/submissions/${submissionId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching submission details:', error);
@@ -131,7 +131,7 @@ export const teacherAssignmentService = {
    */
   async gradeSubmission(submissionId, gradeData) {
     try {
-      const response = await apiClient.put(`/api/submissions/${submissionId}/grade`, gradeData);
+      const response = await apiClient.put(`/submissions/${submissionId}/grade`, gradeData);
       return response.data;
     } catch (error) {
       console.error('Error grading submission:', error);
@@ -161,7 +161,7 @@ export const teacherAssignmentService = {
    */
   async getAssignmentStats(assignmentId) {
     try {
-      const response = await apiClient.get(`/api/assignments/${assignmentId}/stats`);
+      const response = await apiClient.get(`/assignments/${assignmentId}/stats`);
       return response.data;
     } catch (error) {
       console.error('Error fetching assignment stats:', error);
@@ -176,7 +176,7 @@ export const teacherAssignmentService = {
    */
   async downloadSubmissionFile(submissionId) {
     try {
-      const response = await apiClient.get(`/api/submissions/${submissionId}/download`, {
+      const response = await apiClient.get(`/submissions/${submissionId}/download`, {
         responseType: 'blob'
       });
       return response.data;
@@ -194,7 +194,7 @@ export const teacherAssignmentService = {
    */
   async exportAssignmentGrades(assignmentId, format = 'csv') {
     try {
-      const response = await apiClient.get(`/api/assignments/${assignmentId}/export-grades`, {
+      const response = await apiClient.get(`/assignments/${assignmentId}/export-grades`, {
         params: { format },
         responseType: 'blob'
       });
@@ -212,7 +212,7 @@ export const teacherAssignmentService = {
    */
   async sendFeedbackNotification(submissionId) {
     try {
-      await apiClient.post(`/api/submissions/${submissionId}/send-feedback`);
+      await apiClient.post(`/submissions/${submissionId}/send-feedback`);
     } catch (error) {
       console.error('Error sending feedback notification:', error);
       throw error;

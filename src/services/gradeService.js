@@ -12,63 +12,125 @@ class GradeService {
    */
   static async getMyGrades(classroomId = null) {
     try {
-      // Get student's assignments first - use the correct endpoint for current authenticated student
-      const assignmentResponse = await apiClient.get('/assignments/student/me');
-      const assignments = Array.isArray(assignmentResponse.data?.data) ? assignmentResponse.data.data :
-                         Array.isArray(assignmentResponse.data) ? assignmentResponse.data : [];
+      console.log('📊 [GradeService] Fetching student assignments and submissions...');
+      
+      // Import SubmissionService to use the same logic as StudentAssignments
+      const SubmissionService = (await import('./submissionService')).default;
+      const AssignmentService = (await import('./assignmentService')).default;
+      
+      // Get student's assignments first - use the same method as StudentAssignments
+      const assignments = await AssignmentService.getCurrentStudentAssignments();
+      console.log('📚 [GradeService] Found assignments:', assignments.length);
 
       if (assignments.length === 0) {
-        console.info('No assignments found for current student');
+        console.info('📚 [GradeService] No assignments found for current student');
         return [];
       }
 
-      // Get current user ID from assignments or submissions
-      const userResponse = await apiClient.get('/classrooms/student/me');
-      const userInfo = userResponse.data?.[0]; // Get user info from first classroom
+      // Get current user ID from localStorage or auth context
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
       
-      if (!userInfo) {
+      if (!user?.id) {
+        console.log('👤 [GradeService] No user info found in localStorage');
         return [];
       }
 
-      // For each assignment, try to get the submission and grade
+      console.log('👤 [GradeService] Current user:', user.id);
+
+      // For each assignment, try to get the submission using SubmissionService
       const gradePromises = assignments.map(async (assignment) => {
         try {
-          // Try to get submission for this assignment - need to extract student ID
-          // Since we don't have direct student ID, we'll use a different approach
-          const submissionResponse = await apiClient.get(`/submissions/assignment/${assignment.id}`);
-          const submissions = Array.isArray(submissionResponse.data) ? submissionResponse.data : [];
+          console.log(`📝 [GradeService] Checking submission for assignment ${assignment.id}`);
           
-          // Find current user's submission (this is a limitation - we need student ID)
-          // For now, we'll return assignment info and mark if there's any submission
-          return {
-            id: assignment.id,
-            type: 'assignment',
-            title: assignment.title,
-            description: assignment.description,
-            classroomId: assignment.classroomId,
-            classroomName: assignment.classroomName,
-            subject: assignment.subject,
-            maxPoints: assignment.points || 0,
-            earnedPoints: null, // Will be filled if submission found
-            isGraded: false,
-            submittedAt: null,
-            gradedAt: null,
-            feedback: null,
-            dueDate: assignment.dueDate,
-            createdAt: assignment.createdAt
-          };
+          // Use the same method as StudentAssignments
+          const submission = await SubmissionService.getStudentSubmission(assignment.id, user.id);
+          
+          if (submission) {
+            console.log(`✅ [GradeService] Found submission for assignment ${assignment.id}:`, {
+              score: submission.score,
+              isGraded: submission.isGraded
+            });
+
+            // Check if submission is graded - either isGraded is true OR score is not null/undefined
+            const hasScore = submission.score !== null && submission.score !== undefined;
+            const isActuallyGraded = submission.isGraded === true || hasScore;
+
+            console.log(`🔍 [GradeService] Assignment ${assignment.id} grading status:`, {
+              isGraded: submission.isGraded,
+              score: submission.score,
+              hasScore,
+              isActuallyGraded
+            });
+
+            // Normalize score to 10-point scale for Vietnamese grading system
+            const maxPoints = assignment.points || 100;
+            const rawScore = submission.score || 0;
+            const normalizedScore = maxPoints > 0 ? Math.round((rawScore / maxPoints) * 10 * 100) / 100 : 0;
+
+            console.log(`📊 [GradeService] Score normalization for assignment ${assignment.id}:`, {
+              rawScore,
+              maxPoints,
+              normalizedScore,
+              calculation: `(${rawScore} / ${maxPoints}) * 10 = ${normalizedScore}`
+            });
+
+            return {
+              id: assignment.id,
+              type: 'assignment',
+              title: assignment.title,
+              assignmentTitle: assignment.title, // Add this for UI compatibility
+              description: assignment.description,
+              classroomId: assignment.classroomId,
+              classroomName: assignment.classroomName,
+              subject: assignment.classroomName || 'Chưa xác định',
+              maxPoints: assignment.points || 0,
+              earnedPoints: submission.score || 0,
+              score: normalizedScore, // Normalized to 10-point scale
+              rawScore: submission.score, // Keep original score for reference
+              isGraded: isActuallyGraded,
+              submittedAt: submission.submittedAt,
+              gradedAt: submission.gradedAt,
+              feedback: submission.feedback,
+              dueDate: assignment.dueDate,
+              createdAt: assignment.createdAt
+            };
+          } else {
+            console.log(`❌ [GradeService] No submission found for assignment ${assignment.id}`);
+            return {
+              id: assignment.id,
+              type: 'assignment',
+              title: assignment.title,
+              assignmentTitle: assignment.title, // Add this for UI compatibility
+              description: assignment.description,
+              classroomId: assignment.classroomId,
+              classroomName: assignment.classroomName,
+              subject: assignment.classroomName || 'Chưa xác định',
+              maxPoints: assignment.points || 0,
+              earnedPoints: 0,
+              score: null, // Add this field for UI compatibility
+              isGraded: false,
+              submittedAt: null,
+              gradedAt: null,
+              feedback: null,
+              dueDate: assignment.dueDate,
+              createdAt: assignment.createdAt
+            };
+          }
         } catch (error) {
-          console.error(`Error fetching submission for assignment ${assignment.id}:`, error);
+          console.log(`❌ [GradeService] Error getting submission for assignment ${assignment.id}:`, error);
           return {
             id: assignment.id,
             type: 'assignment',
             title: assignment.title,
+            assignmentTitle: assignment.title, // Add this for UI compatibility
             description: assignment.description,
             classroomId: assignment.classroomId,
             classroomName: assignment.classroomName,
-            subject: assignment.subject,
+            subject: assignment.classroomName || 'Chưa xác định',
             maxPoints: assignment.points || 0,
-            earnedPoints: null,
+            earnedPoints: 0,
+            score: null, // Add this field for UI compatibility
             isGraded: false,
             submittedAt: null,
             gradedAt: null,
@@ -82,25 +144,29 @@ class GradeService {
       const grades = await Promise.all(gradePromises);
       const validGrades = grades.filter(grade => grade !== null);
 
+      console.log('📊 [GradeService] All grades processed:', validGrades.length);
+
       // Filter by classroomId if provided
       if (classroomId) {
-        return validGrades.filter(grade => grade.classroomId === parseInt(classroomId));
+        const filteredGrades = validGrades.filter(grade => grade.classroomId === parseInt(classroomId));
+        console.log(`🔍 [GradeService] Filtered by classroom ${classroomId}:`, filteredGrades.length);
+        return filteredGrades;
       }
 
       return validGrades;
       
     } catch (error) {
-      console.error('Error fetching my grades:', error);
+      console.error('❌ [GradeService] Error fetching my grades:', error);
 
       // Provide more specific error information
       if (error.response?.status === 401) {
-        console.error('Authentication required - user may need to log in again');
+        console.error('🔐 [GradeService] Authentication required - user may need to log in again');
       } else if (error.response?.status === 403) {
-        console.error('Access denied - user may not have student permissions');
+        console.error('🚫 [GradeService] Access denied - user may not have student permissions');
       } else if (error.response?.status === 404) {
-        console.error('Assignments endpoint not found - check API configuration');
+        console.error('🔍 [GradeService] Assignments endpoint not found - check API configuration');
       } else if (error.response?.status === 500) {
-        console.error('Server error - check backend logs for details');
+        console.error('🔥 [GradeService] Server error - check backend logs for details');
       }
 
       return [];

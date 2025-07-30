@@ -10,7 +10,8 @@ export const teacherClassroomService = {
    */
   async getMyClassrooms() {
     try {
-      const response = await apiClient.get('/classrooms/current-teacher');
+      // ✅ FIX: Loại bỏ /api từ đầu vì apiClient đã có baseURL: /api
+      const response = await apiClient.get('/classroom-management/classrooms/current-teacher');
       return response.data;
     } catch (error) {
       console.error('Error fetching teacher classrooms:', error);
@@ -25,6 +26,7 @@ export const teacherClassroomService = {
    */
   async getClassroomDetails(classroomId) {
     try {
+      // ✅ FIX: Loại bỏ /api từ đầu
       const response = await apiClient.get(`/classrooms/${classroomId}`);
       return response.data;
     } catch (error) {
@@ -130,7 +132,8 @@ export const teacherClassroomService = {
    */
   async getTeachingHistory(signal) {
     try {
-      const response = await apiClient.get('/attendance/teaching-history', {
+      // ✅ FIX: Loại bỏ /api từ đầu
+      const response = await apiClient.get('/teacher/teaching-history', {
         signal: signal // Pass the AbortSignal to axios
       });
       return response.data;

@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^5.3.7",
+    "@ant-design/plots": "^2.6.2",
     "@babel/core": "^7.27.4",
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-react": "^7.27.1",
@@ -17,10 +18,12 @@
     "@fullcalendar/interaction": "^6.1.18",
     "@fullcalendar/react": "^6.1.18",
     "@fullcalendar/timegrid": "^6.1.18",
+    "@jitsi/react-sdk": "^1.4.4",
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
     "@mui/x-date-pickers": "^8.8.0",
     "@reduxjs/toolkit": "^2.2.5",
+    "@stomp/stompjs": "^7.1.1",
     "@testing-library/dom": "^9.3.3",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
@@ -52,13 +55,19 @@
     "react-scripts": "^5.0.1",
     "react-toastify": "^11.0.5",
     "recharts": "^2.9.2",
+    "remark-gfm": "^4.0.1",
+    "simple-peer": "^9.11.1",
+    "socket.io-client": "^4.8.1",
+    "sockjs-client": "^1.6.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--no-deprecation GENERATE_SOURCEMAP=false react-scripts start",
     "build": "cross-env NODE_OPTIONS=--no-deprecation GENERATE_SOURCEMAP=false react-scripts build",
     "test": "cross-env NODE_OPTIONS=--no-deprecation react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src --ext .js,.jsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .js,.jsx --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -80,6 +89,13 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
-    "tailwindcss": "^3.3.5"
+    "crypto-browserify": "^3.12.1",
+    "https-browserify": "^1.0.0",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "tailwindcss": "^3.3.5",
+    "url": "^0.11.4",
+    "util": "^0.12.5"
   }
 }

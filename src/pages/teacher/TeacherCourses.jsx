@@ -42,7 +42,7 @@ const TeacherCourses = () => {
         }
       };
       
-      const response = await axios.get('http://localhost:8088/api/classrooms/current-teacher', axiosConfig);
+      const response = await axios.get('http://localhost:8088/api/teacher/courses', axiosConfig);
       console.log('Teacher courses response:', response.data);
       
       setCourses(response.data || []);
@@ -161,9 +161,9 @@ const TeacherCourses = () => {
                   }
                   title={
                     <div>
-                      <Title level={4} className="mb-1">{course.name}</Title>
-                      <Tag color={getSubjectColor(course.subject)}>
-                        {course.subject}
+                      <Title level={4} className="mb-1">{course.classroomName}</Title>
+                      <Tag color={getSubjectColor(course.section || course.description)}>
+                        {course.section || course.description || 'General'}
                       </Tag>
                     </div>
                   }

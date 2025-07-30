@@ -93,7 +93,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và quản lý các yêu cầu đăng ký trong hệ thống</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/request-list')}
+            onClick={() => navigate('/manager/users')}
           >
             Xem danh sách yêu cầu
           </button>
@@ -104,7 +104,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và quản lý các yêu cầu giải trình điểm danh trong hệ thống</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/explanation-reports')}
+            onClick={() => navigate('/manager/reports/explanation')}
           >
             Quản lý giải trình điểm danh
           </button>
@@ -137,7 +137,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Quản lý lịch học các lớp trong hệ thống</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/schedule')}
+            onClick={() => navigate('/manager/schedules')}
           >
             Quản lý lịch học
           </button>
@@ -192,7 +192,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và chỉnh sửa thông tin cá nhân của bạn</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/profile')}
+            onClick={() => navigate('/manager/edit-profile')}
           >
             Thông tin cá nhân
           </button>
@@ -204,9 +204,33 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và quản lý các yêu cầu giải trình điểm danh trong hệ thống</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/explanation-reports')}
+            onClick={() => navigate('/manager/reports/explanation')}
           >
             Quản lý giải trình điểm danh
+          </button>
+        </div>
+
+        {/* Quản lý chấm công giáo viên */}
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+          <h3 className="text-xl font-semibold mb-2">Chấm công giáo viên</h3>
+          <p className="text-gray-600">Xem trạng thái chấm công của giáo viên</p>
+          <button 
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/attendance/teacher-status')}
+          >
+            Xem chấm công giáo viên
+          </button>
+        </div>
+
+        {/* Quản lý chấm công theo ca */}
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+          <h3 className="text-xl font-semibold mb-2">Chấm công theo ca</h3>
+          <p className="text-gray-600">Xem log chấm công theo ca/ngày</p>
+          <button 
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/attendance/daily-shift')}
+          >
+            Xem chấm công theo ca
           </button>
         </div>
 
@@ -216,7 +240,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem toàn bộ lịch sử chấm công của nhân viên</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/all-staff-attendance-logs')}
+            onClick={() => navigate('/manager/attendance/all-staff')}
           >
             Xem toàn bộ chấm công
           </button>
@@ -228,7 +252,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem lịch sử chấm công cá nhân của nhân viên</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/personal-attendance-history')}
+            onClick={() => navigate('/manager/attendance/personal-history')}
           >
             Xem lịch sử cá nhân
           </button>

@@ -77,11 +77,11 @@ class DebugService {
    */
   static async testAttendanceEndpoints() {
     const endpoints = [
-      '/api/attendance/my-history',           // Current frontend call (failing)
-      '/api/v1/attendance/my-history',       // Backend actual path
-      '/api/attendance/student/history',     // Alternative
-      '/api/student/attendance',             // Alternative
-      '/api/attendance/student/view'         // Alternative from API config
+      '/attendance/my-history',           // Current frontend call (failing)
+      '/v1/attendance/my-history',       // Backend actual path
+      '/attendance/student/history',     // Alternative
+      '/student/attendance',             // Alternative
+      '/attendance/student/view'         // Alternative from API config
     ];
     
     return await this.testEndpoints('Student Attendance', endpoints);
@@ -92,11 +92,11 @@ class DebugService {
    */
   static async testAssignmentEndpoints() {
     const endpoints = [
-      '/api/assignments/student/my-assignments',  // Current frontend call (failing)
-      '/api/assignments/student',                 // Alternative
-      '/api/v1/assignments/student',              // Alternative
-      '/api/assignments/current-student',         // Alternative
-      '/api/student/assignments'                  // Alternative
+      '/assignments/student/my-assignments',  // Current frontend call (failing)
+      '/assignments/student',                 // Alternative
+      '/v1/assignments/student',              // Alternative
+      '/assignments/current-student',         // Alternative
+      '/student/assignments'                  // Alternative
     ];
     
     return await this.testEndpoints('Student Assignments', endpoints);
@@ -107,11 +107,11 @@ class DebugService {
    */
   static async testMessageEndpoints() {
     const endpoints = [
-      '/api/messages/unread',                     // Current frontend call (failing)
-      '/api/messages/unread-count',               // Alternative
-      '/api/student-messages/unread',             // Alternative  
-      '/api/messages/dashboard/unread-count',     // From backend controller
-      '/api/messages/unread/count'                // Alternative
+      '/messages/unread',                     // Current frontend call (failing)
+      '/messages/unread-count',               // Alternative
+      '/student-messages/unread',             // Alternative  
+      '/messages/dashboard/unread-count',     // From backend controller
+      '/messages/unread/count'                // Alternative
     ];
     
     return await this.testEndpoints('Messages', endpoints);
@@ -122,10 +122,10 @@ class DebugService {
    */
   static async testClassroomEndpoints() {
     const endpoints = [
-      '/api/classrooms/student/me',               // Current frontend call
-      '/api/classrooms/current-student',          // Alternative
-      '/api/student/classrooms',                  // Alternative
-      '/api/classrooms/enrolled'                  // Alternative
+      '/classrooms/student/me',               // Current frontend call
+      '/classrooms/current-student',          // Alternative
+      '/student/classrooms',                  // Alternative
+      '/classrooms/enrolled'                  // Alternative
     ];
     
     return await this.testEndpoints('Student Classrooms', endpoints);

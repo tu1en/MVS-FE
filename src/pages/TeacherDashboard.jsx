@@ -1,15 +1,13 @@
 import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, FileTextOutlined, MessageOutlined, TeamOutlined, VideoCameraOutlined } from '@ant-design/icons';
-import { App, Card, Col, Row, Spin, Statistic } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { App, Button, Card, Col, Row, Spin, Statistic } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
 import api from '../services/api';
-import { useBackButton } from '../hooks/useBackButton';
 
 export default function TeacherDashboard() {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  useBackButton(); // Thêm hook xử lý nút back
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     classStats: { totalClasses: 0, activeClasses: 0, totalStudents: 0 },
@@ -137,6 +135,26 @@ export default function TeacherDashboard() {
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-8 text-center">Trang Giáo Viên</h1>
+      
+      {/* Live Classroom Button */}
+      <div className="mb-8 text-center">
+        <Button
+          type="primary"
+          size="large"
+          icon={<VideoCameraOutlined />}
+          style={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            border: 'none',
+            borderRadius: '8px',
+            height: '50px',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+          onClick={() => navigate("/teacher/live-classroom/room-123")}
+        >
+          🚀 Vào Lớp Trực Tuyến
+        </Button>
+      </div>
       
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className="mb-8">

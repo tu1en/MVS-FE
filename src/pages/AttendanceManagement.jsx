@@ -61,7 +61,7 @@ export default function AttendanceManagement() {
       setLoading(true);
       const [sessionsRes, classroomsRes, attendanceRes] = await Promise.all([
         api.get('/attendance/sessions/teacher'),
-        api.get('/classrooms/current-teacher'),
+        api.get('/classroom-management/current-teacher'),
         api.get('/attendance/teacher')
       ]);
 

@@ -7,7 +7,7 @@ const EditProfile = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [invalidPrefix, setInvalidPrefix] = useState(false);
-
+/**/
   useEffect(() => {
     fetchProfile();
   }, []);

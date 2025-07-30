@@ -1,6 +1,8 @@
-import { Badge, Calendar, Card, message, Typography } from 'antd';
+import { Badge, Calendar, Card, Typography } from 'antd';
+import { App as AntApp } from 'antd';
+import axios from 'axios';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_CONFIG from '../../config/api-config';
 import axiosInstance from '../../config/axiosInstance';
@@ -12,132 +14,132 @@ const TeacherSchedule = () => {
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { message } = AntApp.useApp();
+
+  // Fetch schedules với AbortController để tránh duplicate
+  const fetchSchedules = useCallback(async (month) => {
+    if (!user?.id) {
+      setSchedules([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const startDate = month.startOf('month').format('YYYY-MM-DD');
+    const endDate = month.endOf('month').format('YYYY-MM-DD');
+
+    const controller = new AbortController();
+    
+    try {
+      const response = await axiosInstance.get(API_CONFIG.ENDPOINTS.TEACHER_SCHEDULE, {
+        params: { startDate, endDate },
+        signal: controller.signal
+      });
+      
+      const data = Array.isArray(response.data) ? response.data : [];
+      setSchedules(data.map(item => ({
+        id: item.id,
+        title: item.title || 'Lịch học',
+        description: item.description || '',
+        start_datetime: item.start_datetime,
+        end_datetime: item.end_datetime,
+        color: item.color || '#1890ff',
+        classroom_id: item.classroom_id,
+        classroom_name: item.classroom_name || item.title,
+        lecture_id: item.lecture_id || null
+      })));
+      
+      setLoading(false);
+    } catch (error) {
+      if (!axios.isCancel(error)) {
+        console.error('Error fetching schedules:', error);
+        setSchedules([]);
+        setLoading(false);
+        message.error('Không thể tải lịch dạy');
+      }
+    }
+  }, [user?.id, message]);
 
   useEffect(() => {
     fetchSchedules(currentMonth);
-  }, [currentMonth]);
+  }, [currentMonth, fetchSchedules]);
 
-  const fetchSchedules = async (month) => {
-    try {
-      setLoading(true);
-      console.log('Fetching schedules for teacher...');
-      
-      // Calculate first and last day of the selected month for the query
-      const startDate = month.startOf('month').format('YYYY-MM-DD');
-      const endDate = month.endOf('month').format('YYYY-MM-DD');
-      
-      console.log(`Fetching schedules from ${startDate} to ${endDate}`);
-      console.log('Current user ID:', user?.id);
-      
-      // Use the endpoint from API_CONFIG with proper date parameters
-      const response = await axiosInstance.get(API_CONFIG.ENDPOINTS.TEACHER_SCHEDULE, {
-        params: {
-          startDate: startDate,
-          endDate: endDate
-        }
-      });
-      
-      console.log('Schedules response:', response);
-      console.log('Schedules data:', response.data);
-      
-      if (Array.isArray(response.data)) {
-        if (response.data.length > 0) {
-          console.log('First raw event from API:', JSON.stringify(response.data[0], null, 2));
-        }
-        // Map the response data to a consistent format
-        const formattedSchedules = response.data.map(event => ({
-          id: event.id,
-          title: event.title || event.subject || 'Lịch học',
-          description: event.description || '',
-          classroomId: event.classroomId,
-          classroomName: event.classroomName || 'Lớp học',
-          startDatetime: event.startDatetime,
-          endDatetime: event.endDatetime,
-          location: event.location || event.room || 'Phòng học',
-          color: event.color || '#1890ff'
-        }));
-        
-        console.log('Formatted schedules:', formattedSchedules);
-        setSchedules(formattedSchedules);
+  const handleRefresh = useCallback(() => {
+    fetchSchedules(currentMonth);
+  }, [currentMonth, fetchSchedules]);
+
+  const handleScheduleClick = useCallback((schedule) => {
+    if (schedule && schedule.classroom_id) {
+      if (schedule.lecture_id) {
+        navigate(`/teacher/attendance/take/${schedule.classroom_id}/${schedule.lecture_id}`);
       } else {
-        console.error('Expected array but got:', typeof response.data);
-        setSchedules([]);
+        navigate(`/teacher/attendance/take/${schedule.classroom_id}/${schedule.id}`); // Use schedule.id as fallback for lectureId
       }
-    } catch (error) {
-      console.error('Error fetching schedules:', error);
-      message.error('Không thể tải thời khóa biểu');
-      setSchedules([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleScheduleClick = (schedule) => {
-    if (schedule && schedule.classroomId) {
-      // Navigate to attendance page with only classroomId
-      // TakeAttendancePage will auto-select the appropriate lecture
-      navigate(`/teacher/attendance/take/${schedule.classroomId}`);
     } else {
       message.warning('Không thể mở lịch học này');
     }
-  };
+  }, [navigate, message]);
 
-  const cellRender = (current, info) => {
+  // Group events by date for performance
+  const eventsByDate = useMemo(() => {
+    return schedules.reduce((acc, schedule) => {
+      const date = dayjs(schedule.start_datetime).format('YYYY-MM-DD');
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(schedule);
+      return acc;
+    }, {});
+  }, [schedules]);
+
+  const cellRender = useCallback((current, info) => {
     if (info.type !== 'date') return info.originNode;
     
-    const date = current.format('YYYY-MM-DD');
-    
-    // Filter schedules for the current date, handling different date formats
-    const daySchedules = schedules.filter(schedule => {
-      // Handle both startDatetime and startTime properties
-      const scheduleDate = schedule.startDatetime 
-        ? dayjs(schedule.startDatetime).format('YYYY-MM-DD')
-        : null;
-          
-      return scheduleDate === date;
-    });
+    const dateKey = current.format('YYYY-MM-DD');
+    const daySchedules = eventsByDate[dateKey] || [];
 
     if (daySchedules.length === 0) return null;
 
     return (
-      <ul className="events" style={{ listStyle: 'none', padding: 0 }}>
-        {daySchedules.map((schedule) => (
-          <li
-            key={schedule.id}
-            onClick={() => handleScheduleClick(schedule)}
-            style={{ cursor: 'pointer' }}
-          >
-            <Badge
-              status="processing"
-              color={schedule.color}
-              text={
-                <span style={{ fontSize: '12px' }}>
-                  {`${schedule.classroomName || schedule.title}`}
-                  <br />
-                  {`${dayjs(schedule.startDatetime).format('HH:mm')}-${dayjs(
-                    schedule.endDatetime
-                  ).format('HH:mm')}`}
-                  <br />
-                  {`Phòng: ${schedule.location}`}
-                </span>
-              }
-              style={{
-                whiteSpace: 'normal',
-                lineHeight: '1.2',
+      <div style={{ padding: 2 }}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {daySchedules.slice(0, 3).map((event) => (
+            <li
+              key={`${event.id}-${event.start_datetime}`}
+              onClick={() => handleScheduleClick(event)}
+              style={{ 
+                cursor: 'pointer',
+                marginBottom: 2,
+                lineHeight: 1.1
               }}
-            />
-          </li>
-        ))}
-      </ul>
+            >
+              <Badge 
+                color={event.color || '#1890ff'} 
+                text={
+                  <span style={{ fontSize: 10 }}>
+                    {event.title || 'Lịch học'}
+                    {event.start_datetime && 
+                      ` (${dayjs(event.start_datetime).format('HH:mm')})`
+                    }
+                  </span>
+                }
+                style={{ width: '100%' }}
+              />
+            </li>
+          ))}
+          {daySchedules.length > 3 && (
+            <li style={{ fontSize: 9, color: '#999' }}>
+              +{daySchedules.length - 3} khác
+            </li>
+          )}
+        </ul>
+      </div>
     );
-  };
+  }, [eventsByDate, handleScheduleClick]);
 
-  const handlePanelChange = (date, mode) => {
-    console.log('Panel changed:', date.format('YYYY-MM'), mode);
+  const handlePanelChange = useCallback((date, mode) => {
     if (mode === 'month') {
       setCurrentMonth(date);
     }
-  };
+  }, []);
 
   return (
     <div style={{ padding: '24px' }}>
@@ -150,11 +152,8 @@ const TeacherSchedule = () => {
         ) : schedules.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <p>Không có lịch dạy trong tháng này</p>
-            <p style={{ fontSize: '12px', color: '#999', marginTop: '10px' }}>
-              (ID người dùng hiện tại: {user?.id || 'Không có'})
-            </p>
             <button 
-              onClick={() => fetchSchedules(currentMonth)} 
+              onClick={handleRefresh}
               style={{ 
                 marginTop: '10px', 
                 padding: '5px 10px', 
@@ -169,23 +168,21 @@ const TeacherSchedule = () => {
             </button>
           </div>
         ) : (
-        <Calendar
-          cellRender={cellRender}
+          <Calendar
+            cellRender={cellRender}
             mode="month"
             onPanelChange={handlePanelChange}
             value={currentMonth}
-          headerRender={({ value, onChange }) => {
-            return (
+            headerRender={({ value }) => (
               <div style={{ padding: 8 }}>
                 <Typography.Title level={4}>{value.format('MMMM YYYY')}</Typography.Title>
               </div>
-            );
-          }}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-          }}
-        />
+            )}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+            }}
+          />
         )}
       </Card>
     </div>
