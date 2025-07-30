@@ -1,6 +1,6 @@
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import RegisterModal from '../components/RegisterModal';
@@ -9,16 +9,55 @@ import { ROLE } from '../constants/constants';
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 import authService from '../services/authService'; // Import the new authService
 import { loginSuccess } from '../store/slices/authSlice';
+import { isUserLoggedIn } from '../utils/authUtils';
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
   const { login, syncLoginState } = useAuth(); // Use the login function from AuthContext
+  const { isLogin } = useSelector((state) => state.auth);
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
-  const [loi, setLoi] = useState(null);  const [dangDangNhap, setDangDangNhap] = useState(false);
+  const [loi, setLoi] = useState(null);
+  const [dangDangNhap, setDangDangNhap] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [googleEmail, setGoogleEmail] = useState(''); // Lưu email Google khi đăng nhập thất bại
   const navigate = useNavigate();
+
+  // Redirect nếu đã đăng nhập
+  useEffect(() => {
+    const isLoggedIn = isUserLoggedIn() && isLogin;
+    if (isLoggedIn) {
+      const role = localStorage.getItem('role');
+      let dashboardPath = '/';
+      
+      switch (role) {
+        case 'ADMIN':
+        case '0':
+          dashboardPath = '/admin';
+          break;
+        case 'STUDENT':
+        case '1':
+          dashboardPath = '/student';
+          break;
+        case 'TEACHER':
+        case '2':
+          dashboardPath = '/teacher';
+          break;
+        case 'MANAGER':
+        case '3':
+          dashboardPath = '/manager';
+          break;
+        case 'ACCOUNTANT':
+        case '5':
+          dashboardPath = '/accountant';
+          break;
+        default:
+          dashboardPath = '/';
+      }
+      
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [isLogin, navigate]);
 
   // Use relative path for proxy to work correctly
     const handleSubmit = async (e) => {

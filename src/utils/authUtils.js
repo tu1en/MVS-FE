@@ -105,6 +105,51 @@ export const clearAuthData = () => {
 };
 
 /**
+ * Comprehensive logout function that handles all logout logic
+ * @param {Function} dispatch - Redux dispatch function
+ * @param {Function} navigate - React Router navigate function
+ * @param {Function} signOut - Firebase signOut function (optional)
+ * @param {Object} auth - Firebase auth object (optional)
+ */
+export const performLogout = async (dispatch, navigate, signOut = null, auth = null) => {
+  try {
+    // 1. Clear all auth data from localStorage
+    clearAuthData();
+    
+    // 2. Dispatch logout action to Redux
+    if (dispatch) {
+      // Import logout action dynamically to avoid circular dependency
+      const { logout } = await import('../store/slices/authSlice');
+      dispatch(logout());
+    }
+    
+    // 3. Sign out from Firebase if available
+    if (signOut && auth) {
+      await signOut(auth);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Đã đăng xuất khỏi Firebase thành công');
+      }
+    }
+    
+    // 4. Navigate to login page
+    if (navigate) {
+      navigate('/');
+    }
+    
+    // 5. Reload page to ensure clean state
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('Lỗi khi đăng xuất:', error);
+    // Even if there's an error, still clear data and redirect
+    if (navigate) {
+      navigate('/');
+    }
+    window.location.reload();
+  }
+};
+
+/**
  * Validate token format (basic validation)
  * @param {string} token 
  * @returns {boolean}

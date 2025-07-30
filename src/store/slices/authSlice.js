@@ -65,7 +65,8 @@ const authSlice = createSlice({
       if (!isValidToken) {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
-        localStorage.removeItem('userId');        localStorage.removeItem('email');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('email');
       }
     },
     clearAuthState: (state) => {

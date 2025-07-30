@@ -15,6 +15,7 @@ import Layout from "./components/Layout.jsx";
 import BlankPage from "./pages/BlankPage.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
+import PreventBackNavigation from "./components/PreventBackNavigation.jsx";
 
 // Auth Context
 import { AuthProvider } from "./context/AuthContext";
@@ -187,6 +188,7 @@ function App() {
     <AuthProvider>
       <AntApp>
         <Router>
+          <PreventBackNavigation />
           <Layout>
             <Routes>
               <Route path="/login" element={<LoginScreen />} />
