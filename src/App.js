@@ -85,6 +85,8 @@ import AnnouncementCenter from "./pages/AnnouncementCenter.jsx";
 import AssignmentsPageNew from "./pages/AssignmentsPageNew.jsx";
 import AttendancePageNew from "./pages/AttendancePageNew.jsx";
 import BlogPages from "./pages/BlogPages.jsx";
+import BlogDetailPage from "./pages/BlogDetailPage.jsx";
+import BlogTest from "./components/BlogTest.jsx";
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import HomePage from "./pages/HomePage/index.jsx"; // Import a new page
 import LecturesPageNew from "./pages/LecturesPageNew.jsx";
@@ -154,6 +156,31 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+// GuestRoute component to redirect unauthenticated users to home page
+const GuestRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    console.log('GuestRoute: User not authenticated, redirecting to home page');
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// PublicRoute component for routes that are always accessible (login, home, etc.)
+const PublicRoute = ({ children }) => {
+  return children;
+};
+
 
 const RootRedirect = () => {
     const { user, loading } = useAuth(); // Use the hook
@@ -191,10 +218,10 @@ function App() {
           <PreventBackNavigation />
           <Layout>
             <Routes>
-              <Route path="/login" element={<LoginScreen />} />
-              <Route path="/select-role" element={<SelectRoleLogin />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/" element={<RootRedirect />} />
+              <Route path="/login" element={<PublicRoute><LoginScreen /></PublicRoute>} />
+              <Route path="/select-role" element={<PublicRoute><SelectRoleLogin /></PublicRoute>} />
+              <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+              <Route path="/" element={<PublicRoute><RootRedirect /></PublicRoute>} />
 
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherDashboard /></ProtectedRoute>} />
@@ -244,7 +271,7 @@ function App() {
 
               {/* Admin and Manager stubs */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
-<Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
@@ -271,19 +298,20 @@ function App() {
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
 
-              {/* Test Upload Page */}
-              <Route path="/test-upload" element={<TestUpload />} />
+              {/* Test Upload Page - Requires authentication */}
+              <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />
 
-              {/* Generic and Fallback */}
-              <Route path="/change-password" element={<ChangePasswordPage />} />
-              <Route path="/blog" element={<ProtectedRoute allowedRoles={["TEACHER", "STUDENT", "ADMIN", "MANAGER"]}><BlogPages /></ProtectedRoute>} />
-              <Route path="/blank" element={<BlankPage />} />
+              {/* Generic and Fallback - Requires authentication */}
+              <Route path="/change-password" element={<GuestRoute><ChangePasswordPage /></GuestRoute>} />
+              <Route path="/blog" element={<GuestRoute><BlogPages /></GuestRoute>} />
+              <Route path="/blog-detail/:id" element={<GuestRoute><BlogDetailPage /></GuestRoute>} />
+              <Route path="/blank" element={<GuestRoute><BlankPage /></GuestRoute>} />
 
-              {/* Add generic routes for profile and notifications */}
-              <Route path="/profile" element={<RoleBasedRedirect targetPath="edit-profile" />} />
-              <Route path="/notifications" element={<RoleBasedRedirect targetPath="announcements" />} />
+              {/* Add generic routes for profile and notifications - Requires authentication */}
+              <Route path="/profile" element={<GuestRoute><RoleBasedRedirect targetPath="edit-profile" /></GuestRoute>} />
+              <Route path="/notifications" element={<GuestRoute><RoleBasedRedirect targetPath="announcements" /></GuestRoute>} />
 
-              <Route path="*" element={<NotFoundPage />} />
+              <Route path="*" element={<PublicRoute><NotFoundPage /></PublicRoute>} />
             </Routes>
           </Layout>
         </Router>

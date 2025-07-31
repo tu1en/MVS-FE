@@ -1,39 +1,147 @@
-import { Card, Row, Col } from 'antd';
-import { SmileOutlined, ReadOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Card, Row, Col, Typography, Spin, message } from 'antd';
+import { CalendarOutlined, UserOutlined, EyeOutlined } from '@ant-design/icons';
+import { getPublishedBlogs } from '../../../services/blogService';
+import { useNavigate } from 'react-router-dom';
+
+const { Title, Text, Paragraph } = Typography;
 
 export default function RoleCards() {
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchPublishedBlogs();
+  }, []);
+
+  const fetchPublishedBlogs = async () => {
+    try {
+      const data = await getPublishedBlogs();
+      setBlogs(data.slice(0, 6));
+    } catch (error) {
+      message.error('Không thể tải tin tức');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBlogClick = (blog) => {
+    navigate(`/blog-detail/${blog.id}`, { state: { blog } });
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
   return (
     <section className="py-20 px-6 w-full">
-      <Row gutter={[24, 24]} justify="center">
-        <Col xs={24} md={6}>
-          <Card hoverable className="rounded-xl shadow-md text-center" onClick={() => (window.location.href = '/login?role=student')}>
-            <SmileOutlined style={{ fontSize: 40, color: '#1677ff' }} />
-            <h3 className="text-xl font-semibold mt-4">Học viên</h3>
-            <p className="text-gray-500 mt-2">Xem điểm bài kiểm tra, nộp bài, xem lịch học và điểm danh.</p>
-          </Card>
-        </Col>
-        <Col xs={24} md={6}>
-          <Card hoverable className="rounded-xl shadow-md text-center" onClick={() => (window.location.href = '/login?role=teacher')}>
-            <ReadOutlined style={{ fontSize: 40, color: '#52c41a' }} />
-            <h3 className="text-xl font-semibold mt-4">Giáo viên</h3>
-            <p className="text-gray-500 mt-2">Quản lý lớp học, giao bài, chấm điểm và theo dõi chuyên cần.</p>
-          </Card>
-        </Col>
-        <Col xs={24} md={6}>
-          <Card hoverable className="rounded-xl shadow-md text-center" onClick={() => (window.location.href = '/login?role=manager')}>
-            <UserSwitchOutlined style={{ fontSize: 40, color: '#1890ff' }} />
-            <h3 className="text-xl font-semibold mt-4">Quản lý</h3>
-            <p className="text-gray-500 mt-2">Quản lý yêu cầu đăng ký và phê duyệt tài khoản người dùng.</p>
-          </Card>
-        </Col>
-        <Col xs={24} md={6}>
-          <Card hoverable className="rounded-xl shadow-md text-center" onClick={() => (window.location.href = '/login?role=admin')}>
-            <TeamOutlined style={{ fontSize: 40, color: '#f5222d' }} />
-            <h3 className="text-xl font-semibold mt-4">Quản trị viên</h3>
-            <p className="text-gray-500 mt-2">Quản lý hệ thống, thống kê và báo cáo toàn trung tâm.</p>
-          </Card>
-        </Col>
-      </Row>
+      <div className="text-center mb-12">
+        <Title level={2} className="text-3xl font-bold mb-4">
+          Tin Tức Giáo Dục
+        </Title>
+        <Text className="text-gray-600 text-lg">
+          Cập nhật những tin tức mới nhất về giáo dục và công nghệ
+        </Text>
+      </div>
+      {loading ? (
+        <div className="text-center">
+          <Spin size="large" />
+          <p className="mt-4 text-gray-600">Đang tải tin tức...</p>
+        </div>
+      ) : blogs.length === 0 ? (
+        <div className="text-center text-gray-500">Chưa có tin tức nào.</div>
+      ) : (
+        <Row gutter={[24, 24]}>
+          {blogs.map((blog) => (
+            <Col xs={24} sm={12} lg={8} key={blog.id}>
+              <Card
+                hoverable
+                className="h-full rounded-xl shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-105"
+                onClick={() => handleBlogClick(blog)}
+                cover={
+                  blog.thumbnailUrl ? (
+                    <div className="h-48 overflow-hidden">
+                      <img
+                        alt={blog.title}
+                        src={blog.thumbnailUrl}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div 
+                        className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold"
+                        style={{ display: 'none' }}
+                      >
+                        {blog.title.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">
+                      {blog.title.charAt(0).toUpperCase()}
+                    </div>
+                  )
+                }
+              >
+                <div className="p-4">
+                  <Title level={4} className="mb-3 line-clamp-2">
+                    {blog.title}
+                  </Title>
+                  <Paragraph className="text-gray-600 mb-4 line-clamp-3">
+                    {truncateText(blog.description, 120)}
+                  </Paragraph>
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <UserOutlined className="mr-1" />
+                      <Text>{blog.authorName || 'Admin'}</Text>
+                    </div>
+                    <div className="flex items-center">
+                      <CalendarOutlined className="mr-1" />
+                      <Text>{formatDate(blog.publishedDate)}</Text>
+                    </div>
+                  </div>
+                  {blog.viewCount && (
+                    <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <EyeOutlined className="mr-1" />
+                      <Text>{blog.viewCount} lượt xem</Text>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
+      {blogs.length >= 6 && !loading && (
+        <div className="text-center mt-8">
+          <button
+            onClick={() => {
+              const token = localStorage.getItem('token');
+              if (!token) {
+                window.location.href = '/login';
+              } else {
+                navigate('/blog');
+              }
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 font-medium"
+          >
+            Xem thêm
+          </button>
+        </div>
+      )}
     </section>
   );
 }

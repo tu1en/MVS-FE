@@ -77,7 +77,7 @@ function Header() {
         {/* Logo and App Name */}
         <div className="flex items-center">
           <Link to="/" className="text-xl font-bold text-primary hover:text-primary-dark transition-colors">
-            Lớp Học Trực Tuyến
+            Minh Việt Education
           </Link>
         </div>
         

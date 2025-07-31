@@ -1,7 +1,9 @@
-import { Modal, Table, Button, message, Tag, Alert, Form, Input, Upload } from 'antd';
+import { Modal, Table, Button, message, Tag, Alert, Form, Input, Upload, Typography, Row, Col, Card, Divider } from 'antd';
 import { useState, useEffect } from 'react';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, DollarOutlined, CalendarOutlined, UserOutlined, PhoneOutlined, MailOutlined, HomeOutlined } from '@ant-design/icons';
 import axiosInstance from '../config/axiosInstance';
+
+const { Title, Text, Paragraph } = Typography;
 
 const RecruitmentModal = ({ visible, onCancel }) => {
   const [jobs, setJobs] = useState([]);
@@ -71,38 +73,6 @@ const RecruitmentModal = ({ visible, onCancel }) => {
     return e && e.fileList;
   };
 
-  const columns = [
-    {
-      title: 'Vị trí',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
-    },
-    {
-      title: 'Mức lương',
-      dataIndex: 'salaryRange',
-      key: 'salaryRange',
-    },
-    {
-      title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
-    },
-    {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
-        <Button type="primary" onClick={() => handleApply(record)}>
-          Ứng tuyển
-        </Button>
-      ),
-    },
-  ];
-
   if (showApplyForm && selectedJob) {
     return (
       <Modal
@@ -121,7 +91,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
             label="Họ và tên"
             rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
           >
-            <Input />
+            <Input prefix={<UserOutlined />} placeholder="Nhập họ và tên đầy đủ" />
           </Form.Item>
 
           <Form.Item
@@ -132,7 +102,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
               { type: 'email', message: 'Email không hợp lệ!' }
             ]}
           >
-            <Input />
+            <Input prefix={<MailOutlined />} placeholder="example@email.com" />
           </Form.Item>
 
           <Form.Item
@@ -140,7 +110,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
             label="Số điện thoại"
             rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
           >
-            <Input />
+            <Input prefix={<PhoneOutlined />} placeholder="0987654321" />
           </Form.Item>
 
           <Form.Item
@@ -148,7 +118,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
             label="Địa chỉ"
             rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
           >
-            <Input.TextArea rows={3} />
+            <Input.TextArea prefix={<HomeOutlined />} rows={3} placeholder="Nhập địa chỉ chi tiết" />
           </Form.Item>
 
           <Form.Item
@@ -187,29 +157,123 @@ const RecruitmentModal = ({ visible, onCancel }) => {
 
   return (
     <Modal
-      title="Tuyển dụng"
+      title={null}
       open={visible}
       onCancel={onCancel}
       footer={null}
-      width={800}
+      width={1000}
+      className="recruitment-modal"
     >
-      {jobs.length === 0 && !loading && (
-        <Alert
-          message="Hiện tại không có vị trí tuyển dụng nào"
-          description="Tất cả kế hoạch tuyển dụng đã đóng hoặc chưa có vị trí nào được tạo."
-          type="info"
-          showIcon
-          className="mb-4"
-        />
-      )}
-      
-      <Table
-        columns={columns}
-        dataSource={jobs}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-      />
+      <div className="recruitment-content">
+        {/* Header with Image and Message */}
+        <div className="recruitment-header" style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          padding: '30px',
+          borderRadius: '12px 12px 0 0',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            backgroundImage: 'url(/anh-tuyen-dung.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.3,
+            zIndex: 1
+          }} />
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <Title level={1} style={{ color: 'white', marginBottom: '10px' }}>
+              🎓 Tuyển Dụng Giáo Viên
+            </Title>
+            <Paragraph style={{ color: 'white', fontSize: '18px', marginBottom: '20px' }}>
+              Tham gia đội ngũ giáo viên chuyên nghiệp của chúng tôi
+            </Paragraph>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
+              <div style={{ textAlign: 'center' }}>
+                <DollarOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
+                <div>Mức lương hấp dẫn</div>
+                <Text strong style={{ color: 'white' }}>12-25 triệu VNĐ</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <CalendarOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
+                <div>Làm việc linh hoạt</div>
+                <Text strong style={{ color: 'white' }}>Full-time/Part-time</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <UserOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
+                <div>Cơ hội thăng tiến</div>
+                <Text strong style={{ color: 'white' }}>Không giới hạn</Text>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Job Positions Section */}
+        <div style={{ padding: '30px' }}>
+          <Title level={3} style={{ marginBottom: '20px', textAlign: 'center' }}>
+            📋 Các Vị Trí Tuyển Dụng
+          </Title>
+          
+          {jobs.length === 0 && !loading && (
+            <Alert
+              message="Hiện tại không có vị trí tuyển dụng nào"
+              description="Tất cả kế hoạch tuyển dụng đã đóng hoặc chưa có vị trí nào được tạo."
+              type="info"
+              showIcon
+              className="mb-4"
+            />
+          )}
+          
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div>Đang tải danh sách tuyển dụng...</div>
+            </div>
+          ) : (
+            <Row gutter={[16, 16]}>
+              {jobs.map((job) => (
+                <Col xs={24} md={12} key={job.id}>
+                  <Card
+                    hoverable
+                    style={{ height: '100%' }}
+                    actions={[
+                      <Button type="primary" onClick={() => handleApply(job)}>
+                        Ứng tuyển ngay
+                      </Button>
+                    ]}
+                  >
+                    <Card.Meta
+                      title={
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{job.title}</span>
+                          <Tag color="green">{job.quantity} vị trí</Tag>
+                        </div>
+                      }
+                      description={
+                        <div>
+                          <Paragraph style={{ marginBottom: '10px' }}>
+                            {job.description}
+                          </Paragraph>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text strong style={{ color: '#1890ff' }}>
+                              💰 {job.salaryRange}
+                            </Text>
+                          </div>
+                        </div>
+                      }
+                    />
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 };

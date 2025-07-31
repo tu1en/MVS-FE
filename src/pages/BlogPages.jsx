@@ -24,11 +24,14 @@ import {
     Tabs,
     Tag,
     Tooltip,
-    Typography
+    Typography,
+    Table,
+    Popconfirm
 } from "antd";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import * as blogService from "../services/blogService";
+import NavigationBar from '../components/NavigationBar';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -42,18 +45,16 @@ const BlogPages = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("blogs");
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   
-  const user = useSelector((state) => state.auth.user);
-  const isManager = user && user.roleId === 1;
+  const { user, isLogin } = useSelector((state) => state.auth);
+  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
   const isAuthenticated = !!user;
 
   useEffect(() => {
-    if (activeTab === "all") {
-      fetchAllBlogs();
-    } else if (activeTab === "published") {
+    if (activeTab === "blogs") {
       fetchPublishedBlogs();
     } else if (activeTab === "my") {
       if (user && user.id) {
@@ -103,9 +104,7 @@ const BlogPages = () => {
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
-      if (activeTab === "all") {
-        fetchAllBlogs();
-      } else if (activeTab === "published") {
+      if (activeTab === "blogs") {
         fetchPublishedBlogs();
       } else if (activeTab === "my") {
         fetchMyBlogs(user.id);
@@ -157,9 +156,7 @@ const BlogPages = () => {
     try {
       await blogService.deleteBlog(blogId);
       message.success("Blog deleted successfully");
-      if (activeTab === "all") {
-        fetchAllBlogs();
-      } else if (activeTab === "published") {
+      if (activeTab === "blogs") {
         fetchPublishedBlogs();
       } else if (activeTab === "my") {
         fetchMyBlogs(user.id);
@@ -179,9 +176,7 @@ const BlogPages = () => {
         await blogService.publishBlog(blogId);
         message.success("Blog published successfully");
       }
-      if (activeTab === "all") {
-        fetchAllBlogs();
-      } else if (activeTab === "published") {
+      if (activeTab === "blogs") {
         fetchPublishedBlogs();
       } else if (activeTab === "my") {
         fetchMyBlogs(user.id);
@@ -197,9 +192,7 @@ const BlogPages = () => {
       await blogService.createBlog(values);
       message.success("Blog created successfully");
       setCreateModalVisible(false);
-      if (activeTab === "all") {
-        fetchAllBlogs();
-      } else if (activeTab === "published") {
+      if (activeTab === "blogs") {
         fetchPublishedBlogs();
       } else if (activeTab === "my") {
         fetchMyBlogs(user.id);
@@ -215,9 +208,7 @@ const BlogPages = () => {
       await blogService.updateBlog(selectedBlog.id, values);
       message.success("Blog updated successfully");
       setEditModalVisible(false);
-      if (activeTab === "all") {
-        fetchAllBlogs();
-      } else if (activeTab === "published") {
+      if (activeTab === "blogs") {
         fetchPublishedBlogs();
       } else if (activeTab === "my") {
         fetchMyBlogs(user.id);
@@ -265,19 +256,19 @@ const BlogPages = () => {
             <Tooltip title="View">
               <EyeOutlined key="view" onClick={() => handleViewBlog(blog)} />
             </Tooltip>,
-            (isManager || (user && user.id === blog.authorId)) && (
+            (isAdmin || (user && user.id === blog.authorId)) && (
               <Tooltip title="Edit">
                 <EditOutlined key="edit" onClick={() => handleEditBlog(blog)} />
               </Tooltip>
             ),
-            (isManager || (user && user.id === blog.authorId)) && (
+            (isAdmin || (user && user.id === blog.authorId)) && (
               <Tooltip title="Delete">
                 <DeleteOutlined key="delete" onClick={() => handleDeleteBlog(blog.id)} />
               </Tooltip>
             ),
           ].filter(Boolean)}
           extra={
-            (isManager || (user && user.id === blog.authorId)) && (
+            (isAdmin || (user && user.id === blog.authorId)) && (
               <Button 
                 type={blog.isPublished ? "default" : "primary"} 
                 size="small"
@@ -323,48 +314,95 @@ const BlogPages = () => {
   };
 
   return (
-    <div className="blog-page" style={{ padding: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <Title level={2}>Blogs</Title>
-        <Space>
-          <Input
-            placeholder="Search blogs..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onPressEnter={handleSearch}
-            suffix={<SearchOutlined onClick={handleSearch} style={{ cursor: "pointer" }} />}
-            style={{ width: 250 }}
-          />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateBlog}>
-            Create Blog
+    <div className="flex min-h-screen bg-gray-50">
+      {isLogin && <NavigationBar />}
+      <div className="flex-1 p-6">
+        <Title level={2} className="mb-6">Tin Tức</Title>
+        {/* Only show Create Blog for admin */}
+        {isAdmin && (
+          <Button type="primary" icon={<PlusOutlined />} className="mb-4" onClick={() => setCreateModalVisible(true)}>
+            Tạo Blog Mới
           </Button>
-        </Space>
-      </div>      <Tabs 
-        activeKey={activeTab} 
-        onChange={handleTabChange} 
-        style={{ marginBottom: 16 }}
-        items={[
-          { key: 'all', label: 'All Blogs' },
-          { key: 'published', label: 'Published' },
-          ...(isAuthenticated ? [{ key: 'my', label: 'My Blogs' }] : [])
-        ]}
-      />
+        )}
+        {/* Blog Management for admin */}
+        {isAdmin && (
+          <div className="mb-8">
+            <Title level={4}>Quản Lý Blog</Title>
+            <Table
+              dataSource={blogs}
+              rowKey="id"
+              columns={[
+                { title: 'Tiêu đề', dataIndex: 'title', key: 'title' },
+                { title: 'Tác giả', dataIndex: 'authorName', key: 'authorName' },
+                { title: 'Trạng thái', dataIndex: 'status', key: 'status' },
+                { title: 'Ngày đăng', dataIndex: 'publishedDate', key: 'publishedDate', render: (date) => date ? new Date(date).toLocaleDateString('vi-VN') : '' },
+                { title: 'Lượt xem', dataIndex: 'viewCount', key: 'viewCount' },
+                {
+                  title: 'Hành động',
+                  key: 'actions',
+                  render: (_, blog) => (
+                    <Space>
+                      <Button icon={<EyeOutlined />} onClick={() => handleViewBlog(blog)} />
+                      <Button icon={<EditOutlined />} onClick={() => handleEditBlog(blog)} />
+                      <Popconfirm title="Xoá blog này?" onConfirm={() => handleDeleteBlog(blog.id)} okText="Xoá" cancelText="Huỷ">
+                        <Button icon={<DeleteOutlined />} danger />
+                      </Popconfirm>
+                    </Space>
+                  )
+                }
+              ]}
+              pagination={false}
+            />
+          </div>
+        )}
+        {/* Blog list for all users */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <Space>
+              <Input
+                placeholder="Tìm tin tức..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onPressEnter={handleSearch}
+                suffix={<SearchOutlined onClick={handleSearch} style={{ cursor: "pointer" }} />}
+                style={{ width: 250 }}
+              />
+              {/* Only show Create Blog for admin */}
+              {isAdmin && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateBlog}>
+                  Create Blog
+                </Button>
+              )}
+            </Space>
+          </div>
+          
+          <Tabs 
+            activeKey={activeTab} 
+            onChange={handleTabChange} 
+            style={{ marginBottom: 16 }}
+            items={[
+              { key: 'blogs', label: 'Blogs' },
+              ...(isAuthenticated ? [{ key: 'my', label: 'My Blogs' }] : [])
+            ]}
+          />
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "50px 0" }}>
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Row gutter={[16, 16]}>
-          {blogs.length > 0 ? renderBlogCards() : (
-            <Col span={24}>
-              <div style={{ textAlign: "center", padding: "50px 0" }}>
-                <Text type="secondary">No blogs found</Text>
-              </div>
-            </Col>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "50px 0" }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            <Row gutter={[16, 16]}>
+              {blogs.length > 0 ? renderBlogCards() : (
+                <Col span={24}>
+                  <div style={{ textAlign: "center", padding: "50px 0" }}>
+                    <Text type="secondary">No blogs found</Text>
+                  </div>
+                </Col>
+              )}
+            </Row>
           )}
-        </Row>
-      )}
+        </div>
+      </div>
 
       {/* View Blog Modal - Anyone can view details */}
       <Modal
@@ -428,7 +466,7 @@ const BlogPages = () => {
             </div>
             
             {/* Edit/Delete buttons only for managers or author */}
-            {(isManager || (user && user.id === selectedBlog.authorId)) && (
+            {(isAdmin || (user && user.id === selectedBlog.authorId)) && (
               <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
                 <Space>
                   <Button 
