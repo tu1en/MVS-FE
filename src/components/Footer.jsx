@@ -11,12 +11,12 @@ function Footer() {
   
   return (
     <footer className="bg-gray-900 text-white w-full">
-      <div className="px-6 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
         {/* Main footer content */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* About section */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 border-b pb-2 border-primary">Về Lớp Học Trực Tuyến</h3>
+            <h3 className="text-lg font-semibold mb-4 border-b pb-2 border-primary">Về Minh Việt Education</h3>
             <ul className="space-y-2">
               <li><Link to="/" className="hover:text-primary-hover transition-colors">Về chúng tôi</Link></li>
               <li><Link to="/" className="hover:text-primary-hover transition-colors">Chính sách đối tác</Link></li>
@@ -92,7 +92,7 @@ function Footer() {
         
         {/* Copyright */}
         <div className="border-t border-gray-800 mt-6 pt-4 text-center text-gray-400">
-          <p>© {currentYear} Lớp Học Trực Tuyến. Tất cả các quyền được bảo lưu.</p>
+          <p>© {currentYear} Minh Việt Education. Tất cả các quyền được bảo lưu.</p>
         </div>
       </div>
     </footer>
