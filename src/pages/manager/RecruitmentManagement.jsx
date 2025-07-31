@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import dayjs from 'dayjs';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
+import { recruitmentService } from '../../services/recruitmentService';
 
 const { RangePicker } = DatePicker;
 
@@ -304,6 +305,20 @@ const RecruitmentManagement = () => {
     }
   };
 
+  const handleViewCV = (cvUrl, applicantName) => {
+    if (!cvUrl) {
+      message.warning(`Ứng viên ${applicantName} chưa có CV`);
+      return;
+    }
+    
+    try {
+      window.open(cvUrl, '_blank');
+    } catch (error) {
+      message.error('Không thể mở CV. Vui lòng thử lại!');
+      console.error('Error opening CV:', error);
+    }
+  };
+
   const openPlans = plans.filter(p => p.status === 'OPEN');
 
   const positionColumns = [
@@ -342,6 +357,17 @@ const RecruitmentManagement = () => {
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
+          {record.cvUrl && (
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={() => handleViewCV(record.cvUrl, record.fullName)}
+              className="vietnamese-text"
+              style={{ padding: 0, height: 'auto' }}
+            >
+              📄 Xem CV
+            </Button>
+          )}
           {record.status === 'PENDING' && (
             <>
               <Button 
@@ -419,6 +445,17 @@ const RecruitmentManagement = () => {
         const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
         return (
           <div className="space-x-2">
+            {record.cvUrl && (
+              <Button 
+                type="link" 
+                size="small" 
+                onClick={() => handleViewCV(record.cvUrl, record.fullName)}
+                className="vietnamese-text"
+                style={{ padding: 0, height: 'auto' }}
+              >
+                📄 Xem CV
+              </Button>
+            )}
             {!hasSchedule && (
               <Button 
                 type="primary" 
@@ -463,11 +500,21 @@ const RecruitmentManagement = () => {
         }
       }
     },
-    { title: 'Địa điểm', dataIndex: 'location', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
+          {record.cvUrl && (
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={() => handleViewCV(record.cvUrl, record.applicantName)}
+              className="vietnamese-text"
+              style={{ padding: 0, height: 'auto' }}
+            >
+              📄 Xem CV
+            </Button>
+          )}
           <Button 
             type="primary" 
             size="small" 
