@@ -92,7 +92,7 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       key: 'title',
       render: (text, record) => (
         <span 
-          className={record.status === 'OPEN' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : 'text-gray-500'}
+          className={`${record.status === 'OPEN' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : 'text-gray-500'} vietnamese-text vietnamese-diacritics-fix`}
           onClick={() => record.status === 'OPEN' && onPlanSelect && onPlanSelect(record)}
         >
           {text}
@@ -103,25 +103,26 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       title: 'Ngày bắt đầu',
       dataIndex: 'startDate',
       key: 'startDate',
-      render: (text) => dayjs(text).format('DD/MM/YYYY')
+      render: (text) => <span className="vietnamese-text">{dayjs(text).format('DD/MM/YYYY')}</span>
     },
     {
       title: 'Ngày kết thúc',
       dataIndex: 'endDate',
       key: 'endDate',
-      render: (text) => dayjs(text).format('DD/MM/YYYY')
+      render: (text) => <span className="vietnamese-text">{dayjs(text).format('DD/MM/YYYY')}</span>
     },
     {
       title: 'Số lượng',
       dataIndex: 'totalQuantity',
       key: 'totalQuantity',
+      render: (text) => <span className="vietnamese-text">{text}</span>
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       render: (status) => (
-        <Tag color={status === 'OPEN' ? 'green' : 'red'}>
+        <Tag color={status === 'OPEN' ? 'green' : 'red'} className="vietnamese-text">
           {status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
         </Tag>
       )
@@ -131,7 +132,7 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       key: 'actions',
       render: (_, record) => (
         <div className="space-x-2">
-          <Button type="link" onClick={() => openEditPlan(record)}>
+          <Button type="link" onClick={() => openEditPlan(record)} className="vietnamese-text">
             Sửa
           </Button>
           <Popconfirm
@@ -140,7 +141,7 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger>
+            <Button type="link" danger className="vietnamese-text">
               Xóa
             </Button>
           </Popconfirm>
@@ -148,9 +149,10 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
             value={record.status}
             style={{ width: 100 }}
             onChange={(value) => handleStatusChange(record.id, value)}
+            className="vietnamese-text"
           >
-            <Select.Option value="OPEN">Mở</Select.Option>
-            <Select.Option value="CLOSED">Đóng</Select.Option>
+            <Select.Option value="OPEN" className="vietnamese-text">Mở</Select.Option>
+            <Select.Option value="CLOSED" className="vietnamese-text">Đóng</Select.Option>
           </Select>
         </div>
       )
@@ -159,8 +161,8 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Quản Lý Kế Hoạch Tuyển Dụng</h2>
-      <Button type="primary" className="mb-4" onClick={openAddPlan}>
+      <h2 className="text-2xl font-bold mb-6 vietnamese-heading">Quản Lý Kế Hoạch Tuyển Dụng</h2>
+      <Button type="primary" className="mb-4 vietnamese-text" onClick={openAddPlan}>
         Thêm kế hoạch mới
       </Button>
       <Table columns={columns} dataSource={plans} rowKey="id" loading={loading} />
@@ -171,19 +173,20 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
         title={editingPlan ? 'Cập nhật kế hoạch' : 'Thêm kế hoạch mới'} 
         onOk={() => form.submit()} 
         okText={editingPlan ? 'Cập nhật' : 'Thêm mới'}
+        className="form-vietnamese"
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="form-vietnamese">
           <Form.Item name="title" label="Tên kế hoạch" rules={[{ required: true, message: 'Nhập tên kế hoạch' }]}>
-            <Input />
+            <Input className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Chọn ngày bắt đầu' }]}>
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker style={{ width: '100%' }} className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="endDate" label="Ngày kết thúc" rules={[{ required: true, message: 'Chọn ngày kết thúc' }]}>
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker style={{ width: '100%' }} className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="totalQuantity" label="Số lượng tuyển dụng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: '100%' }} className="vietnamese-text" />
           </Form.Item>
         </Form>
       </Modal>

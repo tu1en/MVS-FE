@@ -212,6 +212,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    },
+    {
       category: "Học tập",
       items: [
         { 
@@ -286,6 +292,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    },
+    {
       category: "Giảng dạy",
       items: [
         { 
@@ -327,11 +339,6 @@ function NavigationBar() {
           name: 'Thông Báo', 
           path: '/teacher/announcements', 
           icon: '📢'
-        },
-        { 
-          name: 'Blog', 
-          path: '/blog', 
-          icon: '📝'
         }
       ]
     },
@@ -362,6 +369,12 @@ function NavigationBar() {
           path: '/manager', 
           icon: '🏠'
         }
+      ]
+    },
+    {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
       ]
     },
     {
@@ -429,6 +442,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    },
+    {
       category: "Quản trị hệ thống",
       items: [
         { 
@@ -466,6 +485,12 @@ function NavigationBar() {
       category: "Chính",
       items: [
         { name: 'Trang Chủ/Dashboard', path: '/accountant', icon: '🏠' }
+      ]
+    },
+    {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
       ]
     },
     {

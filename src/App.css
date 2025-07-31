@@ -28,3 +28,41 @@
 .tab-inactive {
   @apply bg-gray-200 hover:bg-gray-300;
 }
+
+/* Line clamp utilities for blog text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom animations for HomeBanner */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Hover effects for carousel slides */
+.carousel-slide-hover {
+  transition: all 0.5s ease;
+}
+
+.carousel-slide-hover:hover {
+  transform: scale(1.02);
+}

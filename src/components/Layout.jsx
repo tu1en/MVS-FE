@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import '../styles/vietnamese-fonts.css';
-import Footer from './Footer';
 import Header from './Header';
 import NavigationBar from './NavigationBar';
 
 /**
- * Layout component that wraps the application with Header and Footer
+ * Layout component that wraps the application with Header
  * @param {Object} props - Component props
- * @param {React.ReactNode} props.children - Child components to render between header and footer
- * @returns {JSX.Element} Layout with header, content area, and footer
+ * @param {React.ReactNode} props.children - Child components to render between header and content area
+ * @returns {JSX.Element} Layout with header and content area
  */
 function Layout({ children }) {
   // State to track if sidebar is collapsed
@@ -56,7 +55,7 @@ function Layout({ children }) {
         <Header />
         <div className="flex flex-1 pt-16">
           <NavigationBar />
-          <main className="flex-grow w-full px-4 md:px-6 py-6">
+          <main className="flex-grow w-full">
             {children}
           </main>
         </div>
@@ -73,9 +72,6 @@ function Layout({ children }) {
           ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
           {children}
         </main>
-      </div>
-      <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <Footer />
       </div>
     </div>
   );

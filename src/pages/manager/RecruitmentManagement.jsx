@@ -139,6 +139,25 @@ const RecruitmentManagement = () => {
     setActiveTab('positions');
   };
 
+  // Hàm xử lý khi thay đổi tab
+  const handleTabChange = (key) => {
+    if (key === 'plans') {
+      // Nếu đang ở tab plans và ấn lại vào plans, refresh trang
+      if (activeTab === 'plans') {
+        window.location.href = '/manager/recruitment';
+        return;
+      }
+      // Reset selectedPlan khi chuyển về tab plans
+      setSelectedPlan(null);
+    }
+    
+    if (selectedPlan || key === 'plans') {
+      setActiveTab(key);
+    } else {
+      message.warning('Vui lòng chọn một kế hoạch tuyển dụng trước!');
+    }
+  };
+
   const openAddPosition = () => {
     setEditingPosition(null);
     setShowPositionModal(true);
@@ -288,17 +307,17 @@ const RecruitmentManagement = () => {
   const openPlans = plans.filter(p => p.status === 'OPEN');
 
   const positionColumns = [
-    { title: 'Vị trí', dataIndex: 'title' },
-    { title: 'Mô tả', dataIndex: 'description' },
-    { title: 'Mức lương', dataIndex: 'salaryRange' },
-    { title: 'Số lượng', dataIndex: 'quantity' },
+    { title: 'Vị trí', dataIndex: 'title', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Mô tả', dataIndex: 'description', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Mức lương', dataIndex: 'salaryRange', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Số lượng', dataIndex: 'quantity', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
-          <Button size="small" onClick={() => openEditPosition(record)}>Sửa</Button>
+          <Button size="small" onClick={() => openEditPosition(record)} className="vietnamese-text">Sửa</Button>
           <Popconfirm title="Xóa vị trí này?" onConfirm={() => handleDeletePosition(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger>Xóa</Button>
+            <Button size="small" danger className="vietnamese-text">Xóa</Button>
           </Popconfirm>
         </div>
       )
@@ -306,15 +325,15 @@ const RecruitmentManagement = () => {
   ];
 
   const applicationColumns = [
-    { title: 'Họ tên', dataIndex: 'fullName' },
-    { title: 'Email', dataIndex: 'email' },
-    { title: 'Số điện thoại', dataIndex: 'phoneNumber' },
-    { title: 'Vị trí', dataIndex: 'jobPosition' },
+    { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobPosition', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       render: (status) => (
-        <Tag color={status === 'APPROVED' ? 'green' : status === 'REJECTED' ? 'red' : 'orange'}>
+        <Tag color={status === 'APPROVED' ? 'green' : status === 'REJECTED' ? 'red' : 'orange'} className="vietnamese-text">
           {status === 'APPROVED' ? 'Đã duyệt' : status === 'REJECTED' ? 'Từ chối' : 'Chờ duyệt'}
         </Tag>
       )
@@ -330,6 +349,7 @@ const RecruitmentManagement = () => {
                 size="small" 
                 onClick={() => handleApplicationStatusChange(record.id, 'APPROVED')}
                 style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                className="vietnamese-text"
               >
                 ✓ Duyệt
               </Button>
@@ -338,13 +358,14 @@ const RecruitmentManagement = () => {
                 size="small" 
                 danger
                 onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
+                className="vietnamese-text"
               >
                 ✗ Từ chối
               </Button>
             </>
           )}
           <Popconfirm title="Xóa đơn này?" onConfirm={() => handleDeleteApplication(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger>Xóa</Button>
+            <Button size="small" danger className="vietnamese-text">Xóa</Button>
           </Popconfirm>
         </div>
       )
@@ -353,16 +374,16 @@ const RecruitmentManagement = () => {
 
   // Gộp danh sách ứng viên đã duyệt và lịch phỏng vấn
   const scheduleColumns = [
-    { title: 'Họ tên', dataIndex: 'fullName' },
-    { title: 'Email', dataIndex: 'email' },
-    { title: 'Vị trí', dataIndex: 'jobPosition' },
+    { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobPosition', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Trạng thái lịch',
       dataIndex: 'hasSchedule',
       render: (_, record) => {
         const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
         return (
-          <Tag color={hasSchedule ? 'green' : 'orange'}>
+          <Tag color={hasSchedule ? 'green' : 'orange'} className="vietnamese-text">
             {hasSchedule ? 'Đã lên lịch' : 'Chưa lên lịch'}
           </Tag>
         );
@@ -383,13 +404,13 @@ const RecruitmentManagement = () => {
             const endTime = dayjs(interview.endTime);
             console.log('Parsed startTime:', startTime.format('YYYY-MM-DD HH:mm:ss'));
             console.log('Parsed endTime:', endTime.format('YYYY-MM-DD HH:mm:ss'));
-            return `${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`;
+            return <span className="vietnamese-text">{`${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`}</span>;
           } catch (error) {
             console.error('Error formatting date:', interview.startTime, interview.endTime, error);
-            return 'Lỗi định dạng';
+            return <span className="vietnamese-text">Lỗi định dạng</span>;
           }
         }
-        return '-';
+        return <span className="vietnamese-text">-</span>;
       }
     },
     {
@@ -403,6 +424,7 @@ const RecruitmentManagement = () => {
                 type="primary" 
                 size="small" 
                 onClick={() => openScheduleModal(record)}
+                className="vietnamese-text"
               >
                 Lên lịch
               </Button>
@@ -411,6 +433,7 @@ const RecruitmentManagement = () => {
               <Button 
                 size="small" 
                 onClick={() => openScheduleModal(record)}
+                className="vietnamese-text"
               >
                 Sửa lịch
               </Button>
@@ -422,8 +445,8 @@ const RecruitmentManagement = () => {
   ];
 
   const pendingInterviewColumns = [
-    { title: 'Họ tên', dataIndex: 'applicantName' },
-    { title: 'Vị trí', dataIndex: 'jobTitle' },
+    { title: 'Họ tên', dataIndex: 'applicantName', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     { 
       title: 'Ngày phỏng vấn', 
       dataIndex: 'startTime', 
@@ -433,14 +456,14 @@ const RecruitmentManagement = () => {
           console.log('Pending interview endTime:', record.endTime, 'Type:', typeof record.endTime);
           const startTime = dayjs(date);
           const endTime = dayjs(record.endTime);
-          return `${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`;
+          return <span className="vietnamese-text">{`${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`}</span>;
         } catch (error) {
           console.error('Error formatting pending interview date:', date, record.endTime, error);
-          return 'Lỗi định dạng';
+          return <span className="vietnamese-text">Lỗi định dạng</span>;
         }
       }
     },
-    { title: 'Địa điểm', dataIndex: 'location' },
+    { title: 'Địa điểm', dataIndex: 'location', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Thao tác',
       render: (_, record) => (
@@ -450,6 +473,7 @@ const RecruitmentManagement = () => {
             size="small" 
             onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
             style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            className="vietnamese-text"
           >
             ✓ Đỗ
           </Button>
@@ -458,11 +482,12 @@ const RecruitmentManagement = () => {
             size="small" 
             danger
             onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
+            className="vietnamese-text"
           >
             ✗ Trượt
           </Button>
           <Popconfirm title="Xóa lịch này?" onConfirm={() => handleDeleteInterview(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger>Xóa</Button>
+            <Button size="small" danger className="vietnamese-text">Xóa</Button>
           </Popconfirm>
         </div>
       )
@@ -471,12 +496,12 @@ const RecruitmentManagement = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Quản Lý Tuyển Dụng</h2>
+      <h2 className="text-2xl font-bold mb-6 vietnamese-heading">Quản Lý Tuyển Dụng</h2>
       
       {selectedPlan && (
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-          <h3 className="text-lg font-semibold text-blue-800">Kế hoạch đang quản lý: {selectedPlan.title}</h3>
-          <p className="text-blue-600">
+          <h3 className="text-lg font-semibold text-blue-800 vietnamese-heading">Kế hoạch đang quản lý: {selectedPlan.title}</h3>
+          <p className="text-blue-600 vietnamese-body">
             Thời gian: {dayjs(selectedPlan.startDate).format('DD/MM/YYYY')} - {dayjs(selectedPlan.endDate).format('DD/MM/YYYY')} | 
             Số lượng: {selectedPlan.totalQuantity} | 
             Trạng thái: <Tag color={selectedPlan.status === 'OPEN' ? 'green' : 'red'}>
@@ -489,27 +514,21 @@ const RecruitmentManagement = () => {
               setSelectedPlan(null);
               setActiveTab('plans');
             }}
-            className="p-0 text-blue-600"
+            className="p-0 text-blue-600 vietnamese-text"
           >
             ← Chọn kế hoạch khác
           </Button>
         </div>
       )}
 
-      <Tabs activeKey={activeTab} onChange={(key) => {
-        if (selectedPlan || key === 'plans') {
-          setActiveTab(key);
-        } else {
-          message.warning('Vui lòng chọn một kế hoạch tuyển dụng trước!');
-        }
-      }}>
+      <Tabs activeKey={activeTab} onChange={handleTabChange}>
         <Tabs.TabPane tab="Kế hoạch tuyển dụng" key="plans">
           <RecruitmentPlanManagement onPlanSelect={handlePlanSelect} />
         </Tabs.TabPane>
         
         <Tabs.TabPane tab="Vị trí tuyển dụng" key="positions" disabled={!selectedPlan}>
           <div className="mb-4">
-            <Button type="primary" onClick={openAddPosition}>Thêm vị trí</Button>
+            <Button type="primary" onClick={openAddPosition} className="vietnamese-text">Thêm vị trí</Button>
           </div>
           <Table columns={positionColumns} dataSource={positions} rowKey="id" />
         </Tabs.TabPane>
@@ -533,24 +552,25 @@ const RecruitmentManagement = () => {
         open={showPositionModal}
         onCancel={() => setShowPositionModal(false)}
         footer={null}
+        className="form-vietnamese"
       >
-        <Form layout="vertical" onFinish={handlePositionSubmit}>
+        <Form layout="vertical" onFinish={handlePositionSubmit} className="form-vietnamese">
           <Form.Item name="title" label="Tên vị trí" rules={[{ required: true }]}>
-            <Input />
+            <Input className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="description" label="Mô tả" rules={[{ required: true }]}>
-            <Input.TextArea />
+            <Input.TextArea className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true }]}>
-            <Input />
+            <Input className="vietnamese-text" />
           </Form.Item>
           <Form.Item name="quantity" label="Số lượng" rules={[{ required: true }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: '100%' }} className="vietnamese-text" />
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
-              <Button onClick={() => setShowPositionModal(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
+              <Button onClick={() => setShowPositionModal(false)} className="vietnamese-text">Hủy</Button>
+              <Button type="primary" htmlType="submit" className="vietnamese-text">
                 {editingPosition ? 'Cập nhật' : 'Tạo'}
               </Button>
             </div>
@@ -564,8 +584,9 @@ const RecruitmentManagement = () => {
         open={showScheduleModal}
         onCancel={() => setShowScheduleModal(false)}
         footer={null}
+        className="form-vietnamese"
       >
-        <Form layout="vertical" form={scheduleForm} onFinish={handleScheduleSubmit}>
+        <Form layout="vertical" form={scheduleForm} onFinish={handleScheduleSubmit} className="form-vietnamese">
           <Form.Item 
             name="interviewTime" 
             label="Thời gian phỏng vấn" 
@@ -575,12 +596,13 @@ const RecruitmentManagement = () => {
               showTime 
               format="YYYY-MM-DD HH:mm"
               placeholder={['Bắt đầu', 'Kết thúc']}
+              className="vietnamese-text"
             />
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
-              <Button onClick={() => setShowScheduleModal(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
+              <Button onClick={() => setShowScheduleModal(false)} className="vietnamese-text">Hủy</Button>
+              <Button type="primary" htmlType="submit" className="vietnamese-text">
                 Lên lịch
               </Button>
             </div>
