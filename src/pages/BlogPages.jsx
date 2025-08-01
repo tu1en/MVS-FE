@@ -5,7 +5,6 @@ import {
     EyeOutlined,
     PlusOutlined,
     SearchOutlined, TagOutlined,
-    UserOutlined,
     VideoCameraOutlined
 } from "@ant-design/icons";
 import {
@@ -45,7 +44,7 @@ const BlogPages = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [activeTab, setActiveTab] = useState("blogs");
+
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   
@@ -54,14 +53,8 @@ const BlogPages = () => {
   const isAuthenticated = !!user;
 
   useEffect(() => {
-    if (activeTab === "blogs") {
-      fetchPublishedBlogs();
-    } else if (activeTab === "my") {
-      if (user && user.id) {
-        fetchMyBlogs(user.id);
-      }
-    }
-  }, [activeTab, user]);
+    fetchPublishedBlogs();
+  }, []);
 
   const fetchAllBlogs = async () => {
     setLoading(true);
@@ -89,26 +82,11 @@ const BlogPages = () => {
     }
   };
 
-  const fetchMyBlogs = async (authorId) => {
-    setLoading(true);
-    try {
-      const data = await blogService.getBlogsByAuthor(authorId);
-      setBlogs(data);
-    } catch (error) {
-      console.error("Error fetching my blogs:", error);
-      message.error("Failed to fetch your blogs");
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
-      if (activeTab === "blogs") {
-        fetchPublishedBlogs();
-      } else if (activeTab === "my") {
-        fetchMyBlogs(user.id);
-      }
+      fetchPublishedBlogs();
       return;
     }
     
@@ -156,11 +134,7 @@ const BlogPages = () => {
     try {
       await blogService.deleteBlog(blogId);
       message.success("Blog deleted successfully");
-      if (activeTab === "blogs") {
-        fetchPublishedBlogs();
-      } else if (activeTab === "my") {
-        fetchMyBlogs(user.id);
-      }
+      fetchPublishedBlogs();
     } catch (error) {
       console.error("Error deleting blog:", error);
       message.error("Failed to delete blog");
@@ -176,11 +150,7 @@ const BlogPages = () => {
         await blogService.publishBlog(blogId);
         message.success("Blog published successfully");
       }
-      if (activeTab === "blogs") {
-        fetchPublishedBlogs();
-      } else if (activeTab === "my") {
-        fetchMyBlogs(user.id);
-      }
+      fetchPublishedBlogs();
     } catch (error) {
       console.error("Error changing blog publish status:", error);
       message.error("Failed to change blog publish status");
@@ -192,11 +162,7 @@ const BlogPages = () => {
       await blogService.createBlog(values);
       message.success("Blog created successfully");
       setCreateModalVisible(false);
-      if (activeTab === "blogs") {
-        fetchPublishedBlogs();
-      } else if (activeTab === "my") {
-        fetchMyBlogs(user.id);
-      }
+      fetchPublishedBlogs();
     } catch (error) {
       console.error("Error creating blog:", error);
       message.error("Failed to create blog");
@@ -208,11 +174,7 @@ const BlogPages = () => {
       await blogService.updateBlog(selectedBlog.id, values);
       message.success("Blog updated successfully");
       setEditModalVisible(false);
-      if (activeTab === "blogs") {
-        fetchPublishedBlogs();
-      } else if (activeTab === "my") {
-        fetchMyBlogs(user.id);
-      }
+      fetchPublishedBlogs();
     } catch (error) {
       console.error("Error updating blog:", error);
       message.error("Failed to update blog");
@@ -256,28 +218,28 @@ const BlogPages = () => {
             <Tooltip title="View">
               <EyeOutlined key="view" onClick={() => handleViewBlog(blog)} />
             </Tooltip>,
-            (isAdmin || (user && user.id === blog.authorId)) && (
-              <Tooltip title="Edit">
-                <EditOutlined key="edit" onClick={() => handleEditBlog(blog)} />
-              </Tooltip>
-            ),
-            (isAdmin || (user && user.id === blog.authorId)) && (
-              <Tooltip title="Delete">
-                <DeleteOutlined key="delete" onClick={() => handleDeleteBlog(blog.id)} />
-              </Tooltip>
-            ),
+                         isAdmin && (
+               <Tooltip title="Edit">
+                 <EditOutlined key="edit" onClick={() => handleEditBlog(blog)} />
+               </Tooltip>
+             ),
+             isAdmin && (
+               <Tooltip title="Delete">
+                 <DeleteOutlined key="delete" onClick={() => handleDeleteBlog(blog.id)} />
+               </Tooltip>
+             ),
           ].filter(Boolean)}
-          extra={
-            (isAdmin || (user && user.id === blog.authorId)) && (
-              <Button 
-                type={blog.isPublished ? "default" : "primary"} 
-                size="small"
-                onClick={() => handlePublishBlog(blog.id, blog.isPublished)}
-              >
-                {blog.isPublished ? "Unpublish" : "Publish"}
-              </Button>
-            )
-          }
+                     extra={
+             isAdmin && (
+               <Button 
+                 type={blog.isPublished ? "default" : "primary"} 
+                 size="small"
+                 onClick={() => handlePublishBlog(blog.id, blog.isPublished)}
+               >
+                 {blog.isPublished ? "Unpublish" : "Publish"}
+               </Button>
+             )
+           }
         >
           <Card.Meta
             title={blog.title}
@@ -287,20 +249,17 @@ const BlogPages = () => {
                   {blog.description}
                 </Paragraph>
                 {renderTags(blog.tags)}
-                <div style={{ marginTop: 8 }}>
-                  <Space>
-                    <Tooltip title="Author">
-                      <Text type="secondary"><UserOutlined /> {blog.authorName}</Text>
-                    </Tooltip>
-                    {blog.isPublished && blog.publishedDate && (
-                      <Tooltip title="Published Date">
-                        <Text type="secondary">
-                          <CalendarOutlined /> {new Date(blog.publishedDate).toLocaleDateString()}
-                        </Text>
-                      </Tooltip>
-                    )}
-                  </Space>
-                </div>
+                                 <div style={{ marginTop: 8 }}>
+                   <Space>
+                     {blog.isPublished && blog.publishedDate && (
+                       <Tooltip title="Published Date">
+                         <Text type="secondary">
+                           <CalendarOutlined /> {new Date(blog.publishedDate).toLocaleDateString()}
+                         </Text>
+                       </Tooltip>
+                     )}
+                   </Space>
+                 </div>
               </>
             }
           />
@@ -309,9 +268,7 @@ const BlogPages = () => {
     ));
   };
 
-  const handleTabChange = (key) => {
-    setActiveTab(key);
-  };
+
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -333,10 +290,8 @@ const BlogPages = () => {
               rowKey="id"
               columns={[
                 { title: 'Tiêu đề', dataIndex: 'title', key: 'title' },
-                { title: 'Tác giả', dataIndex: 'authorName', key: 'authorName' },
                 { title: 'Trạng thái', dataIndex: 'status', key: 'status' },
                 { title: 'Ngày đăng', dataIndex: 'publishedDate', key: 'publishedDate', render: (date) => date ? new Date(date).toLocaleDateString('vi-VN') : '' },
-                { title: 'Lượt xem', dataIndex: 'viewCount', key: 'viewCount' },
                 {
                   title: 'Hành động',
                   key: 'actions',
@@ -376,15 +331,7 @@ const BlogPages = () => {
             </Space>
           </div>
           
-          <Tabs 
-            activeKey={activeTab} 
-            onChange={handleTabChange} 
-            style={{ marginBottom: 16 }}
-            items={[
-              { key: 'blogs', label: 'Blogs' },
-              ...(isAuthenticated ? [{ key: 'my', label: 'My Blogs' }] : [])
-            ]}
-          />
+
 
           {loading ? (
             <div style={{ textAlign: "center", padding: "50px 0" }}>
@@ -447,26 +394,23 @@ const BlogPages = () => {
             
             {renderTags(selectedBlog.tags)}
             
-            <div style={{ marginTop: 16 }}>
-              <Space>
-                <Text type="secondary">
-                  <UserOutlined /> Author: {selectedBlog.authorName}
-                </Text>
-                {selectedBlog.isPublished && selectedBlog.publishedDate && (
-                  <Text type="secondary">
-                    <CalendarOutlined /> Published: {new Date(selectedBlog.publishedDate).toLocaleString()}
-                  </Text>
-                )}
-                <Text type="secondary">
-                  Status: <Tag color={selectedBlog.isPublished ? "green" : "orange"}>
-                    {selectedBlog.isPublished ? "Published" : "Draft"}
-                  </Tag>
-                </Text>
-              </Space>
-            </div>
+                         <div style={{ marginTop: 16 }}>
+               <Space>
+                 {selectedBlog.isPublished && selectedBlog.publishedDate && (
+                   <Text type="secondary">
+                     <CalendarOutlined /> Published: {new Date(selectedBlog.publishedDate).toLocaleString()}
+                   </Text>
+                 )}
+                 <Text type="secondary">
+                   Status: <Tag color={selectedBlog.isPublished ? "green" : "orange"}>
+                     {selectedBlog.isPublished ? "Published" : "Draft"}
+                   </Tag>
+                 </Text>
+               </Space>
+             </div>
             
-            {/* Edit/Delete buttons only for managers or author */}
-            {(isAdmin || (user && user.id === selectedBlog.authorId)) && (
+                         {/* Edit/Delete buttons only for admins */}
+             {isAdmin && (
               <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
                 <Space>
                   <Button 

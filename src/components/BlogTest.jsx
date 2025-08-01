@@ -39,7 +39,7 @@ const BlogTest = () => {
           <ul>
             {blogs.map(blog => (
               <li key={blog.id}>
-                <strong>{blog.title}</strong> - {blog.authorName} - {blog.isPublished ? 'Published' : 'Draft'}
+                <strong>{blog.title}</strong> - {blog.isPublished ? 'Published' : 'Draft'}
               </li>
             ))}
           </ul>
