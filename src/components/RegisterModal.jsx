@@ -5,7 +5,7 @@ import StudentRequestForm from './StudentRequestForm';
 const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
   return (
     <Modal
-      title="Đăng ký tài khoản"
+      title="Đăng ký tham gia học tập"
       open={open}
       onCancel={onClose}
       width={700}
@@ -21,7 +21,10 @@ const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
         )}
         
         <p className="mb-4 text-gray-600">
-          Vui lòng điền thông tin để đăng ký tài khoản. Yêu cầu của bạn sẽ được xem xét và phản hồi qua email.
+          Hãy hoàn thành form dưới đây để tham gia Minh Việt Education
+        </p>
+        <p className="mb-4 text-red-500 text-sm">
+          Chỉ dành cho học sinh chưa có tài khoản trong hệ thống.
         </p>
         
         <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />

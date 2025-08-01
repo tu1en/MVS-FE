@@ -3,8 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Typography, Card, Spin, message, Button, Tag, Divider } from 'antd';
 import { 
   CalendarOutlined, 
-  UserOutlined, 
-  EyeOutlined, 
   ArrowLeftOutlined,
   TagOutlined
 } from '@ant-design/icons';
@@ -130,20 +128,12 @@ const BlogDetailPage = () => {
 
             {/* Meta Information */}
             <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-6">
-              <div className="flex items-center">
-                <UserOutlined className="mr-2" />
-                <Text strong>{blog.authorName || 'Admin'}</Text>
-              </div>
+
               <div className="flex items-center">
                 <CalendarOutlined className="mr-2" />
                 <Text>{formatDate(blog.publishedDate)}</Text>
               </div>
-              {blog.viewCount && (
-                <div className="flex items-center">
-                  <EyeOutlined className="mr-2" />
-                  <Text>{blog.viewCount} lượt xem</Text>
-                </div>
-              )}
+
             </div>
 
             {/* Tags */}
@@ -186,11 +176,7 @@ const BlogDetailPage = () => {
             <Divider />
             <div className="text-center text-gray-500">
               <Text>Bài viết được cập nhật lần cuối: {formatDate(blog.lastEditedDate)}</Text>
-              {blog.lastEditedByName && blog.lastEditedByName !== blog.authorName && (
-                <Text className="block mt-1">
-                  Chỉnh sửa bởi: {blog.lastEditedByName}
-                </Text>
-              )}
+
             </div>
           </div>
         </Card>

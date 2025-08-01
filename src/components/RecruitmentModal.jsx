@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { UploadOutlined, DollarOutlined, CalendarOutlined, UserOutlined, PhoneOutlined, MailOutlined, HomeOutlined } from '@ant-design/icons';
 import apiClient from '../config/axiosInstance';
 import { recruitmentService } from '../services/recruitmentService';
+import { validatePhoneNumber } from '../utils/validation';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -158,7 +159,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
           <Form.Item
             name="phoneNumber"
             label="Số điện thoại"
-            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+            rules={[{ required: true, validator: validatePhoneNumber }]}
           >
             <Input prefix={<PhoneOutlined />} placeholder="0987654321" />
           </Form.Item>
