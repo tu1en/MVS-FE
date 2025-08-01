@@ -21,6 +21,9 @@ const RecruitmentManagement = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [scheduleForm] = Form.useForm();
+  const [showCvModal, setShowCvModal] = useState(false);
+  const [currentCvUrl, setCurrentCvUrl] = useState('');
+  const [currentApplicantName, setCurrentApplicantName] = useState('');
 
   useEffect(() => {
     fetchPlans();
@@ -311,12 +314,9 @@ const RecruitmentManagement = () => {
       return;
     }
     
-    try {
-      window.open(cvUrl, '_blank');
-    } catch (error) {
-      message.error('Không thể mở CV. Vui lòng thử lại!');
-      console.error('Error opening CV:', error);
-    }
+    setCurrentCvUrl(cvUrl);
+    setCurrentApplicantName(applicantName);
+    setShowCvModal(true);
   };
 
   const openPlans = plans.filter(p => p.status === 'OPEN');
@@ -655,6 +655,39 @@ const RecruitmentManagement = () => {
             </div>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal xem CV */}
+      <Modal
+        title={`CV của ${currentApplicantName}`}
+        open={showCvModal}
+        onCancel={() => setShowCvModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowCvModal(false)}>
+            Đóng
+          </Button>,
+          <Button 
+            key="download" 
+            type="primary" 
+            onClick={() => window.open(currentCvUrl, '_blank')}
+          >
+            Tải xuống
+          </Button>
+        ]}
+        width={800}
+        className="cv-modal"
+      >
+        <div style={{ height: '600px', overflow: 'auto' }}>
+          {currentCvUrl && (
+            <iframe
+              src={currentCvUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+              title={`CV của ${currentApplicantName}`}
+            />
+          )}
+        </div>
       </Modal>
     </div>
   );
