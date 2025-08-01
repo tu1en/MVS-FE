@@ -5,13 +5,13 @@ import { getStorage } from "firebase/storage";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBVtmZ_HGO7Rg9TgqGjdgBCTQfTRLLgYS0",
+  apiKey: "AIzaSyBaee83bB8PfzzesOyozvx6VDrdv-2y8co",
   authDomain: "mve-1-ad9e3.firebaseapp.com",
   projectId: "mve-1-ad9e3",
   storageBucket: "mve-1-ad9e3.firebasestorage.app",
-  messagingSenderId: "1025997359755",
-  appId: "1:1025997359755:web:8d85556947596c8021c327",
-  measurementId: "G-XBKDVKC9G4"
+  messagingSenderId: "1087367399589",
+  appId: "1:1087367399589:web:0344a7c8ff4d58bdcf254c",
+  measurementId: "G-V58HPC2JN4"
 };
 
 console.log("Initializing Firebase with config:", firebaseConfig);
@@ -20,6 +20,17 @@ console.log("Initializing Firebase with config:", firebaseConfig);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+
+// Cấu hình Google Auth Provider
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+  access_type: 'offline'
+});
+
+// Thêm scopes cho Google Auth
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
 const storage = getStorage(app);
 
 // Initialize Analytics only in production to avoid ad blocker issues

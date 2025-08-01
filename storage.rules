@@ -1,24 +1,23 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow anyone to read/write files in test-uploads folder (for testing)
-    match /test-uploads/{allPaths=**} {
-      allow read, write: if true;
+    // Cho phép đọc tất cả file trong thư mục recruit-cv
+    match /recruit-cv/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
     
-    // Allow authenticated users to upload files
+    // Cho phép đọc tất cả file trong thư mục uploads (cho các file khác)
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Cho phép đọc tất cả file khác
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow anonymous read access to public files
-    match /public/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
   }
-}
+} 
