@@ -111,7 +111,7 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
       
       <Form.Item>
         <Button type="primary" htmlType="submit" block loading={loading}>
-          Gửi yêu cầu
+          Gửi đơn tạo tài khoản
         </Button>
       </Form.Item>
     </Form>

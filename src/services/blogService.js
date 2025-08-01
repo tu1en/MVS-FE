@@ -196,17 +196,4 @@ export const getBlogsByTag = async (tag) => {
   }
 };
 
-/**
- * Get blogs by author
- * @param {number} authorId - Author ID
- * @returns {Promise} Promise containing matching blog data
- */
-export const getBlogsByAuthor = async (authorId) => {
-  try {
-    const response = await apiClient.get(`${API_URL}/author/${authorId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching blogs by author ${authorId}:`, error);
-    throw error;
-  }
-}; 
+ 
