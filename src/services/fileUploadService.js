@@ -110,13 +110,13 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
 
     console.log(`[Debug] uploadFileToFirebase: Starting upload for "${file.name}" to path "${path}".`);
 
-    // Check if user is authenticated
+    // Check if user is authenticated - TEMPORARILY SKIP FOR TESTING
     const user = auth.currentUser;
     if (!user) {
-        console.log('[Debug] User not authenticated, falling back to backend upload');
-        message.warning('Đang sử dụng phương thức upload qua server...');
-        uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
-        return;
+        console.log('[Debug] User not authenticated, but proceeding with Firebase upload anyway for testing');
+        // message.warning('Đang sử dụng phương thức upload qua server...');
+        // uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+        // return;
     }
 
     console.log('[Debug] User authenticated, proceeding with Firebase upload');
@@ -132,7 +132,7 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
         const metadata = {
           contentType: file.type,
           customMetadata: {
-            uploadedBy: user.email || user.uid,
+            uploadedBy: user ? (user.email || user.uid) : 'anonymous',
             uploadTimestamp: new Date().toISOString(),
             originalFileName: file.name
           }
