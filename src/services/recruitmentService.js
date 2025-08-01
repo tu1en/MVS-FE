@@ -1,8 +1,28 @@
 import apiClient from '../config/axiosInstance';
 
-const API_URL = '/api/recruitment-applications';
+const API_URL = '/recruitment-applications';
 
 export const recruitmentService = {
+  // Gửi đơn ứng tuyển
+  apply: async (formData) => {
+    console.log('🌐 recruitmentService.apply called');
+    console.log('📦 FormData received:', formData);
+    console.log('🔗 API URL:', `${API_URL}/apply`);
+    
+    try {
+      console.log('📤 Sending request to backend...');
+      const response = await apiClient.post(`${API_URL}/apply`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('✅ Response received:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error submitting application:', error);
+      console.error('❌ Error response:', error.response?.data);
+      throw error;
+    }
+  },
+
   // Lấy thông tin CV của ứng viên
   getCvInfo: async (applicationId) => {
     try {

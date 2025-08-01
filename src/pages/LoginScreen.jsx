@@ -1,10 +1,10 @@
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import RegisterModal from '../components/RegisterModal';
-import { auth } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
+import { auth, googleProvider } from '../config/firebase'; // Đảm bảo file cấu hình firebase đúng
 import { ROLE } from '../constants/constants';
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 import authService from '../services/authService'; // Import the new authService
@@ -21,6 +21,7 @@ export default function LoginScreen() {
   const [dangDangNhap, setDangDangNhap] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [googleEmail, setGoogleEmail] = useState(''); // Lưu email Google khi đăng nhập thất bại
+  const [googlePopupClosed, setGooglePopupClosed] = useState(false); // Track khi user đóng popup Google
   const navigate = useNavigate();
 
   // Redirect nếu đã đăng nhập
@@ -74,10 +75,13 @@ export default function LoginScreen() {
       // Force a sync with localStorage to ensure state is up-to-date
       syncLoginState();
 
-      // Also dispatch to Redux for components using Redux
-      dispatch(loginSuccess(userData));
-      
-      toast.success('Đăng nhập thành công!');
+             // Also dispatch to Redux for components using Redux
+       dispatch(loginSuccess(userData));
+       
+       // Reset popup closed flag khi đăng nhập thành công
+       setGooglePopupClosed(false);
+       
+       toast.success('Đăng nhập thành công!');
 
       console.log('Navigating based on role:', userData.role);
       switch (userData.role) {
@@ -116,13 +120,19 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     try {
       console.log('Starting Google sign-in process...');
+      console.log('Firebase auth object:', auth);
+      console.log('Google provider:', googleProvider);
+      
+      // Reset popup closed flag khi bắt đầu đăng nhập Google mới
+      setGooglePopupClosed(false);
+      
       setDangDangNhap(true);
       
       // 1. Sign in with Google
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       console.log('Google sign-in successful, user:', user.email);
+      console.log('User ID token available:', !!result.credential);
       
       // 2. Get ID token
       const idToken = await user.getIdToken();
@@ -164,17 +174,103 @@ export default function LoginScreen() {
           navigate('/');
       }
     } catch (error) {
-        // Handle specific error from googleLogin service
-        if (error.status === 404 && error.message) {
+        console.error('Google login error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Handle Firebase auth errors
+        if (error.code === 'auth/popup-closed-by-user') {
+            console.log('User closed Google popup, refreshing session...');
+            toast.info('Đăng nhập Google bị hủy. Bạn có thể đăng nhập bằng tài khoản thường.');
+            
+            // Set flag để track trạng thái đóng popup
+            setGooglePopupClosed(true);
+            
+            // Refresh session để đảm bảo có thể đăng nhập bằng username
+            try {
+              // Clear any Firebase auth state
+              await auth.signOut();
+              console.log('Firebase auth signed out successfully');
+            } catch (signOutError) {
+              console.warn('Error signing out from Firebase:', signOutError);
+            }
+            
+            // Clear any stored auth data
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('email');
+            localStorage.removeItem('user');
+            
+            // Reset form state
+            setEmail('');
+            setMatKhau('');
+            setLoi(null);
+            
+            console.log('Session refreshed, ready for username login');
+            
+        } else if (error.code === 'auth/popup-blocked') {
+            toast.error('Popup bị chặn bởi trình duyệt. Vui lòng cho phép popup cho trang web này');
+        } else if (error.code === 'auth/network-request-failed') {
+            toast.error('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet');
+        } else if (error.code === 'auth/api-key-not-valid') {
+            toast.error('Lỗi cấu hình Firebase. Vui lòng liên hệ quản trị viên');
+            console.error('Firebase API key error:', error);
+            console.error('Current API key:', 'AIzaSyBaee83bB8PfzzesOyozvx6VDrdv-2y8co');
+        } else if (error.code === 'auth/unauthorized-domain') {
+            toast.error('Domain không được phép. Vui lòng liên hệ quản trị viên');
+            console.error('Current domain:', window.location.hostname);
+        } else if (error.code === 'auth/operation-not-allowed') {
+            toast.error('Google sign-in chưa được bật. Vui lòng liên hệ quản trị viên');
+        } else if (error.code === 'auth/invalid-credential') {
+            toast.error('Thông tin đăng nhập không hợp lệ');
+        } else if (error.status === 404 && error.message) {
+            // Handle specific error from googleLogin service - Account not registered
             console.error('Account not registered:', error.message);
-            toast.error(error.message);
+            toast.error('Tài khoản chưa được đăng ký!');
+            
+            // Set email for registration
             if (error.email) {
                 setGoogleEmail(error.email);
                 setEmail(error.email);
             }
+            
+            // Show registration modal
             setRegisterModalVisible(true);
+            
+            // Clear Firebase auth state
+            try {
+              await auth.signOut();
+              console.log('Firebase auth signed out after account not found');
+            } catch (signOutError) {
+              console.warn('Error signing out from Firebase:', signOutError);
+            }
+            
+        } else if (error.response && error.response.status === 404) {
+            // Handle 404 from backend - Account not found
+            console.error('Account not found in backend:', error.response.data);
+            toast.error('Tài khoản chưa được đăng ký!');
+            
+            // Try to get email from error response
+            const errorData = error.response.data;
+            if (errorData && errorData.email) {
+                setGoogleEmail(errorData.email);
+                setEmail(errorData.email);
+            }
+            
+            // Show registration modal
+            setRegisterModalVisible(true);
+            
+            // Clear Firebase auth state
+            try {
+              await auth.signOut();
+              console.log('Firebase auth signed out after account not found');
+            } catch (signOutError) {
+              console.warn('Error signing out from Firebase:', signOutError);
+            }
+            
         } else {
-            console.error('Google login error:', error);
             toast.error(error.message || 'Đăng nhập Google thất bại!');
         }
     } finally {
@@ -259,17 +355,25 @@ export default function LoginScreen() {
             </div>
           </form>
 
-          <button
-            onClick={handleGoogleSignIn}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-              alt="Google logo"
-              className="w-5 h-5"
-            />
-            Đăng nhập với Google
-          </button>
+                     <button
+             onClick={handleGoogleSignIn}
+             className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+           >
+             <img
+               src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+               alt="Google logo"
+               className="w-5 h-5"
+             />
+             Đăng nhập với Google
+           </button>
+           
+           {googlePopupClosed && (
+             <div className="mt-2 text-center">
+               <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md">
+                 💡 Bạn có thể đăng nhập bằng tài khoản thường ở trên
+               </p>
+             </div>
+           )}
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Chưa có tài khoản?{' '}

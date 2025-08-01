@@ -1,15 +1,18 @@
 import { Modal, Table, Button, message, Tag, Alert, Form, Input, Upload, Typography, Row, Col, Card, Divider } from 'antd';
 import { useState, useEffect } from 'react';
 import { UploadOutlined, DollarOutlined, CalendarOutlined, UserOutlined, PhoneOutlined, MailOutlined, HomeOutlined } from '@ant-design/icons';
-import axiosInstance from '../config/axiosInstance';
+import apiClient from '../config/axiosInstance';
+import { recruitmentService } from '../services/recruitmentService';
 
 const { Title, Text, Paragraph } = Typography;
 
 const RecruitmentModal = ({ visible, onCancel }) => {
+  
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [cvFile, setCvFile] = useState(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -21,13 +24,14 @@ const RecruitmentModal = ({ visible, onCancel }) => {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get('/job-positions/all');
+      const res = await apiClient.get('/job-positions/all');
       // Lọc các job có recruitmentPlanStatus === 'OPEN'
       const filtered = (res.data || []).filter(job => 
         job.recruitmentPlanStatus === 'OPEN'
       );
       setJobs(filtered);
     } catch (err) {
+      console.error('Error fetching jobs:', err);
       message.error('Không thể tải danh sách vị trí tuyển dụng!');
     } finally {
       setLoading(false);
@@ -37,10 +41,19 @@ const RecruitmentModal = ({ visible, onCancel }) => {
   const handleApply = (job) => {
     setSelectedJob(job);
     setShowApplyForm(true);
+    setCvFile(null);
     form.resetFields();
   };
 
   const handleSubmitApplication = async (values) => {
+    console.log('🚀 handleSubmitApplication called with values:', values);
+    console.log('📁 CV values:', values.cv);
+    console.log('📁 CV length:', values.cv?.length);
+    console.log('📁 CV[0]:', values.cv?.[0]);
+    console.log('📁 CV[0].originFileObj:', values.cv?.[0]?.originFileObj);
+    console.log('📁 cvFile state:', cvFile);
+    console.log('📁 cvFile.originFileObj:', cvFile?.originFileObj);
+    
     try {
       const formData = new FormData();
       formData.append('jobPositionId', selectedJob.id);
@@ -49,20 +62,48 @@ const RecruitmentModal = ({ visible, onCancel }) => {
       formData.append('phoneNumber', values.phoneNumber);
       formData.append('address', values.address);
       
-      if (values.cv && values.cv.length > 0) {
-        formData.append('cv', values.cv[0].originFileObj);
+      console.log('📦 FormData before CV:', formData);
+      
+      // Kiểm tra và append CV file - ưu tiên cvFile state
+      let cvFileToAppend = null;
+      
+      if (cvFile && cvFile.originFileObj) {
+        cvFileToAppend = cvFile.originFileObj;
+        console.log('✅ Using cvFile state:', cvFileToAppend);
+      } else if (values.cv && values.cv.length > 0 && values.cv[0].originFileObj) {
+        cvFileToAppend = values.cv[0].originFileObj;
+        console.log('✅ Using values.cv:', cvFileToAppend);
+      }
+      
+      if (cvFileToAppend) {
+        console.log('✅ Appending CV file:', cvFileToAppend);
+        console.log('✅ File name:', cvFileToAppend.name);
+        console.log('✅ File size:', cvFileToAppend.size);
+        console.log('✅ File type:', cvFileToAppend.type);
+        formData.append('cv', cvFileToAppend);
+      } else {
+        console.log('❌ No CV file to append');
+        console.log('❌ values.cv:', values.cv);
+        console.log('❌ cvFile state:', cvFile);
+        throw new Error('CV file is required');
+      }
+      
+      console.log('📦 FormData after CV:', formData);
+      console.log('📋 FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`   ${key}:`, value);
       }
 
-      await axiosInstance.post('/recruitment-applications/apply', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      console.log('🌐 Calling recruitmentService.apply...');
+      await recruitmentService.apply(formData);
       
       message.success('Đã gửi đơn ứng tuyển thành công!');
       setShowApplyForm(false);
       setSelectedJob(null);
       onCancel();
     } catch (err) {
-      message.error('Không thể gửi đơn ứng tuyển!');
+      console.error('Error submitting application:', err);
+      message.error(`Không thể gửi đơn ứng tuyển: ${err.response?.data?.message || err.message}`);
     }
   };
 
@@ -70,7 +111,16 @@ const RecruitmentModal = ({ visible, onCancel }) => {
     if (Array.isArray(e)) {
       return e;
     }
-    return e && e.fileList;
+    
+    if (e && e.fileList) {
+      return e.fileList;
+    }
+    
+    if (e && e.file) {
+      return [e.file];
+    }
+    
+    return [];
   };
 
   if (showApplyForm && selectedJob) {
@@ -126,26 +176,88 @@ const RecruitmentModal = ({ visible, onCancel }) => {
             label="CV/Resume"
             valuePropName="fileList"
             getValueFromEvent={normFile}
-            rules={[{ required: true, message: 'Vui lòng upload CV!' }]}
+            rules={[
+              {
+                validator: (_, fileList) => {
+                  console.log('🔍 CV validator called with fileList:', fileList);
+                  console.log('🔍 cvFile state:', cvFile);
+                  
+                  // Check if we have a valid file - ưu tiên cvFile state
+                  let hasFile = false;
+                  let file = null;
+                  
+                  if (cvFile && cvFile.originFileObj) {
+                    hasFile = true;
+                    file = cvFile.originFileObj;
+                    console.log('✅ Using cvFile state for validation');
+                  } else if (fileList && fileList.length > 0 && fileList[0].originFileObj) {
+                    hasFile = true;
+                    file = fileList[0].originFileObj;
+                    console.log('✅ Using fileList for validation');
+                  }
+                  
+                  if (!hasFile) {
+                    console.log('❌ No valid CV file found');
+                    return Promise.reject(new Error('Vui lòng upload CV!'));
+                  }
+                  
+                  console.log('✅ Valid CV file found:', file);
+                  
+                  if (file.size > 10 * 1024 * 1024) {
+                    console.log('❌ File too large:', file.size);
+                    return Promise.reject(new Error('File CV không được lớn hơn 10MB!'));
+                  }
+                  
+                  console.log('✅ CV validation passed');
+                  return Promise.resolve();
+                }
+              }
+            ]}
           >
             <Upload
-              beforeUpload={() => false}
+              beforeUpload={() => false} // Prevent auto upload
+              onChange={(info) => {
+                console.log('📁 Upload onChange called with info:', info);
+                console.log('📁 info.fileList:', info.fileList);
+                console.log('📁 info.fileList[0]:', info.fileList[0]);
+                setCvFile(info.fileList[0] || null);
+                // Trigger form validation after file change
+                setTimeout(() => {
+                  form.validateFields(['cv']);
+                }, 100);
+              }}
+              onRemove={() => {
+                console.log('🗑️ Upload onRemove called');
+                setCvFile(null);
+                // Trigger form validation after file removal
+                setTimeout(() => {
+                  form.validateFields(['cv']);
+                }, 100);
+              }}
               maxCount={1}
               accept=".pdf,.doc,.docx"
+              listType="text"
             >
               <Button icon={<UploadOutlined />}>Chọn file CV</Button>
             </Upload>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              Hỗ trợ: PDF, DOC, DOCX (tối đa 10MB)
+            </div>
           </Form.Item>
 
           <Form.Item>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              
               <Button onClick={() => {
                 setShowApplyForm(false);
                 setSelectedJob(null);
               }}>
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button 
+                type="primary" 
+                htmlType="submit"
+              >
                 Gửi đơn ứng tuyển
               </Button>
             </div>

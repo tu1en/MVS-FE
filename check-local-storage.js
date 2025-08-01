@@ -1,1 +1,0 @@
-console.log("User in localStorage:", localStorage.getItem("user")); console.log("User ID in localStorage:", localStorage.getItem("userId"));
