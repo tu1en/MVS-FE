@@ -95,8 +95,9 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx"; // Import a new p
 import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
-import ContractManagement from './pages/accountant/ContractManagement';
+
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
+import ContractManagement from './pages/accountant/ContractManagement';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -295,8 +296,9 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
-              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
+
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
+              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
 
               {/* Test Upload Page - Requires authentication */}
               <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />

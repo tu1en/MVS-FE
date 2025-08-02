@@ -1,0 +1,257 @@
+.contract-management {
+  padding: 24px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.contract-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.contract-card .ant-card-head {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.contract-card .ant-card-head-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.contract-tabs {
+  margin-top: 16px;
+}
+
+.contract-tabs .ant-tabs-tab {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 24px;
+}
+
+.contract-tabs .ant-tabs-tab-active {
+  background-color: #f0f2ff;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.create-contract-btn {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border: none;
+  border-radius: 6px;
+  height: 40px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+  transition: all 0.3s ease;
+}
+
+.create-contract-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4);
+}
+
+.candidates-card {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 1px solid #ffcc02;
+  border-radius: 8px;
+}
+
+.candidates-card .ant-card-head {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.candidates-card .ant-card-head-title {
+  color: white;
+  font-weight: 600;
+}
+
+/* Table styling */
+.ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+  color: #262626;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: #f5f5f5;
+}
+
+.ant-table-tbody > tr > td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+/* Tag styling */
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+/* Button styling */
+.ant-btn-sm {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: none;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.4);
+}
+
+.ant-btn-danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  border: none;
+  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.3);
+}
+
+.ant-btn-danger:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #ffa39e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(255, 77, 79, 0.4);
+}
+
+/* Modal styling */
+.ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.ant-modal-close {
+  color: white;
+}
+
+.ant-modal-close:hover {
+  color: #f0f0f0;
+}
+
+/* Form styling */
+.ant-form-item-label > label {
+  font-weight: 600;
+  color: #262626;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-picker,
+.ant-input-number {
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused,
+.ant-input-number-focused {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Pagination styling */
+.ant-pagination {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.ant-pagination-item-active {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border-color: #1890ff;
+}
+
+.ant-pagination-item-active a {
+  color: white;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .contract-management {
+    padding: 16px;
+  }
+  
+  .tab-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .create-contract-btn {
+    width: 100%;
+  }
+  
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+  
+  .ant-modal {
+    margin: 16px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Loading state */
+.ant-spin-container {
+  min-height: 200px;
+}
+
+/* Empty state */
+.ant-empty {
+  margin: 40px 0;
+}
+
+.ant-empty-description {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* Success/Error messages */
+.ant-message {
+  z-index: 9999;
+}
+
+/* Tooltip styling */
+.ant-tooltip-inner {
+  background-color: #262626;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Popconfirm styling */
+.ant-popover-inner {
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ant-popover-buttons {
+  margin-top: 12px;
+}
+
+.ant-popover-buttons .ant-btn {
+  margin-left: 8px;
+  border-radius: 4px;
+}
