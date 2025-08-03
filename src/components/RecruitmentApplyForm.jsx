@@ -1,4 +1,4 @@
-import { Button, Form, Input, Upload, message } from 'antd';
+import { Form, Input, Button, Upload, message } from 'antd';
 import { useState } from 'react';
 import { UploadOutlined } from '@ant-design/icons';
 import axiosInstance from '../config/axiosInstance';
@@ -26,13 +26,26 @@ const RecruitmentApplyForm = ({ job, onSuccess }) => {
       if (values.cv && values.cv.length > 0) {
         formData.append('cv', values.cv[0].originFileObj);
       }
-      await axiosInstance.post('/recruitments/apply', formData, {
+      await axiosInstance.post('/recruitment-applications/apply', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       message.success('Nộp CV thành công!');
       onSuccess && onSuccess();
     } catch (err) {
-      message.error('Nộp CV thất bại!');
+      console.error('❌ Error submitting application:', err);
+      
+      // Xử lý thông báo lỗi từ backend
+      let errorMessage = 'Nộp CV thất bại!';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data) {
+        errorMessage = err.response.data;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      message.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -80,11 +93,49 @@ const RecruitmentApplyForm = ({ job, onSuccess }) => {
         label="Tải lên CV"
         valuePropName="fileList"
         getValueFromEvent={normFile}
-        rules={[{ required: true, message: 'Vui lòng tải lên CV!' }]}
+        rules={[
+          { required: true, message: 'Vui lòng tải lên CV!' },
+          {
+            validator: (_, fileList) => {
+              if (!fileList || fileList.length === 0) {
+                return Promise.resolve();
+              }
+              
+              const file = fileList[0];
+              if (file.originFileObj) {
+                const fileName = file.originFileObj.name.toLowerCase();
+                if (!fileName.endsWith('.pdf')) {
+                  return Promise.reject(new Error('Chỉ hỗ trợ file PDF !'));
+                }
+                
+                if (file.originFileObj.size > 10 * 1024 * 1024) {
+                  return Promise.reject(new Error('File CV không được lớn hơn 10MB!'));
+                }
+              }
+              
+              return Promise.resolve();
+            }
+          }
+        ]}
       >
         <Upload
-          beforeUpload={() => false}
-          accept=".pdf,.doc,.docx"
+          beforeUpload={(file) => {
+            // Kiểm tra định dạng file
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.pdf')) {
+              message.error('Chỉ hỗ trợ file PDF !');
+              return Upload.LIST_IGNORE;
+            }
+            
+            // Kiểm tra kích thước file
+            if (file.size > 10 * 1024 * 1024) {
+              message.error('File CV không được lớn hơn 10MB!');
+              return Upload.LIST_IGNORE;
+            }
+            
+            return false; // Prevent auto upload
+          }}
+          accept=".pdf"
           maxCount={1}
         >
           <Button icon={<UploadOutlined />}>Chọn file CV</Button>
