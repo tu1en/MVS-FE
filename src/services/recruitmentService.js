@@ -1,4 +1,5 @@
 import apiClient from '../config/axiosInstance';
+import { message } from 'antd';
 
 const API_URL = '/recruitment-applications';
 
@@ -19,6 +20,19 @@ export const recruitmentService = {
     } catch (error) {
       console.error('❌ Error submitting application:', error);
       console.error('❌ Error response:', error.response?.data);
+      
+      // Xử lý thông báo lỗi từ backend
+      let errorMessage = 'Có lỗi xảy ra khi gửi đơn ứng tuyển!';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data) {
+        errorMessage = error.response.data;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(errorMessage);
       throw error;
     }
   },
