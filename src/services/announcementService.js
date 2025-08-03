@@ -354,6 +354,20 @@ class AnnouncementService {
       throw error;
     }
   }
+
+  /**
+   * Get announcements for teacher
+   * @returns {Promise<Array>} List of announcements for teacher
+   */
+  static async getAnnouncementsForTeacher() {
+    try {
+      const response = await apiClient.get('/announcements/teacher');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching announcements for teacher:', error);
+      throw error;
+    }
+  }
 }
 
 export default AnnouncementService;
