@@ -1,544 +1,429 @@
 import {
-    BellOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    EyeOutlined,
-    NotificationOutlined,
-    PlusOutlined,
-    ReloadOutlined,
-    SearchOutlined
-} from '@ant-design/icons';
-import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Form,
-    Input,
-    List,
-    message,
-    Modal,
-    Popconfirm,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Switch,
-    Tag,
-    Typography
-} from 'antd';
-import dayjs from 'dayjs';
+    AlertCircle,
+    Bell,
+    Calendar,
+    ChevronRight,
+    Clock,
+    Filter,
+    Megaphone,
+    Pin,
+    Search,
+    Star,
+    User
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import AnnouncementService from '../../services/announcementService';
-import { ApiService } from '../../services/api';
-
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
+import announcementNotificationService from '../../services/announcementNotificationService';
 
 const TeacherAnnouncementsPage = () => {
-  // State management
   const [announcements, setAnnouncements] = useState([]);
-  const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  
-  // Form for announcement
-  const [form] = Form.useForm();
-  
-  // Get teacher info from localStorage
-  const teacherId = localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('role');
-
-  // Check if user can create announcements (only MANAGER and ADMIN)
-  const canCreateAnnouncements = userRole === 'MANAGER' || userRole === 'ADMIN' || userRole === '3' || userRole === '0';
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   useEffect(() => {
-    if (teacherId && token) {
-      fetchAnnouncements();
-      fetchClassrooms();
-    }
-  }, [teacherId, token]);
+    fetchAnnouncements();
+  }, []);
 
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const allAnnouncements = await AnnouncementService.getAnnouncements();
-      // Filter announcements created by this teacher
-      const teacherAnnouncements = allAnnouncements.filter(
-        announcement => announcement.createdBy === parseInt(teacherId)
-      );
-      setAnnouncements(teacherAnnouncements);
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-      message.error('Không thể tải thông báo');
+      const data = await AnnouncementService.getAnnouncementsForTeacher();
+      console.log('Raw announcement data:', data);
+      if (data && data.length > 0) {
+        console.log('First announcement createdAt:', data[0].createdAt);
+        console.log('Type of createdAt:', typeof data[0].createdAt);
+      }
+      setAnnouncements(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching announcements:', err);
+      setError('Không thể tải thông báo. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchClassrooms = async () => {
-    try {
-      const response = await ApiService.GetClasses();
-      // Filter classrooms for this teacher
-      const teacherClassrooms = response.filter(
-        classroom => classroom.teacherId === parseInt(teacherId)
-      );
-      setClassrooms(teacherClassrooms);
-    } catch (error) {
-      console.error('Error fetching classrooms:', error);
-    }
-  };
-
-  const createAnnouncement = async (values) => {
-    try {
-      const announcementData = {
-        title: values.title,
-        content: values.content,
-        classroomId: values.classroomId,
-        priority: values.priority || 'NORMAL',
-        targetAudience: values.targetAudience || 'ALL',
-        scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : null,
-        expiryDate: values.expiryDate ? values.expiryDate.toISOString() : null,
-        status: values.isPublished !== false ? 'ACTIVE' : 'ARCHIVED',
-        isPinned: values.isPinned || false,
-        createdBy: parseInt(teacherId)
-      };
-
-      await AnnouncementService.createAnnouncement(announcementData);
-
-      message.success('Đã tạo thông báo thành công');
-      setIsModalVisible(false);
-      form.resetFields();
-      fetchAnnouncements();
-    } catch (error) {
-      console.error('Error creating announcement:', error);
-      message.error('Không thể tạo thông báo');
-    }
-  };
-
-  const updateAnnouncement = async (values) => {
-    try {
-      const announcementData = {
-        ...editingAnnouncement,
-        title: values.title,
-        content: values.content,
-        classroomId: values.classroomId,
-        priority: values.priority,
-        targetAudience: values.targetAudience,
-        scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : null,
-        expiryDate: values.expiryDate ? values.expiryDate.toISOString() : null,
-        status: values.isPublished ? 'ACTIVE' : 'ARCHIVED',
-        isPinned: values.isPinned
-      };
-
-      await AnnouncementService.updateAnnouncement(editingAnnouncement.id, announcementData);
-
-      message.success('Đã cập nhật thông báo thành công');
-      setIsModalVisible(false);
-      setEditingAnnouncement(null);
-      form.resetFields();
-      fetchAnnouncements();
-    } catch (error) {
-      console.error('Error updating announcement:', error);
-      message.error('Không thể cập nhật thông báo');
-    }
-  };
-
-  const deleteAnnouncement = async (announcementId) => {
-    try {
-      await AnnouncementService.deleteAnnouncement(announcementId);
-
-      message.success('Đã xóa thông báo thành công');
-      fetchAnnouncements();
-    } catch (error) {
-      console.error('Error deleting announcement:', error);
-      message.error('Không thể xóa thông báo');
-    }
-  };
-
-  const handleEdit = (announcement) => {
-    setEditingAnnouncement(announcement);
-    form.setFieldsValue({
-      title: announcement.title,
-      content: announcement.content,
-      classroomId: announcement.classroomId,
-      priority: announcement.priority,
-      targetAudience: announcement.targetAudience,
-      scheduledDate: announcement.scheduledDate ? dayjs(announcement.scheduledDate) : null,
-      expiryDate: announcement.expiryDate ? dayjs(announcement.expiryDate) : null,
-      isPublished: announcement.status === 'ACTIVE',
-      isPinned: announcement.isPinned
-    });
-    setIsModalVisible(true);
-  };
-
-  const handleSubmit = (values) => {
-    if (editingAnnouncement) {
-      updateAnnouncement(values);
-    } else {
-      createAnnouncement(values);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsModalVisible(false);
-    setEditingAnnouncement(null);
-    form.resetFields();
-  };
-
-  // Filter announcements
-  const filteredAnnouncements = announcements.filter(announcement => {
-    const matchesSearch = 
-      announcement.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-      announcement.content?.toLowerCase().includes(searchText.toLowerCase());
-    
-    const matchesStatus = 
-      filterStatus === 'all' ||
-      (filterStatus === 'published' && announcement.status === 'ACTIVE') ||
-      (filterStatus === 'draft' && announcement.status === 'ARCHIVED') ||
-      (filterStatus === 'pinned' && announcement.isPinned);
-    
-    return matchesSearch && matchesStatus;
-  });
-
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'URGENT': return 'red';
-      case 'HIGH': return 'orange';
-      case 'NORMAL': return 'blue';
-      case 'LOW': return 'green';
-      default: return 'blue';
+      case 'HIGH':
+        return 'bg-red-500';
+      case 'MEDIUM':
+        return 'bg-yellow-500';
+      case 'LOW':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
-  const getStatusColor = (announcement) => {
-    if (announcement.status === 'ARCHIVED') return 'default';
-    if (announcement.isPinned) return 'gold';
-    return 'green';
+  const getPriorityLabel = (priority) => {
+    switch (priority) {
+      case 'HIGH':
+        return 'Cao';
+      case 'MEDIUM':
+        return 'Trung bình';
+      case 'LOW':
+        return 'Thấp';
+      default:
+        return 'Bình thường';
+    }
   };
 
-  const getStatusText = (announcement) => {
-    if (announcement.status === 'ARCHIVED') return 'Nháp';
-    if (announcement.isPinned) return 'Đã ghim';
-    return 'Đã xuất bản';
+  const getTargetAudienceIcon = (targetAudience) => {
+    switch (targetAudience) {
+      case 'STUDENTS':
+        return <User className="h-4 w-4" />;
+      case 'TEACHERS':
+        return <User className="h-4 w-4" />;
+      case 'ALL':
+        return <Megaphone className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
   };
+
+  const formatDate = (dateString) => {
+    console.log('formatDate called with:', dateString, 'type:', typeof dateString);
+    
+    if (!dateString) {
+      console.log('No dateString provided, returning empty');
+      return '';
+    }
+    
+    // Handle various date formats from backend
+    let date;
+    if (typeof dateString === 'string') {
+      console.log('Processing string date:', dateString);
+      // Replace space with 'T' if needed for ISO format
+      const isoString = dateString.replace(' ', 'T');
+      console.log('ISO string:', isoString);
+      date = new Date(isoString);
+    } else if (Array.isArray(dateString)) {
+      console.log('Date is array format:', dateString);
+      // Handle array format [year, month, day, hour, minute, second, nano]
+      if (dateString.length >= 3) {
+        date = new Date(dateString[0], dateString[1] - 1, dateString[2], 
+                       dateString[3] || 0, dateString[4] || 0, dateString[5] || 0);
+      } else {
+        date = new Date(dateString);
+      }
+    } else {
+      console.log('Processing non-string date:', dateString);
+      date = new Date(dateString);
+    }
+    
+    console.log('Parsed date object:', date);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date after parsing:', dateString, 'resulted in:', date);
+      return 'Ngày không hợp lệ';
+    }
+    
+    const formatted = date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    console.log('Formatted date:', formatted);
+    return formatted;
+  };
+
+  const formatContent = (content) => {
+    if (!content) return '';
+    return content.replace(/\n/g, '<br>');
+  };
+
+  const filteredAnnouncements = announcements.filter(announcement => {
+    const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         announcement.content.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFilter = filterType === 'all' || 
+                         (filterType === 'pinned' && announcement.isPinned) ||
+                         (filterType === 'high' && announcement.priority === 'HIGH') ||
+                         (filterType === 'medium' && announcement.priority === 'MEDIUM') ||
+                         (filterType === 'low' && announcement.priority === 'LOW');
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // Pagination logic
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, endIndex);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Đang tải thông báo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-red-500 mb-2">
+          <AlertCircle className="h-12 w-12 mx-auto mb-2" />
+          <p className="text-lg font-medium">{error}</p>
+        </div>
+        <button
+          onClick={fetchAnnouncements}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <div className="flex justify-between items-center mb-6">
-            <Title level={2}>
-              <NotificationOutlined className="mr-2" />
-              Quản lý thông báo
-            </Title>
-            <Space>
-              {canCreateAnnouncements && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setIsModalVisible(true)}
-                >
-                  Tạo thông báo mới
-                </Button>
-              )}
-              <Button 
-                icon={<ReloadOutlined />}
-                onClick={fetchAnnouncements}
-                loading={loading}
-              >
-                Làm mới
-              </Button>
-            </Space>
-          </div>
-        </Col>
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thông Báo</h1>
+        <p className="text-gray-600">Xem các thông báo mới nhất từ nhà trường và giáo viên</p>
+      </div>
 
-        {/* Notice for teachers */}
-        {!canCreateAnnouncements && (
-          <Col span={24}>
-            <Card size="small" style={{ backgroundColor: '#f6ffed', borderColor: '#b7eb8f' }}>
-              <Text type="secondary">
-                <BellOutlined style={{ marginRight: 8, color: '#52c41a' }} />
-                Bạn chỉ có thể xem và đọc thông báo. Chỉ có Quản lý và Quản trị viên mới có thể tạo thông báo mới.
-              </Text>
-            </Card>
-          </Col>
-        )}
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm thông báo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-500" />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">Tất cả</option>
+            <option value="pinned">Ghim</option>
+            <option value="high">Ưu tiên cao</option>
+            <option value="medium">Ưu tiên trung bình</option>
+            <option value="low">Ưu tiên thấp</option>
+          </select>
+        </div>
+      </div>
 
-        {/* Filters */}
-        <Col span={24}>
-          <Card size="small">
-            <Row gutter={[16, 16]} align="middle">
-              <Col span={8}>
-                <Input
-                  prefix={<SearchOutlined />}
-                  placeholder="Tìm kiếm thông báo..."
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                />
-              </Col>
-              <Col span={6}>
-                <Select
-                  value={filterStatus}
-                  onChange={setFilterStatus}
-                  style={{ width: '100%' }}
-                >
-                  <Option value="all">Tất cả</Option>
-                  <Option value="published">Đã xuất bản</Option>
-                  <Option value="draft">Nháp</Option>
-                  <Option value="pinned">Đã ghim</Option>
-                </Select>
-              </Col>
-              <Col span={10}>
-                <Text type="secondary">
-                  Tổng cộng: {filteredAnnouncements.length} thông báo
-                </Text>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
+      {/* Results count */}
+      <div className="mb-4 text-sm text-gray-600">
+        Hiển thị {Math.min((currentPage - 1) * pageSize + 1, filteredAnnouncements.length)} - {Math.min(currentPage * pageSize, filteredAnnouncements.length)} của {filteredAnnouncements.length} thông báo
+      </div>
 
-        {/* Announcements List */}
-        <Col span={24}>
-          <Spin spinning={loading}>
-            <List
-              grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 3 }}
-              dataSource={filteredAnnouncements}
-              renderItem={(announcement) => (
-                <List.Item>
-                  <Card
-                    size="small"
-                    actions={[
-                      <EyeOutlined key="view" title="Xem chi tiết" />,
-                      <EditOutlined 
-                        key="edit" 
-                        title="Chỉnh sửa"
-                        onClick={() => handleEdit(announcement)}
-                      />,
-                      <Popconfirm
-                        title="Bạn có chắc chắn muốn xóa thông báo này?"
-                        onConfirm={() => deleteAnnouncement(announcement.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                      >
-                        <DeleteOutlined key="delete" title="Xóa" />
-                      </Popconfirm>
-                    ]}
+      {/* Announcements List */}
+      {paginatedAnnouncements.length === 0 ? (
+        <div className="text-center py-12">
+          <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">Không có thông báo nào</p>
+          <p className="text-gray-400">Hãy quay lại sau để xem thông báo mới</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {paginatedAnnouncements.map((announcement) => (
+            <Card key={announcement.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {announcement.isPinned && (
+                      <Pin className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {getTargetAudienceIcon(announcement.targetAudience)}
+                    <Badge className={`${getPriorityColor(announcement.priority)} text-white`}>
+                      {getPriorityLabel(announcement.priority)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="h-4 w-4" />
+                    {formatDate(announcement.createdAt)}
+                  </div>
+                </div>
+                
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {announcement.title}
+                </h3>
+                
+                <p className="text-gray-700 mb-4 line-clamp-3">
+                  {announcement.content}
+                </p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    {announcement.scheduledDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Lên lịch: {formatDate(announcement.scheduledDate)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={async () => {
+                      // Mark announcement as read when viewed
+                      try {
+                        await announcementNotificationService.markAnnouncementAsRead(announcement.id);
+                      } catch (error) {
+                        console.error('Error marking announcement as read:', error);
+                      }
+                      setSelectedAnnouncement(announcement);
+                    }}
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    <Card.Meta
-                      title={
-                        <div className="flex justify-between items-start">
-                          <Text strong className="flex-1" ellipsis>
-                            {announcement.title}
-                          </Text>
-                          <div className="flex flex-col gap-1 ml-2">
-                            <Tag color={getStatusColor(announcement)}>
-                              {getStatusText(announcement)}
-                            </Tag>
-                            <Tag color={getPriorityColor(announcement.priority)}>
-                              {announcement.priority || 'NORMAL'}
-                            </Tag>
-                          </div>
-                        </div>
-                      }
-                      description={
-                        <div>
-                          <Paragraph 
-                            ellipsis={{ rows: 3, expandable: true, symbol: 'Xem thêm' }}
-                            className="mb-2"
-                          >
-                            {announcement.content}
-                          </Paragraph>
-                          
-                          <div className="text-xs text-gray-500 space-y-1">
-                            <div>
-                              <BellOutlined className="mr-1" />
-                              Lớp: {classrooms.find(c => c.id === announcement.classroomId)?.name || 'Tất cả'}
-                            </div>
-                            <div>
-                              Đối tượng: {announcement.targetAudience || 'ALL'}
-                            </div>
-                            <div>
-                              Tạo: {new Date(announcement.createdAt).toLocaleString('vi-VN')}
-                            </div>
-                            {announcement.scheduledDate && (
-                              <div>
-                                Lên lịch: {new Date(announcement.scheduledDate).toLocaleString('vi-VN')}
-                              </div>
-                            )}
-                            {announcement.expiryDate && (
-                              <div>
-                                Hết hạn: {new Date(announcement.expiryDate).toLocaleString('vi-VN')}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      }
-                    />
-                  </Card>
-                </List.Item>
-              )}
-            />
-          </Spin>
-        </Col>
-      </Row>
+                    Xem chi tiết
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {announcement.isPinned && (
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                      <Star className="h-3 w-3 mr-1" />
+                      Ghim
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Create/Edit Modal */}
-      <Modal
-        title={editingAnnouncement ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={null}
-        width={700}
-      >
-        <Form form={form} onFinish={handleSubmit} layout="vertical">
-          <Form.Item
-            name="title"
-            label="Tiêu đề"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
-          >
-            <Input placeholder="Nhập tiêu đề thông báo" />
-          </Form.Item>
-
-          <Form.Item
-            name="content"
-            label="Nội dung"
-            rules={[{ required: true, message: 'Vui lòng nhập nội dung' }]}
-          >
-            <TextArea rows={6} placeholder="Nhập nội dung thông báo" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="classroomId"
-                label="Lớp học"
-              >
-                <Select
-                  placeholder="Chọn lớp học (để trống nếu gửi cho tất cả)"
-                  allowClear
+      {/* Pagination */}
+      {filteredAnnouncements.length > pageSize && (
+        <div className="mt-8 flex justify-center">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Trước
+            </button>
+            
+            {Array.from({ length: Math.ceil(filteredAnnouncements.length / pageSize) }, (_, i) => i + 1)
+              .filter(page => Math.abs(page - currentPage) <= 2)
+              .map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 border rounded-lg ${
+                    currentPage === page
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
                 >
-                  {classrooms.map(classroom => (
-                    <Option key={classroom.id} value={classroom.id}>
-                      {classroom.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="priority"
-                label="Mức độ ưu tiên"
-                initialValue="NORMAL"
-              >
-                <Select>
-                  <Option value="LOW">Thấp</Option>
-                  <Option value="NORMAL">Bình thường</Option>
-                  <Option value="MEDIUM">Trung bình</Option>
-                  <Option value="HIGH">Cao</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+                  {page}
+                </button>
+              ))}
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAnnouncements.length / pageSize), currentPage + 1))}
+              disabled={currentPage === Math.ceil(filteredAnnouncements.length / pageSize)}
+              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
+      )}
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="targetAudience"
-                label="Đối tượng"
-                initialValue="ALL"
-              >
-                <Select>
-                  <Option value="ALL">Tất cả</Option>
-                  <Option value="STUDENTS">Học sinh</Option>
-                  <Option value="TEACHERS">Giảng viên</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="priority"
-                label="Mức độ ưu tiên"
-                initialValue="NORMAL"
-              >
-                <Select>
-                  <Option value="LOW">Thấp</Option>
-                  <Option value="NORMAL">Bình thường</Option>
-                  <Option value="HIGH">Cao</Option>
-                  <Option value="URGENT">Khẩn cấp</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+      {/* Announcement Detail Modal */}
+      {selectedAnnouncement && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    {selectedAnnouncement.isPinned && (
+                      <Pin className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {getTargetAudienceIcon(selectedAnnouncement.targetAudience)}
+                    <Badge className={`${getPriorityColor(selectedAnnouncement.priority)} text-white`}>
+                      {getPriorityLabel(selectedAnnouncement.priority)}
+                    </Badge>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {selectedAnnouncement.title}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="scheduledDate"
-                label="Lên lịch xuất bản"
-              >
-                <DatePicker 
-                  showTime 
-                  style={{ width: '100%' }}
-                  placeholder="Chọn thời gian xuất bản"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="expiryDate"
-                label="Ngày hết hạn"
-              >
-                <DatePicker 
-                  showTime 
-                  style={{ width: '100%' }}
-                  placeholder="Chọn ngày hết hạn"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+              {/* Modal Content */}
+              <div className="space-y-4">
+                <div className="text-sm text-gray-500 flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {formatDate(selectedAnnouncement.createdAt)}
+                  </div>
+                  {selectedAnnouncement.scheduledDate && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      Lên lịch: {formatDate(selectedAnnouncement.scheduledDate)}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="prose max-w-none">
+                  <div 
+                    className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatContent(selectedAnnouncement.content) }}
+                  />
+                </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="isPublished"
-                label="Xuất bản ngay"
-                valuePropName="checked"
-                initialValue={true}
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="isPinned"
-                label="Ghim thông báo"
-                valuePropName="checked"
-                initialValue={false}
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
+                {selectedAnnouncement.expiryDate && (
+                  <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="font-medium">Thông báo này sẽ hết hạn vào:</span>
+                      <span>{formatDate(selectedAnnouncement.expiryDate)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button onClick={handleCancel}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit">
-                {editingAnnouncement ? 'Cập nhật' : 'Tạo thông báo'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

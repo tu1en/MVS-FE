@@ -15,15 +15,16 @@ import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import AnnouncementService from '../../services/announcementService';
-import announcementNotificationService from '../../services/announcementNotificationService';
 
-const StudentAnnouncements = () => {
+const TeacherAnnouncementsPage = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   useEffect(() => {
     fetchAnnouncements();
@@ -32,7 +33,7 @@ const StudentAnnouncements = () => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const data = await AnnouncementService.getAnnouncementsForStudent();
+      const data = await AnnouncementService.getAnnouncementsForTeacher();
       setAnnouncements(data);
       setError(null);
     } catch (err) {
@@ -73,6 +74,8 @@ const StudentAnnouncements = () => {
     switch (targetAudience) {
       case 'STUDENTS':
         return <User className="h-4 w-4" />;
+      case 'TEACHERS':
+        return <User className="h-4 w-4" />;
       case 'ALL':
         return <Megaphone className="h-4 w-4" />;
       default:
@@ -81,58 +84,19 @@ const StudentAnnouncements = () => {
   };
 
   const formatDate = (dateString) => {
-    console.log('StudentAnnouncements formatDate called with:', dateString, 'type:', typeof dateString);
-    
-    if (!dateString) {
-      console.log('StudentAnnouncements: No dateString provided, returning empty');
-      return '';
-    }
-    
-    // Handle various date formats from backend
-    let date;
-    if (typeof dateString === 'string') {
-      console.log('StudentAnnouncements: Processing string date:', dateString);
-      // Replace space with 'T' if needed for ISO format
-      const isoString = dateString.replace(' ', 'T');
-      console.log('StudentAnnouncements: ISO string:', isoString);
-      date = new Date(isoString);
-    } else if (Array.isArray(dateString)) {
-      console.log('StudentAnnouncements: Date is array format:', dateString);
-      // Handle array format [year, month, day, hour, minute, second, nano]
-      if (dateString.length >= 3) {
-        date = new Date(dateString[0], dateString[1] - 1, dateString[2], 
-                       dateString[3] || 0, dateString[4] || 0, dateString[5] || 0);
-      } else {
-        date = new Date(dateString);
-      }
-    } else {
-      console.log('StudentAnnouncements: Processing non-string date:', dateString);
-      date = new Date(dateString);
-    }
-    
-    console.log('StudentAnnouncements: Parsed date object:', date);
-    
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.warn('StudentAnnouncements: Invalid date after parsing:', dateString, 'resulted in:', date);
-      return 'Ngày không hợp lệ';
-    }
-    
-    const formatted = date.toLocaleDateString('vi-VN', {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
-    
-    console.log('StudentAnnouncements: Formatted date:', formatted);
-    return formatted;
   };
 
   const formatContent = (content) => {
     if (!content) return '';
-    // Convert line breaks to <br> tags
     return content.replace(/\n/g, '<br>');
   };
 
@@ -148,6 +112,11 @@ const StudentAnnouncements = () => {
     
     return matchesSearch && matchesFilter;
   });
+
+  // Pagination logic
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -178,16 +147,11 @@ const StudentAnnouncements = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
-          <Bell className="h-8 w-8 mr-3 text-blue-600" />
-          Thông Báo
-        </h1>
-        <p className="text-gray-600">
-          Xem các thông báo mới nhất từ nhà trường và giáo viên
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thông Báo</h1>
+        <p className="text-gray-600">Xem các thông báo mới nhất từ nhà trường và giáo viên</p>
       </div>
 
       {/* Search and Filter */}
@@ -199,7 +163,7 @@ const StudentAnnouncements = () => {
             placeholder="Tìm kiếm thông báo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -207,10 +171,10 @@ const StudentAnnouncements = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tất cả</option>
-            <option value="pinned">Được ghim</option>
+            <option value="pinned">Ghim</option>
             <option value="high">Ưu tiên cao</option>
             <option value="medium">Ưu tiên trung bình</option>
             <option value="low">Ưu tiên thấp</option>
@@ -218,82 +182,67 @@ const StudentAnnouncements = () => {
         </div>
       </div>
 
-      {/* Announcements Count */}
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Hiển thị {filteredAnnouncements.length} / {announcements.length} thông báo
-        </p>
+      {/* Results count */}
+      <div className="mb-4 text-sm text-gray-600">
+        Hiển thị {Math.min((currentPage - 1) * pageSize + 1, filteredAnnouncements.length)} - {Math.min(currentPage * pageSize, filteredAnnouncements.length)} của {filteredAnnouncements.length} thông báo
       </div>
 
       {/* Announcements List */}
-      {filteredAnnouncements.length === 0 ? (
+      {paginatedAnnouncements.length === 0 ? (
         <div className="text-center py-12">
-          <Bell className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-xl text-gray-500 mb-2">Không có thông báo nào</p>
-          <p className="text-gray-400">
-            {searchTerm || filterType !== 'all' 
-              ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' 
-              : 'Bạn chưa có thông báo nào'}
-          </p>
+          <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">Không có thông báo nào</p>
+          <p className="text-gray-400">Hãy quay lại sau để xem thông báo mới</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredAnnouncements.map((announcement) => (
-            <Card 
-              key={announcement.id} 
-              className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-l-4 ${
-                announcement.isPinned 
-                  ? 'border-l-yellow-500 bg-yellow-50' 
-                  : 'border-l-blue-500'
-              }`}
-              onClick={async () => {
-                // Mark announcement as read when viewed
-                try {
-                  await announcementNotificationService.markAnnouncementAsRead(announcement.id);
-                } catch (error) {
-                  console.error('Error marking announcement as read:', error);
-                }
-                setSelectedAnnouncement(announcement);
-              }}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {announcement.isPinned && (
-                        <Pin className="h-4 w-4 text-yellow-500" />
-                      )}
-                      {getTargetAudienceIcon(announcement.targetAudience)}
-                      <Badge className={`${getPriorityColor(announcement.priority)} text-white`}>
-                        {getPriorityLabel(announcement.priority)}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      {announcement.title}
-                    </CardTitle>
+          {paginatedAnnouncements.map((announcement) => (
+            <Card key={announcement.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {announcement.isPinned && (
+                      <Pin className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {getTargetAudienceIcon(announcement.targetAudience)}
+                    <Badge className={`${getPriorityColor(announcement.priority)} text-white`}>
+                      {getPriorityLabel(announcement.priority)}
+                    </Badge>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="h-4 w-4" />
+                    {formatDate(announcement.createdAt)}
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-3">
-                  <p className="text-gray-700 line-clamp-2">
-                    {announcement.content}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {formatDate(announcement.createdAt)}
-                    </div>
+                
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {announcement.title}
+                </h3>
+                
+                <p className="text-gray-700 mb-4 line-clamp-3">
+                  {announcement.content}
+                </p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
                     {announcement.scheduledDate && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        Đã lên lịch
+                        Lên lịch: {formatDate(announcement.scheduledDate)}
                       </div>
                     )}
                   </div>
+                  
+                  <button
+                    onClick={() => setSelectedAnnouncement(announcement)}
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Xem chi tiết
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="mt-3 flex flex-wrap gap-2">
                   {announcement.isPinned && (
                     <Badge variant="outline" className="text-yellow-600 border-yellow-600">
                       <Star className="h-3 w-3 mr-1" />
@@ -304,6 +253,45 @@ const StudentAnnouncements = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredAnnouncements.length > pageSize && (
+        <div className="mt-8 flex justify-center">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Trước
+            </button>
+            
+            {Array.from({ length: Math.ceil(filteredAnnouncements.length / pageSize) }, (_, i) => i + 1)
+              .filter(page => Math.abs(page - currentPage) <= 2)
+              .map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 border rounded-lg ${
+                    currentPage === page
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAnnouncements.length / pageSize), currentPage + 1))}
+              disabled={currentPage === Math.ceil(filteredAnnouncements.length / pageSize)}
+              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Sau
+            </button>
+          </div>
         </div>
       )}
 
@@ -388,4 +376,4 @@ const StudentAnnouncements = () => {
   );
 };
 
-export default StudentAnnouncements;
+export default TeacherAnnouncementsPage;
