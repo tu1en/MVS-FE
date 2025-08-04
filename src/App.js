@@ -1,10 +1,10 @@
 import { App as AntApp } from "antd";
 import { useEffect } from "react";
 import {
-    Navigate,
-    Route,
-    BrowserRouter as Router,
-    Routes,
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
 } from "react-router-dom";
 import "./App.css";
 import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
@@ -12,29 +12,29 @@ import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
 import Layout from "./components/Layout.jsx";
+import PreventBackNavigation from "./components/PreventBackNavigation.jsx";
 import BlankPage from "./pages/BlankPage.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
-import PreventBackNavigation from "./components/PreventBackNavigation.jsx";
 
 // Auth Context
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from './context/AuthContext.js'; // Import useAuth
 
 // Dashboards
+import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
+import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
+import ExplanationReports from './pages/manager/ExplanationReports.jsx';
+import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
+import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
+import ManagerDashboard from './pages/ManagerDashboard.jsx';
+import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import SystemActivityLogsPage from './pages/SystemActivityLogsPage.jsx';
 import SystemChartsPage from './pages/SystemChartsPage.jsx';
 import SystemSettingsPage from './pages/SystemSettingsPage.jsx';
-import ManagerDashboard from './pages/ManagerDashboard.jsx';
-import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
-import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
-import ExplanationReports from './pages/manager/ExplanationReports.jsx';
-import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
-import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
-import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
-import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
 
 // Teacher Pages
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -46,10 +46,10 @@ import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
+import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
-import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 
@@ -57,18 +57,18 @@ import Whiteboard from './pages/teacher/Whiteboard.jsx';
 import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
 import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
+import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
 import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
-import RequestList from "./pages/RequestList.jsx";
-import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import RecruitmentManagement from './pages/manager/RecruitmentManagement';
+import RequestList from "./pages/RequestList.jsx";
 
 // Student Pages
-import NotFoundPage from "./pages/NotFoundPage.jsx";
 import AccountList from "./pages/AccountList.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 import AssignmentDetail from "./pages/student/AssignmentDetail.jsx";
 import DoExamPage from './pages/student/DoExamPage'; // Import the new DoExamPage
 import StudentEditProfile from "./pages/student/EditProfile.jsx";
@@ -87,9 +87,8 @@ import AcademicPerformance from './pages/AcademicPerformance.jsx';
 import AnnouncementCenter from "./pages/AnnouncementCenter.jsx";
 import AssignmentsPageNew from "./pages/AssignmentsPageNew.jsx";
 import AttendancePageNew from "./pages/AttendancePageNew.jsx";
-import BlogPages from "./pages/BlogPages.jsx";
 import BlogDetailPage from "./pages/BlogDetailPage.jsx";
-import BlogTest from "./components/BlogTest.jsx";
+import BlogPages from "./pages/BlogPages.jsx";
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import HomePage from "./pages/HomePage/index.jsx"; // Import a new page
 import LecturesPageNew from "./pages/LecturesPageNew.jsx";
@@ -99,6 +98,7 @@ import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
+import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollManagement from './pages/accountant/PayrollManagement';
@@ -303,7 +303,7 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
-
+              <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />

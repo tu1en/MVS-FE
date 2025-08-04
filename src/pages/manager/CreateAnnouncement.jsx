@@ -55,6 +55,7 @@ const CreateAnnouncement = () => {
             <Select.Option value="all">Tất cả</Select.Option>
             <Select.Option value="students">Sinh viên</Select.Option>
             <Select.Option value="teachers">Giáo viên</Select.Option>
+            <Select.Option value="accountants">Kế toán viên</Select.Option>
           </Select>
         </Form.Item>
 
