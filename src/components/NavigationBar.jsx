@@ -494,6 +494,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Thông Báo",
+      items: [
+        { name: 'Thông Báo', path: '/accountant/announcements', icon: '📢' }
+      ]
+    },
+    {
       category: "Nghỉ phép",
       items: [
         { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' }

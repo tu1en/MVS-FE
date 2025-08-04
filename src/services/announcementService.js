@@ -368,6 +368,20 @@ class AnnouncementService {
       throw error;
     }
   }
+
+  /**
+   * Get announcements for accountant
+   * @returns {Promise<Array>} List of announcements for accountant
+   */
+  static async getAnnouncementsForAccountant() {
+    try {
+      const response = await apiClient.get('/announcements/accountant');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching announcements for accountant:', error);
+      throw error;
+    }
+  }
 }
 
 export default AnnouncementService;
