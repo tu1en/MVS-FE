@@ -223,7 +223,7 @@ const CourseDetail = () => {
     }
 }} className="text-blue-500 hover:text-blue-700 mb-2 flex items-center">← Quay lại danh sách khóa học</button>
             <h1 className="text-3xl font-bold mb-2">{course.name}</h1>
-            <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.name}</p>
+            <p className="text-gray-600 mb-6">Giáo viên: {course.teacher?.fullName || course.teacher?.name || 'Chưa xác định'}</p>
           </div>
           <div className="flex flex-col space-y-2">
             <Button 
@@ -249,19 +249,19 @@ const CourseDetail = () => {
         {/* Course Info Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-600">{course.students?.length || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{course.totalStudents || course.students?.length || 0}</div>
             <div className="text-sm text-blue-800">Học viên</div>
           </div>
           <div className="bg-green-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-600">{course.lectures?.length || 0}</div>
+            <div className="text-2xl font-bold text-green-600">{course.totalLectures || course.lectures?.length || 0}</div>
             <div className="text-sm text-green-800">Bài giảng</div>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{course.course?.subject}</div>
+            <div className="text-2xl font-bold text-purple-600">{course.subject || 'Chưa xác định'}</div>
             <div className="text-sm text-purple-800">Môn học</div>
           </div>
           <div className="bg-orange-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-orange-600">{course.course?.section}</div>
+            <div className="text-2xl font-bold text-orange-600">{course.section || 'Chưa xác định'}</div>
             <div className="text-sm text-orange-800">Lớp</div>
           </div>
         </div>

@@ -77,8 +77,14 @@ const StudentAttendanceHub = () => {
             >
               <div className="flex-grow">
                 <Title level={4}>
-                  {course.name}
+                  {course.subject || course.description || course.name || `Lớp ${course.id}`}
                 </Title>
+                
+                {course.subject && course.name && (
+                  <Text type="secondary" className="mb-2 block">
+                    Mã lớp: {course.name}
+                  </Text>
+                )}
                 
                 <Text type="secondary" className="mb-4 block">
                   Giáo viên: {course.teacherName || 'N/A'}

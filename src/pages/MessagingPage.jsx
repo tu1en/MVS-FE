@@ -3,6 +3,7 @@ import { Avatar, Button, Card, Empty, Input, List, message, Rate, Select, Space,
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
+import ClassroomService from '../services/classroomService';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -64,6 +65,9 @@ function MessagingPage() {
   const { user } = useAuth();
   const userId = user?.id;
   const userRole = user?.role;
+  
+  // Debug user context
+  console.log('🔧 MessagingPage user context:', { user, userId, userRole });
 
   // Add ref to track if component is mounted
   const isMountedRef = { current: true };
@@ -113,6 +117,7 @@ function MessagingPage() {
     if (!isMountedRef.current) return;
 
     console.log('🔄 MessagingPage: Starting to load data...');
+    console.log('📋 Current user info:', { userId, userRole, token: !!localStorage.getItem('token') });
     setLoading(true);
 
     try {
@@ -122,33 +127,34 @@ function MessagingPage() {
         console.log(`👤 Thông tin người dùng hiện tại:`, userResponse.data);
       } catch (userError) {
         console.error('❌ Không thể lấy thông tin người dùng:', userError);
+        if (userError.response?.status === 401) {
+          console.error('🔒 Authentication failed - redirecting to login');
+          localStorage.clear();
+          window.location.href = '/login';
+          return;
+        }
       }
 
-      // Load all data sequentially to ensure data is set before turning off loading
-      await fetchMessages();
-      await fetchSentMessages(); // Thêm lấy tin nhắn đã gửi
-      await fetchTeachers();
-      await fetchCourses();
+      // Load all data in parallel for better performance, but handle individual failures
+      const results = await Promise.allSettled([
+        fetchMessages(),
+        fetchSentMessages(),
+        fetchTeachers(), 
+        fetchCourses()
+      ]);
+
+      // Log results for debugging
+      results.forEach((result, index) => {
+        const operation = ['fetchMessages', 'fetchSentMessages', 'fetchTeachers', 'fetchCourses'][index];
+        if (result.status === 'rejected') {
+          console.error(`❌ ${operation} failed:`, result.reason);
+        } else {
+          console.log(`✅ ${operation} completed`);
+        }
+      });
       
       console.log('✅ MessagingPage: Data loading completed');
       
-      // Kiểm tra xem dữ liệu đã được tải thành công hay chưa
-      const dataCheck = {
-        messages: Array.isArray(messages),
-        sentMessages: Array.isArray(sentMessages),
-        teachers: Array.isArray(teachers),
-        courses: Array.isArray(courses)
-      };
-      
-      console.log('📊 Data check:', dataCheck);
-      
-      // Nếu có bất kỳ dữ liệu nào không đúng dạng mảng, thử tải lại
-      if (!dataCheck.messages || !dataCheck.sentMessages || !dataCheck.teachers || !dataCheck.courses) {
-        console.warn('⚠️ Dữ liệu chưa được tải đầy đủ, đang tải lại...');
-        if (retryCount < 3) {
-          setTimeout(() => retryLoading(), 1000);
-        }
-      }
     } catch (error) {
       console.error('💥 Error loading data:', error);
       if (isMountedRef.current) {
@@ -258,16 +264,49 @@ function MessagingPage() {
 
   const fetchCourses = async () => {
     try {
-      console.log(`📚 Fetching courses for role: ${userRole}...`);
+      console.log(`📚 Fetching courses for role: ${userRole}, userId: ${userId}...`);
+      console.log(`🔍 Role check: userRole === 'STUDENT': ${userRole === 'STUDENT'}, userRole === '1': ${userRole === '1'}`);
+      console.log(`🔍 Role type: ${typeof userRole}, Role value: "${userRole}"`);
       let response;
-      if (userRole === 'STUDENT') {
-        response = await apiClient.get(`/classrooms/student/${userId}`);
+      
+      // Check for student role - handle both string numbers and role names
+      console.log('🚨 ENTERING ROLE CHECK - userRole:', userRole, 'type:', typeof userRole);
+      if (userRole === 'STUDENT' || userRole === 'ROLE_STUDENT' || userRole === '1') {
+        console.log('🎓 STUDENT ROLE DETECTED - using student endpoints');
+        // Use direct API call since ClassroomService has URL issues
+        try {
+          console.log('✅ Using direct API call to /classrooms/student/me');
+          response = await apiClient.get('/classrooms/student/me');
+          console.log('📊 Direct API response:', response);
+        } catch (error) {
+          console.warn('⚠️ direct API call failed:', error);
+          console.warn('⚠️ Error response:', error.response?.data);
+          console.warn('⚠️ Trying fallback student/{userId}');
+          // Fallback to specific student ID endpoint
+          response = await apiClient.get(`/classrooms/student/${userId}`);
+          console.log('📊 Full response from /student/{userId}:', response);
+        }
+      } else if (userRole === 'TEACHER' || userRole === 'ROLE_TEACHER' || userRole === '2') {
+        console.log('👨‍🏫 TEACHER ROLE DETECTED - using teacher endpoints');
+        response = await apiClient.get('/classrooms/current-teacher');
       } else {
-        response = await apiClient.get(`/classrooms/current-teacher`);
+        console.log('❓ UNKNOWN ROLE DETECTED - using fallback endpoints');
+        // For other roles (admin, manager), try both endpoints
+        try {
+          response = await apiClient.get('/classrooms/current-teacher');
+        } catch (error) {
+          response = await apiClient.get('/classrooms');
+        }
       }
+      
       if (isMountedRef.current) {
         console.log(`✅ Courses fetched:`, response.data);
-        setCourses(response.data || []);
+        // Handle nested response structure
+        const coursesData = response.data?.data || response.data || [];
+        console.log(`📊 Final coursesData:`, coursesData);
+        console.log(`📊 coursesData.length:`, coursesData.length);
+        setCourses(coursesData);
+        console.log(`📊 After setCourses, courses state should be updated`);
       }
     } catch (error) {
       if (isMountedRef.current) {
@@ -278,6 +317,8 @@ function MessagingPage() {
         if (error.code !== 'ERR_CANCELED') {
           message.error('Không thể tải danh sách khóa học');
         }
+        // Set empty array to prevent infinite loading
+        setCourses([]);
       }
     }
   };
@@ -572,16 +613,23 @@ function MessagingPage() {
         <Text strong>Chọn khóa học:</Text>
         <Select
           style={{ width: '100%', marginTop: 8 }}
-          placeholder="Chọn khóa học để đánh giá"
+          placeholder={courses.length === 0 ? "Đang tải khóa học..." : "Chọn khóa học để đánh giá"}
           value={selectedCourse}
           onChange={setSelectedCourse}
+          loading={loading}
+          notFoundContent={courses.length === 0 ? "Không có khóa học nào" : "Không tìm thấy"}
         >
           {courses.map(course => (
             <Option key={course.id} value={course.id}>
-              {course.name}
+              {course.name || course.className || `Khóa học #${course.id}`}
             </Option>
           ))}
         </Select>
+        {courses.length === 0 && !loading && (
+          <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: '12px' }}>
+            Không tìm thấy khóa học nào. <Button type="link" size="small" onClick={() => fetchCourses()}>Thử lại</Button>
+          </div>
+        )}
       </div>
 
       <div>

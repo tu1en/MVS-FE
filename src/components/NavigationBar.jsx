@@ -408,6 +408,36 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Điểm danh",
+      items: [
+        { 
+          name: 'Giải trình điểm danh', 
+          path: '/manager/explanation-reports',
+          icon: '📝'
+        },
+        { 
+          name: 'Chấm công nhân viên', 
+          path: '/manager/all-staff-attendance-logs',
+          icon: '👥'
+        },
+        { 
+          name: 'Lịch sử chấm công', 
+          path: '/manager/personal-attendance-history',
+          icon: '📊'
+        },
+        { 
+          name: 'Trạng thái giáo viên', 
+          path: '/manager/teacher-attendance-status',
+          icon: '👨‍🏫'
+        },
+        { 
+          name: 'Ca làm việc hàng ngày', 
+          path: '/manager/daily-shift-attendance',
+          icon: '🕒'
+        }
+      ]
+    },
+    {
       category: "Giao tiếp",
       items: [
         { 
@@ -491,6 +521,13 @@ function NavigationBar() {
       category: "Tin tức",
       items: [
         { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    },
+    {
+      category: "Điểm danh",
+      items: [
+        { name: 'Giải trình vi phạm', path: '/accountant/attendance-explanations', icon: '📝' },
+        { name: 'Xem trạng thái giải trình', path: '/accountant/explanation-status', icon: '📊' }
       ]
     },
     {

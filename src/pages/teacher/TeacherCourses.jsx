@@ -45,7 +45,28 @@ const TeacherCourses = () => {
       const response = await axios.get('http://localhost:8088/api/classrooms/current-teacher', axiosConfig);
       console.log('Teacher courses response:', response.data);
       
-      setCourses(response.data || []);
+      // Fetch assignment counts for each classroom
+      const coursesWithAssignments = await Promise.all(
+        (response.data || []).map(async (course) => {
+          try {
+            const assignmentResponse = await axios.get(`http://localhost:8088/api/assignments/classroom/${course.id}`, axiosConfig);
+            return {
+              ...course,
+              assignments: assignmentResponse.data || [],
+              assignmentCount: assignmentResponse.data?.length || 0
+            };
+          } catch (err) {
+            console.warn(`Failed to load assignments for classroom ${course.id}:`, err);
+            return {
+              ...course,
+              assignments: [],
+              assignmentCount: 0
+            };
+          }
+        })
+      );
+      
+      setCourses(coursesWithAssignments);
     } catch (error) {
       console.error('Error loading teacher courses:', error);
       setError('Không thể tải danh sách khóa học. Vui lòng thử lại.');
@@ -182,7 +203,7 @@ const TeacherCourses = () => {
                         <Col span={12}>
                           <Statistic
                             title="Học viên"
-                            value={course.enrolledStudents?.length || 0}
+                            value={course.studentCount || course.studentIds?.length || 0}
                             prefix={<UsergroupAddOutlined />}
                             valueStyle={{ fontSize: '16px' }}
                           />
@@ -190,7 +211,7 @@ const TeacherCourses = () => {
                         <Col span={12}>
                           <Statistic
                             title="Bài tập"
-                            value={course.assignments?.length || 0}
+                            value={course.assignmentCount || course.assignments?.length || 0}
                             prefix={<FileTextOutlined />}
                             valueStyle={{ fontSize: '16px' }}
                           />
@@ -236,14 +257,14 @@ const TeacherCourses = () => {
             <Col>
               <Statistic
                 title="Tổng số học viên"
-                value={courses.reduce((total, course) => total + (course.enrolledStudents?.length || 0), 0)}
+                value={courses.reduce((total, course) => total + (course.studentCount || course.studentIds?.length || 0), 0)}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col>
               <Statistic
                 title="Tổng số bài tập"
-                value={courses.reduce((total, course) => total + (course.assignments?.length || 0), 0)}
+                value={courses.reduce((total, course) => total + (course.assignmentCount || course.assignments?.length || 0), 0)}
                 prefix={<FileTextOutlined />}
               />
             </Col>

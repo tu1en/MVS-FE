@@ -29,6 +29,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import SubmissionService from '../../services/submissionService';
+import FileUploadService from '../../services/fileUploadService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -46,6 +47,8 @@ const StudentAssignments = () => {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
+  const [submissionDetailModalVisible, setSubmissionDetailModalVisible] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState([]);
   const [form] = Form.useForm();
@@ -90,7 +93,14 @@ const StudentAssignments = () => {
     const dueDate = dayjs(assignment.dueDate);
     const submission = submissions[assignment.id];
     
-    if (submission) {
+    // Kiểm tra submission có nội dung thực sự (có file đính kèm hoặc attachments)
+    const hasActualSubmission = submission && (
+      submission.fileSubmissionUrl || 
+      submission.content || 
+      (submission.attachments && submission.attachments.length > 0)
+    );
+    
+    if (hasActualSubmission) {
       if (submission.isGraded) {
         return <Tag color="blue" icon={<CheckCircleOutlined />}>Đã chấm điểm</Tag>;
       }
@@ -121,6 +131,15 @@ const StudentAssignments = () => {
     setFileList([]);
   };
 
+  const showSubmissionDetail = (assignment) => {
+    const submission = submissions[assignment.id];
+    if (submission) {
+      setSelectedSubmission(submission);
+      setSelectedAssignment(assignment);
+      setSubmissionDetailModalVisible(true);
+    }
+  };
+
   const handleSubmit = async (values) => {
     if (fileList.length === 0) {
       message.error('Vui lòng chọn file để nộp bài');
@@ -130,22 +149,54 @@ const StudentAssignments = () => {
     try {
       setSubmitting(true);
       
-      // TODO: Upload file first to get file URL
-      // For now, we'll use a placeholder URL
-      const submissionData = {
-        assignmentId: selectedAssignment.id,
-        comment: values.comment || '',
-        fileSubmissionUrl: `uploaded-file-${Date.now()}.pdf` // This should be the actual uploaded file URL
-      };
-
-      await SubmissionService.submitAssignment(submissionData);
-      message.success('Nộp bài thành công!');
+      // Upload file first to get the actual URL
+      const file = fileList[0];
       
-      setSubmitModalVisible(false);
-      fetchAssignments(); // Refresh the list to update submission status
+      return new Promise((resolve, reject) => {
+        FileUploadService.uploadFile({
+          file,
+          onSuccess: async (uploadedFileData) => {
+            try {
+              console.log('File uploaded successfully:', uploadedFileData);
+              
+              const submissionData = {
+                assignmentId: selectedAssignment.id,
+                comment: values.comment || '',
+                attachments: [{
+                  fileName: uploadedFileData.name,
+                  fileUrl: uploadedFileData.url,
+                  fileType: uploadedFileData.type,
+                  size: uploadedFileData.size
+                }]
+              };
+
+              console.log('Submitting assignment data:', submissionData);
+              const submissionResult = await SubmissionService.submitAssignment(submissionData);
+              console.log('Submission result:', submissionResult);
+              message.success('Nộp bài thành công!');
+              
+              setSubmitModalVisible(false);
+              fetchAssignments(); // Refresh the list to update submission status
+              resolve();
+            } catch (submitError) {
+              console.error('Error submitting assignment:', submitError);
+              message.error('Có lỗi xảy ra khi lưu thông tin bài nộp');
+              reject(submitError);
+            }
+          },
+          onError: (error) => {
+            console.error('Error uploading file:', error);
+            message.error('Có lỗi xảy ra khi tải file lên');
+            reject(error);
+          },
+          onProgress: (progress) => {
+            console.log('Upload progress:', progress.percent);
+          }
+        }, `assignments/${selectedAssignment.id}`);
+      });
       
     } catch (error) {
-      console.error('Error submitting assignment:', error);
+      console.error('Error in submission process:', error);
       message.error('Có lỗi xảy ra khi nộp bài');
     } finally {
       setSubmitting(false);
@@ -215,7 +266,13 @@ const StudentAssignments = () => {
       key: 'score',
       render: (_, record) => {
         const submission = submissions[record.id];
-        if (submission?.score !== null && submission?.score !== undefined) {
+        const hasActualSubmission = submission && (
+          submission.fileSubmissionUrl || 
+          submission.content || 
+          (submission.attachments && submission.attachments.length > 0)
+        );
+        
+        if (hasActualSubmission && submission?.score !== null && submission?.score !== undefined) {
           return (
             <Text strong style={{ color: '#52c41a' }}>
               {submission.score}/{record.points || 0}
@@ -237,7 +294,13 @@ const StudentAssignments = () => {
         const now = dayjs();
         const dueDate = dayjs(record.dueDate);
         const submission = submissions[record.id];
-        const canSubmit = now.isBefore(dueDate) && !submission;
+        // Chỉ cho phép nộp bài nếu chưa quá hạn và chưa có submission thực sự
+        const hasActualSubmission = submission && (
+          submission.fileSubmissionUrl || 
+          submission.content || 
+          (submission.attachments && submission.attachments.length > 0)
+        );
+        const canSubmit = now.isBefore(dueDate) && !hasActualSubmission;
         
         return (
           <Space>
@@ -256,13 +319,10 @@ const StudentAssignments = () => {
                 Nộp bài
               </Button>
             )}
-            {submission && (
+            {hasActualSubmission && (
               <Button 
                 size="small"
-                onClick={() => {
-                  // TODO: Show submission details
-                  message.info('Xem chi tiết bài nộp');
-                }}
+                onClick={() => showSubmissionDetail(record)}
               >
                 Xem bài nộp
               </Button>
@@ -465,6 +525,107 @@ const StudentAssignments = () => {
                 </Space>
               </Form.Item>
             </Form>
+          </div>
+        )}
+      </Modal>
+
+      {/* Submission Detail Modal */}
+      <Modal
+        title={
+          <Space>
+            <FileTextOutlined />
+            Chi tiết bài nộp
+          </Space>
+        }
+        open={submissionDetailModalVisible}
+        onCancel={() => setSubmissionDetailModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setSubmissionDetailModalVisible(false)}>
+            Đóng
+          </Button>,
+        ]}
+        width={700}
+      >
+        {selectedSubmission && selectedAssignment && (
+          <div>
+            <Descriptions column={1} bordered>
+              <Descriptions.Item label="Bài tập">
+                {selectedAssignment.title}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian nộp">
+                {dayjs(selectedSubmission.submittedAt).format('DD/MM/YYYY HH:mm:ss')}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {selectedSubmission.isLate ? (
+                  <Tag color="orange" icon={<ExclamationCircleOutlined />}>Nộp muộn</Tag>
+                ) : (
+                  <Tag color="green" icon={<CheckCircleOutlined />}>Nộp đúng hạn</Tag>
+                )}
+              </Descriptions.Item>
+              {selectedSubmission.score !== null && selectedSubmission.score !== undefined && (
+                <Descriptions.Item label="Điểm số">
+                  <Text strong style={{ color: '#52c41a' }}>
+                    {selectedSubmission.score}/{selectedAssignment.points || 0}
+                  </Text>
+                </Descriptions.Item>
+              )}
+              {selectedSubmission.feedback && (
+                <Descriptions.Item label="Nhận xét của giáo viên">
+                  <Text>{selectedSubmission.feedback}</Text>
+                </Descriptions.Item>
+              )}
+              {selectedSubmission.comment && (
+                <Descriptions.Item label="Ghi chú của học sinh">
+                  <Text>{selectedSubmission.comment}</Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+            
+            {/* Show file attachments */}
+            {((selectedSubmission.attachments && selectedSubmission.attachments.length > 0) || selectedSubmission.fileSubmissionUrl) && (
+              <>
+                <Divider>File đã nộp</Divider>
+                <div>
+                  {selectedSubmission.fileSubmissionUrl && (
+                    <div style={{ marginBottom: 8 }}>
+                      <Button 
+                        type="link"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(selectedSubmission.fileSubmissionUrl, '_blank')}
+                      >
+                        Tải về file đã nộp
+                      </Button>
+                    </div>
+                  )}
+                  {selectedSubmission.attachments && selectedSubmission.attachments.map((attachment, index) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <Button 
+                        type="link"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(attachment.fileUrl, '_blank')}
+                      >
+                        {attachment.fileName || `File ${index + 1}`}
+                      </Button>
+                      {attachment.size && (
+                        <Text type="secondary" style={{ marginLeft: 8 }}>
+                          ({Math.round(attachment.size / 1024)} KB)
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Show submission content if any */}
+            {selectedSubmission.content && (
+              <>
+                <Divider>Nội dung bài nộp</Divider>
+                <Paragraph>
+                  {selectedSubmission.content}
+                </Paragraph>
+              </>
+            )}
           </div>
         )}
       </Modal>

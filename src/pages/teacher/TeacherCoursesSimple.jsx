@@ -32,7 +32,29 @@ const TeacherCoursesSimple = () => {
       
       const data = await teacherClassroomService.getMyClassrooms();
       console.log('Teacher courses response:', data);
-      setCourses(data || []);
+      
+      // Fetch assignment counts for each classroom
+      const coursesWithAssignments = await Promise.all(
+        (data || []).map(async (course) => {
+          try {
+            const assignments = await teacherClassroomService.getClassroomAssignments(course.id);
+            return {
+              ...course,
+              assignments: assignments || [],
+              assignmentCount: assignments?.length || 0
+            };
+          } catch (err) {
+            console.warn(`Failed to load assignments for classroom ${course.id}:`, err);
+            return {
+              ...course,
+              assignments: [],
+              assignmentCount: 0
+            };
+          }
+        })
+      );
+      
+      setCourses(coursesWithAssignments);
     } catch (error) {
       console.error('Error loading teacher courses:', error);
       // Don't show error message for canceled requests
@@ -176,10 +198,10 @@ const TeacherCoursesSimple = () => {
                   <span className="font-medium">Lớp:</span> {course.section}
                 </div>
                 <div>
-                  <span className="font-medium">Học viên:</span> {course.enrolledStudents?.length || 0}
+                  <span className="font-medium">Học viên:</span> {course.studentCount || course.studentIds?.length || 0}
                 </div>
                 <div>
-                  <span className="font-medium">Bài tập:</span> {course.assignments?.length || 0}
+                  <span className="font-medium">Bài tập:</span> {course.assignmentCount || course.assignments?.length || 0}
                 </div>
               </div>
               
@@ -242,13 +264,13 @@ const TeacherCoursesSimple = () => {
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">
-                {courses.reduce((total, course) => total + (course.enrolledStudents?.length || 0), 0)}
+                {courses.reduce((total, course) => total + (course.studentCount || course.studentIds?.length || 0), 0)}
               </div>
               <div className="text-sm text-gray-600">Học viên</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
-                {courses.reduce((total, course) => total + (course.assignments?.length || 0), 0)}
+                {courses.reduce((total, course) => total + (course.assignmentCount || course.assignments?.length || 0), 0)}
               </div>
               <div className="text-sm text-gray-600">Bài tập</div>
             </div>

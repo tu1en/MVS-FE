@@ -1,9 +1,9 @@
-import { useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { isUserLoggedIn, performLogout } from '../utils/authUtils';
 import { signOut } from 'firebase/auth';
+import { useCallback, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
+import { isUserLoggedIn, performLogout } from '../utils/authUtils';
 
 /**
  * Custom hook để ngăn back navigation khi đã đăng nhập

@@ -243,10 +243,10 @@ const CreateLectureModal = ({ open, onCancel, onSuccess, courseId, editingLectur
       
       console.log("Submitting to backend:", { selectedCourseId, lectureData });
 
-      await lectureService.createLecture(selectedCourseId, lectureData);
+      const createdLecture = await lectureService.createLecture(selectedCourseId, lectureData);
 
       message.success('Bài giảng đã được tạo thành công!');
-      onSuccess(); // Close modal and refresh list
+      onSuccess(createdLecture); // Pass created lecture data and close modal
     } catch (error) {
       console.error('Failed to create lecture:', error);
       message.error(error.response?.data?.message || 'Không thể tạo bài giảng.');

@@ -33,6 +33,7 @@ function AssignmentsPageNew() {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submissionsList, setSubmissionsList] = useState([]);
+  const [allSubmissionsData, setAllSubmissionsData] = useState({});
   const [submitDrawerVisible, setSubmitDrawerVisible] = useState(false);
   const [fileList, setFileList] = useState([]);
   const [submissionComment, setSubmissionComment] = useState('');
@@ -102,7 +103,8 @@ function AssignmentsPageNew() {
       const response = await ClassroomService.getClassroomsByCurrentTeacher();
       console.log('Fetched teacher classrooms:', response);
       setTeacherClassrooms(response);
-      setClassrooms(response);
+      // Extract the data array from the response
+      setClassrooms(response.data || []);
     } catch (error) {
       console.error('Error fetching teacher classrooms:', error);
       // If error, set some mock classrooms for testing
@@ -114,6 +116,32 @@ function AssignmentsPageNew() {
       setTeacherClassrooms(mockClassrooms);
       setClassrooms(mockClassrooms);
     }
+  };
+
+  // Function to fetch submissions for all assignments (for teachers)
+  const fetchAllSubmissionsData = async (assignments) => {
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return;
+    }
+
+    console.log('Fetching submissions for all assignments:', assignments.length);
+    const submissionsData = {};
+    
+    // Fetch submissions for each assignment in parallel
+    const submissionPromises = assignments.map(async (assignment) => {
+      try {
+        const submissions = await AssignmentService.getSubmissionsForAssignment(assignment.id);
+        submissionsData[assignment.id] = submissions;
+        console.log(`Fetched ${submissions.length} submissions for assignment ${assignment.id}`);
+      } catch (error) {
+        console.error(`Failed to fetch submissions for assignment ${assignment.id}:`, error);
+        submissionsData[assignment.id] = [];
+      }
+    });
+
+    await Promise.all(submissionPromises);
+    console.log('All submissions data fetched:', submissionsData);
+    setAllSubmissionsData(submissionsData);
   };
 
   // Fetch all necessary data based on user role
@@ -133,8 +161,18 @@ function AssignmentsPageNew() {
         // If courseId is present, fetch assignments for that specific course
         const assignments = await AssignmentService.getAssignmentsByClassroom(courseId);
         // You might want to split these into upcoming and past as well
-        setUpcomingAssignments(assignments.filter(a => new Date(a.dueDate) >= new Date()));
-        setPastAssignments(assignments.filter(a => new Date(a.dueDate) < new Date()));
+        const upcoming = assignments.filter(a => new Date(a.dueDate) >= new Date());
+        const past = assignments.filter(a => new Date(a.dueDate) < new Date());
+        setUpcomingAssignments(upcoming);
+        setPastAssignments(past);
+        
+        // For teachers, fetch submissions data for all assignments to enable proper filtering
+        if (userRole === 'TEACHER') {
+          const allAssignments = [...upcoming, ...past];
+          if (allAssignments.length > 0) {
+            await fetchAllSubmissionsData(allAssignments);
+          }
+        }
       } else {
         // Fallback to original behavior if no courseId
         await fetchAssignments();
@@ -257,6 +295,14 @@ function AssignmentsPageNew() {
         console.log('Setting past assignments:', past);
         setUpcomingAssignments(upcoming);
         setPastAssignments(past);
+
+        // For teachers, fetch submissions data for all assignments to enable proper filtering
+        if (userRole === 'TEACHER') {
+          const allAssignments = [...upcoming, ...past];
+          if (allAssignments.length > 0) {
+            await fetchAllSubmissionsData(allAssignments);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -738,6 +784,17 @@ function AssignmentsPageNew() {
     );
   };
 
+  // Helper function to get assignments that need grading
+  const getAssignmentsNeedingGrading = (assignments) => {
+    return assignments.filter(assignment => {
+      const assignmentSubmissions = allSubmissionsData[assignment?.id] || [];
+      const hasUngradedSubmissions = assignmentSubmissions.some(
+        sub => sub?.score === null || sub?.score === undefined || sub?.grade === null || sub?.grade === undefined
+      );
+      return hasUngradedSubmissions;
+    });
+  };
+
   // Teacher view components
   const renderTeacherDashboard = () => {
     return (
@@ -772,14 +829,8 @@ function AssignmentsPageNew() {
             },
             {
               key: 'needGrading',
-              label: 'Cần chấm điểm',
-              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => {
-                // Filter for assignments that have ungraded submissions
-                const hasUngradedSubmissions = submissionsList.some(
-                  sub => sub?.assignmentId === assignment?.id && (sub?.score === null || sub?.score === undefined)
-                );
-                return hasUngradedSubmissions;
-              }))
+              label: `Cần chấm điểm (${getAssignmentsNeedingGrading(upcomingAssignments).length})`,
+              children: renderTeacherAssignmentsList(getAssignmentsNeedingGrading(upcomingAssignments))
             },
             {
               key: 'upcoming',

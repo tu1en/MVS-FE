@@ -23,6 +23,9 @@ import { useAuth } from './context/AuthContext.js'; // Import useAuth
 
 // Dashboards
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import SystemActivityLogsPage from './pages/SystemActivityLogsPage.jsx';
+import SystemChartsPage from './pages/SystemChartsPage.jsx';
+import SystemSettingsPage from './pages/SystemSettingsPage.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
@@ -98,6 +101,7 @@ import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 import ContractManagement from './pages/accountant/ContractManagement';
+import PayrollManagement from './pages/accountant/PayrollManagement';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -273,6 +277,9 @@ function App() {
               {/* Admin and Manager stubs */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
+              <Route path="/admin/system-logs" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemActivityLogsPage /></ProtectedRoute>} />
+              <Route path="/admin/system-charts" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemChartsPage /></ProtectedRoute>} />
+              <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemSettingsPage /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
@@ -299,6 +306,12 @@ function App() {
 
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
+              
+              {/* Accountant Attendance Explanation Routes */}
+              <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><ExplanationReports /></ProtectedRoute>} />
+              <Route path="/accountant/explanation-status" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><ExplanationReports /></ProtectedRoute>} />
+              <Route path="/accountant/attendance-history" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
 
               {/* Test Upload Page - Requires authentication */}
               <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />
