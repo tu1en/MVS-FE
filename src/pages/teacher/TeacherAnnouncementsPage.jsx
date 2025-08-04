@@ -68,11 +68,8 @@ const TeacherAnnouncementsPage = () => {
     try {
       setLoading(true);
       const allAnnouncements = await AnnouncementService.getAnnouncements();
-      // Filter announcements created by this teacher
-      const teacherAnnouncements = allAnnouncements.filter(
-        announcement => announcement.createdBy === parseInt(teacherId)
-      );
-      setAnnouncements(teacherAnnouncements);
+      // Show all announcements for teachers to read
+      setAnnouncements(allAnnouncements);
     } catch (error) {
       console.error('Error fetching announcements:', error);
       message.error('Không thể tải thông báo');

@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import {
+  CalendarOutlined,
+  ContainerOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  StopOutlined,
+  TeamOutlined,
+  UserOutlined
+} from '@ant-design/icons';
+import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, message, Typography, Divider } from 'antd';
-import { DollarOutlined, FileTextOutlined, TeamOutlined, CalendarOutlined, UserOutlined, StopOutlined, ContainerOutlined } from '@ant-design/icons';
-import api from '../utils/api.js';
+import { ROLE } from '../constants/constants';
 import { useBackButton } from '../hooks/useBackButton';
+import api from '../services/api.js';
 
 const { Title } = Typography;
 
 const AccountantDashboard = () => {
   const navigate = useNavigate();
-  useBackButton(); // Thêm hook xử lý nút back
+  useBackButton();
+
+  const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     financialStats: {
       totalInvoices: 0,
@@ -27,39 +38,47 @@ const AccountantDashboard = () => {
     approvedAbsences: 0,
     annualLeaveBalance: 0
   });
-
-  const [loading, setLoading] = useState(true);
+  const [contractStats, setContractStats] = useState({
+    totalContracts: 0,
+    activeContracts: 0,
+    terminatedContracts: 0,
+    contractsExpiringSoon: 0
+  });
 
   useEffect(() => {
+    const role = localStorage.getItem('role');
+    if (role !== ROLE.ACCOUNTANT) {
+      navigate('/');
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // Fetch dashboard stats
         const statsResponse = await api.get('/accountant/dashboard-stats');
         if (statsResponse.data) {
-          // Lấy đúng các trường từ API mới
           setDashboardData({
-            financialStats: statsResponse.data.financialStats || { totalInvoices: 0, paidInvoices: 0, pendingPayments: 0, overduePayments: 0 },
-            messageStats: statsResponse.data.messageStats || { unreadMessages: 0 }
+            financialStats: statsResponse.data.financialStats || {},
+            messageStats: statsResponse.data.messageStats || {}
           });
-          setLeaveStats(statsResponse.data.leaveStats || { totalAbsences: 0, pendingAbsences: 0, approvedAbsences: 0, annualLeaveBalance: 0 });
-        } else {
-          setDashboardData({
-            financialStats: { totalInvoices: 0, paidInvoices: 0, pendingPayments: 0, overduePayments: 0 },
-            messageStats: { unreadMessages: 0 }
-          });
-          setLeaveStats({ totalAbsences: 0, pendingAbsences: 0, approvedAbsences: 0, annualLeaveBalance: 0 });
+          setLeaveStats(statsResponse.data.leaveStats || {});
         }
-        
 
+        try {
+          const contractStatsResponse = await api.get('/contracts/statistics');
+          setContractStats(contractStatsResponse.data || {});
+        } catch (error) {
+          console.error('Error fetching contract stats:', error);
+        }
       } catch (error) {
         message.error('Không thể tải dữ liệu dashboard');
       } finally {
         setLoading(false);
       }
     };
+
     fetchDashboardData();
-  }, []);
+  }, [navigate]);
 
   const handleCardClick = (route) => {
     navigate(route);
@@ -67,61 +86,163 @@ const AccountantDashboard = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Title level={2}>Bảng Điều Khiển Kế Toán</Title>
 
-      
-      {/* Leave Management Section */}
-      <Title level={3} style={{ marginBottom: 16 }}>Quản lý Nghỉ phép</Title>
+      {/* Quản lý hợp đồng */}
+      <Title level={3}>Quản lý Hợp đồng</Title>
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
-          <Card loading={loading} bordered={false}>
-            <Statistic title="Tổng Đơn Nghỉ Phép" value={leaveStats?.totalAbsences ?? 0} prefix={<CalendarOutlined />} />
+          <Card loading={loading}>
+            <Statistic title="Tổng số hợp đồng" value={contractStats.totalContracts ?? 0} prefix={<FileTextOutlined />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card loading={loading} bordered={false}>
-            <Statistic title="Đơn Chờ Duyệt" value={leaveStats?.pendingAbsences ?? 0} valueStyle={{ color: '#faad14' }} />
+          <Card loading={loading}>
+            <Statistic title="Đang hoạt động" value={contractStats.activeContracts ?? 0} prefix={<UserOutlined />} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card loading={loading} bordered={false}>
-            <Statistic title="Đơn Đã Duyệt" value={leaveStats?.approvedAbsences ?? 0} valueStyle={{ color: '#52c41a' }} />
+          <Card loading={loading}>
+            <Statistic title="Đã chấm dứt" value={contractStats.terminatedContracts ?? 0} prefix={<StopOutlined />} valueStyle={{ color: '#ff4d4f' }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card loading={loading} bordered={false}>
-            <Statistic title="Số Ngày Phép Còn Lại" value={leaveStats?.annualLeaveBalance ?? 0} valueStyle={{ color: leaveStats?.annualLeaveBalance > 0 ? '#3f8600' : '#ff4d4f' }} />
+          <Card loading={loading}>
+            <Statistic title="Sắp hết hạn (30 ngày)" value={contractStats.contractsExpiringSoon ?? 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#faad14' }} />
           </Card>
         </Col>
       </Row>
-      
-      {/* Management Navigation */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
         <Col xs={24} sm={12} md={8}>
-          <Card
-            hoverable
-            title="Quản lý Nghỉ phép"
-            bordered={false}
-            style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}
-            onClick={() => handleCardClick('/accountant/leave-requests')}
-          >
+          <Card hoverable title="Quản lý Hợp đồng" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/contracts')}>
+            <ContainerOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Tạo và quản lý hợp đồng lao động</div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Divider />
+
+      {/* Quản lý nghỉ phép */}
+      <Title level={3}>Quản lý Nghỉ phép</Title>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Tổng Đơn Nghỉ Phép" value={leaveStats.totalAbsences ?? 0} prefix={<CalendarOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Đơn Chờ Duyệt" value={leaveStats.pendingAbsences ?? 0} valueStyle={{ color: '#faad14' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Đơn Đã Duyệt" value={leaveStats.approvedAbsences ?? 0} valueStyle={{ color: '#52c41a' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Số Ngày Phép Còn Lại" value={leaveStats.annualLeaveBalance ?? 0} valueStyle={{ color: leaveStats.annualLeaveBalance > 0 ? '#3f8600' : '#ff4d4f' }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Quản lý Nghỉ phép" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/leave-requests')}>
             <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
             <div>Quản lý đơn nghỉ phép nhân viên</div>
           </Card>
         </Col>
+      </Row>
+
+      <Divider />
+
+      {/* Quản lý điểm danh */}
+      <Title level={3}>Quản lý Điểm danh</Title>
+      <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
         <Col xs={24} sm={12} md={8}>
-          <Card
-            hoverable
-            title="Quản lý Hợp đồng"
-            bordered={false}
-            style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}
-            onClick={() => handleCardClick('/accountant/contracts')}
-          >
-            <ContainerOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
-            <div>Quản lý hợp đồng Giáo viên & Nhân viên</div>
+          <Card hoverable title="Giải trình vi phạm" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-explanations')}>
+            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Gửi giải trình cho các vi phạm điểm danh</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Trạng thái giải trình" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/explanation-status')}>
+            <CalendarOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
+            <div>Xem trạng thái các giải trình đã gửi</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Lịch sử chấm công" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-history')}>
+            <UserOutlined style={{ fontSize: 48, color: '#faad14', marginBottom: 16 }} />
+            <div>Xem lịch sử chấm công cá nhân</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Tạo bảng lương" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/payroll')}>
+            <DollarOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
+            <div>Tạo bảng lương dựa trên điểm danh và giờ dạy</div>
           </Card>
         </Col>
       </Row>
-      </div>
+
+      <Divider />
+
+      {/* Thống kê tài chính */}
+      <Title level={3}>Thống kê Tài chính</Title>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Tổng Hóa Đơn" value={dashboardData.financialStats.totalInvoices ?? 0} prefix={<FileTextOutlined />} valueStyle={{ color: '#3f8600' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Đã Thanh Toán" value={dashboardData.financialStats.paidInvoices ?? 0} prefix={<DollarOutlined />} valueStyle={{ color: '#52c41a' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Chờ Xử Lý" value={dashboardData.financialStats.pendingPayments ?? 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#faad14' }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={loading}>
+            <Statistic title="Quá Hạn" value={dashboardData.financialStats.overduePayments ?? 0} prefix={<TeamOutlined />} valueStyle={{ color: '#ff4d4f' }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={6}>
+          <Card hoverable title="Quản Lý Hóa Đơn" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/invoices')}>
+            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Quản lý hóa đơn và thanh toán</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card hoverable title="Theo Dõi Thanh Toán" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/payments')}>
+            <DollarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Theo dõi lịch sử thanh toán</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card hoverable title="Báo Cáo Tài Chính" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/reports')}>
+            <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Tạo báo cáo tài chính</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card hoverable title="Tài Khoản Học Sinh" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/students')}>
+            <TeamOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Quản lý tài khoản học sinh</div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 };
 

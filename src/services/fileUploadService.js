@@ -1,6 +1,7 @@
 import { message } from 'antd';
 import axios from 'axios';
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+import { signInAnonymously } from "firebase/auth";
 import { auth, storage } from '../config/firebase';
 
 /**
@@ -97,7 +98,7 @@ const uploadFileToBackend = async ({ file, onSuccess, onError, onProgress }, pat
  * @param {Function} options.onProgress - Callback for upload progress.
  * @param {string} path - The destination path in Firebase Storage (e.g., 'lectures/course-123').
  */
-const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) => {
+const uploadFileToFirebase = async ({ file, onSuccess, onError, onProgress }, path) => {
     // Check if the file object is valid
     if (!file || typeof file.name === 'undefined') {
         console.error('[Debug] uploadFileToFirebase: Invalid file object received.', file);
@@ -110,18 +111,32 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
 
     console.log(`[Debug] uploadFileToFirebase: Starting upload for "${file.name}" to path "${path}".`);
 
-    // Check if user is authenticated - TEMPORARILY SKIP FOR TESTING
-    const user = auth.currentUser;
-    if (!user) {
-        console.log('[Debug] User not authenticated, but proceeding with Firebase upload anyway for testing');
-        // message.warning('Đang sử dụng phương thức upload qua server...');
-        // uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
-        // return;
+    // Check if user is authenticated via localStorage token (custom auth system)
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+    
+    if (!token || !userId) {
+        console.log('[Debug] No authentication token found, using backend upload...');
+        message.warning('Đang sử dụng phương thức upload qua server...');
+        uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+        return;
     }
 
-    console.log('[Debug] User authenticated, proceeding with Firebase upload');
+    console.log('[Debug] User authenticated via token, proceeding with Firebase upload');
 
     try {
+        // Ensure Firebase authentication
+        if (!auth.currentUser) {
+            console.log('[Debug] No Firebase user found, signing in anonymously...');
+            try {
+                await signInAnonymously(auth);
+                console.log('[Debug] Firebase anonymous authentication successful');
+            } catch (authError) {
+                console.error('[Debug] Firebase auth failed, falling back to backend:', authError);
+                uploadFileToBackend({ file, onSuccess, onError, onProgress }, path);
+                return;
+            }
+        }
         const timestamp = Date.now();
         const uniqueFileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
         const storagePath = `${path}/${uniqueFileName}`;
@@ -129,12 +144,16 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
 
         console.log(`[Debug] Firebase storage path: ${storagePath}`);
         
+        const userData = localStorage.getItem('user');
+        const userEmail = localStorage.getItem('email') || userId;
+        
         const metadata = {
           contentType: file.type,
           customMetadata: {
-            uploadedBy: user ? (user.email || user.uid) : 'anonymous',
+            uploadedBy: userEmail || userId,
             uploadTimestamp: new Date().toISOString(),
-            originalFileName: file.name
+            originalFileName: file.name,
+            uploadedByUserId: userId
           }
         };
 
@@ -157,7 +176,8 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
                                   error.message.includes('cors') ||
                                   error.message.includes('Access-Control-Allow-Origin') ||
                                   error.code === 'storage/unauthorized' ||
-                                  error.code === 'storage/unknown';
+                                  error.code === 'storage/unknown' ||
+                                  error.code === 'storage/unauthenticated';
                 
                 if (isCorsError) {
                     console.log('[Debug] CORS/Network error detected, falling back to backend upload');
@@ -209,7 +229,7 @@ const uploadFileToFirebase = ({ file, onSuccess, onError, onProgress }, path) =>
 };
 
 const FileUploadService = {
-    uploadFile: uploadFileToFirebase, // Switch back to Firebase with CORS fixed
+    uploadFile: uploadFileToFirebase, // Use Firebase upload as primary method
 };
 
 export default FileUploadService;

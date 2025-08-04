@@ -1,18 +1,15 @@
-import { TeamOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Button, Form, Input, Select, Spin } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import StudentAttendance from './StudentAttendance';
 import TeacherAttendance from './TeacherAttendance';
-
-const { Option } = Select;
+import { Alert } from 'antd';
 
 // Main Attendance Module Component
 const AttendanceModule = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Default to true assuming user is already logged in
-  const [loading, setLoading] = useState(false);
-  const [userRole, setUserRole] = useState('');
-  const [userId, setUserId] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const { user, logout } = useContext(AuthContext);
+  
+  // State for message box
+  const [messageBox, setMessageBox] = useState({ visible: false, title: '', message: '' });
 
   // Custom Message Box Component
   const MessageBox = ({ title, message, onClose }) => {
@@ -34,185 +31,95 @@ const AttendanceModule = () => {
     );
   };
 
-  // State for message box
-  const [messageBox, setMessageBox] = useState({ visible: false, title: '', message: '' });
-
   const closeMessageBox = () => {
     setMessageBox({ visible: false, title: '', message: '' });
   };
 
-  // Login Component
-  const LoginScreen = ({ onLogin }) => {
-    const [form] = Form.useForm();
+  const showMessageBox = (title, message) => {
+    setMessageBox({ visible: true, title, message });
+  };
 
-    const handleFormSubmit = (values) => {
-      if (!values.userId) {
-        setLoginError('Vui lòng nhập ID người dùng');
-        return;
-      }
-      onLogin(values.userId, values.role);
-    };
-
+  // Check if user is authenticated
+  if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-          <div className="text-center mb-6">
-            <TeamOutlined style={{ fontSize: '3rem', color: '#1890ff' }} />
-            <h2 className="text-2xl font-bold text-gray-800 mt-2">Hệ thống Điểm Danh</h2>
-            <p className="text-gray-600 mt-2">Đăng nhập vào hệ thống để tiếp tục</p>
-          </div>
-          
-          {loginError && (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Alert
+          message="Chưa đăng nhập"
+          description="Vui lòng đăng nhập để sử dụng tính năng điểm danh."
+          type="warning"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  // Determine user role and render appropriate component
+  const getUserRole = (roleId) => {
+    switch (roleId) {
+      case 1:
+        return 'STUDENT';
+      case 2:
+        return 'TEACHER';
+      case 3:
+        return 'MANAGER';
+      case 4:
+        return 'ADMIN';
+      case 5:
+        return 'ACCOUNTANT';
+      default:
+        return 'UNKNOWN';
+    }
+  };
+
+  const userRole = getUserRole(user.roleId);
+
+  // Render the appropriate attendance component based on user role
+  const renderAttendanceComponent = () => {
+    switch (userRole) {
+      case 'STUDENT':
+        return (
+          <StudentAttendance 
+            onLogout={logout}
+            showMessageBox={showMessageBox}
+            user={user}
+          />
+        );
+      case 'TEACHER':
+        return (
+          <TeacherAttendance 
+            onLogout={logout}
+            showMessageBox={showMessageBox}
+            user={user}
+          />
+        );
+      default:
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <Alert
-              message={loginError}
+              message="Không có quyền truy cập"
+              description={`Vai trò ${userRole} không được phép sử dụng tính năng điểm danh.`}
               type="error"
               showIcon
-              closable
-              className="mb-4"
-              onClose={() => setLoginError('')}
             />
-          )}
-          
-          <Form
-            form={form}
-            name="login"
-            initialValues={{ role: '2' }}
-            onFinish={handleFormSubmit}
-            layout="vertical"
-          >
-            <Form.Item
-              name="userId"
-              label="ID Người dùng"
-              rules={[{ required: true, message: 'Vui lòng nhập ID người dùng' }]}
-            >
-              <Input 
-                prefix={<UserOutlined className="site-form-item-icon" />} 
-                placeholder="VD: GV001 hoặc SV001"
-                size="large"
-              />
-            </Form.Item>
-            
-            <Form.Item
-              name="role"
-              label="Vai trò"
-            >
-              <Select size="large">
-                <Option value="2">Giảng viên</Option>
-                <Option value="1">Sinh viên</Option>
-              </Select>
-            </Form.Item>
-            
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                block
-                className="bg-blue-500 hover:bg-blue-600 h-12"
-              >
-                Đăng nhập
-              </Button>
-            </Form.Item>
-          </Form>
-          
-          <div className="text-center mt-4 text-sm text-gray-600">
-            <p>Hệ thống điểm danh của MVS Classroom</p>
           </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Effect to get user info on component mount
-  useEffect(() => {
-    // In a real app, get this from localStorage or user context
-    const storedUserId = localStorage.getItem('userId');
-    const storedUserRole = localStorage.getItem('role');
-    
-    if (storedUserId && storedUserRole) {
-      setUserId(storedUserId);
-      setUserRole(storedUserRole);
-    } else {
-      setIsLoggedIn(false);
+        );
     }
-  }, []);
-
-  // Handle login
-  const handleLogin = (userInfo, role) => {
-    setLoading(true);
-    setLoginError('');
-    
-    // Validate input
-    if (!userInfo.trim()) {
-      setLoginError('ID người dùng không được để trống');
-      setLoading(false);
-      return;
-    }
-    
-    // Simulate authentication
-    setTimeout(() => {
-      setUserId(userInfo);
-      setUserRole(role);
-      setIsLoggedIn(true);
-      setLoading(false);
-      
-      // In a real app, save this to localStorage
-      localStorage.setItem('userId', userInfo);
-      localStorage.setItem('role', role);
-    }, 800);
   };
-
-  // Handle logout
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserId('');
-    setUserRole('');
-    
-    // Clear from localStorage
-    localStorage.removeItem('userId');
-    localStorage.removeItem('role');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-center">
-          <Spin size="large" />
-          <p className="mt-3 text-gray-600">Đang tải...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
 
   return (
-    <>
-      <div className="App">
-        {userRole === '2' || userRole === 'TEACHER' ? (
-          <TeacherAttendance 
-            userId={userId} 
-            onLogout={handleLogout}
-          />
-        ) : (
-          <StudentAttendance 
-            userId={userId} 
-            onLogout={handleLogout}
-          />
-        )}
-        
-        {messageBox.visible && (
-          <MessageBox
-            title={messageBox.title}
-            message={messageBox.message}
-            onClose={closeMessageBox}
-          />
-        )}
-      </div>
-    </>
+    <div className="min-h-screen bg-gray-50">
+      {renderAttendanceComponent()}
+      
+      {/* Message Box Modal */}
+      {messageBox.visible && (
+        <MessageBox
+          title={messageBox.title}
+          message={messageBox.message}
+          onClose={closeMessageBox}
+        />
+      )}
+    </div>
   );
 };
 
-export default AttendanceModule; 
+export default AttendanceModule;

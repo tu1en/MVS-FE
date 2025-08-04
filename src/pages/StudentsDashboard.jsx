@@ -3,9 +3,9 @@ import { App, Button, Card, Col, Progress, Row, Spin, Statistic, Typography } fr
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROLE } from "../constants/constants";
+import { useBackButton } from '../hooks/useBackButton';
 import api from "../services/api";
 import ClassroomService from "../services/classroomService";
-import { useBackButton } from '../hooks/useBackButton';
 
 const { Title, Text } = Typography;
 
@@ -389,7 +389,7 @@ export default function StudentDashboard() {
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
-            onClick={() => handleCardClick("/student/attendance")}
+            onClick={() => handleCardClick("/student/attendance-records")}
           >
             <div className="text-center">
               <CalendarOutlined className="text-4xl text-green-500 mb-4" />
