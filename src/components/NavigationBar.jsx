@@ -354,7 +354,13 @@ function NavigationBar() {
           name: 'Quản Lý Nghỉ Phép',
           path: '/teacher/leave-requests',
           icon: '🏖️'
-        }
+        },
+        {
+          name: 'Yêu Cầu Giải Trình',
+          path: '/teacher/explanation-request',
+          icon: '📝'
+        },
+
       ].filter(Boolean)
     }
   ];
@@ -539,7 +545,9 @@ function NavigationBar() {
     {
       category: "Nghỉ phép",
       items: [
-        { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' }
+        { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' },
+        { name: 'Yêu Cầu Giải Trình', path: '/accountant/explanation-request', icon: '📝' },
+
       ]
     }
   ];
