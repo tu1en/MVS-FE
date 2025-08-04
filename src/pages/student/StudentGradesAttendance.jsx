@@ -173,7 +173,7 @@ const StudentGradesAttendance = () => {
         >
           {enrolledCourses.map((course) => (
             <option key={course.id} value={course.id.toString()}>
-              {course.name} - {course.teacherName}
+              {course.subject || course.description || course.name} - {course.teacherName}
             </option>
           ))}
         </select>
@@ -219,7 +219,7 @@ const StudentGradesAttendance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold text-purple-600">
-              {selectedCourse?.name || 'Khóa học'}
+              {selectedCourse?.subject || selectedCourse?.description || selectedCourse?.name || 'Khóa học'}
             </div>
             <p className="text-xs text-muted-foreground">
               Giảng viên: {selectedCourse?.teacherName || 'N/A'}

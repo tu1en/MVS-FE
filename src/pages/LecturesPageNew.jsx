@@ -127,7 +127,7 @@ function LecturesPageNew() {
       setLectures([]);
       
       try {
-        const response = await apiClient.get(`/courses/${selectedCourse.id}/lectures`, { timeout: 15000 });
+        const response = await apiClient.get(`/lectures/classroom/${selectedCourse.id}`, { timeout: 15000 });
         setLectures(response.data || []);
       } catch (error) {
         console.error('Error fetching lectures:', error);
@@ -154,22 +154,11 @@ function LecturesPageNew() {
 
   // ===== Lecture Management Functions =====
   const handleEditLecture = (lecture) => {
-    // Check if this is a mock lecture (ID <= 10 are considered mock for demo purposes)
-    if (lecture.id <= 10) {
-      message.warning('Đây là dữ liệu mẫu, không thể chỉnh sửa. Vui lòng tạo bài giảng mới.');
-      return;
-    }
     setEditingLecture(lecture);
     setShowAdvancedModal(true); // Use advanced modal for editing too
   };  
   
   const handleDeleteLecture = (lecture) => {
-    // Check if this is a mock lecture (ID <= 10 are considered mock for demo purposes)
-    if (lecture.id <= 10) {
-      message.warning('Đây là dữ liệu mẫu, không thể xóa. Chỉ có thể xóa bài giảng thực tế.');
-      return;
-    }
-    
     modal.confirm({
       title: 'Xác nhận xóa',
       content: `Bạn có chắc chắn muốn xóa bài giảng "${lecture.title}"? Tất cả tài liệu bên trong cũng sẽ bị xóa.`,
@@ -211,39 +200,32 @@ function LecturesPageNew() {
   // Handle advanced lecture creation
   const handleAdvancedLectureCreated = async (lectureData) => {
     try {
-      // In a real app, you would reload from the server
-      // For now, we'll add to local state and then try to reload from API
+      console.log('handleAdvancedLectureCreated called with:', lectureData);
       
       if (editingLecture) {
-        // Update existing lecture in local state
-        const updatedLectures = lectures.map(lecture => 
-          lecture.id === editingLecture.id ? 
-            { 
-              ...lecture, 
-              title: lectureData.title,
-              description: lectureData.description || lectureData.content,
-              materials: lectureData.materials || lecture.materials
-            } : 
-            lecture
-        );
-        setLectures(updatedLectures);
         message.success('Đã cập nhật bài giảng nâng cao thành công!');
       } else {
-        // Create new lecture in local state
-        const newLecture = {
-          id: lectureData.id || (Math.max(...lectures.map(l => l.id), 0) + 1),
-          title: lectureData.title,
-          description: lectureData.description || lectureData.content,
-          courseId: selectedCourse?.id,
-          materials: lectureData.materials || []
-        };
-        setLectures(prev => [...prev, newLecture]);
         message.success('Đã tạo bài giảng nâng cao thành công!');
       }
       
       // Close modal
       setShowAdvancedModal(false);
       setEditingLecture(null);
+      
+      // Refresh lectures from server to get the latest data
+      if (selectedCourse && selectedCourse.id) {
+        console.log('Refreshing lectures for course:', selectedCourse.id);
+        setLoading(true);
+        try {
+          const response = await apiClient.get(`/lectures/classroom/${selectedCourse.id}`, { timeout: 15000 });
+          console.log('Refreshed lectures:', response.data);
+          setLectures(response.data || []);
+        } catch (error) {
+          console.error('Error refreshing lectures:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
       
     } catch (error) {
       console.error('Error handling advanced lecture creation:', error);

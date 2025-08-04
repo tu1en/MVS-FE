@@ -85,9 +85,15 @@ const TakeAttendancePage = () => {
                 const selectedLecture = validLecture || lecturesData[0];
                 setActualLectureId(selectedLecture.id);
                 console.log('TakeAttendancePage: Selected lecture ID:', selectedLecture.id);
+            } else {
+                // No lectures found - stop loading and show error
+                console.log('TakeAttendancePage: No lectures found for classroom', classroomId);
+                setIsLoading(false);
+                setError('No lectures found for this classroom. Please create lectures first.');
             }
         } catch (error) {
             console.error('TakeAttendancePage: Error fetching lectures:', error);
+            setIsLoading(false);
             setError('Không thể tải danh sách bài giảng');
         }
     }, [classroomId, urlLectureId]);

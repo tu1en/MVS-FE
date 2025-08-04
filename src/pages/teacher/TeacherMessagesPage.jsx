@@ -1,4 +1,5 @@
 import {
+    PlusOutlined,
     SendOutlined,
     UserOutlined
 } from '@ant-design/icons';
@@ -183,8 +184,9 @@ const TeacherMessagesPage = () => {
       if (studentsByRole && Array.isArray(studentsByRole)) {
         const normalizedStudents = studentsByRole.map(student => ({
           id: student.id,
-          fullName: student.fullName,
+          fullName: student.fullName || student.name || student.username || `Học sinh ${student.id}`,
         })).filter(Boolean);
+        console.log('Normalized students:', normalizedStudents);
         setStudents(normalizedStudents);
       } else {
         setStudents([]);
@@ -373,7 +375,20 @@ const TeacherMessagesPage = () => {
   return (
     <Row gutter={16} style={{ height: 'calc(100vh - 120px)' }}>
       <Col span={6}>
-        <Card title="Danh sách học sinh" style={{ height: '100%', overflowY: 'auto' }}>
+        <Card 
+          title="Danh sách học sinh" 
+          style={{ height: '100%', overflowY: 'auto' }}
+          extra={
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => setIsModalVisible(true)}
+              size="small"
+            >
+              Tin nhắn mới
+            </Button>
+          }
+        >
           {loadingStudents ? (
             <Spin />
           ) : (
@@ -390,7 +405,6 @@ const TeacherMessagesPage = () => {
                   <List.Item.Meta
                     avatar={<Avatar icon={<UserOutlined />} />}
                     title={student.fullName}
-                    description={`ID: ${student.id}`}
                   />
                 </List.Item>
               )}
@@ -400,7 +414,7 @@ const TeacherMessagesPage = () => {
       </Col>
       <Col span={18}>
         <Card
-          title={selectedStudent ? `Trò chuyện với ${selectedStudent.fullName}` : 'Chọn một cuộc trò chuyện'}
+          title={selectedStudent ? `Trò chuyện với ${selectedStudent.fullName || 'Học sinh'}` : 'Chọn một cuộc trò chuyện'}
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
           styles={{ body: { flex: 1, overflowY: 'auto' } }}
           actions={[
@@ -444,7 +458,7 @@ const TeacherMessagesPage = () => {
             <Select placeholder="Chọn học sinh">
               {students.map((student) => (
                 <Option key={student.id} value={student.id}>
-                  {student.fullName} (ID: {student.id})
+                  {student.fullName}
                 </Option>
               ))}
             </Select>
