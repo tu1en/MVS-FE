@@ -1,21 +1,21 @@
 import {
-    AlertCircle,
-    Bell,
-    Calendar,
-    ChevronRight,
-    Clock,
-    Filter,
-    Megaphone,
-    Pin,
-    Search,
-    Star,
-    User
+  AlertCircle,
+  Bell,
+  Calendar,
+  ChevronRight,
+  Clock,
+  Filter,
+  Megaphone,
+  Pin,
+  Search,
+  Star,
+  User
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import AnnouncementService from '../../services/announcementService';
+import { Card, CardContent } from '../../components/ui/card';
 import announcementNotificationService from '../../services/announcementNotificationService';
+import AnnouncementService from '../../services/announcementService';
 
 const TeacherAnnouncementsPage = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -48,10 +48,7 @@ const TeacherAnnouncementsPage = () => {
       const allAnnouncements = await AnnouncementService.getAnnouncements();
       // Show all announcements for teachers to read
       setAnnouncements(allAnnouncements);
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-      message.error('Không thể tải thông báo');
-    } finally {
+    }finally {
       setLoading(false);
     }
   };
