@@ -1,0 +1,28 @@
+
+  1. User Data: Gets actual users from userRepository.findAll() (teachers, managers, accountants)
+  2. Working Hours: Calculated from real attendance logs in StaffAttendanceLog table:
+  calculateWorkingHours(staffId, startDate, endDate)
+  3. Teaching Hours: Calculated from actual teaching schedule/attendance data
+  4. Attendance Violations: Real violations from AttendanceViolation table that affect deductions
+  5. Base Salary & Hourly Rates: Currently uses default values but designed to get from real staff profiles:
+    - Base salary: 5,000,000 VND
+    - Teacher hourly rate: 100,000 VND/hour
+    - Other staff hourly rate: 50,000 VND/hour
+
+  What Gets Calculated:
+
+  - Gross Pay = Base Salary + (Hourly Rate × Working Hours)
+  - Deductions = Tax (10%) + Insurance (8%) + Violation penalties
+  - Net Pay = Gross Pay - Total Deductions
+
+  To See Real Data:
+
+  1. Make sure you have users with roles TEACHER, MANAGER, ACCOUNTANT in your database
+  2. Make sure they have attendance records in StaffAttendanceLog table
+  3. Click "Tạo bảng lương" to generate payroll from this real data
+  4. The system will show actual calculated salaries based on their real working hours
+
+  If you're not seeing data, it means either:
+  - No eligible users exist in database
+  - No attendance records exist for the selected period
+  - Payroll hasn't been generated yet for that month

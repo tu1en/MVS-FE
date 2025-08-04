@@ -153,7 +153,7 @@ class ProfileDataService {
     } else if (userType === 'teacher') {
       return {
         ...commonDefaults,
-        employeeId: localStorage.getItem('userId') || localStorage.getItem('employeeId') || '',
+        userId: localStorage.getItem('userId') || '',
         department: localStorage.getItem('department') || 'Khoa Công nghệ thông tin',
         position: localStorage.getItem('position') || 'Giảng viên'
       };
@@ -183,7 +183,7 @@ class ProfileDataService {
   static clearLocalData() {
     const keysToRemove = [
       'fullName', 'email', 'phoneNumber', 'gender', 'address',
-      'studentId', 'school', 'className', 'employeeId', 'department', 
+      'studentId', 'school', 'className', 'userId', 'department', 
       'position', 'profileLastUpdated'
     ];
 
