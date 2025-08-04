@@ -47,6 +47,8 @@ import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
+import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
+
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 
@@ -97,6 +99,8 @@ import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
+import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest.jsx';
+
 import ContractManagement from './pages/accountant/ContractManagement';
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 
@@ -248,6 +252,8 @@ function App() {
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
+              <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
+
               <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
@@ -299,6 +305,8 @@ function App() {
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
+              <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
+
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
 
               {/* Test Upload Page - Requires authentication */}

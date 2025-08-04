@@ -60,10 +60,41 @@ const ExplanationReports = () => {
     approvedCount: 0,
     rejectedCount: 0
   });
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   useEffect(() => {
     fetchReports();
   }, [pagination.current, pagination.pageSize, dateRange, selectedStatus, selectedRole, selectedDepartment]);
+
+  const fetchStatistics = async () => {
+    try {
+      const params = {};
+      if (dateRange && dateRange.length === 2) {
+        params.startDate = dateRange[0].format('YYYY-MM-DD');
+        params.endDate = dateRange[1].format('YYYY-MM-DD');
+      }
+      
+      const statusResponse = await api.get('/attendance-explanations/statistics/status', { params });
+      const statusData = statusResponse.data;
+      
+      setStatistics({
+        totalReports: (statusData.PENDING || 0) + (statusData.APPROVED || 0) + (statusData.REJECTED || 0),
+        pendingCount: statusData.PENDING || 0,
+        approvedCount: statusData.APPROVED || 0,
+        rejectedCount: statusData.REJECTED || 0
+      });
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+      // Fallback to basic statistics if API fails
+      setStatistics({
+        totalReports: 0,
+        pendingCount: 0,
+        approvedCount: 0,
+        rejectedCount: 0
+      });
+    }
+  };
 
   const fetchReports = async () => {
     try {
@@ -90,17 +121,14 @@ const ExplanationReports = () => {
         total: response.data.totalElements || data.length
       }));
       
-      // Calculate statistics
-      const pendingCount = data.filter(report => report.status === 'PENDING').length;
-      const approvedCount = data.filter(report => report.status === 'APPROVED').length;
-      const rejectedCount = data.filter(report => report.status === 'REJECTED').length;
+      // Set pagination info
+      setPagination(prev => ({
+        ...prev,
+        total: response.data.totalElements || data.length
+      }));
       
-      setStatistics({
-        totalReports: data.length,
-        pendingCount,
-        approvedCount,
-        rejectedCount
-      });
+      // Fetch overall statistics from backend API
+      fetchStatistics();
       
     } catch (error) {
       console.error('Error fetching explanation reports:', error);
@@ -144,7 +172,12 @@ const ExplanationReports = () => {
 
   const handleApprove = async (reportId) => {
     try {
-      await api.put(`/attendance-explanations/${reportId}/approve`);
+      const user = JSON.parse(localStorage.getItem('user'));
+      const approverId = user?.email || user?.name || 'Manager';
+      
+      await api.put(`/attendance-explanations/${reportId}/approve`, null, {
+        params: { approverId }
+      });
       message.success('Đã phê duyệt yêu cầu giải trình');
       fetchReports();
     } catch (error) {
@@ -155,7 +188,12 @@ const ExplanationReports = () => {
 
   const handleReject = async (reportId) => {
     try {
-      await api.put(`/attendance-explanations/${reportId}/reject`);
+      const user = JSON.parse(localStorage.getItem('user'));
+      const approverId = user?.email || user?.name || 'Manager';
+      
+      await api.put(`/attendance-explanations/${reportId}/reject`, null, {
+        params: { approverId }
+      });
       message.success('Đã từ chối yêu cầu giải trình');
       fetchReports();
     } catch (error) {
@@ -195,6 +233,16 @@ const ExplanationReports = () => {
     fetchReports();
   };
 
+  const handleViewDetails = (record) => {
+    setSelectedRecord(record);
+    setDetailModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setDetailModalVisible(false);
+    setSelectedRecord(null);
+  };
+
   const filteredReports = reports.filter(report => {
     const matchesSearch = !searchText || 
       report.submitterName?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -222,16 +270,14 @@ const ExplanationReports = () => {
       render: (date) => dayjs(date).format('DD/MM/YYYY'),
     },
     {
-      title: 'Lý do',
-      dataIndex: 'reason',
-      key: 'reason',
-      ellipsis: true,
-    },
-    {
       title: 'Ngày gửi',
       dataIndex: 'submittedAt',
       key: 'submittedAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+      render: (date) => {
+        if (!date) return 'Chưa có';
+        const parsedDate = dayjs(date);
+        return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY HH:mm') : 'Ngày không hợp lệ';
+      },
     },
     {
       title: 'Trạng thái',
@@ -286,7 +332,11 @@ const ExplanationReports = () => {
               </Popconfirm>
             </>
           )}
-          <Button size="small" icon={<EyeOutlined />}>
+          <Button 
+            size="small" 
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetails(record)}
+          >
             Xem
           </Button>
         </Space>
@@ -434,6 +484,53 @@ const ExplanationReports = () => {
           }}
         />
       </Card>
+
+      {/* Modal for viewing explanation details */}
+      <Modal
+        title="Chi tiết yêu cầu giải trình"
+        open={detailModalVisible}
+        onCancel={handleCloseModal}
+        footer={[
+          <Button key="close" onClick={handleCloseModal}>
+            Đóng
+          </Button>
+        ]}
+        width={600}
+      >
+        {selectedRecord && (
+          <div style={{ padding: '16px 0' }}>
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <Card size="small" title="Thông tin người gửi">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <div><strong>Tên:</strong> {selectedRecord.submitterName}</div>
+                    <div><strong>Phòng ban:</strong> {selectedRecord.department || 'Chưa có'}</div>
+                    <div><strong>Ngày vắng mặt:</strong> {dayjs(selectedRecord.absenceDate).format('DD/MM/YYYY')}</div>
+                    <div><strong>Ngày gửi:</strong> {
+                      selectedRecord.submittedAt ? 
+                        dayjs(selectedRecord.submittedAt).format('DD/MM/YYYY HH:mm') : 
+                        'Chưa có'
+                    }</div>
+                  </Space>
+                </Card>
+              </Col>
+              <Col span={24}>
+                <Card size="small" title="Lý do giải trình">
+                  <div style={{ 
+                    padding: '12px', 
+                    backgroundColor: '#f9f9f9', 
+                    borderRadius: '6px',
+                    minHeight: '80px',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {selectedRecord.reason || 'Không có lý do'}
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
