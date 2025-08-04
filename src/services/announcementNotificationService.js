@@ -14,7 +14,16 @@ export const announcementNotificationService = {
       // Handle both string and number role values
       const roleStr = String(role).toUpperCase();
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const endpoint = isTeacher ? '/announcements/teacher/unread-count' : '/announcements/student/unread-count';
+      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      
+      let endpoint;
+      if (isTeacher) {
+        endpoint = '/announcements/teacher/unread-count';
+      } else if (isAccountant) {
+        endpoint = '/announcements/accountant/unread-count';
+      } else {
+        endpoint = '/announcements/student/unread-count';
+      }
       
       console.log('AnnouncementNotificationService: Using endpoint:', endpoint);
       
@@ -54,7 +63,16 @@ export const announcementNotificationService = {
       // Handle both string and number role values
       const roleStr = String(role).toUpperCase();
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const endpoint = isTeacher ? `/announcements/teacher/recent-unread?limit=${limit}` : `/announcements/student/recent-unread?limit=${limit}`;
+      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      
+      let endpoint;
+      if (isTeacher) {
+        endpoint = `/announcements/teacher/recent-unread?limit=${limit}`;
+      } else if (isAccountant) {
+        endpoint = `/announcements/accountant/recent-unread?limit=${limit}`;
+      } else {
+        endpoint = `/announcements/student/recent-unread?limit=${limit}`;
+      }
       const response = await apiClient.get(endpoint);
       return response.data || [];
     } catch (error) {
@@ -70,7 +88,16 @@ export const announcementNotificationService = {
       // Handle both string and number role values
       const roleStr = String(role).toUpperCase();
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const endpoint = isTeacher ? '/announcements/teacher/mark-all-read' : '/announcements/student/mark-all-read';
+      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      
+      let endpoint;
+      if (isTeacher) {
+        endpoint = '/announcements/teacher/mark-all-read';
+      } else if (isAccountant) {
+        endpoint = '/announcements/accountant/mark-all-read';
+      } else {
+        endpoint = '/announcements/student/mark-all-read';
+      }
       const response = await apiClient.post(endpoint);
       return response.data;
     } catch (error) {
