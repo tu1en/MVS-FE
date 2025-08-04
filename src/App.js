@@ -7,6 +7,7 @@ import {
   Routes,
 } from "react-router-dom";
 import "./App.css";
+import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
 import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
@@ -46,10 +47,12 @@ import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
+import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
+
 import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 
@@ -100,8 +103,11 @@ import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
+
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollManagement from './pages/accountant/PayrollManagement';
+import AccountantAttendanceReports from './pages/accountant/AccountantAttendanceReports.jsx';
+import AccountantPayrollGeneration from './pages/accountant/AccountantPayrollGeneration.jsx';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -251,6 +257,8 @@ function App() {
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
+              <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
+
               <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
@@ -305,13 +313,32 @@ function App() {
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
+
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
               
               {/* Accountant Attendance Explanation Routes */}
-              <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><ExplanationReports /></ProtectedRoute>} />
-              <Route path="/accountant/explanation-status" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><ExplanationReports /></ProtectedRoute>} />
               <Route path="/accountant/attendance-history" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
+<Route 
+  path="/accountant/attendance-explanations" 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
+/>
+<Route 
+  path="/accountant/explanation-status" 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
+/>
+<Route 
+  path="/accountant/evidence-management" 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
+/>
+<Route 
+  path="/accountant/attendance-reports" 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAttendanceReports /></ProtectedRoute>} 
+/>
+<Route 
+  path="/accountant/payroll-generation" 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantPayrollGeneration /></ProtectedRoute>} 
+/>
 
               {/* Test Upload Page - Requires authentication */}
               <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />
