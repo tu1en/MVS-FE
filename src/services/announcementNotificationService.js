@@ -10,26 +10,30 @@ export const announcementNotificationService = {
       console.log('AnnouncementNotificationService: Getting unread count for role:', role, 'type:', typeof role);
       console.log('AnnouncementNotificationService: Token exists:', !!token);
       console.log('AnnouncementNotificationService: Token preview:', token ? token.substring(0, 20) + '...' : 'null');
-      
-      // Handle both string and number role values
+
       const roleStr = String(role).toUpperCase();
-      const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
-      
+
       let endpoint;
-      if (isTeacher) {
-        endpoint = '/announcements/teacher/unread-count';
-      } else if (isAccountant) {
-        endpoint = '/announcements/accountant/unread-count';
-      } else {
-        endpoint = '/announcements/student/unread-count';
+      switch (roleStr) {
+        case '2':
+        case 'TEACHER':
+          endpoint = '/announcements/teacher/unread-count';
+          break;
+        case '5':
+        case 'ACCOUNTANT':
+          endpoint = '/announcements/accountant/unread-count';
+          break;
+        case '4':
+        case 'ADMIN':
+          endpoint = '/announcements/admin/unread-count';
+          break;
+        default:
+          endpoint = '/announcements/student/unread-count';
       }
-      
+
       console.log('AnnouncementNotificationService: Using endpoint:', endpoint);
-      
+
       const response = await apiClient.get(endpoint);
-      console.log('AnnouncementNotificationService: Response status:', response.status);
-      console.log('AnnouncementNotificationService: Response headers:', response.headers);
       console.log('AnnouncementNotificationService: Unread count response:', response.data);
       console.log('=== End API Debug ===');
       return response.data || 0;
@@ -39,13 +43,11 @@ export const announcementNotificationService = {
       console.error('AnnouncementNotificationService: Error status:', error.response?.status);
       console.error('AnnouncementNotificationService: Error data:', error.response?.data);
       console.error('AnnouncementNotificationService: Error headers:', error.response?.headers);
-      console.error('AnnouncementNotificationService: Full error:', error);
       console.error('=== End API Error Debug ===');
       return 0;
     }
   },
 
-  // Mark announcement as read
   markAnnouncementAsRead: async (announcementId) => {
     try {
       const response = await apiClient.post(`/announcements/${announcementId}/mark-read`);
@@ -56,23 +58,29 @@ export const announcementNotificationService = {
     }
   },
 
-  // Get recent unread announcements for current user
   getRecentUnreadAnnouncements: async (limit = 5) => {
     try {
       const role = localStorage.getItem('role');
-      // Handle both string and number role values
       const roleStr = String(role).toUpperCase();
-      const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
-      
+
       let endpoint;
-      if (isTeacher) {
-        endpoint = `/announcements/teacher/recent-unread?limit=${limit}`;
-      } else if (isAccountant) {
-        endpoint = `/announcements/accountant/recent-unread?limit=${limit}`;
-      } else {
-        endpoint = `/announcements/student/recent-unread?limit=${limit}`;
+      switch (roleStr) {
+        case '2':
+        case 'TEACHER':
+          endpoint = `/announcements/teacher/recent-unread?limit=${limit}`;
+          break;
+        case '5':
+        case 'ACCOUNTANT':
+          endpoint = `/announcements/accountant/recent-unread?limit=${limit}`;
+          break;
+        case '4':
+        case 'ADMIN':
+          endpoint = `/announcements/admin/recent-unread?limit=${limit}`;
+          break;
+        default:
+          endpoint = `/announcements/student/recent-unread?limit=${limit}`;
       }
+
       const response = await apiClient.get(endpoint);
       return response.data || [];
     } catch (error) {
@@ -81,23 +89,29 @@ export const announcementNotificationService = {
     }
   },
 
-  // Mark all announcements as read for current user
   markAllAnnouncementsAsRead: async () => {
     try {
       const role = localStorage.getItem('role');
-      // Handle both string and number role values
       const roleStr = String(role).toUpperCase();
-      const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
-      const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
-      
+
       let endpoint;
-      if (isTeacher) {
-        endpoint = '/announcements/teacher/mark-all-read';
-      } else if (isAccountant) {
-        endpoint = '/announcements/accountant/mark-all-read';
-      } else {
-        endpoint = '/announcements/student/mark-all-read';
+      switch (roleStr) {
+        case '2':
+        case 'TEACHER':
+          endpoint = '/announcements/teacher/mark-all-read';
+          break;
+        case '5':
+        case 'ACCOUNTANT':
+          endpoint = '/announcements/accountant/mark-all-read';
+          break;
+        case '4':
+        case 'ADMIN':
+          endpoint = '/announcements/admin/mark-all-read';
+          break;
+        default:
+          endpoint = '/announcements/student/mark-all-read';
       }
+
       const response = await apiClient.post(endpoint);
       return response.data;
     } catch (error) {
