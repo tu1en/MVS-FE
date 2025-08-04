@@ -1,28 +1,20 @@
-import { signOut } from 'firebase/auth';
-import { useCallback, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../config/firebase';
-import { isUserLoggedIn, performLogout } from '../utils/authUtils';
+import { isUserLoggedIn } from '../utils/authUtils';
 
 /**
  * Custom hook để ngăn back navigation khi đã đăng nhập
- * @param {Function} onShowLogoutModal - Callback để hiển thị modal đăng xuất
+ * Thay vì hiển thị popup xác nhận đăng xuất, sẽ chuyển về dashboard chính
  */
-export const usePreventBackNavigation = (onShowLogoutModal) => {
+export const usePreventBackNavigation = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const location = useLocation();
   const { isLogin } = useSelector((state) => state.auth);
-
-  const handleLogout = useCallback(() => {
-    performLogout(dispatch, navigate, signOut, auth);
-  }, [dispatch, navigate]);
 
   useEffect(() => {
     const isLoggedIn = isUserLoggedIn() && isLogin;
     const isHomepage = location.pathname === '/';
-    const isGuest = !isLoggedIn;
 
     // Nếu đã đăng nhập và đang ở trang login, redirect về dashboard
     if (isLoggedIn && location.pathname === '/login') {
@@ -59,7 +51,7 @@ export const usePreventBackNavigation = (onShowLogoutModal) => {
     }
 
     // Nếu là guest ở trang chủ, cho phép back navigation bình thường
-    if (isGuest && isHomepage) {
+    if (!isLoggedIn && isHomepage) {
       return;
     }
 
@@ -72,9 +64,38 @@ export const usePreventBackNavigation = (onShowLogoutModal) => {
         if (isLoggedIn) {
           window.history.pushState(null, null, location.pathname);
           
-          // Hiển thị modal xác nhận thay vì alert
-          if (onShowLogoutModal) {
-            onShowLogoutModal(handleLogout);
+          // Thay vì hiển thị popup, chuyển về dashboard chính
+          const role = localStorage.getItem('role');
+          let dashboardPath = '/';
+          
+          switch (role) {
+            case 'ADMIN':
+            case '0':
+              dashboardPath = '/admin';
+              break;
+            case 'STUDENT':
+            case '1':
+              dashboardPath = '/student';
+              break;
+            case 'TEACHER':
+            case '2':
+              dashboardPath = '/teacher';
+              break;
+            case 'MANAGER':
+            case '3':
+              dashboardPath = '/manager';
+              break;
+            case 'ACCOUNTANT':
+            case '5':
+              dashboardPath = '/accountant';
+              break;
+            default:
+              dashboardPath = '/';
+          }
+          
+          // Chỉ chuyển về dashboard nếu không đang ở dashboard
+          if (location.pathname !== dashboardPath) {
+            navigate(dashboardPath, { replace: true });
           }
         }
       };
@@ -85,7 +106,7 @@ export const usePreventBackNavigation = (onShowLogoutModal) => {
         window.removeEventListener('popstate', handlePopState);
       };
     }
-  }, [isLogin, navigate, location.pathname, onShowLogoutModal, handleLogout]);
+  }, [navigate, location, isLogin]);
 
-  return { handleLogout };
+  return {};
 }; 
