@@ -98,6 +98,7 @@ import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 import ContractManagement from './pages/accountant/ContractManagement';
+import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -296,7 +297,7 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
-
+              <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
 

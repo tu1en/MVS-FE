@@ -98,13 +98,22 @@ const NotificationBell = () => {
     
     if (roleStr === '2' || roleStr === 'TEACHER') {
       rolePath = 'teacher';
+    } else if (roleStr === '5' || roleStr === 'ACCOUNTANT') {
+      rolePath = 'accountant';
     } else if (roleStr === '1' || roleStr === 'STUDENT') {
       rolePath = 'student';
     } else {
       // Check URL to determine role if localStorage is empty
       const isTeacherPage = window.location.href.includes('/teacher');
-      rolePath = isTeacherPage ? 'teacher' : 'student';
-      console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage);
+      const isAccountantPage = window.location.href.includes('/accountant');
+      if (isTeacherPage) {
+        rolePath = 'teacher';
+      } else if (isAccountantPage) {
+        rolePath = 'accountant';
+      } else {
+        rolePath = 'student';
+      }
+      console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage, 'isAccountantPage:', isAccountantPage);
     }
     
     console.log('NotificationBell: Determined rolePath:', rolePath);
