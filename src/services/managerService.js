@@ -219,7 +219,7 @@ export const managerService = {
    */
   async createAnnouncement(announcementData) {
     try {
-      const response = await apiClient.post('/manager/announcements', announcementData);
+      const response = await apiClient.post('/announcements', announcementData);
       return response.data;
     } catch (error) {
       console.error('Error creating announcement:', error);
@@ -233,7 +233,7 @@ export const managerService = {
    */
   async getAnnouncements() {
     try {
-      const response = await apiClient.get('/manager/announcements');
+      const response = await apiClient.get('/announcements');
       return response.data;
     } catch (error) {
       console.error('Error fetching announcements:', error);
@@ -249,7 +249,7 @@ export const managerService = {
    */
   async updateAnnouncement(announcementId, announcementData) {
     try {
-      const response = await apiClient.put(`/manager/announcements/${announcementId}`, announcementData);
+      const response = await apiClient.put(`/announcements/${announcementId}`, announcementData);
       return response.data;
     } catch (error) {
       console.error('Error updating announcement:', error);
@@ -264,7 +264,7 @@ export const managerService = {
    */
   async deleteAnnouncement(announcementId) {
     try {
-      await apiClient.delete(`/manager/announcements/${announcementId}`);
+      await apiClient.delete(`/announcements/${announcementId}`);
     } catch (error) {
       console.error('Error deleting announcement:', error);
       throw error;

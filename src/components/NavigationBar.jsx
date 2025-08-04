@@ -4,9 +4,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
-import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
-import { clearAuthData, isUserLoggedIn, performLogout } from '../utils/authUtils';
 import api from '../services/api'; // Added import for api
+import { syncFromLocalStorage } from '../store/slices/authSlice';
+import { isUserLoggedIn, performLogout } from '../utils/authUtils';
 
 /**
  * NavigationBar component that provides sidebar navigation based on user role
@@ -521,6 +521,12 @@ function NavigationBar() {
       category: "Tin tức",
       items: [
         { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    },
+    {
+      category: "Thông Báo",
+      items: [
+        { name: 'Thông Báo', path: '/accountant/announcements', icon: '📢' }
       ]
     },
     {

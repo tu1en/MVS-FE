@@ -204,6 +204,13 @@ const RecruitmentModal = ({ visible, onCancel }) => {
                   
                   console.log('✅ Valid CV file found:', file);
                   
+                  // Kiểm tra định dạng file
+                  const fileName = file.name.toLowerCase();
+                  if (!fileName.endsWith('.pdf')) {
+                    console.log('❌ Invalid file format:', fileName);
+                    return Promise.reject(new Error('Chỉ hỗ trợ file PDF !'));
+                  }
+                  
                   if (file.size > 10 * 1024 * 1024) {
                     console.log('❌ File too large:', file.size);
                     return Promise.reject(new Error('File CV không được lớn hơn 10MB!'));
@@ -216,7 +223,22 @@ const RecruitmentModal = ({ visible, onCancel }) => {
             ]}
           >
             <Upload
-              beforeUpload={() => false} // Prevent auto upload
+              beforeUpload={(file) => {
+                // Kiểm tra định dạng file
+                const fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.pdf')) {
+                  message.error('Chỉ hỗ trợ file PDF !');
+                  return Upload.LIST_IGNORE;
+                }
+                
+                // Kiểm tra kích thước file
+                if (file.size > 10 * 1024 * 1024) {
+                  message.error('File CV không được lớn hơn 10MB!');
+                  return Upload.LIST_IGNORE;
+                }
+                
+                return false; // Prevent auto upload
+              }}
               onChange={(info) => {
                 console.log('📁 Upload onChange called with info:', info);
                 console.log('📁 info.fileList:', info.fileList);
@@ -236,13 +258,13 @@ const RecruitmentModal = ({ visible, onCancel }) => {
                 }, 100);
               }}
               maxCount={1}
-              accept=".pdf,.doc,.docx"
+              accept=".pdf"
               listType="text"
             >
               <Button icon={<UploadOutlined />}>Chọn file CV</Button>
             </Upload>
             <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-              Hỗ trợ: PDF, DOC, DOCX (tối đa 10MB)
+              Hỗ trợ: PDF (tối đa 10MB)
             </div>
           </Form.Item>
 

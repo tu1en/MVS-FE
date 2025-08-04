@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
 import { performLogout } from '../utils/authUtils';
 import RegisterModal from './RegisterModal';
+import NotificationBell from './NotificationBell';
 
 /**
  * Header component for the application
@@ -97,12 +98,7 @@ function Header() {
         <div className="flex items-center space-x-4">
           {isLogin && (
             <>
-              <div className="relative">
-                <button className="p-2 text-primary hover:text-primary-dark">
-                  <span className="text-xl">🔔</span>
-                  <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-                </button>
-              </div>
+              <NotificationBell />
               
               {/* Settings Dropdown */}
               <div className="relative" ref={settingsMenuRef}>
