@@ -240,13 +240,7 @@ const TeacherLectures = () => {
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2}>Quản lý bài giảng</Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={handleCreateLecture}
-        >
-          Tạo bài giảng mới
-        </Button>
+        
       </div>
 
       <Card>

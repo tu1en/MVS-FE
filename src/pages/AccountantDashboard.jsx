@@ -4,7 +4,6 @@ import {
   DollarOutlined,
   FileTextOutlined,
   StopOutlined,
-  TeamOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
@@ -187,58 +186,10 @@ const AccountantDashboard = () => {
             <div>Tạo bảng lương dựa trên điểm danh và giờ dạy</div>
           </Card>
         </Col>
-      </Row>
-
-      <Divider />
-
-      {/* Thống kê tài chính */}
-      <Title level={3}>Thống kê Tài chính</Title>
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Tổng Hóa Đơn" value={dashboardData.financialStats.totalInvoices ?? 0} prefix={<FileTextOutlined />} valueStyle={{ color: '#3f8600' }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Đã Thanh Toán" value={dashboardData.financialStats.paidInvoices ?? 0} prefix={<DollarOutlined />} valueStyle={{ color: '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Chờ Xử Lý" value={dashboardData.financialStats.pendingPayments ?? 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#faad14' }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Quá Hạn" value={dashboardData.financialStats.overduePayments ?? 0} prefix={<TeamOutlined />} valueStyle={{ color: '#ff4d4f' }} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable title="Quản Lý Hóa Đơn" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/invoices')}>
-            <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Quản lý hóa đơn và thanh toán</div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable title="Theo Dõi Thanh Toán" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/payments')}>
-            <DollarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Theo dõi lịch sử thanh toán</div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable title="Báo Cáo Tài Chính" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/reports')}>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Báo Cáo Chấm Công" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-reports')}>
             <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Tạo báo cáo tài chính</div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable title="Tài Khoản Học Sinh" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/students')}>
-            <TeamOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Quản lý tài khoản học sinh</div>
+            <div>Báo cáo chấm công và thống kê</div>
           </Card>
         </Col>
       </Row>

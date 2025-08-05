@@ -106,8 +106,14 @@ import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollManagement from './pages/accountant/PayrollManagement';
-import AccountantAttendanceReports from './pages/accountant/AccountantAttendanceReports.jsx';
 import AccountantPayrollGeneration from './pages/accountant/AccountantPayrollGeneration.jsx';
+
+// Public Course Pages
+import PublicCourseDashboard from './pages/public/PublicCourseDashboard.jsx';
+import PublicCourseDetail from './pages/public/PublicCourseDetail.jsx';
+import DebugPublicCourses from './pages/public/DebugPublicCourses.jsx';
+import EnrollmentRequestsManager from './pages/manager/EnrollmentRequestsManager.jsx';
+
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -234,6 +240,12 @@ function App() {
               <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
               <Route path="/" element={<PublicRoute><RootRedirect /></PublicRoute>} />
 
+              {/* Public Course Routes - No authentication required */}
+              <Route path="/public/courses" element={<PublicRoute><PublicCourseDashboard /></PublicRoute>} />
+              <Route path="/public/courses/:id" element={<PublicRoute><PublicCourseDetail /></PublicRoute>} />
+              <Route path="/courses" element={<PublicRoute><PublicCourseDashboard /></PublicRoute>} />
+              <Route path="/debug/courses" element={<PublicRoute><DebugPublicCourses /></PublicRoute>} />
+
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherDashboard /></ProtectedRoute>} />
               <Route path="/teacher/courses" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherCoursesSimple /></ProtectedRoute>} />
@@ -308,6 +320,7 @@ function App() {
               <Route path="/request-list" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RequestList /></ProtectedRoute>} />
               <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
               <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
+              <Route path="/manager/enrollment-requests" element={<ProtectedRoute allowedRoles={["MANAGER"]}><EnrollmentRequestsManager /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
@@ -333,12 +346,13 @@ function App() {
 />
 <Route 
   path="/accountant/attendance-reports" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAttendanceReports /></ProtectedRoute>} 
+  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><DailyShiftAttendance /></ProtectedRoute>} 
 />
 <Route 
   path="/accountant/payroll-generation" 
   element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantPayrollGeneration /></ProtectedRoute>} 
 />
+
 
               {/* Test Upload Page - Requires authentication */}
               <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />

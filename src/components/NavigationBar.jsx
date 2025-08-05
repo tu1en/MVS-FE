@@ -315,11 +315,11 @@ function NavigationBar() {
           path: '/teacher/assignments', 
           icon: '📝'
         },
-        {
-          name: 'Quản Lý Bài Giảng', 
-          path: '/teacher/lectures', 
-          icon: '📔'
-        },
+        // {
+        //   name: 'Quản Lý Bài Giảng', 
+        //   path: '/teacher/lectures', 
+        //   icon: '📔'
+        // },
         {
           name: 'Lịch Sử Giảng Dạy', 
           path: '/teacher/teaching-history', 

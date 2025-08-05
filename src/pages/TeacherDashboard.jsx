@@ -1,10 +1,10 @@
-import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, FileTextOutlined, MessageOutlined, TeamOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, FileTextOutlined, MessageOutlined, TeamOutlined } from '@ant-design/icons';
 import { App, Card, Col, Row, Spin, Statistic } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import api from '../services/api';
 import { useBackButton } from '../hooks/useBackButton';
+import api from '../services/api';
 
 export default function TeacherDashboard() {
   const { message } = App.useApp();
@@ -217,7 +217,7 @@ export default function TeacherDashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={8}>
+        {/* <Col xs={24} sm={12} lg={8}>
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
@@ -231,7 +231,7 @@ export default function TeacherDashboard() {
               </p>
             </div>
           </Card>
-        </Col>
+        </Col> */}
         
         <Col xs={24} sm={12} lg={8}>
           <Card

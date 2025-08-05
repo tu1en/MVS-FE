@@ -76,10 +76,19 @@ function Header() {
         </button>
       
         {/* Logo and App Name */}
-        <div className="flex items-center">
+        <div className="flex items-center space-x-6">
           <Link to="/" className="text-xl font-bold text-primary hover:text-primary-dark transition-colors">
             Minh Việt Education
           </Link>
+          {/* Navigation Links */}
+          <nav className="hidden md:flex items-center space-x-4">
+            <Link 
+              to="/courses" 
+              className="text-gray-700 hover:text-primary font-medium transition-colors"
+            >
+              Browse Courses
+            </Link>
+          </nav>
         </div>
         
         {/* Search Bar */}
