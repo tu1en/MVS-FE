@@ -1,5 +1,5 @@
-import { Button, Modal, Table, message } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { Modal, Table, message } from 'antd';
+import { useEffect, useState } from 'react';
 import ClassroomService from '../../services/classroomService';
 
 const StudentListTab = ({ classroomId }) => {
@@ -46,15 +46,7 @@ const StudentListTab = ({ classroomId }) => {
     const columns = [
         { title: 'Tên sinh viên', dataIndex: 'name', key: 'name' },
         { title: 'Email', dataIndex: 'email', key: 'email' },
-        {
-            title: 'Hành động',
-            key: 'action',
-            render: (_, record) => (
-                <Button danger onClick={() => handleRemove(record.id)}>
-                    Xóa khỏi lớp
-                </Button>
-            ),
-        },
+  ,
     ];
 
     return (

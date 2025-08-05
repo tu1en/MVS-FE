@@ -68,6 +68,26 @@ const API_CONFIG = {
 
     // Classroom by teacher endpoints
     CLASSROOMS_BY_TEACHER: () => `/classrooms/current-teacher`,
+
+    // Course Template endpoints
+    COURSE_TEMPLATES: "/course-templates",
+    COURSE_TEMPLATES_BY_ID: (id) => `/course-templates/${id}`,
+    COURSE_TEMPLATES_IMPORT: "/course-templates/import",
+    COURSE_TEMPLATES_EXPORT: (id) => `/course-templates/${id}/export`,
+    COURSE_TEMPLATES_SEARCH: "/course-templates/search",
+
+    // Class Management endpoints
+    CLASSES_CREATE: "/classes",
+    CLASSES_CLONE: (id) => `/classes/${id}/clone`,
+    CLASSES_SCHEDULE_CONFLICTS: "/classes/check-schedule-conflicts",
+    CLASSES_ROOM_AVAILABILITY: "/classes/room-availability",
+
+    // Rooms endpoints
+    ROOMS: "/rooms",
+    ROOMS_BY_ID: (id) => `/rooms/${id}`,
+
+    // Teachers endpoints (for class assignment)
+    TEACHERS: "/users/teachers",
   },
 
   // Pagination defaults
