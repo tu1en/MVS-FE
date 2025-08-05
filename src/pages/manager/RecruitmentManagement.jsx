@@ -24,6 +24,9 @@ const RecruitmentManagement = () => {
   const [showCvModal, setShowCvModal] = useState(false);
   const [currentCvUrl, setCurrentCvUrl] = useState('');
   const [currentApplicantName, setCurrentApplicantName] = useState('');
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [editingInterview, setEditingInterview] = useState(null);
+  const [offerForm] = Form.useForm();
 
   useEffect(() => {
     fetchPlans();
@@ -38,7 +41,6 @@ const RecruitmentManagement = () => {
   useEffect(() => {
     if (selectedPlan && positions.length > 0) {
       fetchApplications();
-      fetchApprovedApps();
     }
   }, [selectedPlan, positions]);
 
@@ -48,6 +50,16 @@ const RecruitmentManagement = () => {
       fetchPendingInterviews();
     }
   }, [selectedPlan, applications]);
+
+  useEffect(() => {
+    if (activeTab === 'schedule') {
+      fetchApprovedApps();
+      fetchInterviews();
+    }
+    if (activeTab === 'pending') {
+      fetchPendingInterviews();
+    }
+  }, [activeTab]);
 
   const fetchPlans = async () => {
     try {
@@ -83,55 +95,32 @@ const RecruitmentManagement = () => {
   };
 
   const fetchApprovedApps = async () => {
-    if (!selectedPlan) return;
     try {
       const res = await axiosInstance.get('/recruitment-applications/approved');
-      // Lọc theo job positions thuộc recruitment plan
-      const filtered = res.data.filter(app => 
-        positions.some(pos => pos.id === app.jobPositionId)
-      );
-      setApprovedApps(filtered);
+      // Ngoại lệ: Tại tab "Lên lịch", fetch tất cả đơn ứng tuyển đã duyệt từ tất cả kế hoạch
+      setApprovedApps(res.data);
     } catch (err) {
       message.error('Không thể tải danh sách ứng viên đã duyệt!');
     }
   };
 
   const fetchInterviews = async () => {
-    if (!selectedPlan) return;
     try {
       const res = await axiosInstance.get('/interview-schedules');
-      // Lọc theo applications thuộc recruitment plan
-      const filtered = res.data.filter(interview => 
-        applications.some(app => app.id === interview.applicationId)
-      );
-      setInterviews(filtered);
+      // Ngoại lệ: Tại tab "Lên lịch", fetch tất cả lịch phỏng vấn
+      setInterviews(res.data);
     } catch (err) {
       message.error('Không thể tải danh sách lịch phỏng vấn!');
     }
   };
 
   const fetchPendingInterviews = async () => {
-    if (!selectedPlan) return;
     try {
       const res = await axiosInstance.get('/interview-schedules/pending');
       console.log('All pending interviews from API:', res.data);
       
-      // Lọc theo applications thuộc recruitment plan
-      const filtered = res.data.filter(interview => {
-        // Tìm application tương ứng trong tất cả applications
-        const application = applications.find(app => app.id === interview.applicationId);
-        if (application) {
-          // Kiểm tra xem application có thuộc job position của recruitment plan không
-          const belongsToPlan = positions.some(pos => pos.id === application.jobPositionId);
-          console.log(`Interview ${interview.id} for application ${interview.applicationId}: belongsToPlan = ${belongsToPlan}`);
-          console.log(`Interview ${interview.id} startTime:`, interview.startTime, 'Type:', typeof interview.startTime);
-          return belongsToPlan;
-        }
-        console.log(`Interview ${interview.id}: no application found`);
-        return false;
-      });
-      console.log('Pending interviews filtered:', filtered);
-      setPendingInterviews(filtered);
+      // Ngoại lệ: Tại tab "Phỏng vấn chờ", fetch tất cả lịch phỏng vấn
+      setPendingInterviews(res.data);
     } catch (err) {
       console.error('Error fetching pending interviews:', err);
       message.error('Không thể tải danh sách phỏng vấn chờ!');
@@ -155,7 +144,8 @@ const RecruitmentManagement = () => {
       setSelectedPlan(null);
     }
     
-    if (selectedPlan || key === 'plans') {
+    // Cho phép truy cập trực tiếp vào "Lên lịch" và "Phỏng vấn chờ" vì đã hiện tất cả
+    if (selectedPlan || key === 'plans' || key === 'schedule' || key === 'pending') {
       setActiveTab(key);
     } else {
       message.warning('Vui lòng chọn một kế hoạch tuyển dụng trước!');
@@ -297,6 +287,24 @@ const RecruitmentManagement = () => {
     }
   };
 
+  const handleOfferUpdate = async (id, offer) => {
+    try {
+      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer });
+      message.success('Cập nhật offer thành công!');
+    } catch (err) {
+      message.error('Không thể cập nhật offer!');
+    }
+  };
+
+  const handleEvaluationUpdate = async (id, evaluation) => {
+    try {
+      await axiosInstance.put(`/interview-schedules/${id}/evaluation`, { evaluation });
+      message.success('Cập nhật đánh giá thành công!');
+    } catch (err) {
+      message.error('Không thể cập nhật đánh giá!');
+    }
+  };
+
   const handleDeleteInterview = async (id) => {
     try {
       await axiosInstance.delete(`/interview-schedules/${id}`);
@@ -317,6 +325,44 @@ const RecruitmentManagement = () => {
     setCurrentCvUrl(cvUrl);
     setCurrentApplicantName(applicantName);
     setShowCvModal(true);
+  };
+
+  const handleResendOffer = async (interviewId, offer) => {
+    if (!offer || offer.trim() === '') {
+      message.warning('Vui lòng nhập offer trước khi gửi lại!');
+      return;
+    }
+    try {
+      await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
+        offer: offer
+      });
+      message.success('Đã gửi offer email thành công!');
+    } catch (err) {
+      console.error('Error resending offer:', err);
+      message.error('Không thể gửi offer email!');
+    }
+  };
+
+  const openOfferModal = (record) => {
+    setEditingInterview(record);
+    offerForm.setFieldsValue({
+      offer: record.offer || ''
+    });
+    setShowOfferModal(true);
+  };
+
+  const handleOfferModalSubmit = async (values) => {
+    try {
+      await axiosInstance.put(`/interview-schedules/${editingInterview.id}/offer`, {
+        offer: values.offer
+      });
+      message.success('Cập nhật offer thành công!');
+      setShowOfferModal(false);
+      fetchPendingInterviews(); // Refresh data
+    } catch (err) {
+      console.error('Error updating offer:', err);
+      message.error('Không thể cập nhật offer!');
+    }
   };
 
   const openPlans = plans.filter(p => p.status === 'OPEN');
@@ -343,7 +389,7 @@ const RecruitmentManagement = () => {
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Vị trí', dataIndex: 'jobPosition', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -402,7 +448,7 @@ const RecruitmentManagement = () => {
   const scheduleColumns = [
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Vị trí', dataIndex: 'jobPosition', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Trạng thái lịch',
       dataIndex: 'hasSchedule',
@@ -501,6 +547,38 @@ const RecruitmentManagement = () => {
       }
     },
     {
+      title: 'Offer',
+      dataIndex: 'offer',
+      render: (text, record) => (
+        <div>
+          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
+            {text || 'Chưa có offer'}
+          </div>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => openOfferModal(record)}
+            className="vietnamese-text"
+          >
+            Chỉnh sửa Offer
+          </Button>
+        </div>
+      )
+    },
+    {
+      title: 'Đánh giá',
+      dataIndex: 'evaluation',
+      render: (text, record) => (
+        <Input.TextArea
+          defaultValue={text || ''}
+          placeholder="Nhập đánh giá..."
+          className="vietnamese-text"
+          onBlur={(e) => handleEvaluationUpdate(record.id, e.target.value)}
+          style={{ minHeight: '60px' }}
+        />
+      )
+    },
+    {
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
@@ -533,9 +611,15 @@ const RecruitmentManagement = () => {
           >
             ✗ Trượt
           </Button>
-          <Popconfirm title="Xóa lịch này?" onConfirm={() => handleDeleteInterview(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger className="vietnamese-text">Xóa</Button>
-          </Popconfirm>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => handleResendOffer(record.id, record.offer)}
+            className="vietnamese-text"
+            style={{ backgroundColor: '#1890ff', borderColor: '#1890ff' }}
+          >
+            Offer Lại
+          </Button>
         </div>
       )
     }
@@ -584,11 +668,11 @@ const RecruitmentManagement = () => {
           <Table columns={applicationColumns} dataSource={applications} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Lên lịch" key="schedule" disabled={!selectedPlan}>
+        <Tabs.TabPane tab="Lên lịch" key="schedule">
           <Table columns={scheduleColumns} dataSource={approvedApps} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Phỏng vấn chờ" key="pending" disabled={!selectedPlan}>
+        <Tabs.TabPane tab="Phỏng vấn chờ" key="pending">
           <Table columns={pendingInterviewColumns} dataSource={pendingInterviews} rowKey="id" />
         </Tabs.TabPane>
       </Tabs>
@@ -688,6 +772,37 @@ const RecruitmentManagement = () => {
             />
           )}
         </div>
+      </Modal>
+
+      {/* Modal chỉnh sửa Offer */}
+      <Modal
+        title="Chỉnh sửa Offer"
+        open={showOfferModal}
+        onCancel={() => setShowOfferModal(false)}
+        footer={null}
+        className="form-vietnamese"
+      >
+        <Form layout="vertical" form={offerForm} onFinish={handleOfferModalSubmit} className="form-vietnamese">
+          <Form.Item 
+            name="offer" 
+            label="Nội dung Offer"
+            rules={[{ required: false }]} // Cho phép null
+          >
+            <Input.TextArea 
+              placeholder="Nhập nội dung offer (có thể để trống)..."
+              rows={6}
+              className="vietnamese-text"
+            />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex justify-end space-x-2">
+              <Button onClick={() => setShowOfferModal(false)} className="vietnamese-text">Hủy</Button>
+              <Button type="primary" htmlType="submit" className="vietnamese-text">
+                Cập nhật
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
