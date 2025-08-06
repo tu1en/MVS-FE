@@ -162,6 +162,168 @@ const attendanceService = {
       return [];
     }
   },
+
+  // ==== MANAGER ATTENDANCE VERIFICATION METHODS ====
+
+  /**
+   * Check-in with full verification for Manager/Accountant
+   * @param {Object} verificationData - Verification data including location, device info, etc.
+   * @returns {Promise<Object>} Check-in result
+   */
+  checkIn: async (verificationData) => {
+    try {
+      const payload = {
+        latitude: verificationData.latitude,
+        longitude: verificationData.longitude,
+        accuracy: verificationData.accuracy,
+        deviceFingerprint: verificationData.deviceFingerprint,
+        publicIp: verificationData.publicIp,
+        userAgent: verificationData.userAgent || navigator.userAgent,
+        notes: verificationData.notes || ''
+      };
+
+      const response = await apiClient.post(`${API_URL}/verification/check-in`, payload);
+      return response.data;
+    } catch (error) {
+      console.error('Check-in error:', error);
+      throw new Error(error.response?.data?.message || 'Không thể check-in');
+    }
+  },
+
+  /**
+   * Check-out with verification for Manager/Accountant
+   * @param {Object} verificationData - Verification data
+   * @returns {Promise<Object>} Check-out result
+   */
+  checkOut: async (verificationData) => {
+    try {
+      const payload = {
+        latitude: verificationData.latitude,
+        longitude: verificationData.longitude,
+        accuracy: verificationData.accuracy,
+        deviceFingerprint: verificationData.deviceFingerprint,
+        publicIp: verificationData.publicIp,
+        userAgent: verificationData.userAgent || navigator.userAgent,
+        notes: verificationData.notes || ''
+      };
+
+      const response = await apiClient.post(`${API_URL}/verification/check-out`, payload);
+      return response.data;
+    } catch (error) {
+      console.error('Check-out error:', error);
+      throw new Error(error.response?.data?.message || 'Không thể check-out');
+    }
+  },
+
+  /**
+   * Get today's attendance status for current user
+   * @returns {Promise<Object>} Today's status
+   */
+  getTodayStatus: async () => {
+    try {
+      const response = await apiClient.get(`${API_URL}/verification/today-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Get today status error:', error);
+      // Return mock data if API not implemented yet
+      return {
+        hasCheckedIn: false,
+        hasCheckedOut: false,
+        checkInTime: null,
+        checkOutTime: null,
+        timeline: []
+      };
+    }
+  },
+
+  /**
+   * Get weekly statistics for current user
+   * @returns {Promise<Object>} Weekly stats
+   */
+  getWeeklyStats: async () => {
+    try {
+      const response = await apiClient.get(`${API_URL}/verification/weekly-stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Get weekly stats error:', error);
+      // Return mock data if API not implemented yet
+      return {
+        totalHours: 0,
+        daysWorked: 0,
+        lateCount: 0,
+        remainingLeaves: 12
+      };
+    }
+  },
+
+  /**
+   * Get company locations for verification
+   * @returns {Promise<Array>} List of company locations
+   */
+  getCompanyLocations: async () => {
+    try {
+      const response = await apiClient.get(`${API_URL}/verification/locations`);
+      return response.data;
+    } catch (error) {
+      console.error('Get company locations error:', error);
+      // Return empty array if API not implemented yet
+      return [];
+    }
+  },
+
+  /**
+   * Get attendance history with date range
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)
+   * @returns {Promise<Array>} Attendance history
+   */
+  getAttendanceHistory: async (startDate, endDate) => {
+    try {
+      const response = await apiClient.get(`${API_URL}/verification/history`, {
+        params: { startDate, endDate }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get attendance history error:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Verify location only (for testing)
+   * @param {number} latitude - Latitude
+   * @param {number} longitude - Longitude
+   * @returns {Promise<Object>} Verification result
+   */
+  verifyLocation: async (latitude, longitude) => {
+    try {
+      const response = await apiClient.post(`${API_URL}/verification/verify-location`, {
+        latitude,
+        longitude
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Verify location error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get verification logs for a specific date
+   * @param {string} date - Date (YYYY-MM-DD)
+   * @returns {Promise<Array>} Verification logs
+   */
+  getVerificationLogs: async (date) => {
+    try {
+      const response = await apiClient.get(`${API_URL}/verification/logs`, {
+        params: { date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get verification logs error:', error);
+      return [];
+    }
+  },
 };
 
 // Export both as default and named export
