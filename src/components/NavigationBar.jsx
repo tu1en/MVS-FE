@@ -203,11 +203,334 @@ function NavigationBar() {
     },
   ];
 
+<<<<<<< Updated upstream
   // Toggle sidebar collapsed state
   const ToggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
     // Dispatch custom event for other components to listen to
     window.dispatchEvent(new CustomEvent('sidebarToggled', { detail: { isCollapsed: !isCollapsed }}));
+=======
+  // Define navigation items for STUDENT - Updated with new routes
+  const studentNavItems = [
+    {
+      category: "Chính",
+      items: [        
+        { 
+          name: 'Dashboard', 
+          path: '/student', 
+          icon: '🏠'
+        }
+      ]
+    },
+    {
+      category: "Học tập",
+      items: [
+        { 
+          name: 'Khóa học của tôi', 
+          path: '/student/courses', 
+          icon: '📚'
+        },
+        { 
+          name: 'Lịch trình', 
+          path: '/student/schedule', 
+          icon: '📅'
+        },
+        { 
+          name: 'Bài tập', 
+          path: '/student/assignments', 
+          icon: '📝'
+        },        
+        { 
+          name: 'Kết quả học tập', 
+          path: '/student/grades-attendance', 
+          icon: '📊'
+        },
+        { 
+          name: 'Tài liệu', 
+          path: '/student/materials', 
+          icon: '📄'
+        },
+        { 
+          name: 'Thông báo', 
+          path: '/student/announcements', 
+          icon: '📢'
+        }
+      ]
+    },
+    {
+      category: "Giao tiếp",
+      items: [
+        { 
+          name: 'Tin Nhắn', 
+          path: '/student/messages', 
+          icon: '💬'
+        }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        {
+          name: 'Tài Khoản',
+          path: '/student/account',
+          icon: '👤'
+        },
+        { 
+          name: 'Thành Tựu', 
+          path: '/student/accomplishments', 
+          icon: '🏆'
+        }
+      ]
+    }
+  ];
+
+  // Define navigation items for TEACHER
+  const teacherNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { 
+          name: 'Trang Chủ/Dashboard', 
+          path: '/teacher', 
+          icon: '🏠'
+        }
+      ]
+    },
+    {
+      category: "Giảng dạy",
+      items: [
+        { 
+          name: 'Quản Lý Khóa Học', 
+          path: '/teacher/courses', 
+          icon: '📚'
+        },
+        { 
+          name: 'Lịch Dạy', 
+          path: '/teacher/schedule', 
+          icon: '📅'
+        },
+        { 
+          name: 'Quản Lý Bài Tập', 
+          path: '/teacher/assignments', 
+          icon: '📝'
+        },
+        {
+          name: 'Quản Lý Bài Giảng', 
+          path: '/teacher/lectures', 
+          icon: '📔'
+        },
+        {
+          name: 'Lịch Sử Giảng Dạy', 
+          path: '/teacher/teaching-history', 
+          icon: '🕒'
+        }
+      ]
+    },
+    {
+      category: "Giao tiếp",
+      items: [
+        { 
+          name: 'Hỏi Đáp & Tin Nhắn', 
+          path: '/teacher/messages', 
+          icon: '💬'
+        },
+        { 
+          name: 'Thông Báo', 
+          path: '/teacher/announcements', 
+          icon: '📢'
+        },
+        { 
+          name: 'Blog', 
+          path: '/blog', 
+          icon: '📝'
+        }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        {
+          name: 'Tài Khoản',
+          path: '/teacher/account',
+          icon: '👤'
+        },
+        hasOfficialContract && {
+          name: 'Quản Lý Nghỉ Phép',
+          path: '/teacher/leave-requests',
+          icon: '🏖️'
+        }
+      ].filter(Boolean)
+    }
+  ];
+
+  // Define navigation items for MANAGER
+  const managerNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { 
+          name: 'Trang Chủ/Dashboard', 
+          path: '/manager', 
+          icon: '🏠'
+        }
+      ]
+    },
+    {
+      category: "Quản lý",
+      items: [
+        { 
+          name: 'Quản Lý Yêu Cầu', 
+          path: '/request-list',
+          icon: '📋'
+        },
+        { 
+          name: 'Quản Lý Nghỉ Phép', 
+          path: '/manager/leave-management',
+          icon: '🏖️'
+        },
+        { 
+          name: 'Quản Lý Giao Tiếp', 
+          path: '/manager/communications', 
+          icon: '📢'
+        },
+        { 
+          name: 'Quản Lý Tuyển Dụng',
+          path: '/manager/recruitment',
+          icon: '🧑‍💼'
+        },
+        { 
+          name: 'Báo cáo', 
+          path: '/manager/reports', 
+          icon: '📊'
+        }
+      ]
+    },
+    {
+      category: "Giao tiếp",
+      items: [
+        { 
+          name: 'Tin Nhắn', 
+          path: '/manager/messages', 
+          icon: '💬'
+        }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        {
+          name: 'Tài Khoản',
+          path: '/manager/account',
+          icon: '👤'
+        }
+      ]
+    }
+  ];
+
+  // Define navigation items for ADMIN (includes all Manager options plus system admin options)
+  const adminNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { 
+          name: 'Trang Chủ/Dashboard', 
+          path: '/admin', 
+          icon: '🏠'
+        }
+      ]
+    },
+    {
+      category: "Quản trị hệ thống",
+      items: [
+        { 
+          name: 'Quản Lý Người Dùng', 
+          path: '/admin/users', 
+          icon: '👥'
+        },
+        { 
+          name: 'Quản Lý Khóa Học', 
+          path: '/admin/courses', 
+          icon: '📚'
+        },
+        { 
+          name: 'Cấu Hình Hệ Thống', 
+          path: '/admin/settings', 
+          icon: '⚙️'
+        }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        {
+          name: 'Tài Khoản',
+          path: '/admin/account',
+          icon: '👤'
+        }
+      ]
+    }
+  ];
+
+  // Define navigation items for ACCOUNTANT
+  const accountantNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { name: 'Trang Chủ/Dashboard', path: '/accountant', icon: '🏠' }
+      ]
+    },
+    {
+      category: "Nghỉ phép",
+      items: [
+        { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' }
+      ]
+    }
+  ];
+
+  // Define navigation items for PARENT
+  const parentNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { name: 'Trang Chủ/Dashboard', path: '/parent', icon: '🏠' }
+      ]
+    },
+    {
+      category: "Con Cái",
+      items: [
+        { name: 'Quản Lý Con Cái', path: '/parent/children', icon: '👨‍👩‍👧‍👦' },
+        { name: 'Kết Quả Học Tập', path: '/parent/academic-performance', icon: '📊' },
+        { name: 'Điểm Danh', path: '/parent/attendance', icon: '📅' }
+      ]
+    },
+    {
+      category: "Thông Tin",
+      items: [
+        { name: 'Thông Báo', path: '/parent/notifications', icon: '📢' },
+        { name: 'Lịch Học', path: '/parent/schedule', icon: '📚' },
+        { name: 'Tin Nhắn', path: '/parent/messages', icon: '💬' }
+      ]
+    }
+  ];
+
+  const getNavItems = () => {
+    switch(userRole) {
+      case ROLE.STUDENT:
+        return studentNavItems;
+      case ROLE.TEACHER:
+        return teacherNavItems;
+      case ROLE.ADMIN:
+        return adminNavItems;
+      case ROLE.MANAGER:
+        return managerNavItems;
+      case ROLE.ACCOUNTANT:
+        return accountantNavItems;
+      case ROLE.PARENT:
+        return parentNavItems;
+      default:
+        return guestNavItems;
+    }
+>>>>>>> Stashed changes
   };
 
   // Helper function to check if user has a specific role
