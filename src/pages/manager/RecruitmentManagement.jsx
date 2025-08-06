@@ -27,6 +27,7 @@ const RecruitmentManagement = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
+  const [offers, setOffers] = useState([]);
 
   useEffect(() => {
     fetchPlans();
@@ -58,6 +59,9 @@ const RecruitmentManagement = () => {
     }
     if (activeTab === 'pending') {
       fetchPendingInterviews();
+    }
+    if (activeTab === 'offers') {
+      fetchOffers();
     }
   }, [activeTab]);
 
@@ -127,6 +131,17 @@ const RecruitmentManagement = () => {
     }
   };
 
+  const fetchOffers = async () => {
+    try {
+      const res = await axiosInstance.get('/interview-schedules/accepted');
+      console.log('All offers from API:', res.data);
+      setOffers(res.data);
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+      message.error('Không thể tải danh sách offer!');
+    }
+  };
+
   const handlePlanSelect = (plan) => {
     setSelectedPlan(plan);
     setActiveTab('positions');
@@ -144,8 +159,8 @@ const RecruitmentManagement = () => {
       setSelectedPlan(null);
     }
     
-    // Cho phép truy cập trực tiếp vào "Lên lịch" và "Phỏng vấn chờ" vì đã hiện tất cả
-    if (selectedPlan || key === 'plans' || key === 'schedule' || key === 'pending') {
+    // Cho phép truy cập trực tiếp vào "Lên lịch", "Phỏng vấn chờ" và "Quản Lý Offer" vì đã hiện tất cả
+    if (selectedPlan || key === 'plans' || key === 'schedule' || key === 'pending' || key === 'offers') {
       setActiveTab(key);
     } else {
       message.warning('Vui lòng chọn một kế hoạch tuyển dụng trước!');
@@ -287,6 +302,10 @@ const RecruitmentManagement = () => {
       await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
       message.success('Cập nhật kết quả phỏng vấn thành công!');
       fetchPendingInterviews();
+      // Nếu status là ACCEPTED thì refresh danh sách offer
+      if (status === 'ACCEPTED') {
+        fetchOffers();
+      }
     } catch (err) {
       message.error('Không thể cập nhật kết quả phỏng vấn!');
     }
@@ -363,10 +382,20 @@ const RecruitmentManagement = () => {
       });
       message.success('Cập nhật offer thành công!');
       setShowOfferModal(false);
-      fetchPendingInterviews(); // Refresh data
+      fetchOffers(); // Refresh data
     } catch (err) {
       console.error('Error updating offer:', err);
       message.error('Không thể cập nhật offer!');
+    }
+  };
+
+  const handleApproveCandidate = async (id) => {
+    try {
+      await axiosInstance.put(`/interview-schedules/${id}/result`, { status: 'APPROVED', result: 'Đã duyệt ứng viên' });
+      message.success('Đã duyệt ứng viên thành công!');
+      fetchOffers();
+    } catch (err) {
+      message.error('Không thể duyệt ứng viên!');
     }
   };
 
@@ -441,9 +470,6 @@ const RecruitmentManagement = () => {
               </Button>
             </>
           )}
-          <Popconfirm title="Xóa đơn này?" onConfirm={() => handleDeleteApplication(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger className="vietnamese-text">Xóa</Button>
-          </Popconfirm>
         </div>
       )
     }
@@ -552,25 +578,6 @@ const RecruitmentManagement = () => {
       }
     },
     {
-      title: 'Offer',
-      dataIndex: 'offer',
-      render: (text, record) => (
-        <div>
-          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
-            {text || 'Chưa có offer'}
-          </div>
-          <Button 
-            size="small" 
-            type="primary"
-            onClick={() => openOfferModal(record)}
-            className="vietnamese-text"
-          >
-            Chỉnh sửa Offer
-          </Button>
-        </div>
-      )
-    },
-    {
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
@@ -616,6 +623,61 @@ const RecruitmentManagement = () => {
           >
             ✗ Trượt
           </Button>
+        </div>
+      )
+    }
+  ];
+
+  const offerColumns = [
+    { title: 'Họ tên', dataIndex: 'applicantName', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Ngày phỏng vấn', 
+      dataIndex: 'startTime', 
+      render: (date, record) => {
+        try {
+          const startTime = dayjs(date);
+          const endTime = dayjs(record.endTime);
+          return <span className="vietnamese-text">{`${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`}</span>;
+        } catch (error) {
+          return <span className="vietnamese-text">Lỗi định dạng</span>;
+        }
+      }
+    },
+    {
+      title: 'Offer',
+      dataIndex: 'offer',
+      render: (text, record) => (
+        <div>
+          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
+            {text || 'Chưa có offer'}
+          </div>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => openOfferModal(record)}
+            className="vietnamese-text"
+          >
+            Chỉnh sửa Offer
+          </Button>
+        </div>
+      )
+    },
+    {
+      title: 'Thao tác',
+      render: (_, record) => (
+        <div className="space-x-2">
+          {record.cvUrl && (
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={() => handleViewCV(record.cvUrl, record.applicantName)}
+              className="vietnamese-text"
+              style={{ padding: 0, height: 'auto' }}
+            >
+              📄 Xem CV
+            </Button>
+          )}
           <Button 
             size="small" 
             type="primary"
@@ -624,6 +686,15 @@ const RecruitmentManagement = () => {
             style={{ backgroundColor: '#1890ff', borderColor: '#1890ff' }}
           >
             Offer Lại
+          </Button>
+          <Button 
+            type="primary" 
+            size="small" 
+            onClick={() => handleApproveCandidate(record.id)}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            className="vietnamese-text"
+          >
+            Duyệt ứng viên
           </Button>
         </div>
       )
@@ -679,6 +750,10 @@ const RecruitmentManagement = () => {
         
         <Tabs.TabPane tab="Phỏng vấn chờ" key="pending">
           <Table columns={pendingInterviewColumns} dataSource={pendingInterviews} rowKey="id" />
+        </Tabs.TabPane>
+
+        <Tabs.TabPane tab="Quản Lý Offer" key="offers">
+          <Table columns={offerColumns} dataSource={offers} rowKey="id" />
         </Tabs.TabPane>
       </Tabs>
 
