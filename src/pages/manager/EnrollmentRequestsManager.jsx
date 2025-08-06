@@ -124,17 +124,21 @@ const EnrollmentRequestsManager = () => {
       <div className="mb-6">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            {['PENDING', 'APPROVED', 'REJECTED'].map((status) => (
+            {[
+              { key: 'PENDING', label: 'Chờ duyệt' },
+              { key: 'APPROVED', label: 'Đã duyệt' },
+              { key: 'REJECTED', label: 'Từ chối' }
+            ].map(({ key, label }) => (
               <button
-                key={status}
-                onClick={() => setFilter(status)}
+                key={key}
+                onClick={() => setFilter(key)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  filter === status
+                  filter === key
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {status} ({requests.length})
+                {label} ({requests.length})
               </button>
             ))}
           </nav>
@@ -222,7 +226,10 @@ const EnrollmentRequestsManager = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(request.status)}>
-                        {request.status}
+                        {request.status === 'PENDING' ? 'Chờ duyệt' : 
+                         request.status === 'APPROVED' ? 'Đã duyệt' : 
+                         request.status === 'REJECTED' ? 'Từ chối' : 
+                         request.status}
                       </span>
                     </td>
                     {filter === 'PENDING' && (
