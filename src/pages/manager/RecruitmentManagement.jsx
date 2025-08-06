@@ -181,7 +181,12 @@ const RecruitmentManagement = () => {
       setShowPositionModal(false);
       fetchPositions();
     } catch (err) {
-      message.error('Có lỗi xảy ra!');
+      // Xử lý lỗi validation từ backend
+      if (err.response && err.response.status === 400) {
+        message.error(err.response.data || 'Dữ liệu không hợp lệ!');
+      } else {
+        message.error('Có lỗi xảy ra!');
+      }
     }
   };
 
@@ -695,8 +700,20 @@ const RecruitmentManagement = () => {
           <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true }]}>
             <Input className="vietnamese-text" />
           </Form.Item>
-          <Form.Item name="quantity" label="Số lượng" rules={[{ required: true }]}>
-            <InputNumber min={1} style={{ width: '100%' }} className="vietnamese-text" />
+          <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
+            <InputNumber 
+              min={1} 
+              max={999}
+              step={1}
+              precision={0}
+              style={{ width: '100%' }} 
+              className="vietnamese-text"
+              placeholder="Nhập số lượng"
+              controls={{
+                upIcon: <span>+</span>,
+                downIcon: <span>-</span>
+              }}
+            />
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
