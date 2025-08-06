@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import StudentAttendance from './StudentAttendance';
 import TeacherAttendance from './TeacherAttendance';
+import ManagerAttendance from './ManagerAttendance';
 import { Alert } from 'antd';
 
 // Main Attendance Module Component
@@ -89,6 +90,13 @@ const AttendanceModule = () => {
           <TeacherAttendance 
             onLogout={logout}
             showMessageBox={showMessageBox}
+            user={user}
+          />
+        );
+      case 'MANAGER':
+      case 'ACCOUNTANT':
+        return (
+          <ManagerAttendance 
             user={user}
           />
         );
