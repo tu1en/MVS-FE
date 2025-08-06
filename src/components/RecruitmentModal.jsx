@@ -27,6 +27,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
     try {
       const res = await apiClient.get('/job-positions/all');
       // Lọc các job có recruitmentPlanStatus === 'OPEN'
+      // Việc scan và đóng kế hoạch tương lai đã được thực hiện tự động ở backend
       const filtered = (res.data || []).filter(job => 
         job.recruitmentPlanStatus === 'OPEN'
       );
@@ -358,7 +359,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
           {jobs.length === 0 && !loading && (
             <Alert
               message="Hiện tại không có vị trí tuyển dụng nào"
-              description="Tất cả kế hoạch tuyển dụng đã đóng hoặc chưa có vị trí nào được tạo."
+              description="Tất cả kế hoạch tuyển dụng đã đóng hoặc chưa đến ngày mở. Vui lòng quay lại sau khi có kế hoạch tuyển dụng mới."
               type="info"
               showIcon
               className="mb-4"

@@ -58,12 +58,40 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       message.success('Cập nhật trạng thái thành công!');
       fetchPlans();
     } catch (err) {
-      message.error('Không thể cập nhật trạng thái!');
+      // Xử lý lỗi validation từ backend
+      if (err.response && err.response.status === 400) {
+        message.error(err.response.data || 'Không thể cập nhật trạng thái!');
+      } else {
+        message.error('Không thể cập nhật trạng thái!');
+      }
     }
   };
 
   const handleSubmit = async (values) => {
     try {
+      // Validation cho thời gian
+      const now = dayjs();
+      const startDate = values.startDate;
+      const endDate = values.endDate;
+      
+      // Kiểm tra ngày bắt đầu không được trong quá khứ
+      if (startDate && startDate.isBefore(now, 'day')) {
+        message.error('Ngày bắt đầu không được trong quá khứ!');
+        return;
+      }
+      
+      // Kiểm tra ngày kết thúc không được trong quá khứ
+      if (endDate && endDate.isBefore(now, 'day')) {
+        message.error('Ngày kết thúc không được trong quá khứ!');
+        return;
+      }
+      
+      // Kiểm tra ngày bắt đầu phải trước ngày kết thúc
+      if (startDate && endDate && startDate.isAfter(endDate, 'day')) {
+        message.error('Ngày bắt đầu phải trước ngày kết thúc!');
+        return;
+      }
+
       const data = {
         ...values,
         startDate: values.startDate?.format('YYYY-MM-DD'),
@@ -115,7 +143,10 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       title: 'Số lượng',
       dataIndex: 'totalQuantity',
       key: 'totalQuantity',
-      render: (text) => <span className="vietnamese-text">{text}</span>
+      render: (text, record) => {
+        // Số lượng được tính từ tổng các vị trí trong kế hoạch
+        return <span className="vietnamese-text">{text || 0}</span>;
+      }
     },
     {
       title: 'Trạng thái',
@@ -184,9 +215,6 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
           </Form.Item>
           <Form.Item name="endDate" label="Ngày kết thúc" rules={[{ required: true, message: 'Chọn ngày kết thúc' }]}>
             <DatePicker style={{ width: '100%' }} className="vietnamese-text" />
-          </Form.Item>
-          <Form.Item name="totalQuantity" label="Số lượng tuyển dụng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-            <InputNumber min={1} style={{ width: '100%' }} className="vietnamese-text" />
           </Form.Item>
         </Form>
       </Modal>
