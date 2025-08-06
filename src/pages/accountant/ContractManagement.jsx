@@ -82,6 +82,14 @@ const ContractManagement = () => {
 
   // Xử lý tạo hợp đồng mới
   const handleCreateContract = async (values) => {
+    if (values.endDate && values.endDate.isBefore(values.startDate, 'day')) {
+      message.error('Ngày kết thúc không được trước ngày bắt đầu!');
+      return;
+    }
+    if (values.endDate && values.endDate.isBefore(moment(), 'day')) {
+      message.error('Ngày kết thúc không được là ngày trong quá khứ!');
+      return;
+    }
     try {
       const contractData = {
         ...values,
@@ -107,11 +115,29 @@ const ContractManagement = () => {
 
   // Xử lý cập nhật hợp đồng
   const handleUpdateContract = async (values) => {
+    // Convert startDate and endDate to moment objects if they aren't already, and check for validity
+    const startDate = moment.isMoment(values.startDate) ? values.startDate : moment(values.startDate, 'YYYY-MM-DD', true);
+    const endDate = values.endDate ? (moment.isMoment(values.endDate) ? values.endDate : moment(values.endDate, 'YYYY-MM-DD', true)) : null;
+    
+    if (!startDate.isValid()) {
+      message.error('Ngày bắt đầu không hợp lệ!');
+      return;
+    }
+    
+    if (endDate && !endDate.isValid()) {
+      message.error('Ngày kết thúc không hợp lệ!');
+      return;
+    }
+    
+    if (endDate && endDate.isBefore(startDate, 'day')) {
+      message.error('Ngày kết thúc không được trước ngày bắt đầu!');
+      return;
+    }
     try {
       const contractData = {
         ...values,
-        startDate: values.startDate.format('YYYY-MM-DD'),
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null
+        startDate: startDate.format('YYYY-MM-DD'),
+        endDate: endDate ? endDate.format('YYYY-MM-DD') : null
       };
 
       await axiosInstance.put(`/contracts/${editingContract.id}`, contractData);
@@ -162,11 +188,12 @@ const ContractManagement = () => {
 
   // Mở modal chỉnh sửa hợp đồng
   const handleEditContract = (contract) => {
+    console.log('Editing contract:', contract); // Debug log to check contract data
     setEditingContract(contract);
     form.setFieldsValue({
       ...contract,
-      startDate: moment(contract.startDate),
-      endDate: contract.endDate ? moment(contract.endDate) : null
+      startDate: contract.startDate ? moment(contract.startDate, 'YYYY-MM-DD') : null,
+      endDate: contract.endDate ? moment(contract.endDate, 'YYYY-MM-DD') : null
     });
     setModalVisible(true);
   };
