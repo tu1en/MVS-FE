@@ -69,14 +69,14 @@ const ContractManagement = () => {
     }
   };
 
-  // Lấy danh sách ứng viên đã đỗ phỏng vấn
+  // Lấy danh sách ứng viên đã được duyệt
   const fetchCandidatesReady = async () => {
     try {
       const response = await axiosInstance.get('/contracts/candidates/ready');
       setCandidatesReady(response.data);
     } catch (error) {
       console.error('Error fetching candidates:', error);
-      message.error('Không thể tải danh sách ứng viên đã đỗ!');
+      message.error('Không thể tải danh sách ứng viên đã được duyệt!');
     }
   };
 
@@ -138,7 +138,7 @@ const ContractManagement = () => {
     }
   };
 
-  // Mở modal tạo hợp đồng từ ứng viên đã đỗ
+  // Mở modal tạo hợp đồng từ ứng viên đã duyệt
   const handleSelectCandidate = (candidate) => {
     setSelectedCandidate(candidate);
     candidateForm.setFieldsValue({
@@ -149,6 +149,7 @@ const ContractManagement = () => {
       contractType: candidate.contractType || 'TEACHER',
       position: candidate.position || '',
       department: '',
+      offer: candidate.offer || 'Chưa có thông tin offer',
       salary: candidate.salary || 0,
       workingHours: '8',
       startDate: '',
@@ -270,7 +271,7 @@ const ContractManagement = () => {
     }
   ];
 
-  // Cấu hình cột cho bảng ứng viên đã đỗ
+  // Cấu hình cột cho bảng ứng viên đã duyệt
   const candidateColumns = [
     {
       title: 'Họ tên',
@@ -323,68 +324,51 @@ const ContractManagement = () => {
       <Card title="Quản lý Hợp đồng" className="contract-card">
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
           <TabPane 
-            tab={
-              <span>
-                <UserOutlined />
-                Hợp đồng Giáo viên ({teacherContracts.length})
-              </span>
-            } 
+            tab={<span><UserOutlined /> Hợp đồng Giáo viên ({teacherContracts.length})</span>} 
             key="teachers"
           >
-
             <Table
               columns={contractColumns}
               dataSource={teacherContracts}
               rowKey="id"
               loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total) => `Tổng ${total} hợp đồng`
+              pagination={{ 
+                pageSize: 10, 
+                showSizeChanger: true, 
+                showTotal: (total) => `Tổng ${total} hợp đồng` 
               }}
             />
           </TabPane>
 
           <TabPane 
-            tab={
-              <span>
-                <TeamOutlined />
-                Hợp đồng Nhân viên ({staffContracts.length})
-              </span>
-            } 
+            tab={<span><TeamOutlined /> Hợp đồng Nhân viên ({staffContracts.length})</span>} 
             key="staff"
           >
-
             <Table
               columns={contractColumns}
               dataSource={staffContracts}
               rowKey="id"
               loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total) => `Tổng ${total} hợp đồng`
+              pagination={{ 
+                pageSize: 10, 
+                showSizeChanger: true, 
+                showTotal: (total) => `Tổng ${total} hợp đồng` 
               }}
             />
           </TabPane>
 
           <TabPane 
-            tab={
-              <span>
-                <PlusOutlined />
-                Tạo hợp đồng mới ({candidatesReady.length})
-              </span>
-            } 
+            tab={<span><PlusOutlined /> Tạo hợp đồng từ ứng viên đã duyệt ({candidatesReady.length})</span>} 
             key="create"
           >
-            <Card title="Danh sách ứng viên đã đỗ phỏng vấn" className="candidates-card">
+            <Card title="Danh sách ứng viên đã được duyệt" className="candidates-card">
               <Table
                 columns={candidateColumns}
                 dataSource={candidatesReady}
                 rowKey="email"
-                pagination={{
-                  pageSize: 10,
-                  showTotal: (total) => `Tổng ${total} ứng viên`
+                pagination={{ 
+                  pageSize: 10, 
+                  showTotal: (total) => `Tổng ${total} ứng viên` 
                 }}
               />
             </Card>
@@ -409,85 +393,60 @@ const ContractManagement = () => {
           layout="vertical"
           onFinish={editingContract ? handleUpdateContract : handleCreateContract}
         >
-          <Form.Item
-            name="userId"
-            label="ID Người dùng"
-            rules={[{ required: true, message: 'Vui lòng nhập ID người dùng!' }]}
-          >
-            <InputNumber style={{ width: '100%' }} placeholder="Nhập ID người dùng" />
+          <Form.Item name="userId" label="User ID" rules={[{ required: true, message: 'Vui lòng nhập User ID!' }]}>
+            <Input placeholder="Nhập User ID" />
           </Form.Item>
 
-          <Form.Item
-            name="contractType"
-            label="Loại hợp đồng"
-            rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}
-          >
+          <Form.Item name="fullName" label="Họ và tên">
+            <Input placeholder="Nhập họ và tên" />
+          </Form.Item>
+
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ!' }]}>
+            <Input placeholder="Nhập email" />
+          </Form.Item>
+
+          <Form.Item name="phoneNumber" label="Số điện thoại">
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+
+          <Form.Item name="contractType" label="Loại hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}>
             <Select placeholder="Chọn loại hợp đồng">
               <Option value="TEACHER">Giáo viên</Option>
               <Option value="STAFF">Nhân viên</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="position"
-            label="Vị trí"
-            rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}
-          >
-            <Input placeholder="Nhập vị trí công việc" />
+          <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
+            <Input placeholder="Nhập vị trí" />
           </Form.Item>
 
-          <Form.Item
-            name="department"
-            label="Phòng ban"
-          >
+          <Form.Item name="department" label="Phòng ban" rules={[{ required: true, message: 'Vui lòng nhập phòng ban!' }]}>
             <Input placeholder="Nhập phòng ban" />
           </Form.Item>
 
-          <Form.Item
-            name="salary"
-            label="Lương (VNĐ)"
-            rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}
-          >
+          <Form.Item name="salary" label="Lương" rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}>
             <InputNumber
               style={{ width: '100%' }}
+              placeholder="Nhập lương"
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value.replace(/\$\s?|(,*)/g, '')}
-              placeholder="Nhập mức lương"
             />
           </Form.Item>
 
-          <Form.Item
-            name="workingHours"
-            label="Giờ làm việc"
-            rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
-          >
-            <Select placeholder="Chọn ca làm việc" style={{ width: '100%' }}>
-              <Option value="Ca sáng: 7:30-9:30">Ca sáng: 7:30-9:30</Option>
-              <Option value="Ca chiều: 14:30-16:30">Ca chiều: 14:30-16:30</Option>
-              <Option value="Ca tối: 19:20-21:20">Ca tối: 19:20-21:20</Option>
-            </Select>
+          <Form.Item name="workingHours" label="Giờ làm việc">
+            <Input placeholder="Nhập giờ làm việc" defaultValue="8" />
           </Form.Item>
 
-          <Form.Item
-            name="startDate"
-            label="Ngày bắt đầu"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}
-          >
+          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            name="endDate"
-            label="Ngày kết thúc"
-          >
+          <Form.Item name="endDate" label="Ngày kết thúc">
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            name="contractTerms"
-            label="Điều khoản hợp đồng"
-          >
-            <TextArea rows={4} placeholder="Nhập các điều khoản hợp đồng" />
+          <Form.Item name="contractTerms" label="Điều khoản hợp đồng">
+            <TextArea rows={4} placeholder="Nhập điều khoản hợp đồng" />
           </Form.Item>
 
           <Form.Item>
@@ -507,9 +466,9 @@ const ContractManagement = () => {
         </Form>
       </Modal>
 
-      {/* Modal tạo hợp đồng từ ứng viên đã đỗ */}
+      {/* Modal tạo hợp đồng từ ứng viên đã duyệt */}
       <Modal
-        title="Tạo hợp đồng cho ứng viên đã đỗ"
+        title="Tạo hợp đồng cho ứng viên đã duyệt"
         visible={candidateModalVisible}
         onCancel={() => {
           setCandidateModalVisible(false);
@@ -524,106 +483,64 @@ const ContractManagement = () => {
           layout="vertical"
           onFinish={handleCreateContract}
         >
-          <Form.Item
-            name="fullName"
-            label="Họ tên"
-          >
-            <Input disabled />
+          <Form.Item name="userId" label="User ID" rules={[{ required: true, message: 'Vui lòng nhập User ID!' }]}>
+            <Input placeholder="Nhập User ID" />
           </Form.Item>
 
-          <Form.Item
-            name="email"
-            label="Email"
-          >
-            <Input disabled />
+          <Form.Item name="fullName" label="Họ và tên">
+            <Input placeholder="Nhập họ và tên" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item
-            name="phoneNumber"
-            label="Số điện thoại"
-          >
-            <Input disabled />
+          <Form.Item name="email" label="Email">
+            <Input placeholder="Email" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item
-            name="userId"
-            label="ID Người dùng"
-            rules={[{ required: true, message: 'Vui lòng nhập ID người dùng!' }]}
-          >
-            <InputNumber style={{ width: '100%' }} placeholder="ID tự động tạo" disabled />
+          <Form.Item name="phoneNumber" label="Số điện thoại">
+            <Input placeholder="Số điện thoại" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item
-            name="contractType"
-            label="Loại hợp đồng"
-            rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}
-          >
-            <Select placeholder="Chọn loại hợp đồng">
+          <Form.Item name="contractType" label="Loại hợp đồng">
+            <Select disabled>
               <Option value="TEACHER">Giáo viên</Option>
               <Option value="STAFF">Nhân viên</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="position"
-            label="Vị trí"
-            rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}
-          >
-            <Input placeholder="Nhập vị trí công việc" />
+          <Form.Item name="position" label="Vị trí">
+            <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item
-            name="department"
-            label="Phòng ban"
-          >
+          <Form.Item name="department" label="Phòng ban" rules={[{ required: true, message: 'Vui lòng nhập phòng ban!' }]}>
             <Input placeholder="Nhập phòng ban" />
           </Form.Item>
 
-          <Form.Item
-            name="salary"
-            label="Lương (VNĐ)"
-            rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}
-          >
+          <Form.Item name="offer" label="Offer">
+            <TextArea rows={3} readOnly style={{ backgroundColor: '#f5f5f5', cursor: 'default' }} />
+          </Form.Item>
+
+          <Form.Item name="salary" label="Lương" rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}>
             <InputNumber
               style={{ width: '100%' }}
+              placeholder="Nhập lương"
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value.replace(/\$\s?|(,*)/g, '')}
-              placeholder="Nhập mức lương"
             />
           </Form.Item>
 
-          <Form.Item
-            name="workingHours"
-            label="Giờ làm việc"
-            rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
-          >
-            <Select placeholder="Chọn ca làm việc" style={{ width: '100%' }}>
-              <Option value="Ca sáng: 7:30-9:30">Ca sáng: 7:30-9:30</Option>
-              <Option value="Ca chiều: 14:30-16:30">Ca chiều: 14:30-16:30</Option>
-              <Option value="Ca tối: 19:20-21:20">Ca tối: 19:20-21:20</Option>
-            </Select>
+          <Form.Item name="workingHours" label="Giờ làm việc">
+            <Input placeholder="Nhập giờ làm việc" defaultValue="8" />
           </Form.Item>
 
-          <Form.Item
-            name="startDate"
-            label="Ngày bắt đầu"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}
-          >
+          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            name="endDate"
-            label="Ngày kết thúc"
-          >
+          <Form.Item name="endDate" label="Ngày kết thúc">
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            name="contractTerms"
-            label="Điều khoản hợp đồng"
-          >
-            <TextArea rows={4} placeholder="Nhập các điều khoản hợp đồng" />
+          <Form.Item name="contractTerms" label="Điều khoản hợp đồng">
+            <TextArea rows={4} placeholder="Nhập điều khoản hợp đồng" />
           </Form.Item>
 
           <Form.Item>
