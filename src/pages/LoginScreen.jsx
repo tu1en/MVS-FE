@@ -138,7 +138,19 @@ export default function LoginScreen() {
       const idToken = await user.getIdToken();
       
       // 3. Send to backend via authService
-      const userData = await authService.googleLogin(idToken, user);
+      try {
+        const userData = await authService.googleLogin(idToken, user);
+      } catch (error) {
+        if (error.message === 'Tài khoản này chưa được đăng ký trong hệ thống') {
+          toast.error('Email này chưa được đăng ký trong hệ thống. Vui lòng liên hệ quản trị viên.');
+        } else if (error.message === 'Tài khoản chưa được kích hoạt') {
+          toast.error('Tài khoản chưa được kích hoạt. Vui lòng chờ tạo hợp đồng để có thể đăng nhập bằng Google.');
+        } else {
+          toast.error(error.message || 'Đã xảy ra lỗi khi đăng nhập bằng Google.');
+        }
+        setDangDangNhap(false);
+        return;
+      }
 
       // Store in AuthContext (this will also store in localStorage)
       login(userData);

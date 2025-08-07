@@ -263,26 +263,48 @@ const RecruitmentManagement = () => {
       const startTimeStr = startTime.format('YYYY-MM-DDTHH:mm:ss');
       const endTimeStr = endTime.format('YYYY-MM-DDTHH:mm:ss');
 
-      // Kiểm tra trùng lịch
-      const conflictCheck = await axiosInstance.post('/interview-schedules/check-conflict', null, {
-        params: { startTime: startTimeStr, endTime: endTimeStr }
+      // Tìm lịch phỏng vấn hiện tại của ứng viên (nếu có)
+      const currentInterview = interviews.find(i => i.applicationId === selectedApplication.id);
+
+      // Kiểm tra trùng lịch với các ứng viên khác
+      const otherInterviews = interviews.filter(i => i.applicationId !== selectedApplication.id);
+      const hasConflict = otherInterviews.some(interview => {
+        const interviewStart = dayjs(interview.startTime);
+        const interviewEnd = dayjs(interview.endTime);
+        return (
+          (startTime.isSame(interviewStart) || startTime.isBetween(interviewStart, interviewEnd)) ||
+          (endTime.isSame(interviewEnd) || endTime.isBetween(interviewStart, interviewEnd)) ||
+          (startTime.isBefore(interviewStart) && endTime.isAfter(interviewEnd))
+        );
       });
 
-      if (conflictCheck.data) {
-        message.error('Thời gian này đã có lịch phỏng vấn khác!');
+      if (hasConflict) {
+        message.error('Thời gian này đã có lịch phỏng vấn của ứng viên khác!');
         return;
       }
 
-      const response = await axiosInstance.post('/interview-schedules', null, {
-        params: {
-          applicationId: selectedApplication.id,
-          startTime: startTimeStr,
-          endTime: endTimeStr
-        }
-      });
-      console.log('Interview created:', response.data);
+      let response;
+      if (currentInterview) {
+        // Cập nhật lịch hiện tại
+        response = await axiosInstance.put(`/interview-schedules/${currentInterview.id}`, null, {
+          params: {
+            startTime: startTimeStr,
+            endTime: endTimeStr
+          }
+        });
+      } else {
+        // Tạo lịch mới
+        response = await axiosInstance.post('/interview-schedules', null, {
+          params: {
+            applicationId: selectedApplication.id,
+            startTime: startTimeStr,
+            endTime: endTimeStr
+          }
+        });
+      }
+      console.log('Interview updated/created:', response.data);
 
-      message.success('Lên lịch phỏng vấn thành công!');
+      message.success(currentInterview ? 'Cập nhật lịch phỏng vấn thành công!' : 'Lên lịch phỏng vấn thành công!');
       setShowScheduleModal(false);
       
       // Refresh tất cả dữ liệu
@@ -313,8 +335,14 @@ const RecruitmentManagement = () => {
 
   const handleOfferUpdate = async (id, offer) => {
     try {
-      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer });
+      // Đảm bảo giá trị tối thiểu là 1 triệu
+      let validOffer = offer;
+      if (offer && offer < 1000000) {
+        validOffer = 1000000;
+      }
+      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer: validOffer });
       message.success('Cập nhật offer thành công!');
+      fetchOffers(); // Refresh để hiển thị giá trị đã được chuẩn hóa
     } catch (err) {
       message.error('Không thể cập nhật offer!');
     }
@@ -391,11 +419,33 @@ const RecruitmentManagement = () => {
 
   const handleApproveCandidate = async (id) => {
     try {
-      await axiosInstance.put(`/interview-schedules/${id}/result`, { status: 'APPROVED', result: 'Đã duyệt ứng viên' });
+      // Kiểm tra tài khoản và hợp đồng
+      const response = await axiosInstance.get(`/interview-schedules/${id}/check-account`);
+      const { hasAccount, hasContract } = response.data;
+
+      if (!hasAccount) {
+        message.warning('Ứng viên chưa có tài khoản trong hệ thống. Hệ thống sẽ tự động tạo tài khoản.');
+      }
+
+      // Duyệt ứng viên
+      await axiosInstance.put(`/interview-schedules/${id}/result`, { 
+        status: 'APPROVED', 
+        result: 'Đã duyệt ứng viên',
+        createAccount: !hasAccount
+      });
+
+      if (!hasContract) {
+        message.warning('Vui lòng tạo hợp đồng cho ứng viên để kích hoạt tài khoản đăng nhập bằng Google.');
+      }
+
       message.success('Đã duyệt ứng viên thành công!');
       fetchOffers();
     } catch (err) {
-      message.error('Không thể duyệt ứng viên!');
+      if (err.response && err.response.data && err.response.data.message) {
+        message.error(err.response.data.message);
+      } else {
+        message.error('Không thể duyệt ứng viên!');
+      }
     }
   };
 
@@ -645,21 +695,62 @@ const RecruitmentManagement = () => {
       }
     },
     {
+      title: 'Đánh giá',
+      dataIndex: 'evaluation',
+      render: (text, record) => (
+        <Input.TextArea
+          defaultValue={text || ''}
+          placeholder="Nhập đánh giá..."
+          className="vietnamese-text"
+          onBlur={(e) => handleEvaluationUpdate(record.id, e.target.value)}
+          style={{ minHeight: '60px' }}
+        />
+      )
+    },
+    {
       title: 'Offer',
       dataIndex: 'offer',
       render: (text, record) => (
         <div>
           <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
-            {text || 'Chưa có offer'}
+            {text ? text.toLocaleString('vi-VN') + ' VNĐ' : 'Chưa có offer'}
           </div>
-          <Button 
-            size="small" 
-            type="primary"
-            onClick={() => openOfferModal(record)}
-            className="vietnamese-text"
-          >
-            Chỉnh sửa Offer
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <InputNumber
+              value={text}
+              onChange={(value) => {
+                if (value && value < 1000000) {
+                  value = 1000000;
+                }
+                handleOfferUpdate(record.id, value);
+              }}
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={value => value.replace(/\$\s?|(,*)/g, '')}
+              step={1000000}
+              min={1000000}
+              style={{ width: '150px' }}
+            />
+            <Button 
+              size="small" 
+              onClick={() => {
+                const currentValue = parseInt(text) || 1000000;
+                handleOfferUpdate(record.id, currentValue + 1000000);
+              }}
+            >
+              +1 triệu
+            </Button>
+            <Button 
+              size="small"
+              onClick={() => {
+                const currentValue = parseInt(text) || 1000000;
+                if (currentValue > 1000000) {
+                  handleOfferUpdate(record.id, currentValue - 1000000);
+                }
+              }}
+            >
+              -1 triệu
+            </Button>
+          </div>
         </div>
       )
     },
@@ -877,14 +968,47 @@ const RecruitmentManagement = () => {
         <Form layout="vertical" form={offerForm} onFinish={handleOfferModalSubmit} className="form-vietnamese">
           <Form.Item 
             name="offer" 
-            label="Nội dung Offer"
+            label="Offer"
             rules={[{ required: false }]} // Cho phép null
           >
-            <Input.TextArea 
-              placeholder="Nhập nội dung offer (có thể để trống)..."
-              rows={6}
-              className="vietnamese-text"
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <InputNumber
+                style={{ width: '200px' }}
+                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                step={1000000}
+                min={1000000}
+                placeholder="Nhập offer..."
+                className="vietnamese-text"
+                onChange={(value) => {
+                  if (value && value < 1000000) {
+                    offerForm.setFieldsValue({ offer: 1000000 });
+                  }
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 1000000;
+                    offerForm.setFieldsValue({ offer: currentValue + 1000000 });
+                  }}
+                >
+                  +1 triệu
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 1000000;
+                    if (currentValue > 1000000) {
+                      offerForm.setFieldsValue({ offer: currentValue - 1000000 });
+                    }
+                  }}
+                >
+                  -1 triệu
+                </Button>
+              </div>
+            </div>
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
