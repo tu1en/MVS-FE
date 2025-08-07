@@ -138,6 +138,7 @@ export default function LoginScreen() {
       const idToken = await user.getIdToken();
       
       // 3. Send to backend via authService
+<<<<<<< HEAD
       try {
         const userData = await authService.googleLogin(idToken, user);
       } catch (error) {
@@ -151,6 +152,9 @@ export default function LoginScreen() {
         setDangDangNhap(false);
         return;
       }
+=======
+      const userData = await authService.googleLogin(idToken, user);
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
 
       // Store in AuthContext (this will also store in localStorage)
       login(userData);

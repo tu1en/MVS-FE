@@ -28,9 +28,12 @@ const RecruitmentManagement = () => {
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
+<<<<<<< HEAD
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
+=======
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
 
   useEffect(() => {
     fetchPlans();
@@ -266,6 +269,7 @@ const RecruitmentManagement = () => {
       const startTimeStr = startTime.format('YYYY-MM-DDTHH:mm:ss');
       const endTimeStr = endTime.format('YYYY-MM-DDTHH:mm:ss');
 
+<<<<<<< HEAD
       // Tìm lịch phỏng vấn hiện tại của ứng viên (nếu có)
       const currentInterview = interviews.find(i => i.applicationId === selectedApplication.id);
 
@@ -308,6 +312,28 @@ const RecruitmentManagement = () => {
       console.log('Interview updated/created:', response.data);
 
       message.success(currentInterview ? 'Cập nhật lịch phỏng vấn thành công!' : 'Lên lịch phỏng vấn thành công!');
+=======
+      // Kiểm tra trùng lịch
+      const conflictCheck = await axiosInstance.post('/interview-schedules/check-conflict', null, {
+        params: { startTime: startTimeStr, endTime: endTimeStr }
+      });
+
+      if (conflictCheck.data) {
+        message.error('Thời gian này đã có lịch phỏng vấn khác!');
+        return;
+      }
+
+      const response = await axiosInstance.post('/interview-schedules', null, {
+        params: {
+          applicationId: selectedApplication.id,
+          startTime: startTimeStr,
+          endTime: endTimeStr
+        }
+      });
+      console.log('Interview created:', response.data);
+
+      message.success('Lên lịch phỏng vấn thành công!');
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
       setShowScheduleModal(false);
       
       // Refresh tất cả dữ liệu
@@ -338,6 +364,7 @@ const RecruitmentManagement = () => {
 
   const handleOfferUpdate = async (id, offer) => {
     try {
+<<<<<<< HEAD
       // Đảm bảo giá trị tối thiểu là 1 triệu
       let validOffer = offer;
       if (offer && offer < 1000000) {
@@ -346,6 +373,10 @@ const RecruitmentManagement = () => {
       await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer: validOffer });
       message.success('Cập nhật offer thành công!');
       fetchOffers(); // Refresh để hiển thị giá trị đã được chuẩn hóa
+=======
+      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer });
+      message.success('Cập nhật offer thành công!');
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     } catch (err) {
       message.error('Không thể cập nhật offer!');
     }
@@ -388,6 +419,7 @@ const RecruitmentManagement = () => {
       return;
     }
     try {
+<<<<<<< HEAD
       // Lấy chi tiết tính lương trước khi gửi email
       const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
       
@@ -396,6 +428,12 @@ const RecruitmentManagement = () => {
         salaryDetails: salaryDetails.data
       });
       message.success('Đã gửi offer email với chi tiết lương thành công!');
+=======
+      await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
+        offer: offer
+      });
+      message.success('Đã gửi offer email thành công!');
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
@@ -426,6 +464,7 @@ const RecruitmentManagement = () => {
 
   const handleApproveCandidate = async (id) => {
     try {
+<<<<<<< HEAD
       // Kiểm tra tài khoản và hợp đồng
       const response = await axiosInstance.get(`/interview-schedules/${id}/check-account`);
       const { hasAccount, hasContract } = response.data;
@@ -466,6 +505,13 @@ const RecruitmentManagement = () => {
       message.error('Không thể tải chi tiết tính lương!');
     } finally {
       setLoadingSalaryDetails(false);
+=======
+      await axiosInstance.put(`/interview-schedules/${id}/result`, { status: 'APPROVED', result: 'Đã duyệt ứng viên' });
+      message.success('Đã duyệt ứng viên thành công!');
+      fetchOffers();
+    } catch (err) {
+      message.error('Không thể duyệt ứng viên!');
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     }
   };
 
@@ -715,6 +761,7 @@ const RecruitmentManagement = () => {
       }
     },
     {
+<<<<<<< HEAD
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
@@ -780,10 +827,28 @@ const RecruitmentManagement = () => {
               </Button>
             )}
           </div>
+=======
+      title: 'Offer',
+      dataIndex: 'offer',
+      render: (text, record) => (
+        <div>
+          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
+            {text || 'Chưa có offer'}
+          </div>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => openOfferModal(record)}
+            className="vietnamese-text"
+          >
+            Chỉnh sửa Offer
+          </Button>
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
         </div>
       )
     },
     {
+<<<<<<< HEAD
       title: 'Lương NET',
       dataIndex: 'offer',
       render: (text, record) => {
@@ -818,6 +883,8 @@ const RecruitmentManagement = () => {
       }
     },
     {
+=======
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
@@ -1031,6 +1098,7 @@ const RecruitmentManagement = () => {
         <Form layout="vertical" form={offerForm} onFinish={handleOfferModalSubmit} className="form-vietnamese">
           <Form.Item 
             name="offer" 
+<<<<<<< HEAD
             label="Offer"
             rules={[{ required: false }]} // Cho phép null
           >
@@ -1072,6 +1140,16 @@ const RecruitmentManagement = () => {
                 </Button>
               </div>
             </div>
+=======
+            label="Nội dung Offer"
+            rules={[{ required: false }]} // Cho phép null
+          >
+            <Input.TextArea 
+              placeholder="Nhập nội dung offer (có thể để trống)..."
+              rows={6}
+              className="vietnamese-text"
+            />
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
@@ -1083,6 +1161,7 @@ const RecruitmentManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
+<<<<<<< HEAD
 
       {/* Modal Chi Tiết Tính Lương */}
       <Modal
@@ -1168,6 +1247,8 @@ const RecruitmentManagement = () => {
           </div>
         )}
       </Modal>
+=======
+>>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     </div>
   );
 };
