@@ -1,21 +1,20 @@
 import {
-    AlertCircle,
-    Bell,
-    Calendar,
-    ChevronRight,
-    Clock,
-    Filter,
-    Megaphone,
-    Pin,
-    Search,
-    Star,
-    User
+  AlertCircle,
+  Bell,
+  Calendar,
+  ChevronRight,
+  Clock,
+  Filter,
+  Megaphone,
+  Search,
+  Star,
+  User
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import AnnouncementService from '../../services/announcementService';
+import { Card, CardContent } from '../../components/ui/card';
 import announcementNotificationService from '../../services/announcementNotificationService';
+import AnnouncementService from '../../services/announcementService';
 
 const AccountantAnnouncementsPage = () => {
   const [announcements, setAnnouncements] = useState([]);

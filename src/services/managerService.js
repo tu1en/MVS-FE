@@ -102,7 +102,7 @@ export const managerService = {
    */
   async getClassrooms() {
     try {
-      const response = await apiClient.get('/manager/classrooms');
+      const response = await apiClient.get('/classrooms');
       return response.data;
     } catch (error) {
       console.error('Error fetching classrooms:', error);
@@ -117,7 +117,7 @@ export const managerService = {
    */
   async createClassroom(classroomData) {
     try {
-      const response = await apiClient.post('/manager/classrooms', classroomData);
+      const response = await apiClient.post('/classrooms', classroomData);
       return response.data;
     } catch (error) {
       console.error('Error creating classroom:', error);
@@ -133,7 +133,7 @@ export const managerService = {
    */
   async updateClassroom(classroomId, classroomData) {
     try {
-      const response = await apiClient.put(`/manager/classrooms/${classroomId}`, classroomData);
+      const response = await apiClient.put(`/classrooms/${classroomId}`, classroomData);
       return response.data;
     } catch (error) {
       console.error('Error updating classroom:', error);
@@ -148,7 +148,7 @@ export const managerService = {
    */
   async deleteClassroom(classroomId) {
     try {
-      await apiClient.delete(`/manager/classrooms/${classroomId}`);
+      await apiClient.delete(`/classrooms/${classroomId}`);
     } catch (error) {
       console.error('Error deleting classroom:', error);
       throw error;

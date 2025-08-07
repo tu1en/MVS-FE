@@ -2,6 +2,7 @@ import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { Button, Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 import apiClient from '../../services/apiClient';
+import { safeDataSource } from '../../utils/tableUtils';
 
 // TeacherAttendance Component
 const TeacherAttendance = ({ onLogout, showMessageBox }) => {
@@ -347,7 +348,7 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
       ) : (
         <div className="bg-white rounded-lg shadow">
           <Table
-            dataSource={attendanceData}
+            dataSource={safeDataSource(attendanceData, 'TeacherAttendance-takeAttendance')}
             pagination={false}
             rowKey="id"
             columns={[
@@ -427,7 +428,7 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
         </div>
       ) : (
         <Table
-          dataSource={attendanceData}
+          dataSource={safeDataSource(attendanceData, 'TeacherAttendance-modal')}
           pagination={false}
           rowKey="id"
           size="small"

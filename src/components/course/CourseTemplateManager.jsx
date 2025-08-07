@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import courseService from '../../services/courseService';
 import classManagementService from '../../services/classManagementService';
 import { 
@@ -10,11 +10,11 @@ import {
   debounce 
 } from '../../utils/courseManagementUtils';
 
-const CourseTemplateManager = ({ 
+const CourseTemplateManager = forwardRef(({ 
   onCreateClass, 
   onImportTemplate, 
   onViewTemplate 
-}) => {
+}, ref) => {
   const [state, setState] = useState({
     templates: [],
     classes: [],
@@ -74,13 +74,18 @@ const CourseTemplateManager = ({
       const response = await courseService.getAllTemplates(queryParams);
       const data = response.data;
 
+      // Debug logging
+      console.log('CourseTemplateManager - API response:', response);
+      console.log('CourseTemplateManager - Data received:', data);
+      console.log('CourseTemplateManager - Templates array:', Array.isArray(data) ? data : (data.data || data.content || []));
+
       setState(prev => ({
         ...prev,
-        templates: Array.isArray(data) ? data : data.content || [],
+        templates: Array.isArray(data) ? data : (data.data || data.content || []),
         pagination: {
           current: (data.number || 0) + 1,
           pageSize: data.size || prev.pagination.pageSize,
-          total: data.totalElements || (Array.isArray(data) ? data.length : 0)
+          total: data.totalElements || (data.data ? data.data.length : (Array.isArray(data) ? data.length : 0))
         },
         loading: { ...prev.loading, templates: false }
       }));
@@ -174,6 +179,14 @@ const CourseTemplateManager = ({
     }
   };
 
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    refreshTemplates: () => {
+      loadTemplates();
+      loadClasses();
+    }
+  }));
+
   // Initial load
   useEffect(() => {
     loadTemplates();
@@ -221,13 +234,23 @@ const CourseTemplateManager = ({
           <option value="pending">Chờ duyệt</option>
         </select>
 
-        <button
-          onClick={onImportTemplate}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center font-medium"
-        >
-          <span className="mr-2">⬆️</span>
-          Import Excel
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => loadTemplates()}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center font-medium"
+            title="Làm mới danh sách templates"
+          >
+            <span className="mr-2">🔄</span>
+            Làm mới
+          </button>
+          <button
+            onClick={onImportTemplate}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center font-medium"
+          >
+            <span className="mr-2">⬆️</span>
+            Import Excel
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -450,6 +473,6 @@ const CourseTemplateManager = ({
       {renderTemplatesTable()}
     </div>
   );
-};
+});
 
 export default CourseTemplateManager;
