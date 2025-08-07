@@ -1,5 +1,6 @@
 import { Button, Card, Collapse, Descriptions, Divider, Space, Table, Typography } from 'antd';
 import React, { useState } from 'react';
+import { safeDataSource } from '../utils/tableUtils';
 
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
@@ -37,7 +38,7 @@ const DebugPanel = ({
     
     return (
       <Table 
-        dataSource={dataSource} 
+        dataSource={safeDataSource(dataSource, 'DebugPanel')} 
         columns={columns} 
         size="small" 
         pagination={false} 

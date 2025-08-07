@@ -47,6 +47,7 @@ import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
+import TeacherCourseManagement from "./pages/teacher/TeacherCourseManagement.jsx";
 import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
@@ -62,6 +63,7 @@ import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
+import CourseManagementSystem from "./components/course/CourseManagementSystem.jsx";
 import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
@@ -102,6 +104,7 @@ import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
+import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
 import ContractManagement from './pages/accountant/ContractManagement';
@@ -270,6 +273,7 @@ function App() {
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
               <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
+              <Route path="/teacher/course-management" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherCourseManagement /></ProtectedRoute>} />
 
               <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
               {/* Student Routes */}
@@ -304,6 +308,7 @@ function App() {
 
               {/* Manager Routes */}
               <Route path="/manager/courses" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageCourses /></ProtectedRoute>} />
+              <Route path="/manager/course-templates" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CourseManagementSystem /></ProtectedRoute>} />
               <Route path="/manager/schedule" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageSchedule /></ProtectedRoute>} />
               <Route path="/manager/schedule/create" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CreateSchedulePage /></ProtectedRoute>} />
               <Route path="/manager/announcements" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageAnnouncements /></ProtectedRoute>} />
@@ -326,6 +331,7 @@ function App() {
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
+              <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
 
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
