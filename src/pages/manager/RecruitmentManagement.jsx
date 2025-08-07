@@ -28,6 +28,9 @@ const RecruitmentManagement = () => {
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
+  const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
+  const [salaryDetails, setSalaryDetails] = useState(null);
+  const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -385,10 +388,14 @@ const RecruitmentManagement = () => {
       return;
     }
     try {
+      // Lấy chi tiết tính lương trước khi gửi email
+      const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
+      
       await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
-        offer: offer
+        offer: offer,
+        salaryDetails: salaryDetails.data
       });
-      message.success('Đã gửi offer email thành công!');
+      message.success('Đã gửi offer email với chi tiết lương thành công!');
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
@@ -446,6 +453,19 @@ const RecruitmentManagement = () => {
       } else {
         message.error('Không thể duyệt ứng viên!');
       }
+    }
+  };
+
+  const handleShowSalaryDetails = async (interviewId, grossSalary) => {
+    setLoadingSalaryDetails(true);
+    try {
+      const response = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
+      setSalaryDetails(response.data);
+      setShowSalaryDetailsModal(true);
+    } catch (err) {
+      message.error('Không thể tải chi tiết tính lương!');
+    } finally {
+      setLoadingSalaryDetails(false);
     }
   };
 
@@ -708,14 +728,12 @@ const RecruitmentManagement = () => {
       )
     },
     {
-      title: 'Offer',
+      title: 'Lương GROSS',
       dataIndex: 'offer',
       render: (text, record) => (
         <div>
-          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
-            {text ? text.toLocaleString('vi-VN') + ' VNĐ' : 'Chưa có offer'}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 'bold', marginRight: '8px' }}>Lương GROSS:</div>
             <InputNumber
               value={text}
               onChange={(value) => {
@@ -729,6 +747,7 @@ const RecruitmentManagement = () => {
               step={1000000}
               min={1000000}
               style={{ width: '150px' }}
+              placeholder="Nhập lương GROSS"
             />
             <Button 
               size="small" 
@@ -750,9 +769,53 @@ const RecruitmentManagement = () => {
             >
               -1 triệu
             </Button>
+            {text && (
+              <Button 
+                size="small" 
+                type="primary"
+                onClick={() => handleShowSalaryDetails(record.id, text)}
+                style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+              >
+                Chi Tiết
+              </Button>
+            )}
           </div>
         </div>
       )
+    },
+    {
+      title: 'Lương NET',
+      dataIndex: 'offer',
+      render: (text, record) => {
+        if (!text) return <span style={{ color: '#999' }}>Chưa có offer</span>;
+        
+        // Tính toán lương NET từ GROSS (ước tính đơn giản)
+        const grossSalary = parseInt(text);
+        const employeeContribution = Math.round(grossSalary * 0.105); // 10.5%
+        const estimatedTax = Math.round(grossSalary * 0.1); // Ước tính thuế 10%
+        const netSalary = grossSalary - employeeContribution - estimatedTax;
+        
+        return (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ fontWeight: 'bold', marginRight: '8px' }}>Lương NET:</div>
+            <div style={{ 
+              padding: '4px 12px', 
+              border: '1px solid #d9d9d9', 
+              borderRadius: '6px', 
+              backgroundColor: '#f0f8ff',
+              color: '#1890ff',
+              fontWeight: 'bold',
+              minWidth: '150px',
+              textAlign: 'center'
+            }}>
+              {netSalary.toLocaleString('vi-VN')} VNĐ
+            </div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              (Ước tính)
+            </div>
+          </div>
+        );
+      }
     },
     {
       title: 'Thao tác',
@@ -1019,6 +1082,91 @@ const RecruitmentManagement = () => {
             </div>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Chi Tiết Tính Lương */}
+      <Modal
+        title="Chi Tiết Tính Lương Offer"
+        open={showSalaryDetailsModal}
+        onCancel={() => setShowSalaryDetailsModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowSalaryDetailsModal(false)}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+        className="salary-details-modal"
+      >
+        {loadingSalaryDetails ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <div>Đang tải chi tiết tính lương...</div>
+          </div>
+        ) : salaryDetails ? (
+          <div>
+            <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '6px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#52c41a' }}>Tóm Tắt</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <strong>Lương GROSS:</strong> {salaryDetails.grossSalary?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Lương NET:</strong> {salaryDetails.netSalary?.toLocaleString('vi-VN')} VNĐ
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#1890ff' }}>Chi Tiết Bảo Hiểm</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <strong>Đóng góp nhân viên (10.5%):</strong> {salaryDetails.employeeContribution?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Đóng góp công ty (21.5%):</strong> {salaryDetails.employerContribution?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Tổng bảo hiểm (32%):</strong> {salaryDetails.totalInsuranceContribution?.toLocaleString('vi-VN')} VNĐ
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#722ed1' }}>Chi Tiết Thuế Thu Nhập Cá Nhân (VNĐ)</h3>
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Thu nhập chịu thuế:</strong> {salaryDetails.taxableIncome?.toLocaleString('vi-VN')} VNĐ
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Giảm trừ người phụ thuộc:</strong> {salaryDetails.dependentDeductions?.toLocaleString('vi-VN')} VNĐ
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Tổng thuế TNCN:</strong> {salaryDetails.personalIncomeTax?.toLocaleString('vi-VN')} VNĐ
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#fa8c16' }}>Cách Tính Lương NET</h3>
+              <div style={{ backgroundColor: '#fff7e6', padding: '12px', borderRadius: '6px', border: '1px solid #ffd591' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>Lương NET = Lương GROSS - Đóng góp nhân viên - Thuế TNCN</strong>
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: '14px' }}>
+                  {salaryDetails.grossSalary?.toLocaleString('vi-VN')} - {salaryDetails.employeeContribution?.toLocaleString('vi-VN')} - {salaryDetails.personalIncomeTax?.toLocaleString('vi-VN')} = {salaryDetails.netSalary?.toLocaleString('vi-VN')} VNĐ
+                </div>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#f0f0f0', padding: '12px', borderRadius: '6px' }}>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                <strong>Lưu ý:</strong> Tính toán dựa trên chuẩn pháp luật Việt Nam. 
+                Tỷ lệ đóng góp và thuế có thể thay đổi theo quy định mới.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+            Không có dữ liệu chi tiết tính lương
+          </div>
+        )}
       </Modal>
     </div>
   );
