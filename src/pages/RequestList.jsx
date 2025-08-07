@@ -117,11 +117,13 @@ const RequestList = () => {
 
   const getStatusBadge = (status, resultStatus) => {
     if (status === 'COMPLETED') {
-      if (resultStatus === 'APPROVED') return <Tag color="green">Đã Duyệt</Tag>;
-      if (resultStatus === 'REJECTED') return <Tag color="red">Đã Từ Chối</Tag>;
-      return <Tag color="blue">Hoàn Thành</Tag>;
+      if (resultStatus === 'APPROVED') return <Tag color="green">Đã duyệt</Tag>;
+      if (resultStatus === 'REJECTED') return <Tag color="red">Từ chối</Tag>;
+      return <Tag color="blue">Hoàn thành</Tag>;
     }
-    if (status === 'PENDING') return <Tag color="orange">Đang Chờ</Tag>;
+    if (status === 'PENDING') return <Tag color="orange">Chờ duyệt</Tag>;
+    if (status === 'APPROVED') return <Tag color="green">Đã duyệt</Tag>;
+    if (status === 'REJECTED') return <Tag color="red">Từ chối</Tag>;
     return <Tag>{status}</Tag>;
   };
 
@@ -140,29 +142,14 @@ const RequestList = () => {
       { key: '6', label: 'Trạng thái', children: getStatusBadge(formDetails.status, formDetails.resultStatus) },
     ];
     
-    const teacherItems = formDetails.requestedRole === 'TEACHER' ? [
-      { key: 't1', label: 'Trình độ', children: formDetails.qualifications || 'N/A' },
-      { key: 't2', label: 'Kinh nghiệm', children: formDetails.experience || 'N/A' },
-      { key: 't3', label: 'Môn dạy', children: formDetails.subjects || 'N/A' },
-      { 
-        key: 't4', 
-        label: 'File CV', 
-        children: formDetails.cvFileUrl ? (
-          <a href={formDetails.cvFileUrl} target="_blank" rel="noopener noreferrer">
-            Xem CV
-          </a>
-        ) : 'Không có'
-      },
-      { key: 't5', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
-    ] : [];
-
+    // Chỉ hiển thị chi tiết cho học sinh, bỏ logic giáo viên
     const studentItems = formDetails.requestedRole === 'STUDENT' ? [
       { key: 's1', label: 'Lớp/Khối', children: formDetails.grade || 'N/A' },
       { key: 's2', label: 'Liên hệ phụ huynh', children: formDetails.parentContact || 'N/A' },
       { key: 's3', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
     ] : [];
     
-    const allItems = [...commonItems, ...teacherItems, ...studentItems];
+    const allItems = [...commonItems, ...studentItems];
     
     return <Descriptions bordered column={2} items={allItems} />;
   };
