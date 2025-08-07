@@ -26,9 +26,14 @@ const API_CONFIG = {
     // Student accomplishments endpoint
     STUDENT_ACCOMPLISHMENTS: (userId) => `/students/${userId}/accomplishments`,
 
-    // Classroom endpoints
-    CLASSES: "/classrooms",
-    CLASSES_BY_ID: (id) => `/classrooms/${id}`,
+    // Classroom endpoints (legacy - physical classrooms)
+    CLASSROOMS: "/classrooms", 
+    CLASSROOMS_BY_ID: (id) => `/classrooms/${id}`,
+    
+    // Class endpoints (new - classes created from templates)
+    CLASSES: "/classes",
+    CLASSES_BY_ID: (id) => `/classes/${id}`,
+    CLASSES_LESSONS: (id) => `/classes/${id}/lessons`,
     CLASS_STUDENTS: (id) => `/classrooms/${id}/students`,
     ENROLL_STUDENT: (classId, studentId) =>
       `/classrooms/${classId}/enroll/${studentId}`,
@@ -73,7 +78,9 @@ const API_CONFIG = {
     COURSE_TEMPLATES: "/course-templates",
     COURSE_TEMPLATES_BY_ID: (id) => `/course-templates/${id}`,
     COURSE_TEMPLATES_IMPORT: "/course-templates/import",
+    COURSE_TEMPLATES_SAMPLE: "/course-templates/sample-template",
     COURSE_TEMPLATES_EXPORT: (id) => `/course-templates/${id}/export`,
+    COURSE_TEMPLATES_LESSONS: (id) => `/course-templates/${id}/lessons`,
     COURSE_TEMPLATES_SEARCH: "/course-templates/search",
 
     // Class Management endpoints
@@ -88,6 +95,43 @@ const API_CONFIG = {
 
     // Teachers endpoints (for class assignment)
     TEACHERS: "/users/teachers",
+
+    // Materials endpoints
+    MATERIALS: "/materials",
+    MATERIALS_UPLOAD: "/materials/upload",
+    MATERIALS_DOWNLOAD: (id) => `/materials/download/${id}`,
+    MATERIALS_BY_CLASSROOM: (classroomId) => `/materials/classroom/${classroomId}`,
+    MATERIALS_BY_COURSE: (courseId) => `/materials/course/${courseId}`,
+
+    // Lectures endpoints  
+    LECTURES: "/lectures",
+    LECTURES_BY_CLASSROOM: (classroomId) => `/lectures/classroom/${classroomId}`,
+    LECTURES_CREATE: "/lectures",
+
+    // Assignments endpoints (updated)
+    ASSIGNMENTS_CREATE: "/assignments",
+    ASSIGNMENTS_BY_CLASSROOM: (classroomId) => `/assignments/classroom/${classroomId}`,
+
+    // Public Course endpoints (for Guest users)
+    PUBLIC_COURSES: "/public/courses",
+    PUBLIC_COURSE_CATALOG: "/public/courses/catalog",
+    PUBLIC_COURSE_DETAIL: (id) => `/public/courses/${id}`,
+
+    // Student Course endpoints (for authenticated students)
+    STUDENT_COURSES_ENROLLED: "/student/courses/enrolled",
+    STUDENT_COURSES_ALL: "/student/courses/all",
+    STUDENT_COURSE_DETAIL: (id) => `/student/courses/${id}`,
+    STUDENT_COURSE_ENROLL: (id) => `/student/courses/${id}/enroll`,
+    STUDENT_COURSE_PROGRESS: (id) => `/student/courses/${id}/progress`,
+    STUDENT_COURSES_STATS: "/student/courses/stats",
+    STUDENT_COURSES_SEARCH: "/student/courses/search",
+
+    // Teacher Course endpoints (for authenticated teachers)
+    TEACHER_COURSE_TEMPLATES: "/teacher/course-templates",
+    TEACHER_COURSE_TEMPLATE_DETAIL: (id) => `/teacher/course-templates/${id}`,
+    TEACHER_COURSE_TEMPLATE_CREATE: "/teacher/course-templates",
+    TEACHER_COURSE_TEMPLATE_UPDATE: (id) => `/teacher/course-templates/${id}`,
+    TEACHER_COURSE_ENROLLMENTS: "/teacher/course-enrollments",
   },
 
   // Pagination defaults

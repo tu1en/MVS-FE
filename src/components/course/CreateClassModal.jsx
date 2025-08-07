@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import classManagementService from '../../services/classManagementService';
+import ScheduleManager from '../schedule/ScheduleManager';
 import { 
   validateClassForm, 
   showNotification, 
@@ -36,6 +37,9 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     teachers: [],
     rooms: [],
     conflicts: [],
+    schedule: [],
+    scheduleValidation: null,
+    activeStep: 1, // 1: Basic Info, 2: Schedule, 3: Review
     loading: {
       teachers: false,
       rooms: false,
@@ -44,6 +48,21 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     },
     errors: {}
   });
+
+  // Handle schedule change
+  const handleScheduleChange = (scheduleItems) => {
+    setState(prev => ({ ...prev, schedule: scheduleItems }));
+  };
+
+  // Handle schedule validation
+  const handleScheduleValidate = (validationResult) => {
+    setState(prev => ({ ...prev, scheduleValidation: validationResult }));
+  };
+
+  // Navigation between steps
+  const goToStep = (step) => {
+    setState(prev => ({ ...prev, activeStep: step }));
+  };
 
   // Debounced conflict check
   const debouncedConflictCheck = useCallback(
@@ -67,7 +86,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
       debouncedConflictCheck({
         roomId: formData.roomId,
         teacherId: formData.teacherId,
-        schedule: formData.schedule,
+        schedule: JSON.stringify(formData.schedule),
         startDate: formData.startDate,
         endDate: formData.endDate
       });
@@ -82,15 +101,17 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     
     try {
       const response = await classManagementService.getAllTeachers();
+      const teachersData = response.data?.data || response.data || [];
       setState(prev => ({
         ...prev,
-        teachers: response.data || [],
+        teachers: Array.isArray(teachersData) ? teachersData : [],
         loading: { ...prev.loading, teachers: false }
       }));
     } catch (error) {
       console.error('Error loading teachers:', error);
       setState(prev => ({
         ...prev,
+        teachers: [],
         errors: { ...prev.errors, teachers: error.message },
         loading: { ...prev.loading, teachers: false }
       }));
@@ -103,15 +124,17 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     
     try {
       const response = await classManagementService.getAllRooms();
+      const roomsData = response.data?.data || response.data || [];
       setState(prev => ({
         ...prev,
-        rooms: response.data || [],
+        rooms: Array.isArray(roomsData) ? roomsData : [],
         loading: { ...prev.loading, rooms: false }
       }));
     } catch (error) {
       console.error('Error loading rooms:', error);
       setState(prev => ({
         ...prev,
+        rooms: [],
         errors: { ...prev.errors, rooms: error.message },
         loading: { ...prev.loading, rooms: false }
       }));
@@ -289,6 +312,30 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
             </button>
           </div>
 
+          {/* Step Navigation */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex space-x-8">
+              {[
+                { step: 1, label: '📋 Thông tin cơ bản', desc: 'Tên lớp, giáo viên' },
+                { step: 2, label: '📅 Lịch học & Phòng', desc: 'Thời gian, phòng học' },
+                { step: 3, label: '🔍 Xem trước & Tạo', desc: 'Kiểm tra và hoàn tất' }
+              ].map(item => (
+                <button
+                  key={item.step}
+                  onClick={() => goToStep(item.step)}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    state.activeStep === item.step
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div>{item.label}</div>
+                  <div className="text-xs opacity-75">{item.desc}</div>
+                </button>
+              ))}
+            </nav>
+          </div>
+
           {/* Schedule Conflicts Alert */}
           {state.conflicts.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -309,9 +356,11 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Form */}
-            <div className="lg:col-span-2 space-y-6">
+          {/* Step Content */}
+          {state.activeStep === 1 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Form */}
+              <div className="lg:col-span-2 space-y-6">
               {/* Basic Information */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-4 flex items-center">
@@ -415,7 +464,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                       <option value="">
                         {state.loading.rooms ? 'Đang tải...' : 'Chọn phòng học'}
                       </option>
-                      {state.rooms.map(room => (
+                      {(state.rooms && Array.isArray(state.rooms) ? state.rooms : []).map(room => (
                         <option key={room.id} value={room.id}>
                           {room.roomCode} - {room.roomName} (Sức chứa: {room.capacity})
                         </option>
@@ -653,32 +702,169 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 mt-8 pt-6 border-t">
-            <button
-              onClick={handleCancel}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={state.loading.submit}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {state.loading.submit ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Đang tạo...
-                </>
-              ) : (
-                <>
-                  <span className="mr-2">🏫</span>
-                  Tạo lớp học
-                </>
+          {/* Step 2: Schedule Management */}
+          {state.activeStep === 2 && (
+            <div>
+              <ScheduleManager
+                classData={{
+                  id: null, // New class
+                  template: template,
+                  expectedStudents: formData.maxStudents
+                }}
+                existingSchedule={state.schedule}
+                onScheduleChange={handleScheduleChange}
+                onScheduleValidate={handleScheduleValidate}
+                mode="create"
+              />
+            </div>
+          )}
+
+          {/* Step 3: Review & Create */}
+          {state.activeStep === 3 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">🔍 Xem trước & Hoàn tất</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">📋 Thông tin lớp học</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tên lớp:</span>
+                        <span className="font-medium">{formData.className || 'Chưa nhập'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Giáo viên:</span>
+                        <span className="font-medium">
+                          {state.teachers.find(t => t.id === formData.teacherId)?.fullName || 'Chưa chọn'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Số học viên tối đa:</span>
+                        <span className="font-medium">{formData.maxStudents}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-3">📅 Lịch học</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Số tiết học:</span>
+                        <span className="font-medium">{state.schedule.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Tiết có phòng:</span>
+                        <span className="font-medium">
+                          {state.schedule.filter(s => s.room).length} / {state.schedule.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-yellow-900 mb-3">⚠️ Kiểm tra cuối cùng</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center">
+                        <span className={`mr-2 ${formData.className ? 'text-green-600' : 'text-red-600'}`}>
+                          {formData.className ? '✓' : '✗'}
+                        </span>
+                        <span>Tên lớp học</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className={`mr-2 ${formData.teacherId ? 'text-green-600' : 'text-red-600'}`}>
+                          {formData.teacherId ? '✓' : '✗'}
+                        </span>
+                        <span>Giáo viên phụ trách</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className={`mr-2 ${state.schedule.length > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {state.schedule.length > 0 ? '✓' : '✗'}
+                        </span>
+                        <span>Lịch học đã thiết lập</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className={`mr-2 ${state.scheduleValidation?.isValid !== false ? 'text-green-600' : 'text-red-600'}`}>
+                          {state.scheduleValidation?.isValid !== false ? '✓' : '✗'}
+                        </span>
+                        <span>Không có xung đột lịch</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {state.scheduleValidation && !state.scheduleValidation.isValid && (
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-red-900 mb-3">🚫 Vấn đề cần khắc phục</h4>
+                      <div className="space-y-1 text-sm text-red-800">
+                        {state.scheduleValidation.conflicts?.map((conflict, index) => (
+                          <div key={index}>• {conflict.message || conflict}</div>
+                        ))}
+                        {state.scheduleValidation.errors?.map((error, index) => (
+                          <div key={index}>• {error}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step Navigation Buttons */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t">
+            <div className="flex space-x-3">
+              {state.activeStep > 1 && (
+                <button
+                  onClick={() => goToStep(state.activeStep - 1)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  ← Quay lại
+                </button>
               )}
-            </button>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancel}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              
+              {state.activeStep < 3 ? (
+                <button
+                  onClick={() => goToStep(state.activeStep + 1)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Tiếp tục →
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={state.loading.submit || 
+                    !formData.className || 
+                    !formData.teacherId || 
+                    state.schedule.length === 0}
+                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {state.loading.submit ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Đang tạo...
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">🎯</span>
+                      Tạo lớp học
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

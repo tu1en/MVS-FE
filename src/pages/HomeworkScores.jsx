@@ -1,5 +1,6 @@
 import { Card, Table, Tag, Select, Row, Col } from 'antd';
 import { useState } from 'react';
+import { safeDataSource } from '../utils/tableUtils';
 
 const allSubjects = ['Toán', 'Văn', 'Anh', 'Lý', 'Hóa'];
 
@@ -151,7 +152,7 @@ export default function HomeworkScores() {
         <Card title="📋 Danh sách bài tập" className="rounded-xl shadow border">
           <Table
             columns={columns}
-            dataSource={filtered}
+            dataSource={safeDataSource(filtered, 'HomeworkScores')}
             rowKey={(record, idx) => `${record.name}-${idx}`}
             pagination={false}
             className="text-base"

@@ -217,6 +217,22 @@ export default function TeacherDashboard() {
           </Card>
         </Col>
 
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            hoverable
+            className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
+            onClick={() => handleCardClick("/teacher/course-management")}
+          >
+            <div className="text-center">
+              <BookOutlined className="text-4xl text-green-500 mb-4" />
+              <h2 className="text-xl font-semibold mb-4">Quản lý khóa học</h2>
+              <p className="text-gray-600">
+                Tạo và quản lý khóa học trực tuyến
+              </p>
+            </div>
+          </Card>
+        </Col>
+
         {/* <Col xs={24} sm={12} lg={8}>
           <Card
             hoverable

@@ -133,6 +133,17 @@ export default function ManagerDashboard() {
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">📊 Import Excel Templates</h2>
+          <p className="text-gray-600">Tạo khóa học từ file Excel và quản lý templates</p>
+          <button 
+            className="mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/course-templates')}
+          >
+            Quản lý Templates Excel
+          </button>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý lịch học</h2>
           <p className="text-gray-600">Quản lý lịch học các lớp trong hệ thống</p>
           <button 

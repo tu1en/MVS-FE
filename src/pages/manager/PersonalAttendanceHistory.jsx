@@ -30,6 +30,7 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { safeDataSource } from '../../utils/tableUtils';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -580,7 +581,7 @@ const PersonalAttendanceHistory = () => {
             </div>
             <Table
               columns={columns}
-              dataSource={filteredLogs}
+              dataSource={safeDataSource(filteredLogs, 'PersonalAttendanceHistory')}
               loading={loading}
               rowKey="id"
               pagination={{

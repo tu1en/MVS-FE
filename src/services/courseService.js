@@ -67,6 +67,15 @@ const courseService = {
   },
 
   /**
+   * Get lessons for a course template
+   * @param {number} id - Template ID
+   * @returns {Promise<Array>} List of lessons
+   */
+  getTemplateLessons: (id) => {
+    return apiClient.get(API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_LESSONS(id));
+  },
+
+  /**
    * Create new course template
    * @param {Object} templateData - Template data
    * @returns {Promise<Object>} Created template
@@ -110,6 +119,16 @@ const courseService = {
    */
   getTemplateStats: (id) => {
     return apiClient.get(`${API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_BY_ID(id)}/stats`);
+  },
+
+  /**
+   * Download sample template Excel file
+   * @returns {Promise<Blob>} Sample template file blob
+   */
+  downloadSampleTemplate: () => {
+    return apiClient.get(API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_SAMPLE, {
+      responseType: 'blob'
+    });
   },
 
   /**

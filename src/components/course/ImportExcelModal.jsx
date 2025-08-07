@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import courseService from '../../services/courseService';
 import { 
   validateImportForm, 
@@ -6,7 +7,8 @@ import {
   showNotification, 
   showConfirmDialog,
   formatFileSize,
-  getCurrentUserId 
+  getCurrentUserId,
+  downloadFile 
 } from '../../utils/courseManagementUtils';
 
 const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
@@ -14,6 +16,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
     courseName: '',
     description: '',
     subject: '',
+    section: '',
     file: null,
     preview: [],
     validation: {}
@@ -110,6 +113,15 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
     setCurrentStep(3);
 
     try {
+      // Debug log
+      console.log('Starting import with data:', {
+        file: formData.file?.name,
+        courseName: formData.courseName,
+        description: formData.description,
+        subject: formData.subject,
+        createdBy: getCurrentUserId() || 1
+      });
+
       // Prepare form data
       const uploadData = new FormData();
       uploadData.append('file', formData.file);
@@ -118,8 +130,12 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       uploadData.append('subject', formData.subject);
       uploadData.append('createdBy', getCurrentUserId() || 1);
 
+      console.log('Form data prepared, calling API...');
+
       // Submit to API
       const response = await courseService.importFromExcel(uploadData);
+      
+      console.log('API response received:', response);
       
       showNotification(`Import thành công! Đã tạo khóa học "${formData.courseName}"`, 'success');
       
@@ -142,6 +158,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       courseName: '',
       description: '',
       subject: '',
+      section: '',
       file: null,
       preview: [],
       validation: {}
@@ -156,6 +173,39 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
   const handleCancel = () => {
     handleReset();
     onCancel();
+  };
+
+  // Handle download template
+  const handleDownloadTemplate = () => {
+    try {
+      showNotification('Đang tạo template mẫu...', 'info');
+      
+      // Create sample Excel template data
+      const templateData = [
+        ['Tuần', 'Chủ đề bài học', 'Loại bài học', 'Thời lượng (phút)', 'Mô tả', 'Tài liệu'],
+        [1, 'Giới thiệu khóa học', 'Lý thuyết', 60, 'Tổng quan về khóa học và mục tiêu học tập', 'slide01.pdf'],
+        [1, 'Cài đặt môi trường', 'Thực hành', 90, 'Hướng dẫn cài đặt các công cụ cần thiết', 'setup_guide.pdf'],
+        [2, 'Khái niệm cơ bản', 'Lý thuyết', 75, 'Học các khái niệm nền tảng', 'concept.pdf'],
+        [2, 'Bài tập thực hành đầu tiên', 'Thực hành', 120, 'Thực hành với các ví dụ đơn giản', 'exercise01.pdf'],
+        [3, 'Chủ đề nâng cao', 'Lý thuyết', 90, 'Tìm hiểu các chủ đề phức tạp hơn', 'advanced.pdf'],
+        [3, 'Dự án nhỏ', 'Dự án', 180, 'Làm dự án nhỏ để áp dụng kiến thức', 'project01.pdf']
+      ];
+
+      // Create Excel workbook using xlsx library
+      const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Course Template');
+
+      // Generate Excel file blob
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      downloadFile(blob, 'course_template_sample.xlsx');
+      showNotification('Đã tải template Excel mẫu thành công!', 'success');
+    } catch (error) {
+      console.error('Download template error:', error);
+      showNotification('Lỗi tạo template: ' + error.message, 'error');
+    }
   };
 
   if (!visible) return null;
@@ -250,6 +300,17 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
                       <option value="Kinh doanh">Kinh doanh</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Lớp/Section</label>
+                    <input
+                      type="text"
+                      value={formData.section}
+                      onChange={(e) => handleFieldChange('section', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ví dụ: SE1801, IT001..."
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-4">
@@ -330,7 +391,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
                     <button 
                       type="button"
                       className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                      onClick={() => showNotification('Tính năng tải template đang được phát triển', 'info')}
+                      onClick={handleDownloadTemplate}
                     >
                       📥 Tải Template Mẫu
                     </button>
