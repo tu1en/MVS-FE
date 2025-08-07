@@ -6,19 +6,19 @@ const requestService = {
         return api.post('/auth/register', data);
     },
     getPendingRequests: () => {
-        return api.get('/admin/requests/pending');
+        return api.get('/manager/requests/pending');
     },
     approveRequest: (requestId) => {
-        return api.post(`/admin/requests/${requestId}/approve`);
+        return api.post(`/manager/requests/${requestId}/approve`);
     },
     rejectRequest: (requestId, reason) => {
         // Backend nhận body là chuỗi lý do, không phải object
-        return api.post(`/admin/requests/${requestId}/reject`, reason, {
+        return api.post(`/manager/requests/${requestId}/reject`, reason, {
             headers: { 'Content-Type': 'text/plain' }
         });
     },
     getAllRequests: () => {
-        return api.get('/admin/requests');
+        return api.get('/manager/requests');
     }
 };
 

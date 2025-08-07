@@ -37,6 +37,8 @@
     "firebase-admin": "^13.4.0",
     "framer-motion": "^11.2.10",
     "http-proxy-middleware": "^3.0.5",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.294.0",
     "moment": "^2.30.1",
