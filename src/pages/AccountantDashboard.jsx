@@ -64,7 +64,7 @@ const AccountantDashboard = () => {
         }
 
         try {
-          const contractStatsResponse = await api.get('/contracts/statistics');
+          const contractStatsResponse = await api.get('/contracts/stats');
           setContractStats(contractStatsResponse.data || {});
         } catch (error) {
           console.error('Error fetching contract stats:', error);
