@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import courseService from '../../services/courseService';
+import RoomSelector from '../room/RoomSelector';
 import { 
   validateImportForm, 
   parseExcelFile, 
@@ -19,7 +20,8 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
     section: '',
     file: null,
     preview: [],
-    validation: {}
+    validation: {},
+    selectedRoom: null
   });
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -110,7 +112,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
     }
 
     setLoading(true);
-    setCurrentStep(3);
+    setCurrentStep(4);
 
     try {
       // Debug log
@@ -128,7 +130,14 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       uploadData.append('courseName', formData.courseName);
       uploadData.append('description', formData.description);
       uploadData.append('subject', formData.subject);
+      uploadData.append('section', formData.section);
       uploadData.append('createdBy', getCurrentUserId() || 1);
+      // Include room information if selected
+      if (formData.selectedRoom) {
+        uploadData.append('roomId', formData.selectedRoom.id);
+        uploadData.append('roomName', formData.selectedRoom.name || `${formData.selectedRoom.building}-${formData.selectedRoom.number}`);
+      }
+      // Note: No teacherId - teacher will be assigned later
 
       console.log('Form data prepared, calling API...');
 
@@ -137,16 +146,17 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       
       console.log('API response received:', response);
       
-      showNotification(`Import thành công! Đã tạo khóa học "${formData.courseName}"`, 'success');
+      const roomMsg = formData.selectedRoom ? ` với phòng ${formData.selectedRoom.name || formData.selectedRoom.building + '-' + formData.selectedRoom.number}` : '';
+      showNotification(`Tạo khóa học thành công! "${formData.courseName}"${roomMsg}. Giáo viên có thể được gán sau khi hoàn thành.`, 'success');
       
       // Reset form and close modal
       handleReset();
       onSuccess(response.data);
       
     } catch (error) {
-      console.error('Import error:', error);
-      showNotification('Lỗi import: ' + (error.response?.data?.message || error.message), 'error');
-      setCurrentStep(2); // Go back to preview step
+      console.error('Course creation error:', error);
+      showNotification('Lỗi tạo khóa học: ' + (error.response?.data?.message || error.message), 'error');
+      setCurrentStep(3); // Go back to room selection step
     } finally {
       setLoading(false);
     }
@@ -161,7 +171,8 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       section: '',
       file: null,
       preview: [],
-      validation: {}
+      validation: {},
+      selectedRoom: null
     });
     setCurrentStep(1);
     if (fileInputRef.current) {
@@ -233,8 +244,9 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
             <div className="flex items-center justify-center space-x-4 text-sm">
               {[
                 { step: 1, label: 'Thông tin & File', icon: '📝' },
-                { step: 2, label: 'Preview & Xác nhận', icon: '👁️' },
-                { step: 3, label: 'Đang xử lý', icon: '⚙️' }
+                { step: 2, label: 'Preview & Kiểm tra', icon: '👁️' },
+                { step: 3, label: 'Chọn phòng học', icon: '🏫' },
+                { step: 4, label: 'Hoàn thành khóa học', icon: '✅' }
               ].map((item, index) => (
                 <React.Fragment key={item.step}>
                   <div className="flex items-center">
@@ -249,7 +261,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
                       {item.icon} {item.label}
                     </span>
                   </div>
-                  {index < 2 && (
+                  {index < 3 && (
                     <div className={`flex-1 h-px ${currentStep > item.step ? 'bg-blue-600' : 'bg-gray-300'}`} />
                   )}
                 </React.Fragment>
@@ -463,23 +475,75 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
                   ← Quay lại chỉnh sửa
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  onClick={() => setCurrentStep(3)}
                   disabled={loading}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  Xác nhận Import →
+                  Chọn phòng học →
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Processing */}
+          {/* Step 3: Room Selection */}
           {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <span className="text-blue-600 text-xl mr-2">🏫</span>
+                  <h4 className="font-medium text-blue-900">Chọn phòng học cho khóa học</h4>
+                </div>
+                <p className="text-sm text-blue-700 mb-2">
+                  Chọn phòng học phù hợp cho khóa học "{formData.courseName}". Bạn có thể kiểm tra tình trạng phòng trống.
+                </p>
+                <p className="text-xs text-gray-600">
+                  💡 Quy trình: Tạo khóa học → Chọn phòng → Hoàn thành → Gán giáo viên (sau)
+                </p>
+              </div>
+
+              <div className="bg-white border rounded-lg p-4">
+                <RoomSelector
+                  selectedRoom={formData.selectedRoom}
+                  onRoomSelect={(room) => handleFieldChange('selectedRoom', room)}
+                  scheduleData={null} // No specific schedule data yet
+                  minCapacity={20} // Default minimum capacity
+                  className="w-full"
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  ← Quay lại preview
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!formData.selectedRoom}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Hoàn thành khóa học →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Processing */}
+          {currentStep === 4 && (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Đang xử lý file Excel...</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Đang tạo khóa học...</h4>
               <p className="text-gray-600">
-                Vui lòng đợi trong khi hệ thống import khóa học "{formData.courseName}"
+                Vui lòng đợi trong khi hệ thống tạo khóa học "{formData.courseName}"
+              </p>
+              {formData.selectedRoom && (
+                <p className="text-sm text-blue-600 mt-2">
+                  🏫 Phòng học: {formData.selectedRoom.name || `${formData.selectedRoom.building}-${formData.selectedRoom.number}`}
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                👨‍🏫 Gán giáo viên sau khi khóa học hoàn thành
               </p>
             </div>
           )}
