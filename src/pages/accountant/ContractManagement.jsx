@@ -43,6 +43,7 @@ const ContractManagement = () => {
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [candidatePosition, setCandidatePosition] = useState('');
   const [form] = Form.useForm();
   const [candidateForm] = Form.useForm();
 
@@ -156,26 +157,124 @@ const ContractManagement = () => {
     }
   };
 
+  // Generate Contract ID based on current date and sequence
+  const generateContractId = () => {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = String(today.getFullYear()).slice(-2);
+    // For demo purposes, we'll use a simple sequence. In production, this should come from backend
+    const sequence = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+    return `${sequence}${month}${year}`;
+  };
+
   // Mở modal tạo hợp đồng từ ứng viên đã duyệt
-  const handleSelectCandidate = (candidate) => {
+  const handleSelectCandidate = async (candidate) => {
     setSelectedCandidate(candidate);
+    const contractId = generateContractId();
+    
+    // Set basic candidate information first
+    const position = candidate.position || candidate.jobTitle || candidate.role || '';
+    console.log('Candidate object:', candidate);
+    console.log('Position from candidate:', position);
+    console.log('All possible position fields:', {
+      position: candidate.position,
+      jobTitle: candidate.jobTitle,
+      role: candidate.role,
+      contractType: candidate.contractType
+    });
+    
+    // ✅ FIX: Use contractType from backend for more reliable teacher detection
+    const effectivePosition = candidate.contractType === 'TEACHER' ? 'giáo viên' : position;
+    console.log('Effective position for UI logic:', effectivePosition);
+    setCandidatePosition(effectivePosition);
+    
     candidateForm.setFieldsValue({
-      userId: candidate.userId || '',
+      contractId: contractId,
       fullName: candidate.fullName || '',
       email: candidate.email || '',
       phoneNumber: candidate.phoneNumber || '',
-      contractType: candidate.contractType || 'TEACHER',
-      position: candidate.position || '',
-      department: '',
-      offer: candidate.offer || 'Chưa có thông tin offer',
-      salary: candidate.salary || 0,
-      workingHours: '8',
+      position: position,
       startDate: '',
       endDate: '',
       status: 'ACTIVE',
       contractTerms: ''
     });
+    
+    // Fetch offer data from backend API
+    try {
+      const candidateId = candidate.userId || candidate.id || 1; // Use candidate ID for API call
+      console.log('🔍 DEBUG: Fetching offer data for candidate:', candidate);
+      console.log('🔍 DEBUG: Using candidateId:', candidateId);
+      console.log('🔍 DEBUG: API URL:', `/contracts/candidates/${candidateId}/offer`);
+      console.log('🔍 DEBUG: Candidate contractType:', candidate.contractType);
+      console.log('🔍 DEBUG: Candidate position:', candidate.position);
+      
+      const offerResponse = await axiosInstance.get(`/contracts/candidates/${candidateId}/offer`);
+      const offerData = offerResponse.data;
+      console.log('🔍 DEBUG: Received offer data:', offerData);
+      console.log('🔍 DEBUG: Offer data hourlySalary:', offerData.hourlySalary);
+      console.log('🔍 DEBUG: Offer data grossSalary:', offerData.grossSalary);
+      console.log('🔍 DEBUG: Offer data netSalary:', offerData.netSalary);
+      
+      // Update form with offer data based on position
+      const formValues = {
+        evaluation: offerData.evaluation || 'Chưa có đánh giá'
+      };
+      
+      // Hiển thị dữ liệu lương theo vị trí
+      console.log('🔍 DEBUG: Setting form values from offer data...');
+      if (offerData.grossSalary !== null && offerData.grossSalary !== undefined) {
+        formValues.grossSalary = offerData.grossSalary;
+        console.log('🔍 DEBUG: Set grossSalary:', offerData.grossSalary);
+      } else {
+        formValues.grossSalary = null; // Để trống cho Giáo viên
+        console.log('🔍 DEBUG: Set grossSalary to null (for teachers)');
+      }
+      
+      if (offerData.netSalary !== null && offerData.netSalary !== undefined) {
+        formValues.netSalary = offerData.netSalary;
+        console.log('🔍 DEBUG: Set netSalary:', offerData.netSalary);
+      } else {
+        formValues.netSalary = null; // Để trống cho Giáo viên
+        console.log('🔍 DEBUG: Set netSalary to null (for teachers)');
+      }
+      
+      if (offerData.hourlySalary !== null && offerData.hourlySalary !== undefined) {
+        formValues.hourlySalary = offerData.hourlySalary;
+        console.log('🔍 DEBUG: Set hourlySalary:', offerData.hourlySalary);
+      } else {
+        formValues.hourlySalary = null; // Để trống cho Manager/Kế toán
+        console.log('🔍 DEBUG: Set hourlySalary to null (for staff)');
+      }
+      
+      console.log('🔍 DEBUG: Final formValues before setFieldsValue:', formValues);
+      
+      candidateForm.setFieldsValue(formValues);
+      
+      message.success('Đã tải thông tin offer từ hệ thống Quản lý Offer');
+    } catch (error) {
+      console.error('Error fetching offer data:', error);
+      message.warning('Không thể tải thông tin offer. Sử dụng dữ liệu mặc định.');
+      
+      // Set default values if API call fails
+      candidateForm.setFieldsValue({
+        evaluation: 'Chưa có đánh giá',
+        grossSalary: 0,
+        netSalary: 0,
+        hourlySalary: 0
+      });
+    }
+    
     setCandidateModalVisible(true);
+  };
+
+  // Mở modal tạo hợp đồng thủ công
+  const handleCreateManualContract = () => {
+    const contractId = generateContractId();
+    form.setFieldsValue({
+      contractId: contractId
+    });
+    setModalVisible(true);
   };
 
   // Mở modal chỉnh sửa hợp đồng
@@ -524,6 +623,13 @@ const ContractManagement = () => {
   // Cấu hình cột cho bảng hợp đồng
   const contractColumns = [
     {
+      title: 'ID Hợp đồng',
+      dataIndex: 'contractId',
+      key: 'contractId',
+      width: 120,
+      render: (text) => <strong style={{ color: '#1890ff' }}>{text}</strong>
+    },
+    {
       title: 'Họ tên',
       dataIndex: 'fullName',
       key: 'fullName',
@@ -683,6 +789,16 @@ const ContractManagement = () => {
   return (
     <div className="contract-management">
       <Card title="Quản lý Hợp đồng" className="contract-card">
+        <div style={{ marginBottom: 16, textAlign: 'right' }}>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={handleCreateManualContract}
+            size="large"
+          >
+            Tạo hợp đồng thủ công
+          </Button>
+        </div>
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
           <TabPane 
             tab={<span><UserOutlined /> Hợp đồng Giáo viên ({teacherContracts.length})</span>} 
@@ -754,6 +870,19 @@ const ContractManagement = () => {
           layout="vertical"
           onFinish={editingContract ? handleUpdateContract : handleCreateContract}
         >
+          <Form.Item name="contractId" label="ID Hợp đồng">
+            <Input 
+              placeholder="Tự động tạo" 
+              readOnly 
+              style={{ 
+                backgroundColor: '#f0f8ff', 
+                border: '1px solid #1890ff',
+                color: '#1890ff',
+                fontWeight: 'bold'
+              }} 
+            />
+          </Form.Item>
+
           <Form.Item name="userId" label="User ID" rules={[{ required: true, message: 'Vui lòng nhập User ID!' }]}>
             <Input placeholder="Nhập User ID" />
           </Form.Item>
@@ -879,8 +1008,17 @@ const ContractManagement = () => {
           layout="vertical"
           onFinish={handleCreateContract}
         >
-          <Form.Item name="userId" label="User ID" rules={[{ required: true, message: 'Vui lòng nhập User ID!' }]}>
-            <Input placeholder="Nhập User ID" />
+          <Form.Item name="contractId" label="ID Hợp đồng">
+            <Input 
+              placeholder="Tự động tạo" 
+              readOnly 
+              style={{ 
+                backgroundColor: '#f0f8ff', 
+                border: '1px solid #1890ff',
+                color: '#1890ff',
+                fontWeight: 'bold'
+              }} 
+            />
           </Form.Item>
 
           <Form.Item name="fullName" label="Họ và tên">
@@ -926,37 +1064,90 @@ const ContractManagement = () => {
             <Input placeholder="Nhập cấp học" />
           </Form.Item>
 
-          <Form.Item name="contractType" label="Loại hợp đồng">
-            <Select disabled>
-              <Option value="TEACHER">Giáo viên</Option>
-              <Option value="STAFF">Nhân viên</Option>
-            </Select>
-          </Form.Item>
-
           <Form.Item name="position" label="Vị trí">
             <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item name="department" label="Phòng ban" rules={[{ required: true, message: 'Vui lòng nhập phòng ban!' }]}>
-            <Input placeholder="Nhập phòng ban" />
-          </Form.Item>
-
-          <Form.Item name="offer" label="Offer">
-            <TextArea rows={3} readOnly style={{ backgroundColor: '#f5f5f5', cursor: 'default' }} />
-          </Form.Item>
-
-          <Form.Item name="salary" label="Lương" rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}>
-            <InputNumber
-              style={{ width: '100%' }}
-              placeholder="Nhập lương"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          {/* Offer Management Fields - Read Only */}
+          <Form.Item name="evaluation" label="Đánh giá">
+            <Input 
+              placeholder="Tự động lấy từ Offer" 
+              readOnly 
+              style={{ 
+                backgroundColor: '#f0f8ff', 
+                border: '1px solid #52c41a',
+                color: '#52c41a',
+                fontWeight: 'bold'
+              }} 
             />
           </Form.Item>
 
-          <Form.Item name="workingHours" label="Giờ làm việc">
-            <Input placeholder="Nhập giờ làm việc" defaultValue="8" />
-          </Form.Item>
+          {/* Conditional rendering based on position */}
+          {(() => {
+            const position = candidatePosition.toLowerCase();
+            // ✅ FIX: More robust teacher detection
+            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
+                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
+            console.log('Teacher detection - position:', position, 'isTeacher:', isTeacher, 'contractType:', selectedCandidate?.contractType);
+            
+            if (isTeacher) {
+              // Teachers: only show hourly salary
+              return (
+                <Form.Item name="hourlySalary" label="Lương theo giờ">
+                  <InputNumber
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: '#f0f8ff', 
+                      border: '1px solid #52c41a',
+                      color: '#52c41a',
+                      fontWeight: 'bold'
+                    }}
+                    placeholder="Lương theo giờ cho Giáo viên"
+                    readOnly
+                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                  />
+                </Form.Item>
+              );
+            } else {
+              // Manager/Accountant: show gross and net salary
+              return (
+                <>
+                  <Form.Item name="grossSalary" label="Lương GROSS">
+                    <InputNumber
+                      style={{ 
+                        width: '100%',
+                        backgroundColor: '#f0f8ff', 
+                        border: '1px solid #52c41a',
+                        color: '#52c41a',
+                        fontWeight: 'bold'
+                      }}
+                      placeholder="Lương GROSS cho Manager/Kế toán"
+                      readOnly
+                      formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                      parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="netSalary" label="Lương NET">
+                    <InputNumber
+                      style={{ 
+                        width: '100%',
+                        backgroundColor: '#f0f8ff', 
+                        border: '1px solid #52c41a',
+                        color: '#52c41a',
+                        fontWeight: 'bold'
+                      }}
+                      placeholder="Lương NET cho Manager/Kế toán"
+                      readOnly
+                      formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                      parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                    />
+                  </Form.Item>
+                </>
+              );
+            }
+          })()}
 
           <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
