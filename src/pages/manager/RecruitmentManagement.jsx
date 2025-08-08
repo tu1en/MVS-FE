@@ -70,6 +70,65 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
   );
 };
 
+// Component cho cột Lương theo giờ (Part-time)
+const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
+  const [inputHourlyRate, setInputHourlyRate] = useState(hourlyRate);
+
+  useEffect(() => {
+    setInputHourlyRate(hourlyRate);
+  }, [hourlyRate]);
+
+  const handleHourlyRateChange = async (value) => {
+    if (value && value < 100000) {
+      value = 100000;
+    }
+    setInputHourlyRate(value);
+    await onHourlyRateUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputHourlyRate}
+          onChange={handleHourlyRateChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={100000}
+          min={100000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương/giờ"
+        />
+        <Button 
+          size="small" 
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            handleHourlyRateChange(currentValue + 100000);
+          }}
+        >
+          +100k
+        </Button>
+        <Button 
+          size="small"
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            if (currentValue > 100000) {
+              handleHourlyRateChange(currentValue - 100000);
+            }
+          }}
+        >
+          -100k
+        </Button>
+      </div>
+      {inputHourlyRate && (
+        <div className="text-xs text-gray-500 vietnamese-text mt-1">
+          (Lương theo giờ: {inputHourlyRate.toLocaleString('vi-VN')} VNĐ/giờ)
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Component cho cột Lương NET với input
 const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
   const [netSalary, setNetSalary] = useState(null);
@@ -499,7 +558,7 @@ const RecruitmentManagement = () => {
             'DURATION_TOO_LONG': 'Thời gian phỏng vấn không được quá 4 tiếng!',
             'INVALID_TIME_ORDER': 'Thời gian bắt đầu phải trước thời gian kết thúc!',
             'SCHEDULE_CONFLICT': 'Thời gian phỏng vấn bị trùng với lịch phỏng vấn khác!',
-            'OUTSIDE_BUSINESS_HOURS': 'Lịch phỏng vấn chỉ được sắp xếp trong giờ hành chính (7h sáng đến 5h chiều)!'
+            // Đã bỏ ràng buộc giờ hành chính
           };
           const errorMessage = errorMessages[err.response.data.error] || 'Thời gian phỏng vấn không đáp ứng điều kiện quy định!';
           console.log('Using error code mapping:', err.response.data.error, '->', errorMessage);
@@ -544,6 +603,21 @@ const RecruitmentManagement = () => {
     }
   };
 
+  const handleHourlyRateUpdate = async (id, hourlyRate) => {
+    try {
+      // Đảm bảo giá trị tối thiểu là 100k
+      let validHourlyRate = hourlyRate;
+      if (hourlyRate && hourlyRate < 100000) {
+        validHourlyRate = 100000;
+      }
+      await axiosInstance.put(`/interview-schedules/${id}/hourly-rate`, { hourlyRate: validHourlyRate });
+      message.success('Cập nhật lương theo giờ thành công!');
+      fetchOffers(); // Refresh để hiển thị giá trị đã được chuẩn hóa
+    } catch (err) {
+      message.error('Không thể cập nhật lương theo giờ!');
+    }
+  };
+
   const handleEvaluationUpdate = async (id, evaluation) => {
     try {
       await axiosInstance.put(`/interview-schedules/${id}/evaluation`, { evaluation });
@@ -575,20 +649,34 @@ const RecruitmentManagement = () => {
     setShowCvModal(true);
   };
 
-  const handleResendOffer = async (interviewId, offer) => {
-    if (!offer || offer.trim() === '') {
-      message.warning('Vui lòng nhập offer trước khi gửi lại!');
-      return;
-    }
+  const handleResendOffer = async (interviewId, offer, hourlyRate, contractType) => {
     try {
-      // Lấy chi tiết tính lương trước khi gửi email
-      const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
-      
-      await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
-        offer: offer,
-        salaryDetails: salaryDetails.data
-      });
-      message.success('Đã gửi offer email với chi tiết lương thành công!');
+      if (contractType === 'PART_TIME') {
+        if (!hourlyRate || hourlyRate < 100000) {
+          message.warning('Vui lòng nhập lương theo giờ trước khi gửi lại!');
+          return;
+        }
+        
+        // Gửi email part-time
+        await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer-part-time`, {
+          hourlyRate: hourlyRate
+        });
+        message.success('Đã gửi offer email part-time thành công!');
+      } else {
+        if (!offer || offer.trim() === '') {
+          message.warning('Vui lòng nhập offer trước khi gửi lại!');
+          return;
+        }
+        
+        // Lấy chi tiết tính lương trước khi gửi email
+        const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
+        
+        await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
+          offer: offer,
+          salaryDetails: salaryDetails.data
+        });
+        message.success('Đã gửi offer email với chi tiết lương thành công!');
+      }
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
@@ -665,6 +753,12 @@ const RecruitmentManagement = () => {
   const openPlans = plans.filter(p => p.status === 'OPEN');
 
   const positionColumns = [
+    { 
+      title: 'Thứ tự', 
+      dataIndex: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
     { title: 'Vị trí', dataIndex: 'title', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Mô tả', dataIndex: 'description', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Mức lương', dataIndex: 'salaryRange', render: (text) => <span className="vietnamese-text">{text}</span> },
@@ -683,6 +777,12 @@ const RecruitmentManagement = () => {
   ];
 
   const applicationColumns = [
+    { 
+      title: 'Thứ tự', 
+      dataIndex: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
@@ -740,6 +840,12 @@ const RecruitmentManagement = () => {
 
   // Gộp danh sách ứng viên đã duyệt và lịch phỏng vấn
   const scheduleColumns = [
+    { 
+      title: 'Thứ tự', 
+      dataIndex: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
@@ -831,6 +937,12 @@ const RecruitmentManagement = () => {
   ];
 
   const pendingInterviewColumns = [
+    { 
+      title: 'Thứ tự', 
+      dataIndex: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
     { title: 'Họ tên', dataIndex: 'applicantName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     { 
@@ -901,7 +1013,26 @@ const RecruitmentManagement = () => {
   ];
 
   const offerColumns = [
-    { title: 'Họ tên', dataIndex: 'applicantName', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Thứ tự', 
+      dataIndex: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
+    { 
+      title: 'Họ tên', 
+      dataIndex: 'applicantName', 
+      render: (text, record) => (
+        <span className="vietnamese-text" style={{
+          backgroundColor: record.contractType === 'PART_TIME' ? '#e6f7ff' : '#fff7e6',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          display: 'inline-block'
+        }}>
+          {text}
+        </span>
+      )
+    },
     { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     { 
       title: 'Ngày phỏng vấn', 
@@ -932,17 +1063,37 @@ const RecruitmentManagement = () => {
     {
       title: 'Lương GROSS',
       dataIndex: 'offer',
-      render: (text, record) => <GrossSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} onShowSalaryDetails={handleShowSalaryDetails} />
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return <GrossSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} onShowSalaryDetails={handleShowSalaryDetails} />;
+      }
     },
     {
       title: 'Lương NET',
       dataIndex: 'offer',
-      render: (text, record) => <NetSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} />
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return <NetSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} />;
+      }
+    },
+    {
+      title: 'Lương theo giờ',
+      dataIndex: 'hourlyRate',
+      render: (text, record) => {
+        if (record.contractType === 'FULL_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return <HourlyRateColumn hourlyRate={text} recordId={record.id} onHourlyRateUpdate={handleHourlyRateUpdate} />;
+      }
     },
     {
       title: 'Thao tác',
       render: (_, record) => (
-        <div className="space-x-2">
+        <div className="flex flex-col space-y-2">
           {record.cvUrl && (
             <Button 
               type="link" 
@@ -957,11 +1108,11 @@ const RecruitmentManagement = () => {
           <Button 
             size="small" 
             type="primary"
-            onClick={() => handleResendOffer(record.id, record.offer)}
+            onClick={() => handleResendOffer(record.id, record.offer, record.hourlyRate, record.contractType)}
             className="vietnamese-text"
             style={{ backgroundColor: '#1890ff', borderColor: '#1890ff' }}
           >
-            Offer Lại
+            Gửi mail Offer
           </Button>
           <Button 
             type="primary" 
@@ -1048,6 +1199,12 @@ const RecruitmentManagement = () => {
           <Form.Item name="description" label="Mô tả" rules={[{ required: true }]}>
             <Input.TextArea className="vietnamese-text" />
           </Form.Item>
+          <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
+            <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
+              <Select.Option value="FULL_TIME">Hợp đồng full-time</Select.Option>
+              <Select.Option value="PART_TIME">Hợp đồng có kỳ hạn</Select.Option>
+            </Select>
+          </Form.Item>
           <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true }]}>
             <Input className="vietnamese-text" />
           </Form.Item>
@@ -1129,23 +1286,7 @@ const RecruitmentManagement = () => {
               format="YYYY-MM-DD HH:mm"
               placeholder={['Bắt đầu', 'Kết thúc']}
               className="vietnamese-text"
-              disabledTime={(date, type) => {
-                if (type === 'start' || type === 'end') {
-                  return {
-                    disabledHours: () => {
-                      const hours = [];
-                      // Disable hours outside business hours (7 AM to 5 PM)
-                      for (let i = 0; i < 24; i++) {
-                        if (i < 7 || i >= 17) {
-                          hours.push(i);
-                        }
-                      }
-                      return hours;
-                    }
-                  };
-                }
-                return {};
-              }}
+              // Đã bỏ ràng buộc giờ hành chính, cho phép chọn cả ngày
               onChange={(dates) => {
                 if (dates && dates[0] && dates[1]) {
                   console.log('Selected times:', {
