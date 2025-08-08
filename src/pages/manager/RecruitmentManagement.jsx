@@ -78,7 +78,12 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
 
   useEffect(() => {
     const calculateNetSalary = async () => {
-      if (!offer) return;
+      if (!offer) {
+        // Nếu chưa có offer, cho phép nhập NET trước
+        setInputNetSalary(null);
+        setNetSalary(null);
+        return;
+      }
       
       setLoading(true);
       try {
@@ -124,8 +129,6 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
     }
   };
 
-  if (!offer) return <span className="vietnamese-text">-</span>;
-
   if (loading) {
     return (
       <div>
@@ -150,7 +153,7 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
         <Button 
           size="small" 
           onClick={() => {
-            const currentValue = parseInt(inputNetSalary) || parseInt(netSalary) || 1000000;
+            const currentValue = parseInt(inputNetSalary) || 1000000;
             handleNetChange(currentValue + 1000000);
           }}
         >
@@ -159,7 +162,7 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
         <Button 
           size="small"
           onClick={() => {
-            const currentValue = parseInt(inputNetSalary) || parseInt(netSalary) || 1000000;
+            const currentValue = parseInt(inputNetSalary) || 1000000;
             if (currentValue > 1000000) {
               handleNetChange(currentValue - 1000000);
             }
@@ -168,9 +171,14 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
           -1 triệu
         </Button>
       </div>
-      {netSalary && (
+      {netSalary && offer && (
         <div className="text-xs text-gray-500 vietnamese-text mt-1">
           (Tính toán chính xác từ GROSS: {netSalary.toLocaleString('vi-VN')} VNĐ)
+        </div>
+      )}
+      {!offer && inputNetSalary && (
+        <div className="text-xs text-blue-500 vietnamese-text mt-1">
+          (Nhập NET trước - GROSS sẽ được tính tự động)
         </div>
       )}
     </div>
