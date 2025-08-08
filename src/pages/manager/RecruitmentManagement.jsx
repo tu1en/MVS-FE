@@ -5,6 +5,178 @@ import dayjs from 'dayjs';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
 import { recruitmentService } from '../../services/recruitmentService';
 
+// Component cho cột Lương GROSS với input
+const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
+  const [grossSalary, setGrossSalary] = useState(offer);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setGrossSalary(offer);
+  }, [offer]);
+
+  const handleGrossChange = async (value) => {
+    if (value && value < 1000000) {
+      value = 1000000;
+    }
+    setGrossSalary(value);
+    await onOfferUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={grossSalary}
+          onChange={handleGrossChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương GROSS"
+        />
+        <Button 
+          size="small" 
+          onClick={() => {
+            const currentValue = parseInt(grossSalary) || 1000000;
+            handleGrossChange(currentValue + 1000000);
+          }}
+        >
+          +1 triệu
+        </Button>
+        <Button 
+          size="small"
+          onClick={() => {
+            const currentValue = parseInt(grossSalary) || 1000000;
+            if (currentValue > 1000000) {
+              handleGrossChange(currentValue - 1000000);
+            }
+          }}
+        >
+          -1 triệu
+        </Button>
+        {grossSalary && (
+                      <Button 
+              size="small" 
+              type="primary"
+              onClick={() => onShowSalaryDetails(recordId, grossSalary)}
+              style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+            >
+              Chi Tiết
+            </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Component cho cột Lương NET với input
+const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
+  const [netSalary, setNetSalary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [inputNetSalary, setInputNetSalary] = useState(null);
+
+  useEffect(() => {
+    const calculateNetSalary = async () => {
+      if (!offer) return;
+      
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get(`/interview-schedules/${recordId}/salary-calculation`);
+        const calculatedNet = response.data.netSalary;
+        setNetSalary(calculatedNet);
+        setInputNetSalary(calculatedNet);
+      } catch (err) {
+        console.error('Error calculating net salary:', err);
+        // Fallback to estimation if API fails
+        const grossSalary = parseInt(offer);
+        const estimatedNet = grossSalary * 0.8;
+        setNetSalary(estimatedNet);
+        setInputNetSalary(estimatedNet);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    calculateNetSalary();
+  }, [offer, recordId]);
+
+  const handleNetChange = async (value) => {
+    if (!value) return;
+    
+    setInputNetSalary(value);
+    setLoading(true);
+    
+    try {
+      // Calculate GROSS from NET using backend
+      const response = await axiosInstance.post(`/interview-schedules/${recordId}/calculate-gross-from-net`, {
+        netSalary: value
+      });
+      const calculatedGross = response.data.grossSalary;
+      await onOfferUpdate(recordId, calculatedGross);
+    } catch (err) {
+      console.error('Error calculating gross from net:', err);
+      // Fallback: estimate gross as net * 1.25
+      const estimatedGross = Math.round(value * 1.25);
+      await onOfferUpdate(recordId, estimatedGross);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!offer) return <span className="vietnamese-text">-</span>;
+
+  if (loading) {
+    return (
+      <div>
+        <span className="vietnamese-text text-gray-400">Đang tính...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputNetSalary}
+          onChange={handleNetChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương NET"
+        />
+        <Button 
+          size="small" 
+          onClick={() => {
+            const currentValue = parseInt(inputNetSalary) || parseInt(netSalary) || 1000000;
+            handleNetChange(currentValue + 1000000);
+          }}
+        >
+          +1 triệu
+        </Button>
+        <Button 
+          size="small"
+          onClick={() => {
+            const currentValue = parseInt(inputNetSalary) || parseInt(netSalary) || 1000000;
+            if (currentValue > 1000000) {
+              handleNetChange(currentValue - 1000000);
+            }
+          }}
+        >
+          -1 triệu
+        </Button>
+      </div>
+      {netSalary && (
+        <div className="text-xs text-gray-500 vietnamese-text mt-1">
+          (Tính toán chính xác từ GROSS: {netSalary.toLocaleString('vi-VN')} VNĐ)
+        </div>
+      )}
+    </div>
+  );
+};
+
 const { RangePicker } = DatePicker;
 
 const RecruitmentManagement = () => {
@@ -28,12 +200,9 @@ const RecruitmentManagement = () => {
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
-<<<<<<< HEAD
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
-=======
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
 
   useEffect(() => {
     fetchPlans();
@@ -259,36 +428,18 @@ const RecruitmentManagement = () => {
       console.log('Start time:', startTime.format('YYYY-MM-DDTHH:mm:ss'));
       console.log('End time:', endTime.format('YYYY-MM-DDTHH:mm:ss'));
       
-      // Kiểm tra không cho phép xếp lịch trong quá khứ
-      const now = dayjs();
-      if (startTime.isBefore(now)) {
-        message.error('Không thể xếp lịch phỏng vấn trong quá khứ!');
-        return;
-      }
+      // Ghi chú: Đã loại bỏ validation ở frontend để tránh xung đột với backend
+      // Backend sẽ xử lý tất cả validation bao gồm kiểm tra thời gian trong quá khứ
       
+      // Sử dụng format đơn giản để tránh vấn đề timezone
       const startTimeStr = startTime.format('YYYY-MM-DDTHH:mm:ss');
       const endTimeStr = endTime.format('YYYY-MM-DDTHH:mm:ss');
 
-<<<<<<< HEAD
       // Tìm lịch phỏng vấn hiện tại của ứng viên (nếu có)
       const currentInterview = interviews.find(i => i.applicationId === selectedApplication.id);
 
-      // Kiểm tra trùng lịch với các ứng viên khác
-      const otherInterviews = interviews.filter(i => i.applicationId !== selectedApplication.id);
-      const hasConflict = otherInterviews.some(interview => {
-        const interviewStart = dayjs(interview.startTime);
-        const interviewEnd = dayjs(interview.endTime);
-        return (
-          (startTime.isSame(interviewStart) || startTime.isBetween(interviewStart, interviewEnd)) ||
-          (endTime.isSame(interviewEnd) || endTime.isBetween(interviewStart, interviewEnd)) ||
-          (startTime.isBefore(interviewStart) && endTime.isAfter(interviewEnd))
-        );
-      });
-
-      if (hasConflict) {
-        message.error('Thời gian này đã có lịch phỏng vấn của ứng viên khác!');
-        return;
-      }
+      // Ghi chú: Đã loại bỏ logic kiểm tra trùng lịch ở frontend để tránh xung đột với backend
+      // Backend sẽ xử lý tất cả validation bao gồm kiểm tra trùng lịch
 
       let response;
       if (currentInterview) {
@@ -312,28 +463,6 @@ const RecruitmentManagement = () => {
       console.log('Interview updated/created:', response.data);
 
       message.success(currentInterview ? 'Cập nhật lịch phỏng vấn thành công!' : 'Lên lịch phỏng vấn thành công!');
-=======
-      // Kiểm tra trùng lịch
-      const conflictCheck = await axiosInstance.post('/interview-schedules/check-conflict', null, {
-        params: { startTime: startTimeStr, endTime: endTimeStr }
-      });
-
-      if (conflictCheck.data) {
-        message.error('Thời gian này đã có lịch phỏng vấn khác!');
-        return;
-      }
-
-      const response = await axiosInstance.post('/interview-schedules', null, {
-        params: {
-          applicationId: selectedApplication.id,
-          startTime: startTimeStr,
-          endTime: endTimeStr
-        }
-      });
-      console.log('Interview created:', response.data);
-
-      message.success('Lên lịch phỏng vấn thành công!');
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
       setShowScheduleModal(false);
       
       // Refresh tất cả dữ liệu
@@ -344,7 +473,37 @@ const RecruitmentManagement = () => {
       console.log('Data refresh complete');
     } catch (err) {
       console.error('Error scheduling interview:', err);
-      message.error('Không thể lên lịch phỏng vấn!');
+      console.log('Full error response:', err.response);
+      console.log('Error response data:', err.response?.data);
+      console.log('Error response status:', err.response?.status);
+      
+      // Hiển thị thông báo lỗi cụ thể từ backend
+      if (err.response && err.response.status === 400) {
+        if (err.response.data && err.response.data.message) {
+          // Hiển thị thông báo lỗi chi tiết từ backend
+          console.log('Using backend message:', err.response.data.message);
+          message.error(err.response.data.message);
+        } else if (err.response.data && err.response.data.error) {
+          // Fallback cho trường hợp có error code nhưng không có message
+          const errorMessages = {
+            'PAST_TIME': 'Thời gian bắt đầu không được trong quá khứ!',
+            'DIFFERENT_DAYS': 'Thời gian bắt đầu và kết thúc phải trong cùng một ngày!',
+            'DURATION_TOO_LONG': 'Thời gian phỏng vấn không được quá 4 tiếng!',
+            'INVALID_TIME_ORDER': 'Thời gian bắt đầu phải trước thời gian kết thúc!',
+            'SCHEDULE_CONFLICT': 'Thời gian phỏng vấn bị trùng với lịch phỏng vấn khác!',
+            'OUTSIDE_BUSINESS_HOURS': 'Lịch phỏng vấn chỉ được sắp xếp trong giờ hành chính (7h sáng đến 5h chiều)!'
+          };
+          const errorMessage = errorMessages[err.response.data.error] || 'Thời gian phỏng vấn không đáp ứng điều kiện quy định!';
+          console.log('Using error code mapping:', err.response.data.error, '->', errorMessage);
+          message.error(errorMessage);
+        } else {
+          console.log('No specific error message found, using generic message');
+          message.error('Thời gian phỏng vấn không đáp ứng điều kiện quy định!');
+        }
+      } else {
+        console.log('Non-400 error, using generic message');
+        message.error('Không thể lên lịch phỏng vấn!');
+      }
     }
   };
 
@@ -364,7 +523,6 @@ const RecruitmentManagement = () => {
 
   const handleOfferUpdate = async (id, offer) => {
     try {
-<<<<<<< HEAD
       // Đảm bảo giá trị tối thiểu là 1 triệu
       let validOffer = offer;
       if (offer && offer < 1000000) {
@@ -373,10 +531,6 @@ const RecruitmentManagement = () => {
       await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer: validOffer });
       message.success('Cập nhật offer thành công!');
       fetchOffers(); // Refresh để hiển thị giá trị đã được chuẩn hóa
-=======
-      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer });
-      message.success('Cập nhật offer thành công!');
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     } catch (err) {
       message.error('Không thể cập nhật offer!');
     }
@@ -419,7 +573,6 @@ const RecruitmentManagement = () => {
       return;
     }
     try {
-<<<<<<< HEAD
       // Lấy chi tiết tính lương trước khi gửi email
       const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
       
@@ -428,12 +581,6 @@ const RecruitmentManagement = () => {
         salaryDetails: salaryDetails.data
       });
       message.success('Đã gửi offer email với chi tiết lương thành công!');
-=======
-      await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
-        offer: offer
-      });
-      message.success('Đã gửi offer email thành công!');
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
@@ -464,7 +611,6 @@ const RecruitmentManagement = () => {
 
   const handleApproveCandidate = async (id) => {
     try {
-<<<<<<< HEAD
       // Kiểm tra tài khoản và hợp đồng
       const response = await axiosInstance.get(`/interview-schedules/${id}/check-account`);
       const { hasAccount, hasContract } = response.data;
@@ -505,13 +651,6 @@ const RecruitmentManagement = () => {
       message.error('Không thể tải chi tiết tính lương!');
     } finally {
       setLoadingSalaryDetails(false);
-=======
-      await axiosInstance.put(`/interview-schedules/${id}/result`, { status: 'APPROVED', result: 'Đã duyệt ứng viên' });
-      message.success('Đã duyệt ứng viên thành công!');
-      fetchOffers();
-    } catch (err) {
-      message.error('Không thể duyệt ứng viên!');
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     }
   };
 
@@ -668,6 +807,15 @@ const RecruitmentManagement = () => {
                 Sửa lịch
               </Button>
             )}
+            <Button 
+              type="primary" 
+              size="small" 
+              danger
+              onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
+              className="vietnamese-text"
+            >
+              ✗ Từ chối
+            </Button>
           </div>
         );
       }
@@ -761,7 +909,6 @@ const RecruitmentManagement = () => {
       }
     },
     {
-<<<<<<< HEAD
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
@@ -777,114 +924,14 @@ const RecruitmentManagement = () => {
     {
       title: 'Lương GROSS',
       dataIndex: 'offer',
-      render: (text, record) => (
-        <div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ fontWeight: 'bold', marginRight: '8px' }}>Lương GROSS:</div>
-            <InputNumber
-              value={text}
-              onChange={(value) => {
-                if (value && value < 1000000) {
-                  value = 1000000;
-                }
-                handleOfferUpdate(record.id, value);
-              }}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\$\s?|(,*)/g, '')}
-              step={1000000}
-              min={1000000}
-              style={{ width: '150px' }}
-              placeholder="Nhập lương GROSS"
-            />
-            <Button 
-              size="small" 
-              onClick={() => {
-                const currentValue = parseInt(text) || 1000000;
-                handleOfferUpdate(record.id, currentValue + 1000000);
-              }}
-            >
-              +1 triệu
-            </Button>
-            <Button 
-              size="small"
-              onClick={() => {
-                const currentValue = parseInt(text) || 1000000;
-                if (currentValue > 1000000) {
-                  handleOfferUpdate(record.id, currentValue - 1000000);
-                }
-              }}
-            >
-              -1 triệu
-            </Button>
-            {text && (
-              <Button 
-                size="small" 
-                type="primary"
-                onClick={() => handleShowSalaryDetails(record.id, text)}
-                style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-              >
-                Chi Tiết
-              </Button>
-            )}
-          </div>
-=======
-      title: 'Offer',
-      dataIndex: 'offer',
-      render: (text, record) => (
-        <div>
-          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
-            {text || 'Chưa có offer'}
-          </div>
-          <Button 
-            size="small" 
-            type="primary"
-            onClick={() => openOfferModal(record)}
-            className="vietnamese-text"
-          >
-            Chỉnh sửa Offer
-          </Button>
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
-        </div>
-      )
+      render: (text, record) => <GrossSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} onShowSalaryDetails={handleShowSalaryDetails} />
     },
     {
-<<<<<<< HEAD
       title: 'Lương NET',
       dataIndex: 'offer',
-      render: (text, record) => {
-        if (!text) return <span style={{ color: '#999' }}>Chưa có offer</span>;
-        
-        // Tính toán lương NET từ GROSS (ước tính đơn giản)
-        const grossSalary = parseInt(text);
-        const employeeContribution = Math.round(grossSalary * 0.105); // 10.5%
-        const estimatedTax = Math.round(grossSalary * 0.1); // Ước tính thuế 10%
-        const netSalary = grossSalary - employeeContribution - estimatedTax;
-        
-        return (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ fontWeight: 'bold', marginRight: '8px' }}>Lương NET:</div>
-            <div style={{ 
-              padding: '4px 12px', 
-              border: '1px solid #d9d9d9', 
-              borderRadius: '6px', 
-              backgroundColor: '#f0f8ff',
-              color: '#1890ff',
-              fontWeight: 'bold',
-              minWidth: '150px',
-              textAlign: 'center'
-            }}>
-              {netSalary.toLocaleString('vi-VN')} VNĐ
-            </div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              (Ước tính)
-            </div>
-          </div>
-        );
-      }
+      render: (text, record) => <NetSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} />
     },
     {
-=======
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
@@ -1034,13 +1081,72 @@ const RecruitmentManagement = () => {
           <Form.Item 
             name="interviewTime" 
             label="Thời gian phỏng vấn" 
-            rules={[{ required: true, message: 'Vui lòng chọn thời gian phỏng vấn!' }]}
+            rules={[
+              { required: true, message: 'Vui lòng chọn thời gian phỏng vấn!' },
+              {
+                validator: (_, value) => {
+                  if (!value || !value[0] || !value[1]) {
+                    return Promise.resolve();
+                  }
+                  
+                  const startTime = value[0];
+                  const endTime = value[1];
+                  
+                  console.log('Frontend validation:', {
+                    startTime: startTime.format('YYYY-MM-DD HH:mm:ss'),
+                    endTime: endTime.format('YYYY-MM-DD HH:mm:ss'),
+                    duration: endTime.diff(startTime, 'hour', true)
+                  });
+                  
+                  // Ghi chú: Đã loại bỏ các validation phức tạp ở frontend
+                  // Backend sẽ xử lý tất cả validation bao gồm:
+                  // - Thời gian trong quá khứ
+                  // - Cùng ngày
+                  // - Không quá 4 tiếng
+                  // - Thời gian bắt đầu phải trước thời gian kết thúc
+                  // - Trùng lịch với ứng viên khác
+                  
+                  console.log('Frontend validation passed - letting backend handle all validation');
+                  return Promise.resolve();
+                }
+              }
+            ]}
           >
             <RangePicker 
-              showTime 
+              showTime={{ 
+                format: 'HH:mm',
+                minuteStep: 60, // Chỉ cho phép chọn giờ, không chọn phút
+                hideDisabledOptions: true
+              }}
               format="YYYY-MM-DD HH:mm"
               placeholder={['Bắt đầu', 'Kết thúc']}
               className="vietnamese-text"
+              disabledTime={(date, type) => {
+                if (type === 'start' || type === 'end') {
+                  return {
+                    disabledHours: () => {
+                      const hours = [];
+                      // Disable hours outside business hours (7 AM to 5 PM)
+                      for (let i = 0; i < 24; i++) {
+                        if (i < 7 || i >= 17) {
+                          hours.push(i);
+                        }
+                      }
+                      return hours;
+                    }
+                  };
+                }
+                return {};
+              }}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  console.log('Selected times:', {
+                    start: dates[0].format('YYYY-MM-DD HH:mm:ss'),
+                    end: dates[1].format('YYYY-MM-DD HH:mm:ss'),
+                    duration: dates[1].diff(dates[0], 'hour', true)
+                  });
+                }
+              }}
             />
           </Form.Item>
           <Form.Item>
@@ -1098,7 +1204,6 @@ const RecruitmentManagement = () => {
         <Form layout="vertical" form={offerForm} onFinish={handleOfferModalSubmit} className="form-vietnamese">
           <Form.Item 
             name="offer" 
-<<<<<<< HEAD
             label="Offer"
             rules={[{ required: false }]} // Cho phép null
           >
@@ -1140,16 +1245,6 @@ const RecruitmentManagement = () => {
                 </Button>
               </div>
             </div>
-=======
-            label="Nội dung Offer"
-            rules={[{ required: false }]} // Cho phép null
-          >
-            <Input.TextArea 
-              placeholder="Nhập nội dung offer (có thể để trống)..."
-              rows={6}
-              className="vietnamese-text"
-            />
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
@@ -1161,7 +1256,6 @@ const RecruitmentManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
-<<<<<<< HEAD
 
       {/* Modal Chi Tiết Tính Lương */}
       <Modal
@@ -1198,13 +1292,34 @@ const RecruitmentManagement = () => {
               <h3 style={{ margin: '0 0 12px 0', color: '#1890ff' }}>Chi Tiết Bảo Hiểm</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <strong>Đóng góp nhân viên (10.5%):</strong> {salaryDetails.employeeContribution?.toLocaleString('vi-VN')} VNĐ
+                  <strong>Bảo hiểm xã hội nhân viên (8%):</strong> {salaryDetails.insuranceDetails?.socialInsuranceEmployee?.toLocaleString('vi-VN')} VNĐ
                 </div>
                 <div>
-                  <strong>Đóng góp công ty (21.5%):</strong> {salaryDetails.employerContribution?.toLocaleString('vi-VN')} VNĐ
+                  <strong>Bảo hiểm y tế nhân viên (1.5%):</strong> {salaryDetails.insuranceDetails?.healthInsuranceEmployee?.toLocaleString('vi-VN')} VNĐ
                 </div>
                 <div>
-                  <strong>Tổng bảo hiểm (32%):</strong> {salaryDetails.totalInsuranceContribution?.toLocaleString('vi-VN')} VNĐ
+                  <strong>Bảo hiểm thất nghiệp nhân viên (1%):</strong> {salaryDetails.insuranceDetails?.unemploymentInsuranceEmployee?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Tổng đóng góp nhân viên (10.5%):</strong> {salaryDetails.insuranceDetails?.totalEmployeeContribution?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Bảo hiểm xã hội công ty (17%):</strong> {salaryDetails.insuranceDetails?.socialInsuranceEmployer?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Bảo hiểm y tế công ty (3%):</strong> {salaryDetails.insuranceDetails?.healthInsuranceEmployer?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Bảo hiểm thất nghiệp công ty (1%):</strong> {salaryDetails.insuranceDetails?.unemploymentInsuranceEmployer?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Bảo hiểm tai nạn lao động (0.5%):</strong> {salaryDetails.insuranceDetails?.workAccidentInsurance?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Tổng đóng góp công ty (21.5%):</strong> {salaryDetails.insuranceDetails?.totalEmployerContribution?.toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div>
+                  <strong>Tổng bảo hiểm (32%):</strong> {salaryDetails.insuranceDetails?.totalInsuranceContribution?.toLocaleString('vi-VN')} VNĐ
                 </div>
               </div>
             </div>
@@ -1229,7 +1344,7 @@ const RecruitmentManagement = () => {
                   <strong>Lương NET = Lương GROSS - Đóng góp nhân viên - Thuế TNCN</strong>
                 </div>
                 <div style={{ fontFamily: 'monospace', fontSize: '14px' }}>
-                  {salaryDetails.grossSalary?.toLocaleString('vi-VN')} - {salaryDetails.employeeContribution?.toLocaleString('vi-VN')} - {salaryDetails.personalIncomeTax?.toLocaleString('vi-VN')} = {salaryDetails.netSalary?.toLocaleString('vi-VN')} VNĐ
+                  {salaryDetails.grossSalary?.toLocaleString('vi-VN')} - {salaryDetails.insuranceDetails?.totalEmployeeContribution?.toLocaleString('vi-VN')} - {salaryDetails.personalIncomeTax?.toLocaleString('vi-VN')} = {salaryDetails.netSalary?.toLocaleString('vi-VN')} VNĐ
                 </div>
               </div>
             </div>
@@ -1243,12 +1358,10 @@ const RecruitmentManagement = () => {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-            Không có dữ liệu chi tiết tính lương
+            Không có dữ liệu tính lương
           </div>
         )}
       </Modal>
-=======
->>>>>>> 76c4cea457e8ccd17bfa704adb50b8f90bbd56df
     </div>
   );
 };
