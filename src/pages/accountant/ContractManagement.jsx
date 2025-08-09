@@ -83,8 +83,10 @@ const ContractManagement = () => {
     }
   };
 
-  // Xử lý tạo hợp đồng mới
+  // 🔄 REWRITTEN: Xử lý tạo hợp đồng mới với lương theo giờ từ Quản Lý Offer
   const handleCreateContract = async (values) => {
+    console.log('🔄 REWRITTEN: Creating contract with values:', values);
+    
     // Validate required fields
     if (!values.fullName || values.fullName.trim() === '') {
       message.error('Vui lòng nhập họ tên!');
@@ -110,6 +112,7 @@ const ContractManagement = () => {
       message.error('Ngày kết thúc không được là ngày trong quá khứ!');
       return;
     }
+    
     try {
       // Generate userId if not provided (for manual contract creation)
       let userId = values.userId;
@@ -121,31 +124,45 @@ const ContractManagement = () => {
         userId = Date.now(); // Simple timestamp-based ID
       }
 
-      // Determine contract type based on position
-      let contractType = values.contractType;
-      if (!contractType) {
-        const position = values.position || '';
-        contractType = position.toLowerCase().includes('giáo viên') || position.toLowerCase().includes('teacher') ? 'TEACHER' : 'STAFF';
-      }
+      // 🔄 REWRITTEN: Determine contract type and validate salary based on position
+      const position = values.position || '';
+      const isTeacher = position.toLowerCase().includes('giáo viên') || 
+                       position.toLowerCase().includes('teacher') || 
+                       values.contractType === 'TEACHER';
+      
+      const contractType = isTeacher ? 'TEACHER' : 'STAFF';
+      
+      console.log('🔄 REWRITTEN: Contract type determination:', {
+        position,
+        isTeacher,
+        contractType,
+        hourlySalary: values.hourlySalary,
+        grossSalary: values.grossSalary,
+        netSalary: values.netSalary
+      });
 
-      // Determine salary based on contract type
+      // 🔄 REWRITTEN: Validate salary based on contract type
       let salary = 0;
-      if (contractType === 'TEACHER' && values.hourlySalary) {
+      if (isTeacher) {
+        // ✅ FOR TEACHERS: Validate hourly salary from Offer Management
+        if (!values.hourlySalary || values.hourlySalary <= 0) {
+          message.error('Vui lòng nhập lương theo giờ hợp lệ cho giáo viên!');
+          return;
+        }
         salary = values.hourlySalary;
-      } else if (values.grossSalary) {
+        console.log('🎓 TEACHER: Using hourly salary:', salary, 'VND/hour');
+        
+      } else {
+        // ✅ FOR STAFF: Validate gross salary
+        if (!values.grossSalary || values.grossSalary <= 0) {
+          message.error('Vui lòng nhập lương gross hợp lệ cho nhân viên!');
+          return;
+        }
         salary = values.grossSalary;
-      } else if (values.netSalary) {
-        salary = values.netSalary;
-      } else if (values.salary) {
-        salary = values.salary;
+        console.log('👥 STAFF: Using gross salary:', salary, 'VND');
       }
 
-      // Validate salary
-      if (!salary || salary <= 0) {
-        message.error('Vui lòng nhập lương hợp lệ!');
-        return;
-      }
-
+      // 🔄 REWRITTEN: Contract data structure with proper salary field handling
       const contractData = {
         userId: userId,
         contractId: values.contractId || generateContractId(),
@@ -155,7 +172,7 @@ const ContractManagement = () => {
         contractType: contractType,
         position: values.position || '',
         department: values.department || 'Không xác định',
-        salary: salary,
+        salary: salary, // Main salary field for compatibility
         workingHours: values.workingHours || '8h/ngày',
         startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
         endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
@@ -169,15 +186,23 @@ const ContractManagement = () => {
         qualification: values.qualification || '',
         subject: values.subject || '',
         educationLevel: values.level || values.educationLevel || '',
-        // Offer management fields
+        // 🔄 REWRITTEN: Salary fields from editable Offer Management
         evaluation: values.evaluation || '',
-        grossSalary: values.grossSalary || null,
-        netSalary: values.netSalary || null,
-        hourlySalary: values.hourlySalary || null,
+        // ✅ FOR TEACHERS: Only send hourly salary from Offer Management
+        grossSalary: isTeacher ? null : (values.grossSalary || null),
+        netSalary: isTeacher ? null : (values.netSalary || null),
+        hourlySalary: isTeacher ? (values.hourlySalary || null) : null,
         offer: values.offer || ''
       };
 
-      console.log('🔍 DEBUG: Contract data being sent:', contractData);
+      console.log('🔄 REWRITTEN: Contract data being sent to backend:', contractData);
+      console.log('🔄 REWRITTEN: Salary field breakdown:', {
+        isTeacher,
+        salary: contractData.salary,
+        hourlySalary: contractData.hourlySalary,
+        grossSalary: contractData.grossSalary,
+        netSalary: contractData.netSalary
+      });
 
       await axiosInstance.post('/contracts', contractData);
       message.success('Tạo hợp đồng thành công!');
@@ -283,27 +308,31 @@ const ContractManagement = () => {
     return `${sequence}${month}${year}`;
   };
 
-  // Mở modal tạo hợp đồng từ ứng viên đã duyệt
+  // 🔄 REWRITTEN: Mở modal tạo hợp đồng từ ứng viên đã duyệt với lương theo giờ từ Quản Lý Offer
   const handleSelectCandidate = async (candidate) => {
+    console.log('🔄 REWRITTEN: Creating contract for approved candidate:', candidate);
     setSelectedCandidate(candidate);
     const contractId = generateContractId();
     
-    // Set basic candidate information first
+    // Xác định loại vị trí để xử lý lương phù hợp
     const position = candidate.position || candidate.jobTitle || candidate.role || '';
-    console.log('Candidate object:', candidate);
-    console.log('Position from candidate:', position);
-    console.log('All possible position fields:', {
-      position: candidate.position,
-      jobTitle: candidate.jobTitle,
-      role: candidate.role,
-      contractType: candidate.contractType
+    const contractType = candidate.contractType || '';
+    const isTeacher = position.toLowerCase().includes('giáo viên') || 
+                     position.toLowerCase().includes('teacher') || 
+                     contractType === 'TEACHER';
+    
+    console.log('🔍 REWRITTEN DEBUG: Candidate analysis:', {
+      position,
+      contractType,
+      isTeacher,
+      candidateId: candidate.userId || candidate.id
     });
     
-    // ✅ FIX: Use contractType from backend for more reliable teacher detection
-    const effectivePosition = candidate.contractType === 'TEACHER' ? 'giáo viên' : position;
-    console.log('Effective position for UI logic:', effectivePosition);
+    // Set effective position for UI logic
+    const effectivePosition = isTeacher ? 'giáo viên' : position;
     setCandidatePosition(effectivePosition);
     
+    // Set basic candidate information
     candidateForm.setFieldsValue({
       contractId: contractId,
       fullName: candidate.fullName || '',
@@ -316,69 +345,74 @@ const ContractManagement = () => {
       contractTerms: ''
     });
     
-    // Fetch offer data from backend API
+    // 🔄 REWRITTEN: Fetch offer data with focus on hourly salary for teachers
     try {
-      const candidateId = candidate.userId || candidate.id || 1; // Use candidate ID for API call
-      console.log('🔍 DEBUG: Fetching offer data for candidate:', candidate);
-      console.log('🔍 DEBUG: Using candidateId:', candidateId);
-      console.log('🔍 DEBUG: API URL:', `/contracts/candidates/${candidateId}/offer`);
-      console.log('🔍 DEBUG: Candidate contractType:', candidate.contractType);
-      console.log('🔍 DEBUG: Candidate position:', candidate.position);
+      const candidateId = candidate.userId || candidate.id || 1;
+      console.log('🔄 REWRITTEN: Fetching offer data from editable Offer Management for candidate ID:', candidateId);
       
       const offerResponse = await axiosInstance.get(`/contracts/candidates/${candidateId}/offer`);
       const offerData = offerResponse.data;
-      console.log('🔍 DEBUG: Received offer data:', offerData);
-      console.log('🔍 DEBUG: Offer data hourlySalary:', offerData.hourlySalary);
-      console.log('🔍 DEBUG: Offer data grossSalary:', offerData.grossSalary);
-      console.log('🔍 DEBUG: Offer data netSalary:', offerData.netSalary);
       
-      // Update form with offer data based on position
+      console.log('🔄 REWRITTEN: Received offer data from backend:', offerData);
+      console.log('🔄 REWRITTEN: Salary breakdown - Hourly:', offerData.hourlySalary, 'Gross:', offerData.grossSalary, 'Net:', offerData.netSalary);
+      
+      // 🔄 REWRITTEN: Process salary data based on position type
       const formValues = {
         evaluation: offerData.evaluation || 'Chưa có đánh giá'
       };
       
-      // Hiển thị dữ liệu lương theo vị trí
-      console.log('🔍 DEBUG: Setting form values from offer data...');
-      if (offerData.grossSalary !== null && offerData.grossSalary !== undefined) {
-        formValues.grossSalary = offerData.grossSalary;
-        console.log('🔍 DEBUG: Set grossSalary:', offerData.grossSalary);
+      if (isTeacher) {
+        // ✅ FOR TEACHERS: Only use hourly salary from editable Offer Management
+        console.log('🎓 REWRITTEN TEACHER: Using hourly salary from editable Offer Management');
+        
+        if (offerData.hourlySalary && offerData.hourlySalary > 0) {
+          formValues.hourlySalary = offerData.hourlySalary;
+          console.log('✅ TEACHER: Set hourly salary from Offer Management:', offerData.hourlySalary, 'VND/hour');
+        } else {
+          formValues.hourlySalary = 100000; // Default 100k VND/hour
+          console.log('⚠️ TEACHER: Using default hourly salary: 100,000 VND/hour');
+        }
+        
+        // Don't set gross/net salary for teachers
+        formValues.grossSalary = null;
+        formValues.netSalary = null;
+        
       } else {
-        formValues.grossSalary = null; // Để trống cho Giáo viên
-        console.log('🔍 DEBUG: Set grossSalary to null (for teachers)');
+        // ✅ FOR STAFF: Use gross and net salary
+        console.log('👥 REWRITTEN STAFF: Using gross and net salary from Offer Management');
+        
+        formValues.grossSalary = offerData.grossSalary || 15000000; // Default 15M VND
+        formValues.netSalary = offerData.netSalary || 12000000;     // Default 12M VND
+        formValues.hourlySalary = null; // Don't set hourly salary for staff
+        
+        console.log('✅ STAFF: Set gross salary:', formValues.grossSalary, 'VND, net salary:', formValues.netSalary, 'VND');
       }
       
-      if (offerData.netSalary !== null && offerData.netSalary !== undefined) {
-        formValues.netSalary = offerData.netSalary;
-        console.log('🔍 DEBUG: Set netSalary:', offerData.netSalary);
-      } else {
-        formValues.netSalary = null; // Để trống cho Giáo viên
-        console.log('🔍 DEBUG: Set netSalary to null (for teachers)');
-      }
-      
-      if (offerData.hourlySalary !== null && offerData.hourlySalary !== undefined) {
-        formValues.hourlySalary = offerData.hourlySalary;
-        console.log('🔍 DEBUG: Set hourlySalary:', offerData.hourlySalary);
-      } else {
-        formValues.hourlySalary = null; // Để trống cho Manager/Kế toán
-        console.log('🔍 DEBUG: Set hourlySalary to null (for staff)');
-      }
-      
-      console.log('🔍 DEBUG: Final formValues before setFieldsValue:', formValues);
-      
+      console.log('🔄 REWRITTEN: Final form values for contract creation:', formValues);
       candidateForm.setFieldsValue(formValues);
       
-      message.success('Đã tải thông tin offer từ hệ thống Quản lý Offer');
-    } catch (error) {
-      console.error('Error fetching offer data:', error);
-      message.warning('Không thể tải thông tin offer. Sử dụng dữ liệu mặc định.');
+      message.success(`✅ Đã tải thông tin lương từ Quản Lý Offer ${isTeacher ? '(Lương theo giờ)' : '(Lương gross/net)'}`);
       
-      // Set default values if API call fails
-      candidateForm.setFieldsValue({
-        evaluation: 'Chưa có đánh giá',
-        grossSalary: 0,
-        netSalary: 0,
-        hourlySalary: 0
-      });
+    } catch (error) {
+      console.error('🔄 REWRITTEN ERROR: Failed to fetch offer data:', error);
+      message.error('❌ Không thể tải thông tin lương từ Quản Lý Offer!');
+      
+      // Set appropriate default values based on position
+      const defaultValues = {
+        evaluation: 'Chưa có đánh giá'
+      };
+      
+      if (isTeacher) {
+        defaultValues.hourlySalary = 100000; // 100k VND/hour for teachers
+        defaultValues.grossSalary = null;
+        defaultValues.netSalary = null;
+      } else {
+        defaultValues.grossSalary = 15000000; // 15M VND for staff
+        defaultValues.netSalary = 12000000;   // 12M VND for staff
+        defaultValues.hourlySalary = null;
+      }
+      
+      candidateForm.setFieldsValue(defaultValues);
     }
     
     setCandidateModalVisible(true);
