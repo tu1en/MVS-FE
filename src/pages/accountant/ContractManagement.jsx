@@ -28,8 +28,8 @@ import {
 import axiosInstance from '../../config/axiosInstance';
 import moment from 'moment';
 import './ContractManagement.css';
-import jsPDF from 'jspdf';
 import WorkingScheduleFields from '../../components/WorkingScheduleFields';
+import ContractPDFGenerator from '../../utils/ContractPDFGenerator';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -190,8 +190,8 @@ const ContractManagement = () => {
         // 🔄 REWRITTEN: Updated field names and added working schedule
         comments: values.comments || '', // Changed from evaluation to comments (Nhận xét)
         workSchedule: values.workSchedule || '', // New field: Thời gian làm việc
-        workShifts: values.workShifts || '', // New field: Ca làm việc (morning, afternoon, evening)
-        workDays: values.workDays || '', // New field: Ngày trong tuần
+        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''), // Convert array to comma-separated string
+        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''), // Convert array to comma-separated string
         // ✅ FOR TEACHERS: Only send hourly salary from Offer Management
         grossSalary: isTeacher ? null : (values.grossSalary || null),
         netSalary: isTeacher ? null : (values.netSalary || null),
@@ -218,10 +218,22 @@ const ContractManagement = () => {
       fetchContracts();
       fetchCandidatesReady();
     } catch (error) {
-      console.error('Error creating contract:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      message.error(`Không thể tạo hợp đồng! ${error.response?.data?.message || error.message || ''}`);
+      console.error('❌ Error creating contract:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Full error object:', JSON.stringify(error.response?.data, null, 2));
+      
+      // More detailed error message
+      let errorMessage = 'An unexpected error occurred';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Không thể tạo hợp đồng! ${errorMessage}`);
     }
   };
 
@@ -235,7 +247,13 @@ const ContractManagement = () => {
       const contractData = {
         ...values,
         startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null
+        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        citizenId: values.cccd || values.citizenId || '',
+        // Format working schedule fields for backend
+        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
+        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
+        workSchedule: values.workSchedule || ''
       };
 
       await axiosInstance.put(`/contracts/${editingContract.id}`, contractData);
@@ -298,8 +316,8 @@ const ContractManagement = () => {
       // New working schedule fields
       comments: record.comments, // Changed from evaluation to comments (Nhận xét)
       workSchedule: record.workSchedule, // Thời gian làm việc
-      workShifts: record.workShifts, // Ca làm việc
-      workDays: record.workDays // Ngày trong tuần
+      workShifts: record.workShifts ? (typeof record.workShifts === 'string' ? record.workShifts.split(',') : record.workShifts) : [], // Convert comma-separated string to array
+      workDays: record.workDays ? (typeof record.workDays === 'string' ? record.workDays.split(',') : record.workDays) : [] // Convert comma-separated string to array
     };
 
     console.log('🔍 DEBUG: Form data for edit:', formData);
@@ -446,310 +464,14 @@ const ContractManagement = () => {
     return Promise.resolve();
   };
 
-  // Xem hợp đồng dước dạng PDF
+  // Xem hợp đồng dưới dạng PDF
   const handleViewContractPDF = (contract) => {
-    console.log('Generating PDF for contract:', contract); // Debug log to inspect contract object
-    const doc = new jsPDF();
-    
-    // Helper function to handle undefined/null values
-    const getValue = (value, defaultValue = 'N/A') => value || defaultValue;
-    
-    // Extract contract details with fallback values
-    // Try both possible field names to handle mapping issues
-    const fullName = getValue(contract.fullName);
-    const birthDate = contract.birthDate ? moment(contract.birthDate).format('DD/MM/YYYY') : 'N/A';
-    const citizenId = getValue(contract.citizenId || contract.cccd);
-    const address = getValue(contract.address);
-    const qualification = getValue(contract.qualification);
-    const subject = getValue(contract.subject || contract.position);
-    const educationLevel = getValue(contract.educationLevel || contract.level);
-    const startDate = contract.startDate ? moment(contract.startDate).format('DD/MM/YYYY') : 'N/A';
-    const endDate = contract.endDate ? moment(contract.endDate).format('DD/MM/YYYY') : 'N/A';
-    const salary = contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A';
-    const contractType = contract.type === 'teacher' ? 'Giáo viên' : 'Nhân viên';
-    const department = getValue(contract.department);
-    const offer = getValue(contract.offer);
-    
-    console.log('Extracted PDF values:', { citizenId, educationLevel, subject }); // Debug specific fields
-    
-    // Set document properties
-    doc.setProperties({
-      title: `Hợp đồng ${contractType} - ${fullName}`,
-      subject: 'Hợp đồng lao động',
-      author: 'ClassroomApp',
-      keywords: 'hợp đồng, lao động, giáo viên, nhân viên',
-      creator: 'ClassroomApp'
-    });
-    
-    // Add placeholder for Vietnamese font support (to be implemented)
-    // TODO: Implement proper Vietnamese font support for jsPDF
-    doc.setCharSpace(0);
-    
-    // Sử dụng font helvetica với encoding chuẩn
-    doc.setFont('helvetica');
-    doc.setFontSize(14);
-    doc.text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 55, 20);
-    doc.setFontSize(12);
-    doc.text('Độc lập - Tự do - Hạnh phúc', 75, 30);
-    doc.text('---------------------', 80, 35);
-    doc.setFontSize(14);
-    doc.text('HỢP ĐỒNG LAO ĐỘNG', 70, 50);
-    doc.setFontSize(12);
-    doc.text('(Về việc: Tuyển dụng giáo viên giảng dạy)', 60, 60);
-    doc.text('Số: ........../HĐLĐ', 20, 70);
-    doc.text('Căn cứ:', 20, 80);
-    let y = 90;
-    [
-      '- Bộ luật Lao động nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2019;',
-      '- Luật Giáo dục năm 2019 và các văn bản hướng dẫn thi hành;',
-      '- Nhu cầu và năng lực của hai bên.'
-    ].forEach(line => {
-      const wrapped = doc.splitTextToSize(line, 160);
-      doc.text(wrapped, 30, y);
-      y += wrapped.length * 7;
-    });
-    const wrappedIntro = doc.splitTextToSize('Hôm nay, ngày .... tháng .... năm ........, tại Trung tâm bồi dưỡng kiến thức Minh Việt, chúng tôi gồm:', 160);
-    doc.text(wrappedIntro, 20, y);
-    y += wrappedIntro.length * 7;
-    let yPosition = y; // continue using yPosition as before
-
-    
-    yPosition = 130;
-    doc.setFontSize(14);
-    doc.text('1. Ben A (Ben thue):', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('Trung tam boi duong kien thuc Minh Viet', 30, yPosition);
-    yPosition += 10;
-    doc.text('Ma so thue: 123456789', 30, yPosition);
-    yPosition += 10;
-    doc.text('Dia chi: 123 Duong Le Loi, Quan 1, TP. Ho Chi Minh', 30, yPosition);
-    yPosition += 10;
-    doc.text('Dai dien: Ong Nguyen Van A', 30, yPosition);
-    yPosition += 10;
-    doc.text('Chuc vu: Giam doc', 30, yPosition);
-    yPosition += 10;
-    doc.text('So dien thoai: 0123 456 789    Email: info@minhviet.edu.vn', 30, yPosition);
-    yPosition += 10;
-    
-    doc.setFontSize(14);
-    doc.text('2. Ben B (Ben duoc thue):', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text(`Ho va ten: ${fullName}`, 30, yPosition);
-    yPosition += 10;
-    doc.text(`Sinh ngay: ${birthDate}`, 30, yPosition);
-    yPosition += 10;
-    doc.text(`So CCCD: ${citizenId}`, 30, yPosition);
-    yPosition += 10;
-    doc.text(`Dia chi: ${address}`, 30, yPosition);
-    yPosition += 10;
-    doc.text(`So dien thoai: ${contract.phoneNumber || 'N/A'}    Email: ${contract.email || 'N/A'}`, 30, yPosition);
-    yPosition += 10;
-    doc.text(`Trinh do chuyen mon: ${qualification}`, 30, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
+    try {
+      ContractPDFGenerator.generateContractPDF(contract);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      message.error('Không thể tạo file PDF hợp đồng!');
     }
-    
-    doc.setFontSize(14);
-    doc.text('Hai ben cung thong nhat ky ket hop dong voi cac dieu khoan sau:', 20, yPosition);
-    yPosition += 10;
-    doc.text('Dieu 1: Noi dung hop dong', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('Ben A thue Ben B lam giao vien giang day voi noi dung cong viec nhu sau:', 30, yPosition);
-    yPosition += 10;
-    doc.text(`- Mon hoc giang day: ${subject || contract.position || 'N/A'}`, 40, yPosition);
-    yPosition += 10;
-    doc.text(`- Cap hoc: ${educationLevel}`, 40, yPosition);
-    yPosition += 10;
-    doc.text(`- Thoi gian giang day: Tu ${startDate} den ${endDate}`, 40, yPosition);
-    yPosition += 10;
-    doc.text('- Dia diem giang day: Trung tam boi duong kien thuc Minh Viet', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai tuan thu day du, dung chuong trinh day, dam bao chat luong hoc tap cua hoc sinh.', 40, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 2: Thoi han hop dong va che do lam viec', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('- Loai hop dong lao dong: Co ky han.', 30, yPosition);
-    yPosition += 10;
-    doc.text(`- Thoi han hop dong: Tu ${startDate} den ${endDate}`, 30, yPosition);
-    yPosition += 10;
-    doc.text('- Thoi gian lam viec cua ben B: 8 gio/ngay.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B duoc cap phat nhung dung cu lam viec gom: Cac tai lieu phuc vu cho giang day, dung cu giang day, thiet bi day hoc.', 30, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 3: Muc luong va phuong thuc thanh toan', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text(`- Ben A dong y chi tra cho ben B muc luong viec giang day voi so tien la: ${salary} dong/thang`, 30, yPosition);
-    yPosition += 10;
-    doc.text('- Thoi han tra tien luong: Ben A se tra tien luong cho ben B 01 lan vao cac ngay 5 hang thang.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Phuong thuc thanh toan: chuyen khoan.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co quyen dieu chinh muc luong theo hieu qua cong viec va cac yeu cau khac phat sinh ma khong can co su dong y cua ben B, nhung khong duoc thap hon qua 10% cua muc luong thang truoc do tai thoi diem dang chi tra luong cho ben B.', 30, yPosition);
-    yPosition += 15;
-    doc.text('- Ngoai muc luong ben A chi tra cho ben B, Ben B duoc huong tien thuong hang thang, hang ky, cuoi nam va cac khoan khac theo thoa thuan cua hai ben (neu co).', 30, yPosition);
-    yPosition += 15;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 4: Quyen va nghia vu cua ben A', 20, yPosition);
-    yPosition += 10;
-    doc.text('4.1. Quyen loi cua ben A:', 25, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('- Ben A co quyen yeu cau giao vien thuc hien dung noi dung giang day theo hop dong va co quyen kiem tra, danh gia chat luong giang day.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co quyen yeu cau dieu chinh phuong phap giang day cua Ben B neu thay khong phu hop voi yeu cau, tieu chuan giang day cua ben A.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co quyen cham dut hop dong ngay lap tuc neu Ben B vi pham nghiem trong cac quy dinh, noi quy cua lop hoc hoac hop dong.', 35, yPosition);
-    yPosition += 10;
-    doc.text('4.2. Nghia vu cua Ben A:', 25, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co nghia vu cung cap day du co so vat chat, trang thiet bi, tai lieu, dung cu giang day can thiet cho Ben B.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co nghia vu thanh toan dung han tien luong cho Ben B theo thoa thuan trong hop dong.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A khong co nghia vu cung cap bat ky ho tro nao ngoai cac dieu khoan da ghi trong hop dong.', 35, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 5: Quyen va nghia vu cua ben B', 20, yPosition);
-    yPosition += 10;
-    doc.text('5.1. Quyen loi cua ben B:', 25, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('- Ben B co quyen yeu cau ben A thanh toan tien luong day du, dung han theo dieu 3 hop dong nay.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B co quyen duoc yeu cau ho tro tai lieu, trang thiet bi day hoc tu ben A, nhung phai dam bao viec su dung nhung tai lieu nay chi phuc vu cho muc dich giang day o tren lop.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B co quyen duoc nghi day trong truong hop co ly do chinh dang va phai thong bao cho ben A truoc 03 ngay.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Truong hop ben A cham thanh toan luong qua 15 ngay, ben B co quyen tam ngung giang day cho den khi duoc thanh toan.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B duoc dam bao moi truong lam viec phu hop va duoc huong cac quyen loi khac (neu co).', 35, yPosition);
-    yPosition += 10;
-    doc.text('5.2. Nghia vu cua ben B:', 25, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai thuc hien day du, dung chuong trinh day, dam bao chat luong hoc tap cua hoc sinh.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B khong duoc nghi day dot xuat ma khong co ly do chinh dang, truong hop nghi phai thong bao truoc it nhat 3 ngay.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai giu gin dao duc nghe nghiep, khong co hanh vi thieu chuyen nghiep hoac vi pham phap luat trong suot thoi gian lam viec, giao ket hop dong voi ben A.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B khong duoc tu y su dung tai lieu, chuong trinh day hoc cua ben A cho muc dich ca nhan, khong lien quan den cong viec ben A thue ben B.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai tuan thu day du, dung noi quy, quy dinh cua lop hoc va cac yeu cau cua ben A.', 35, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 6: Cham dut hop dong', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('Hop dong se cham dut trong cac truong hop sau:', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Het thoi han hop dong ma hai ben khong gia han.', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Hai ben thoa thuan cham dut hop dong truoc thoi han.', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Mot trong hai ben vi pham nghiem trong dieu khoan hop dong thi ben con lai duoc don phuong cham dut hop dong.', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Giao vien khong dap ung yeu cau giang day, chat luong hoc sinh hoac vi pham noi quy cua ben thue dat ra.', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A khong thuc hien thanh toan dung han va khong khac phuc sau 15 ngay.', 40, yPosition);
-    yPosition += 10;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 7: Xu li vi pham hop dong', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('- Neu Ben B vi pham noi quy hoac tu y nghi day ma khong co ly do chinh dang, Ben A co quyen cham dut hop dong ngay lap tuc va khong thanh toan luong cho cac buoi day chua hoan thanh.', 30, yPosition);
-    yPosition += 15;
-    doc.text('- Neu Ben A khong thanh toan dung han, Ben B co quyen tam ngung giang day cho den khi duoc thanh toan day du.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Truong hop mot trong hai ben gay thiet hai do vi pham hop dong, ben bi thiet hai co quyen yeu cau boi thuong toan bo thiet hai do vi pham gay ra.', 30, yPosition);
-    yPosition += 15;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.text('Dieu 8: Giai quyet tranh chap', 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('Moi tranh chap phat sinh se duoc giai quyet thong qua thuong luong, hoa giai. Neu khong dat duoc thoa thuan, tranh chap se duoc dua ra toa an co tham quyen giai quyet.', 30, yPosition);
-    yPosition += 15;
-    doc.text('Hop dong nay co hieu luc tu ngay ky va duoc lap thanh 02 ban, moi ben giu 01 ban co gia tri phap ly nhu nhau.', 30, yPosition);
-    yPosition += 15;
-    doc.text('Hai ben cam ket thuc hien dung cac dieu khoan cua hop dong.', 30, yPosition);
-    yPosition += 20;
-    
-    // Add new page if needed
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    // Chu ky
-    doc.setFontSize(14);
-    doc.text('DAI DIEN BEN A', 30, yPosition);
-    doc.text('DAI DIEN BEN B', 130, yPosition);
-    yPosition += 10;
-    doc.setFontSize(12);
-    doc.text('(Ky va ghi ro ho ten)', 25, yPosition);
-    doc.text('(Ky va ghi ro ho ten)', 125, yPosition);
-    
-    // Open PDF in new tab
-    window.open(doc.output('bloburl'), '_blank');
   };
 
   // Cấu hình cột cho bảng hợp đồng
@@ -1090,6 +812,66 @@ const ContractManagement = () => {
             return null; // Don't show for HR/Accountant staff
           })()}
 
+          {/* Working Schedule Fields - Only for Teachers in Edit Mode */}
+          {(() => {
+            // For edit mode, check the editing contract's type and position
+            const isTeacher = editingContract ? 
+              (editingContract.contractType === 'TEACHER' || 
+               editingContract.position?.toLowerCase().includes('giáo viên')) :
+              (candidatePosition.toLowerCase().includes('giáo viên') || 
+               candidatePosition.toLowerCase().includes('teacher'));
+            
+            if (isTeacher) {
+              return (
+                <>
+                  <Form.Item 
+                    name="workShifts" 
+                    label="Ca làm việc" 
+                    rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
+                  >
+                    <Select 
+                      mode="multiple" 
+                      placeholder="Chọn ca làm việc"
+                      options={[
+                        { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
+                        { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
+                        { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item 
+                    name="workDays" 
+                    label="Ngày trong tuần" 
+                    rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
+                  >
+                    <Select 
+                      mode="multiple" 
+                      placeholder="Chọn ngày trong tuần"
+                      options={[
+                        { value: 'monday', label: 'Thứ 2' },
+                        { value: 'tuesday', label: 'Thứ 3' },
+                        { value: 'wednesday', label: 'Thứ 4' },
+                        { value: 'thursday', label: 'Thứ 5' },
+                        { value: 'friday', label: 'Thứ 6' },
+                        { value: 'saturday', label: 'Thứ 7' },
+                        { value: 'sunday', label: 'Chủ nhật' }
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+                    <Input.TextArea 
+                      rows={3} 
+                      placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
+                    />
+                  </Form.Item>
+                </>
+              );
+            }
+            return null; // Don't show for HR/Accountant staff
+          })()}
+
           <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
             <Input 
               placeholder="Nhập vị trí" 
@@ -1275,6 +1057,63 @@ const ContractManagement = () => {
 
                   <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
                     <Input placeholder="Nhập lớp học" />
+                  </Form.Item>
+                </>
+              );
+            }
+            return null; // Don't show for HR/Accountant staff
+          })()}
+
+          {/* Working Schedule Fields - Only for Teachers */}
+          {(() => {
+            const position = candidatePosition.toLowerCase();
+            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
+                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
+            
+            if (isTeacher) {
+              return (
+                <>
+                  <Form.Item 
+                    name="workShifts" 
+                    label="Ca làm việc" 
+                    rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
+                  >
+                    <Select 
+                      mode="multiple" 
+                      placeholder="Chọn ca làm việc"
+                      options={[
+                        { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
+                        { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
+                        { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item 
+                    name="workDays" 
+                    label="Ngày trong tuần" 
+                    rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
+                  >
+                    <Select 
+                      mode="multiple" 
+                      placeholder="Chọn ngày trong tuần"
+                      options={[
+                        { value: 'monday', label: 'Thứ 2' },
+                        { value: 'tuesday', label: 'Thứ 3' },
+                        { value: 'wednesday', label: 'Thứ 4' },
+                        { value: 'thursday', label: 'Thứ 5' },
+                        { value: 'friday', label: 'Thứ 6' },
+                        { value: 'saturday', label: 'Thứ 7' },
+                        { value: 'sunday', label: 'Chủ nhật' }
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+                    <Input.TextArea 
+                      rows={3} 
+                      placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
+                    />
                   </Form.Item>
                 </>
               );
