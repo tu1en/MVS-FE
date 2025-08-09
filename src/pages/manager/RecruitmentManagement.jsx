@@ -1,12 +1,9 @@
-import { Tabs, Table, Button, Modal, Form, Input, DatePicker, InputNumber, Tag, message, Popconfirm, Select, Space } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Table, Tabs, Tag } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
-import dayjs from 'dayjs';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
-import { recruitmentService } from '../../services/recruitmentService';
 
-<<<<<<< HEAD
-=======
 // Component cho cột Lương GROSS với input
 const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
   const [grossSalary, setGrossSalary] = useState(offer);
@@ -187,7 +184,6 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
   );
 };
 
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
 const { RangePicker } = DatePicker;
 
 const RecruitmentManagement = () => {
@@ -211,12 +207,9 @@ const RecruitmentManagement = () => {
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
-<<<<<<< HEAD
-=======
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
 
   useEffect(() => {
     fetchPlans();
@@ -442,38 +435,6 @@ const RecruitmentManagement = () => {
       console.log('Start time:', startTime.format('YYYY-MM-DDTHH:mm:ss'));
       console.log('End time:', endTime.format('YYYY-MM-DDTHH:mm:ss'));
       
-<<<<<<< HEAD
-      // Kiểm tra không cho phép xếp lịch trong quá khứ
-      const now = dayjs();
-      if (startTime.isBefore(now)) {
-        message.error('Không thể xếp lịch phỏng vấn trong quá khứ!');
-        return;
-      }
-      
-      const startTimeStr = startTime.format('YYYY-MM-DDTHH:mm:ss');
-      const endTimeStr = endTime.format('YYYY-MM-DDTHH:mm:ss');
-
-      // Kiểm tra trùng lịch
-      const conflictCheck = await axiosInstance.post('/interview-schedules/check-conflict', null, {
-        params: { startTime: startTimeStr, endTime: endTimeStr }
-      });
-
-      if (conflictCheck.data) {
-        message.error('Thời gian này đã có lịch phỏng vấn khác!');
-        return;
-      }
-
-      const response = await axiosInstance.post('/interview-schedules', null, {
-        params: {
-          applicationId: selectedApplication.id,
-          startTime: startTimeStr,
-          endTime: endTimeStr
-        }
-      });
-      console.log('Interview created:', response.data);
-
-      message.success('Lên lịch phỏng vấn thành công!');
-=======
       // Ghi chú: Đã loại bỏ validation ở frontend để tránh xung đột với backend
       // Backend sẽ xử lý tất cả validation bao gồm kiểm tra thời gian trong quá khứ
       
@@ -509,7 +470,6 @@ const RecruitmentManagement = () => {
       console.log('Interview updated/created:', response.data);
 
       message.success(currentInterview ? 'Cập nhật lịch phỏng vấn thành công!' : 'Lên lịch phỏng vấn thành công!');
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
       setShowScheduleModal(false);
       
       // Refresh tất cả dữ liệu
@@ -520,9 +480,6 @@ const RecruitmentManagement = () => {
       console.log('Data refresh complete');
     } catch (err) {
       console.error('Error scheduling interview:', err);
-<<<<<<< HEAD
-      message.error('Không thể lên lịch phỏng vấn!');
-=======
       console.log('Full error response:', err.response);
       console.log('Error response data:', err.response?.data);
       console.log('Error response status:', err.response?.status);
@@ -554,7 +511,6 @@ const RecruitmentManagement = () => {
         console.log('Non-400 error, using generic message');
         message.error('Không thể lên lịch phỏng vấn!');
       }
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
     }
   };
 
@@ -574,10 +530,6 @@ const RecruitmentManagement = () => {
 
   const handleOfferUpdate = async (id, offer) => {
     try {
-<<<<<<< HEAD
-      await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer });
-      message.success('Cập nhật offer thành công!');
-=======
       // Đảm bảo giá trị tối thiểu là 1 triệu
       let validOffer = offer;
       if (offer && offer < 1000000) {
@@ -586,7 +538,6 @@ const RecruitmentManagement = () => {
       await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer: validOffer });
       message.success('Cập nhật offer thành công!');
       fetchOffers(); // Refresh để hiển thị giá trị đã được chuẩn hóa
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
     } catch (err) {
       message.error('Không thể cập nhật offer!');
     }
@@ -629,12 +580,6 @@ const RecruitmentManagement = () => {
       return;
     }
     try {
-<<<<<<< HEAD
-      await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
-        offer: offer
-      });
-      message.success('Đã gửi offer email thành công!');
-=======
       // Lấy chi tiết tính lương trước khi gửi email
       const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
       
@@ -643,7 +588,6 @@ const RecruitmentManagement = () => {
         salaryDetails: salaryDetails.data
       });
       message.success('Đã gửi offer email với chi tiết lương thành công!');
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
@@ -674,13 +618,6 @@ const RecruitmentManagement = () => {
 
   const handleApproveCandidate = async (id) => {
     try {
-<<<<<<< HEAD
-      await axiosInstance.put(`/interview-schedules/${id}/result`, { status: 'APPROVED', result: 'Đã duyệt ứng viên' });
-      message.success('Đã duyệt ứng viên thành công!');
-      fetchOffers();
-    } catch (err) {
-      message.error('Không thể duyệt ứng viên!');
-=======
       // Kiểm tra tài khoản và hợp đồng
       const response = await axiosInstance.get(`/interview-schedules/${id}/check-account`);
       const { hasAccount, hasContract } = response.data;
@@ -721,7 +658,6 @@ const RecruitmentManagement = () => {
       message.error('Không thể tải chi tiết tính lương!');
     } finally {
       setLoadingSalaryDetails(false);
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
     }
   };
 
@@ -878,8 +814,6 @@ const RecruitmentManagement = () => {
                 Sửa lịch
               </Button>
             )}
-<<<<<<< HEAD
-=======
             <Button 
               type="primary" 
               size="small" 
@@ -889,7 +823,6 @@ const RecruitmentManagement = () => {
             >
               ✗ Từ chối
             </Button>
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
           </div>
         );
       }
@@ -983,27 +916,6 @@ const RecruitmentManagement = () => {
       }
     },
     {
-<<<<<<< HEAD
-      title: 'Offer',
-      dataIndex: 'offer',
-      render: (text, record) => (
-        <div>
-          <div style={{ marginBottom: '8px', minHeight: '40px', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '6px', backgroundColor: '#fafafa' }}>
-            {text || 'Chưa có offer'}
-          </div>
-          <Button 
-            size="small" 
-            type="primary"
-            onClick={() => openOfferModal(record)}
-            className="vietnamese-text"
-          >
-            Chỉnh sửa Offer
-          </Button>
-        </div>
-      )
-    },
-    {
-=======
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
@@ -1027,7 +939,6 @@ const RecruitmentManagement = () => {
       render: (text, record) => <NetSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} />
     },
     {
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
       title: 'Thao tác',
       render: (_, record) => (
         <div className="space-x-2">
@@ -1177,15 +1088,6 @@ const RecruitmentManagement = () => {
           <Form.Item 
             name="interviewTime" 
             label="Thời gian phỏng vấn" 
-<<<<<<< HEAD
-            rules={[{ required: true, message: 'Vui lòng chọn thời gian phỏng vấn!' }]}
-          >
-            <RangePicker 
-              showTime 
-              format="YYYY-MM-DD HH:mm"
-              placeholder={['Bắt đầu', 'Kết thúc']}
-              className="vietnamese-text"
-=======
             rules={[
               { required: true, message: 'Vui lòng chọn thời gian phỏng vấn!' },
               {
@@ -1252,7 +1154,6 @@ const RecruitmentManagement = () => {
                   });
                 }
               }}
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
             />
           </Form.Item>
           <Form.Item>
@@ -1310,16 +1211,6 @@ const RecruitmentManagement = () => {
         <Form layout="vertical" form={offerForm} onFinish={handleOfferModalSubmit} className="form-vietnamese">
           <Form.Item 
             name="offer" 
-<<<<<<< HEAD
-            label="Nội dung Offer"
-            rules={[{ required: false }]} // Cho phép null
-          >
-            <Input.TextArea 
-              placeholder="Nhập nội dung offer (có thể để trống)..."
-              rows={6}
-              className="vietnamese-text"
-            />
-=======
             label="Offer"
             rules={[{ required: false }]} // Cho phép null
           >
@@ -1361,7 +1252,6 @@ const RecruitmentManagement = () => {
                 </Button>
               </div>
             </div>
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
           </Form.Item>
           <Form.Item>
             <div className="flex justify-end space-x-2">
@@ -1373,8 +1263,6 @@ const RecruitmentManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
-<<<<<<< HEAD
-=======
 
       {/* Modal Chi Tiết Tính Lương */}
       <Modal
@@ -1481,7 +1369,6 @@ const RecruitmentManagement = () => {
           </div>
         )}
       </Modal>
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
     </div>
   );
 };

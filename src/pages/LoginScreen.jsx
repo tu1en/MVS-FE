@@ -1,5 +1,5 @@
 import { signInWithPopup } from 'firebase/auth';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -138,9 +138,6 @@ export default function LoginScreen() {
       const idToken = await user.getIdToken();
       
       // 3. Send to backend via authService
-<<<<<<< HEAD
-      const userData = await authService.googleLogin(idToken, user);
-=======
       try {
         const userData = await authService.googleLogin(idToken, user);
       } catch (error) {
@@ -154,7 +151,6 @@ export default function LoginScreen() {
         setDangDangNhap(false);
         return;
       }
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
 
       // Store in AuthContext (this will also store in localStorage)
       login(userData);

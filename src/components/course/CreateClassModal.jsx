@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
-import ScheduleManager from '../schedule/ScheduleManager';
-import { 
-  validateClassForm, 
-  showNotification, 
-  showConfirmDialog,
-  getCurrentUserId,
-  formatSchedule,
-  debounce 
+import {
+    debounce,
+    formatSchedule,
+    getCurrentUserId,
+    showConfirmDialog,
+    showNotification,
+    validateClassForm
 } from '../../utils/courseManagementUtils';
+import ScheduleManager from '../schedule/ScheduleManager';
 
 const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -72,10 +72,9 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     []
   );
 
-  // Load teachers and rooms
+  // Chỉ tải phòng khi mở modal; giáo viên sẽ tải sau khi có đủ lịch + ngày
   useEffect(() => {
     if (visible) {
-      loadTeachers();
       loadRooms();
     }
   }, [visible]);
@@ -95,20 +94,46 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     }
   }, [formData.roomId, formData.teacherId, formData.schedule, formData.startDate, formData.endDate]);
 
-  // Load teachers
-  const loadTeachers = async () => {
+  // Kiểm tra điều kiện đủ để lọc giáo viên
+  const isScheduleReady = () => {
+    return (
+      formData.startDate &&
+      formData.endDate &&
+      formData.schedule?.days?.length > 0 &&
+      formData.schedule?.startTime &&
+      formData.schedule?.endTime
+    );
+  };
+
+  // Tải giáo viên khả dụng theo lịch và môn
+  const loadAvailableTeachers = async () => {
+    if (!isScheduleReady()) {
+      setState(prev => ({ ...prev, teachers: [] }));
+      setFormData(prev => ({ ...prev, teacherId: null }));
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: { ...prev.loading, teachers: true } }));
-    
     try {
-      const response = await classManagementService.getAllTeachers();
+      const payload = {
+        subject: template.subject || '',
+        schedule: JSON.stringify(formData.schedule),
+        startDate: formData.startDate,
+        endDate: formData.endDate
+      };
+      const response = await classManagementService.getAvailableTeachers(payload);
       const teachersData = response.data?.data || response.data || [];
       setState(prev => ({
         ...prev,
         teachers: Array.isArray(teachersData) ? teachersData : [],
         loading: { ...prev.loading, teachers: false }
       }));
+      // Nếu giáo viên đã chọn không còn trong danh sách mới → reset
+      if (formData.teacherId && !teachersData.find?.(t => t.id === formData.teacherId)) {
+        setFormData(prev => ({ ...prev, teacherId: null }));
+      }
     } catch (error) {
-      console.error('Error loading teachers:', error);
+      console.error('Error loading available teachers:', error);
       setState(prev => ({
         ...prev,
         teachers: [],
@@ -117,6 +142,13 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
       }));
     }
   };
+
+  // Mỗi khi lịch hoặc ngày thay đổi → reload danh sách giáo viên khả dụng
+  useEffect(() => {
+    if (!visible) return;
+    loadAvailableTeachers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startDate, formData.endDate, JSON.stringify(formData.schedule), visible]);
 
   // Load rooms
   const loadRooms = async () => {
@@ -433,14 +465,18 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         formData.validation.teacherId ? 'border-red-300 bg-red-50' : 'border-gray-300'
                       }`}
-                      disabled={state.loading.teachers}
+                      disabled={state.loading.teachers || !isScheduleReady()}
                     >
                       <option value="">
-                        {state.loading.teachers ? 'Đang tải...' : 'Chọn giáo viên'}
+                        {!isScheduleReady()
+                          ? 'Vui lòng nhập lịch + ngày để gợi ý giáo viên'
+                          : state.loading.teachers
+                            ? 'Đang lọc giáo viên phù hợp...'
+                            : (state.teachers.length === 0 ? 'Không có giáo viên phù hợp' : 'Chọn giáo viên')}
                       </option>
                       {state.teachers.map(teacher => (
                         <option key={teacher.id} value={teacher.id}>
-                          {teacher.fullName} - {teacher.specialization || 'Chưa có chuyên môn'}
+                          {teacher.fullName || teacher.name} - {teacher.department || 'Chưa có chuyên môn'}
                         </option>
                       ))}
                     </select>

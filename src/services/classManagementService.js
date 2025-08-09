@@ -1,5 +1,5 @@
-import apiClient from './apiClient';
 import API_CONFIG from '../config/api-config.js';
+import apiClient from './apiClient';
 
 const classManagementService = {
   /**
@@ -83,6 +83,15 @@ const classManagementService = {
    */
   checkScheduleConflicts: (scheduleData) => {
     return apiClient.post(API_CONFIG.ENDPOINTS.CLASSES_SCHEDULE_CONFLICTS, scheduleData);
+  },
+
+  /**
+   * Lấy giáo viên khả dụng theo môn và lịch
+   * @param {Object} payload { subject, schedule, startDate, endDate }
+   * @returns {Promise<Array>} Danh sách giáo viên khả dụng
+   */
+  getAvailableTeachers: (payload) => {
+    return apiClient.post(API_CONFIG.ENDPOINTS.CLASSES_AVAILABLE_TEACHERS, payload);
   },
 
   /**

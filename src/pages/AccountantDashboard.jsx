@@ -64,11 +64,7 @@ const AccountantDashboard = () => {
         }
 
         try {
-<<<<<<< HEAD
-          const contractStatsResponse = await api.get('/contracts/statistics');
-=======
           const contractStatsResponse = await api.get('/contracts/stats');
->>>>>>> 770835b1056f571ef10e2345115c53862632498d
           setContractStats(contractStatsResponse.data || {});
         } catch (error) {
           console.error('Error fetching contract stats:', error);

@@ -88,6 +88,7 @@ const API_CONFIG = {
     CLASSES_CLONE: (id) => `/classes/${id}/clone`,
     CLASSES_SCHEDULE_CONFLICTS: "/classes/check-schedule-conflicts",
     CLASSES_ROOM_AVAILABILITY: "/classes/room-availability",
+    CLASSES_AVAILABLE_TEACHERS: "/classes/available-teachers",
 
     // Rooms endpoints
     ROOMS: "/rooms",
