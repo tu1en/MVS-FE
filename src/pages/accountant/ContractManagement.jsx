@@ -233,6 +233,46 @@ const ContractManagement = () => {
     }
   };
 
+  // Xử lý chỉnh sửa hợp đồng
+  const handleEditContract = (record) => {
+    console.log('🔍 DEBUG: Editing contract:', record);
+    console.log('🔍 DEBUG: Contract salary fields:', {
+      grossSalary: record.grossSalary,
+      netSalary: record.netSalary,
+      hourlySalary: record.hourlySalary,
+      salary: record.salary
+    });
+
+    setEditingContract(record);
+    
+    // Populate form with contract data
+    const formData = {
+      contractId: record.contractId,
+      fullName: record.fullName,
+      email: record.email,
+      phoneNumber: record.phoneNumber,
+      position: record.position,
+      // Populate salary fields from contract data (read-only)
+      grossSalary: record.grossSalary,
+      netSalary: record.netSalary,
+      hourlySalary: record.hourlySalary,
+      startDate: record.startDate ? moment(record.startDate) : null,
+      endDate: record.endDate ? moment(record.endDate) : null,
+      status: record.status,
+      contractTerms: record.contractTerms,
+      birthDate: record.birthDate ? moment(record.birthDate) : null,
+      cccd: record.citizenId,
+      address: record.address,
+      qualification: record.qualification,
+      subject: record.subject,
+      level: record.educationLevel
+    };
+
+    console.log('🔍 DEBUG: Form data for edit:', formData);
+    form.setFieldsValue(formData);
+    setModalVisible(true);
+  };
+
   // Generate Contract ID based on current date and sequence
   const generateContractId = () => {
     const today = new Date();
@@ -353,34 +393,7 @@ const ContractManagement = () => {
     setModalVisible(true);
   };
 
-  // Mở modal chỉnh sửa hợp đồng
-  const handleEditContract = async (record) => {
-    try {
-      console.log('Editing contract:', record);
-      // Parse dates with moment to ensure proper format before validation
-      const parsedStartDate = record.startDate ? moment(record.startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true) : null;
-      const parsedEndDate = record.endDate ? moment(record.endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true) : null;
-      const parsedBirthDate = record.birthDate ? moment(record.birthDate, ['YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true) : null;
-      
-      console.log('Parsed dates:', { 
-        startDate: parsedStartDate, 
-        endDate: parsedEndDate, 
-        birthDate: parsedBirthDate 
-      });
-      
-      form.setFieldsValue({
-        ...record,
-        startDate: parsedStartDate && parsedStartDate.isValid() ? parsedStartDate : null,
-        endDate: parsedEndDate && parsedEndDate.isValid() ? parsedEndDate : null,
-        birthDate: parsedBirthDate && parsedBirthDate.isValid() ? parsedBirthDate : null,
-      });
-      setEditingContract(record);
-      setModalVisible(true);
-    } catch (error) {
-      console.error('Error in handleEditContract:', error);
-      message.error('Có lỗi xảy ra khi mở form chỉnh sửa hợp đồng');
-    }
-  };
+
 
   // Hàm validate ngày sinh (ít nhất 20 tuổi) - Đã bỏ validate tuổi theo yêu cầu
   const validateBirthDate = (_, value) => {
@@ -711,12 +724,7 @@ const ContractManagement = () => {
       key: 'fullName',
       render: (text) => <strong>{text}</strong>
     },
-    {
-      title: 'Offer',
-      dataIndex: 'offer',
-      key: 'offer',
-      render: (offer) => offer || 'Chưa có thông tin offer'
-    },
+
     {
       title: 'Email',
       dataIndex: 'email',
@@ -732,11 +740,7 @@ const ContractManagement = () => {
       dataIndex: 'position',
       key: 'position'
     },
-    {
-      title: 'Phòng ban',
-      dataIndex: 'department',
-      key: 'department'
-    },
+
     {
       title: 'Lương',
       dataIndex: 'salary',
@@ -959,12 +963,16 @@ const ContractManagement = () => {
             />
           </Form.Item>
 
-          <Form.Item name="userId" label="User ID" rules={[{ required: true, message: 'Vui lòng nhập User ID!' }]}>
-            <Input placeholder="Nhập User ID" />
-          </Form.Item>
-
           <Form.Item name="fullName" label="Họ và tên">
-            <Input placeholder="Nhập họ và tên" />
+            <Input 
+              placeholder="Nhập họ và tên" 
+              readOnly={editingContract}
+              style={editingContract ? {
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                cursor: 'not-allowed'
+              } : {}}
+            />
           </Form.Item>
 
           <Form.Item 
@@ -979,11 +987,27 @@ const ContractManagement = () => {
           </Form.Item>
 
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ!' }]}>
-            <Input placeholder="Nhập email" />
+            <Input 
+              placeholder="Nhập email" 
+              readOnly={editingContract}
+              style={editingContract ? {
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                cursor: 'not-allowed'
+              } : {}}
+            />
           </Form.Item>
 
           <Form.Item name="phoneNumber" label="Số điện thoại">
-            <Input placeholder="Nhập số điện thoại" />
+            <Input 
+              placeholder="Nhập số điện thoại" 
+              readOnly={editingContract}
+              style={editingContract ? {
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                cursor: 'not-allowed'
+              } : {}}
+            />
           </Form.Item>
 
           <Form.Item name="cccd" label="Số CCCD" rules={[{ required: true, message: 'Vui lòng nhập số CCCD!' }, { pattern: /^\d{12}$/, message: 'Số CCCD phải có đúng 12 chữ số!' }]}>
@@ -1006,37 +1030,81 @@ const ContractManagement = () => {
             <Input placeholder="Nhập cấp học" />
           </Form.Item>
 
-          <Form.Item name="contractType" label="Loại hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}>
-            <Select placeholder="Chọn loại hợp đồng">
-              <Option value="TEACHER">Giáo viên</Option>
-              <Option value="STAFF">Nhân viên</Option>
-            </Select>
-          </Form.Item>
-
           <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
-            <Input placeholder="Nhập vị trí" />
-          </Form.Item>
-
-          <Form.Item name="department" label="Phòng ban" rules={[{ required: true, message: 'Vui lòng nhập phòng ban!' }]}>
-            <Input placeholder="Nhập phòng ban" />
-          </Form.Item>
-
-          <Form.Item name="offer" label="Offer">
-            <TextArea rows={3} placeholder="Nhập thông tin offer (nếu có)" />
-          </Form.Item>
-
-          <Form.Item name="salary" label="Lương" rules={[{ required: true, message: 'Vui lòng nhập lương!' }]}>
-            <InputNumber
-              style={{ width: '100%' }}
-              placeholder="Nhập lương"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\$\s?|(,*)/g, '')}
+            <Input 
+              placeholder="Nhập vị trí" 
+              readOnly={editingContract}
+              style={editingContract ? {
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                cursor: 'not-allowed'
+              } : {}}
             />
           </Form.Item>
 
-          <Form.Item name="workingHours" label="Giờ làm việc">
-            <Input placeholder="Nhập giờ làm việc" defaultValue="8" />
-          </Form.Item>
+          {/* Salary fields - only show in edit mode and read-only, based on contract type */}
+          {editingContract && (
+            <>
+              {/* For Teacher Contracts: Show only Hourly Salary */}
+              {(editingContract.contractType === 'TEACHER' || 
+                editingContract.position?.toLowerCase().includes('giáo viên')) && 
+                editingContract.hourlySalary && (
+                <Form.Item name="hourlySalary" label="Lương theo giờ">
+                  <InputNumber
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: '#f5f5f5',
+                      color: '#666',
+                      cursor: 'not-allowed'
+                    }}
+                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                    readOnly
+                    disabled
+                  />
+                </Form.Item>
+              )}
+              
+              {/* For Staff Contracts: Show Gross and Net Salary */}
+              {(editingContract.contractType === 'STAFF' || 
+                !editingContract.position?.toLowerCase().includes('giáo viên')) && (
+                <>
+                  {editingContract.grossSalary && (
+                    <Form.Item name="grossSalary" label="Lương GROSS">
+                      <InputNumber
+                        style={{ 
+                          width: '100%',
+                          backgroundColor: '#f5f5f5',
+                          color: '#666',
+                          cursor: 'not-allowed'
+                        }}
+                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                        readOnly
+                        disabled
+                      />
+                    </Form.Item>
+                  )}
+                  {editingContract.netSalary && (
+                    <Form.Item name="netSalary" label="Lương NET">
+                      <InputNumber
+                        style={{ 
+                          width: '100%',
+                          backgroundColor: '#f5f5f5',
+                          color: '#666',
+                          cursor: 'not-allowed'
+                        }}
+                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                        readOnly
+                        disabled
+                      />
+                    </Form.Item>
+                  )}
+                </>
+              )}
+            </>
+          )}
 
           <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
