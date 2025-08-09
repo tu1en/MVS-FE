@@ -29,6 +29,7 @@ import axiosInstance from '../../config/axiosInstance';
 import moment from 'moment';
 import './ContractManagement.css';
 import jsPDF from 'jspdf';
+import WorkingScheduleFields from '../../components/WorkingScheduleFields';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -185,9 +186,12 @@ const ContractManagement = () => {
         address: values.address || '',
         qualification: values.qualification || '',
         subject: values.subject || '',
-        educationLevel: values.level || values.educationLevel || '',
-        // 🔄 REWRITTEN: Salary fields from editable Offer Management
-        evaluation: values.evaluation || '',
+        classLevel: values.classLevel || values.level || '', // Changed from educationLevel to classLevel (Lớp học)
+        // 🔄 REWRITTEN: Updated field names and added working schedule
+        comments: values.comments || '', // Changed from evaluation to comments (Nhận xét)
+        workSchedule: values.workSchedule || '', // New field: Thời gian làm việc
+        workShifts: values.workShifts || '', // New field: Ca làm việc (morning, afternoon, evening)
+        workDays: values.workDays || '', // New field: Ngày trong tuần
         // ✅ FOR TEACHERS: Only send hourly salary from Offer Management
         grossSalary: isTeacher ? null : (values.grossSalary || null),
         netSalary: isTeacher ? null : (values.netSalary || null),
@@ -290,7 +294,12 @@ const ContractManagement = () => {
       address: record.address,
       qualification: record.qualification,
       subject: record.subject,
-      level: record.educationLevel
+      classLevel: record.classLevel || record.educationLevel, // Changed from level to classLevel (Lớp học)
+      // New working schedule fields
+      comments: record.comments, // Changed from evaluation to comments (Nhận xét)
+      workSchedule: record.workSchedule, // Thời gian làm việc
+      workShifts: record.workShifts, // Ca làm việc
+      workDays: record.workDays // Ngày trong tuần
     };
 
     console.log('🔍 DEBUG: Form data for edit:', formData);
@@ -358,7 +367,7 @@ const ContractManagement = () => {
       
       // 🔄 REWRITTEN: Process salary data based on position type
       const formValues = {
-        evaluation: offerData.evaluation || 'Chưa có đánh giá'
+        comments: offerData.comments || 'Chưa có nhận xét' // Changed from evaluation to comments
       };
       
       if (isTeacher) {
@@ -399,7 +408,7 @@ const ContractManagement = () => {
       
       // Set appropriate default values based on position
       const defaultValues = {
-        evaluation: 'Chưa có đánh giá'
+        comments: 'Chưa có nhận xét' // Changed from evaluation to comments
       };
       
       if (isTeacher) {
@@ -1056,13 +1065,30 @@ const ContractManagement = () => {
             <Input placeholder="Nhập trình độ chuyên môn" />
           </Form.Item>
 
-          <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
-            <Input placeholder="Nhập môn giảng dạy" />
-          </Form.Item>
+          {/* Subject and Class Level fields - Only for Teachers */}
+          {(() => {
+            // For edit mode, check the editing contract's type and position
+            const isTeacher = editingContract ? 
+              (editingContract.contractType === 'TEACHER' || 
+               editingContract.position?.toLowerCase().includes('giáo viên')) :
+              (candidatePosition.toLowerCase().includes('giáo viên') || 
+               candidatePosition.toLowerCase().includes('teacher'));
+            
+            if (isTeacher) {
+              return (
+                <>
+                  <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
+                    <Input placeholder="Nhập môn giảng dạy" />
+                  </Form.Item>
 
-          <Form.Item name="level" label="Cấp học" rules={[{ required: true, message: 'Vui lòng nhập cấp học!' }]}>
-            <Input placeholder="Nhập cấp học" />
-          </Form.Item>
+                  <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
+                    <Input placeholder="Nhập lớp học" />
+                  </Form.Item>
+                </>
+              );
+            }
+            return null; // Don't show for HR/Accountant staff
+          })()}
 
           <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
             <Input 
@@ -1234,20 +1260,34 @@ const ContractManagement = () => {
             <Input placeholder="Nhập trình độ chuyên môn" />
           </Form.Item>
 
-          <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
-            <Input placeholder="Nhập môn giảng dạy" />
-          </Form.Item>
+          {/* Subject and Class Level fields - Only for Teachers */}
+          {(() => {
+            const position = candidatePosition.toLowerCase();
+            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
+                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
+            
+            if (isTeacher) {
+              return (
+                <>
+                  <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
+                    <Input placeholder="Nhập môn giảng dạy" />
+                  </Form.Item>
 
-          <Form.Item name="level" label="Cấp học" rules={[{ required: true, message: 'Vui lòng nhập cấp học!' }]}>
-            <Input placeholder="Nhập cấp học" />
-          </Form.Item>
+                  <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
+                    <Input placeholder="Nhập lớp học" />
+                  </Form.Item>
+                </>
+              );
+            }
+            return null; // Don't show for HR/Accountant staff
+          })()}
 
           <Form.Item name="position" label="Vị trí">
             <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
           {/* Offer Management Fields - Read Only */}
-          <Form.Item name="evaluation" label="Đánh giá">
+          <Form.Item name="comments" label="Nhận xét">
             <Input 
               placeholder="Tự động lấy từ Offer" 
               readOnly 
