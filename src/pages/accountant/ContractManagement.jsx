@@ -85,6 +85,23 @@ const ContractManagement = () => {
 
   // Xử lý tạo hợp đồng mới
   const handleCreateContract = async (values) => {
+    // Validate required fields
+    if (!values.fullName || values.fullName.trim() === '') {
+      message.error('Vui lòng nhập họ tên!');
+      return;
+    }
+    if (!values.email || values.email.trim() === '') {
+      message.error('Vui lòng nhập email!');
+      return;
+    }
+    if (!values.position || values.position.trim() === '') {
+      message.error('Vui lòng nhập vị trí công việc!');
+      return;
+    }
+    if (!values.startDate) {
+      message.error('Vui lòng chọn ngày bắt đầu!');
+      return;
+    }
     if (values.endDate && values.endDate.isBefore(values.startDate, 'day')) {
       message.error('Ngày kết thúc không được trước ngày bắt đầu!');
       return;
@@ -94,17 +111,73 @@ const ContractManagement = () => {
       return;
     }
     try {
+      // Generate userId if not provided (for manual contract creation)
+      let userId = values.userId;
+      if (!userId && selectedCandidate) {
+        userId = selectedCandidate.userId || selectedCandidate.id;
+      }
+      if (!userId) {
+        // Generate a temporary userId for manual contracts
+        userId = Date.now(); // Simple timestamp-based ID
+      }
+
+      // Determine contract type based on position
+      let contractType = values.contractType;
+      if (!contractType) {
+        const position = values.position || '';
+        contractType = position.toLowerCase().includes('giáo viên') || position.toLowerCase().includes('teacher') ? 'TEACHER' : 'STAFF';
+      }
+
+      // Determine salary based on contract type
+      let salary = 0;
+      if (contractType === 'TEACHER' && values.hourlySalary) {
+        salary = values.hourlySalary;
+      } else if (values.grossSalary) {
+        salary = values.grossSalary;
+      } else if (values.netSalary) {
+        salary = values.netSalary;
+      } else if (values.salary) {
+        salary = values.salary;
+      }
+
+      // Validate salary
+      if (!salary || salary <= 0) {
+        message.error('Vui lòng nhập lương hợp lệ!');
+        return;
+      }
+
       const contractData = {
-        ...values,
-        citizenId: values.cccd, // mapping CCCD
-        educationLevel: values.level, // mapping cấp học
+        userId: userId,
+        contractId: values.contractId || generateContractId(),
+        fullName: values.fullName || '',
+        email: values.email || '',
+        phoneNumber: values.phoneNumber || '',
+        contractType: contractType,
+        position: values.position || '',
+        department: values.department || 'Không xác định',
+        salary: salary,
+        workingHours: values.workingHours || '8h/ngày',
         startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
         endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
         status: 'ACTIVE',
-        createdBy: 'Accountant'
+        contractTerms: values.contractTerms || '',
+        createdBy: 'Accountant',
+        // Custom fields
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        citizenId: values.cccd || values.citizenId || '',
+        address: values.address || '',
+        qualification: values.qualification || '',
+        subject: values.subject || '',
+        educationLevel: values.level || values.educationLevel || '',
+        // Offer management fields
+        evaluation: values.evaluation || '',
+        grossSalary: values.grossSalary || null,
+        netSalary: values.netSalary || null,
+        hourlySalary: values.hourlySalary || null,
+        offer: values.offer || ''
       };
-      delete contractData.cccd;
-      delete contractData.level;
+
+      console.log('🔍 DEBUG: Contract data being sent:', contractData);
 
       await axiosInstance.post('/contracts', contractData);
       message.success('Tạo hợp đồng thành công!');
@@ -112,11 +185,14 @@ const ContractManagement = () => {
       setCandidateModalVisible(false);
       form.resetFields();
       candidateForm.resetFields();
+      setSelectedCandidate(null);
       fetchContracts();
       fetchCandidatesReady();
     } catch (error) {
       console.error('Error creating contract:', error);
-      message.error('Không thể tạo hợp đồng!');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      message.error(`Không thể tạo hợp đồng! ${error.response?.data?.message || error.message || ''}`);
     }
   };
 
