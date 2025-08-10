@@ -1,47 +1,50 @@
 import {
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-  HistoryOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TeamOutlined,
-  UserOutlined
+    CalendarOutlined,
+    CheckCircleOutlined,
+    ClockCircleOutlined,
+    CloseCircleOutlined,
+    DownloadOutlined,
+    ExclamationCircleOutlined,
+    HistoryOutlined,
+    ReloadOutlined,
+    SearchOutlined,
+    TeamOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Empty,
-  Input,
-  message,
-  Row,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tag
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Empty,
+    Input,
+    message,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import attendanceService from '../../services/attendanceService';
 import { safeDataSource } from '../../utils/tableUtils';
 
-const { Option } = Select;
 const { Search } = Input;
 const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 const PersonalAttendanceHistory = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState([dayjs().subtract(7, 'day'), dayjs()]);
-  const [selectedUserId, setSelectedUserId] = useState('');
+  const [rangeMode, setRangeMode] = useState('last7'); // today | last7 | last30 | thisMonth | custom
+  // Chỉ hiển thị dữ liệu bản thân
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({
     current: 1,
@@ -55,28 +58,31 @@ const PersonalAttendanceHistory = () => {
     lateCount: 0,
     totalHours: 0
   });
-  const [testUsers, setTestUsers] = useState([]);
+  
 
   // HELPER FUNCTIONS
   const getStatusColor = (status) => {
-    switch(status) {
-      case 'PRESENT': return 'success';
-      case 'ABSENT': return 'error';
-      case 'LATE': return 'warning';
-      default: return 'default';
-    }
+    // Hỗ trợ cả status từ BE: 'Chưa chấm công', 'Đang làm việc', 'Hoàn thành'
+    if (!status) return 'default';
+    const s = String(status).toUpperCase();
+    if (s.includes('PRESENT') || s.includes('HOÀN THÀNH')) return 'success';
+    if (s.includes('ABSENT') || s.includes('VẮNG')) return 'error';
+    if (s.includes('LATE') || s.includes('MUỘN')) return 'warning';
+    if (s.includes('ĐANG LÀM')) return 'processing';
+    return 'default';
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
-      case 'PRESENT': return <CheckCircleOutlined />;
-      case 'ABSENT': return <CloseCircleOutlined />;
-      case 'LATE': return <ExclamationCircleOutlined />;
-      default: return <ClockCircleOutlined />;
-    }
+    if (!status) return <ClockCircleOutlined />;
+    const s = String(status).toUpperCase();
+    if (s.includes('PRESENT') || s.includes('HOÀN THÀNH')) return <CheckCircleOutlined />;
+    if (s.includes('ABSENT') || s.includes('VẮNG')) return <CloseCircleOutlined />;
+    if (s.includes('LATE') || s.includes('MUỘN')) return <ExclamationCircleOutlined />;
+    return <ClockCircleOutlined />;
   };
 
   const getStatusText = (status) => {
+    if (!status) return '-';
     switch(status) {
       case 'PRESENT': return 'Có mặt';
       case 'ABSENT': return 'Vắng mặt';
@@ -90,7 +96,7 @@ const PersonalAttendanceHistory = () => {
       case 'morning': return 'Ca sáng';
       case 'afternoon': return 'Ca chiều';
       case 'evening': return 'Ca tối';
-      default: return shift;
+      default: return shift || '-';
     }
   };
 
@@ -109,7 +115,7 @@ const PersonalAttendanceHistory = () => {
       render: (text) => (
         <Space>
           <UserOutlined />
-          {text}
+          {text || user?.fullName || user?.username}
         </Space>
       ),
     },
@@ -133,13 +139,13 @@ const PersonalAttendanceHistory = () => {
       title: 'Giờ vào',
       dataIndex: 'checkIn',
       key: 'checkIn',
-      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : '-'),
+      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : (Array.isArray(time) ? `${String(time[0]).padStart(2,'0')}:${String(time[1]).padStart(2,'0')}` : '-')),
     },
     {
       title: 'Giờ ra',
       dataIndex: 'checkOut',
       key: 'checkOut',
-      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : '-'),
+      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : (Array.isArray(time) ? `${String(time[0]).padStart(2,'0')}:${String(time[1]).padStart(2,'0')}` : '-')),
     },
     {
       title: 'Số giờ làm',
@@ -169,134 +175,42 @@ const PersonalAttendanceHistory = () => {
 
   // useEffect hooks
   useEffect(() => {
-    loadTestUsers();
-  }, []);
+    fetchLogs();
+  }, [pagination.current, pagination.pageSize, dateRange]);
 
-  useEffect(() => {
-    if (testUsers.length > 0) {
-      fetchLogs();
-    }
-  }, [pagination.current, pagination.pageSize, dateRange, testUsers, selectedUserId]);
+  // remove testUsers dependency for production data
 
   // MAIN FUNCTIONS
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      
-      // Nếu không chọn user cụ thể, lấy dữ liệu của tất cả user
-      if (!selectedUserId) {
-        console.log('Fetching data for all users...');
-        
-        // Lấy dữ liệu cho tất cả user có trong danh sách
-        const allPromises = testUsers.map(async (userString) => {
-          const idMatch = userString.match(/ID: (\d+)/);
-          const userId = idMatch ? idMatch[1] : '';
-          
-          if (!userId) return [];
-          
-          try {
-            const params = {
-              userId: userId,
-              startDate: dateRange[0].format('YYYY-MM-DD'),
-              endDate: dateRange[1].format('YYYY-MM-DD')
-            };
-            
-            const response = await api.get('/attendance/my-history-range', { params });
-            const rawData = response.data?.data ?? response.data ?? [];
-            return Array.isArray(rawData) ? rawData : [];
-          } catch (error) {
-            console.error(`Error fetching data for user ${userId}:`, error);
-            return [];
-          }
-        });
-        
-        // Chờ tất cả request hoàn thành
-        const allResults = await Promise.all(allPromises);
-        
-        // Gộp tất cả dữ liệu lại
-        const allData = allResults.flat();
-        
-        console.log('All users data:', allData);
-        setLogs(allData);
-        
-        // Tính toán thống kê tổng
-        const presentCount = allData.filter(log => log.status === 'PRESENT').length;
-        const absentCount = allData.filter(log => log.status === 'ABSENT').length;
-        const lateCount = allData.filter(log => log.status === 'LATE').length;
-        
-        const totalHours = allData.reduce((sum, log) => {
-          if (log.checkIn && log.checkOut) {
-            const today = dayjs().format('YYYY-MM-DD');
-            const checkIn = dayjs(`${today} ${log.checkIn}`);
-            const checkOut = dayjs(`${today} ${log.checkOut}`);
-            const hours = checkOut.diff(checkIn, 'hour', true);
-            return sum + (hours > 0 ? hours : 0);
-          }
-          return sum;
-        }, 0);
-        
-        setStatistics({
-          totalRecords: allData.length,
-          presentCount,
-          absentCount,
-          lateCount,
-          totalHours: Math.round(totalHours * 10) / 10
-        });
-        
-        setPagination(prev => ({
-          ...prev,
-          total: allData.length
-        }));
-        
-      } else {
-        // Logic cũ cho user cụ thể
-        const params = {
-          userId: selectedUserId,
-          startDate: dateRange[0].format('YYYY-MM-DD'),
-          endDate: dateRange[1].format('YYYY-MM-DD')
-        };
-        
-        console.log('Making API call with params:', params);
-        
-        const response = await api.get('/attendance/my-history-range', { params });
-        console.log('API response:', response);
-        
-        const rawData = response.data?.data ?? response.data ?? [];
-        const data = Array.isArray(rawData) ? rawData : [];
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
+      const raw = await attendanceService.getAttendanceHistory(startDate, endDate);
+      const data = Array.isArray(raw) ? raw : [];
 
-        console.log('Processed data:', data);
-        
-        setLogs(data);
-        setPagination(prev => ({
-          ...prev,
-          total: response.data.totalElements || data.length
-        }));
-        
-        // Calculate statistics
-        const presentCount = data.filter(log => log.status === 'PRESENT').length;
-        const absentCount = data.filter(log => log.status === 'ABSENT').length;
-        const lateCount = data.filter(log => log.status === 'LATE').length;
-        
-        // Calculate total working hours
-        const totalHours = data.reduce((sum, log) => {
-          if (log.checkIn && log.checkOut) {
-            const today = dayjs().format('YYYY-MM-DD');
-            const checkIn = dayjs(`${today} ${log.checkIn}`);
-            const checkOut = dayjs(`${today} ${log.checkOut}`);
-            const hours = checkOut.diff(checkIn, 'hour', true);
-            return sum + (hours > 0 ? hours : 0);
-          }
-          return sum;
-        }, 0);
-        
-        setStatistics({
-          totalRecords: data.length,
-          presentCount,
-          absentCount,
-          lateCount,
-          totalHours: Math.round(totalHours * 10) / 10
-        });
-      }
+      // Map dữ liệu từ BE -> FE columns
+      const mapped = data.map((item, index) => ({
+        id: index + 1,
+        userName: user?.fullName || user?.username || '',
+        date: item.date,
+        shift: item.shift, // có thể undefined nếu BE chưa có
+        checkIn: item.checkInTime,
+        checkOut: item.checkOutTime,
+        status: item.status,
+      }));
+
+      setLogs(mapped);
+      setPagination(prev => ({ ...prev, total: mapped.length }));
+
+      const totalHours = data.reduce((sum, it) => sum + (typeof it.workingHours === 'number' ? it.workingHours : 0), 0);
+      setStatistics({
+        totalRecords: mapped.length,
+        presentCount: mapped.filter(r => String(r.status).toUpperCase().includes('HOÀN THÀNH') || String(r.status).toUpperCase().includes('PRESENT')).length,
+        absentCount: mapped.filter(r => String(r.status).toUpperCase().includes('ABSENT') || String(r.status).toUpperCase().includes('VẮNG')).length,
+        lateCount: mapped.filter(r => String(r.status).toUpperCase().includes('LATE') || String(r.status).toUpperCase().includes('MUỘN')).length,
+        totalHours: Math.round(totalHours * 10) / 10,
+      });
       
     } catch (error) {
       console.error('Error fetching staff attendance history:', error);
@@ -313,21 +227,39 @@ const PersonalAttendanceHistory = () => {
     }
   };
 
-  const loadTestUsers = async () => {
-    try {
-      const response = await api.get('/debug/users');
-      console.log('Test users:', response.data);
-      setTestUsers(response.data);
-      message.success('Đã tải danh sách người dùng test');
-    } catch (error) {
-      console.error('Error loading test users:', error);
-      message.error('Không thể tải danh sách người dùng test');
-    }
-  };
+  const loadTestUsers = async () => {};
 
   const handleRefresh = () => {
     fetchLogs();
   };
+
+  useEffect(() => {
+    if (rangeMode === 'custom') return;
+    const today = dayjs();
+    let start = today;
+    let end = today;
+    switch (rangeMode) {
+      case 'today':
+        start = today;
+        end = today;
+        break;
+      case 'last7':
+        start = today.subtract(6, 'day');
+        end = today;
+        break;
+      case 'last30':
+        start = today.subtract(29, 'day');
+        end = today;
+        break;
+      case 'thisMonth':
+        start = today.startOf('month');
+        end = today;
+        break;
+      default:
+        break;
+    }
+    setDateRange([start, end]);
+  }, [rangeMode]);
 
   const handleExportExcel = async () => {
     try {
@@ -395,9 +327,6 @@ const PersonalAttendanceHistory = () => {
             Lịch sử chấm công nhân viên
           </h2>
           <Space>
-            <Button type="default" onClick={loadTestUsers}>
-              Tải danh sách User ID
-            </Button>
             <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportExcel} disabled={logs.length === 0}>
               Xuất CSV
             </Button>
@@ -407,44 +336,7 @@ const PersonalAttendanceHistory = () => {
           </Space>
         </div>
 
-        {/* Test Users Display */}
-        {testUsers.length > 0 && (
-          <Card style={{ marginBottom: '16px', backgroundColor: '#f6ffed' }}>
-            <h4>🔍 Danh sách User ID có sẵn (để test):</h4>
-            <p style={{ marginBottom: '8px', color: '#666' }}>
-              {selectedUserId ? 
-                `Đang xem dữ liệu của user ${selectedUserId}. Nhấn "Xem tất cả" để xem toàn bộ dữ liệu.` :
-                'Đang hiển thị dữ liệu chấm công của TẤT CẢ nhân viên. Nhấp vào một User ID để xem riêng.'
-              }
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-              <Button 
-                size="small" 
-                onClick={() => setSelectedUserId('')}
-                type={!selectedUserId ? 'primary' : 'default'}
-              >
-                Xem tất cả
-              </Button>
-              {testUsers.map((userString, index) => {
-                const idMatch = userString.match(/ID: (\d+)/);
-                const nameMatch = userString.match(/Name: ([^,]+)/);
-                const userId = idMatch ? idMatch[1] : '';
-                const userName = nameMatch ? nameMatch[1] : '';
-                
-                return (
-                  <Button 
-                    key={index} 
-                    size="small" 
-                    onClick={() => setSelectedUserId(userId)}
-                    type={selectedUserId === userId ? 'primary' : 'default'}
-                  >
-                    ID: {userId} - {userName}
-                  </Button>
-                );
-              })}
-            </div>
-          </Card>
-        )}
+        {/* Ẩn khu vực user test trong môi trường thật */}
 
         {/* Statistics Cards */}
         {logs.length > 0 && (
@@ -508,47 +400,34 @@ const PersonalAttendanceHistory = () => {
           <Row gutter={16}>
             <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                <CalendarOutlined /> Khoảng thời gian:
+                <CalendarOutlined /> Chọn nhanh:
               </label>
-              <RangePicker
-                value={dateRange}
-                onChange={setDateRange}
-                format="DD/MM/YYYY"
-                style={{ width: '100%' }}
-                placeholder={['Từ ngày', 'Đến ngày']}
-              />
+              <Select value={rangeMode} onChange={setRangeMode} style={{ width: '100%' }}>
+                <Option value="today">Hôm nay</Option>
+                <Option value="last7">7 ngày gần nhất</Option>
+                <Option value="last30">30 ngày gần nhất</Option>
+                <Option value="thisMonth">Tháng này</Option>
+                <Option value="custom">Tùy chọn...</Option>
+              </Select>
             </Col>
             <Col span={8}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                <UserOutlined /> Mã nhân viên:
-              </label>
-              <Select
-                showSearch
-                value={selectedUserId}
-                onChange={(value) => setSelectedUserId(value)}
-                placeholder="Chọn nhân viên (để trống = xem tất cả)"
-                style={{ width: '100%' }}
-                allowClear
-                filterOption={(input, option) =>
-                  option?.label?.toLowerCase().includes(input.toLowerCase())
-                }
-                options={[
-                  { value: '', label: 'Tất cả nhân viên' },
-                  ...testUsers.map((userString) => {
-                    const idMatch = userString.match(/ID: (\d+)/);
-                    const nameMatch = userString.match(/Name: ([^,]+)/);
-                    const userId = idMatch ? idMatch[1] : '';
-                    const userName = nameMatch ? nameMatch[1] : '';
-                    const label = `${userName} (ID: ${userId})`;
-
-                    return {
-                      value: userId,
-                      label: label,
-                    };
-                  })
-                ]}
-              />
+              {rangeMode === 'custom' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    <CalendarOutlined /> Khoảng thời gian:
+                  </label>
+                  <RangePicker
+                    value={dateRange}
+                    onChange={setDateRange}
+                    format="DD/MM/YYYY"
+                    style={{ width: '100%' }}
+                    placeholder={['Từ ngày', 'Đến ngày']}
+                  />
+                </div>
+              )}
             </Col>
+            {/* Không cần chọn mã nhân viên ở trang cá nhân */}
+            <Col span={8}></Col>
             <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 <SearchOutlined /> Tìm kiếm:
@@ -564,19 +443,13 @@ const PersonalAttendanceHistory = () => {
         </Card>
 
         {/* Table */}
-        {testUsers.length === 0 ? (
-          <Empty
-            description="Nhấn 'Tải danh sách User ID' để xem dữ liệu chấm công của tất cả nhân viên"
-            style={{ margin: '40px 0' }}
-          />
+        {logs.length === 0 ? (
+          <Empty description="Không có dữ liệu trong khoảng thời gian đã chọn" style={{ margin: '40px 0' }} />
         ) : (
           <div>
             <div style={{ marginBottom: '16px', color: '#666' }}>
               <strong>
-                {selectedUserId ? 
-                  `Hiển thị dữ liệu của nhân viên có ID: ${selectedUserId}` :
-                  `Hiển thị dữ liệu của TẤT CẢ nhân viên (${logs.length} bản ghi)`
-                }
+                {`Hiển thị ${logs.length} bản ghi lịch sử chấm công`}
               </strong>
             </div>
             <Table

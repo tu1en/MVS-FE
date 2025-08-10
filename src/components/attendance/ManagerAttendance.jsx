@@ -1,27 +1,37 @@
 // components/attendance/ManagerAttendance.jsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-    Card, Button, Row, Col, Statistic, Timeline, Alert, message, 
-    Spin, Badge, Space, Divider, Typography, Progress, Empty, Modal 
-} from 'antd';
-import { 
-    ClockCircleOutlined, 
-    EnvironmentOutlined, 
-    GlobalOutlined,
+import {
+    CalendarOutlined,
     CheckCircleOutlined,
-    CloseCircleOutlined,
+    EnvironmentOutlined,
+    FieldTimeOutlined,
     LoginOutlined,
     LogoutOutlined,
-    CalendarOutlined,
-    TeamOutlined,
-    FieldTimeOutlined
+    TeamOutlined
 } from '@ant-design/icons';
-import AttendanceVerificationModal from './AttendanceVerificationModal';
-import LocationStatus from './LocationStatus';
-import attendanceService from '../../services/attendanceService';
-import locationService from '../../services/locationService';
+import {
+    Alert,
+    Badge,
+    Button,
+    Card,
+    Col,
+    Divider,
+    Empty,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Space,
+    Spin,
+    Statistic, Timeline,
+    Typography
+} from 'antd';
 import moment from 'moment';
 import 'moment/locale/vi';
+import React, { useEffect, useState } from 'react';
+import attendanceService from '../../services/attendanceService';
+import locationService from '../../services/locationService';
+import AttendanceVerificationModal from './AttendanceVerificationModal';
+import LocationStatus from './LocationStatus';
 
 const { Title, Text } = Typography;
 
@@ -39,6 +49,7 @@ const ManagerAttendance = ({ user }) => {
     });
     const [weeklyStats, setWeeklyStats] = useState(null);
     const [companyLocations, setCompanyLocations] = useState([]);
+    const [todayLogs, setTodayLogs] = useState([]);
 
     // Clock update
     useEffect(() => {
@@ -53,10 +64,12 @@ const ManagerAttendance = ({ user }) => {
         initializeAttendance();
         checkLocationPermission();
         loadCompanyLocations();
+        loadTodayLogs();
         
         // Refresh every 5 minutes
         const refreshInterval = setInterval(() => {
             loadTodayStatus();
+            loadTodayLogs();
         }, 5 * 60 * 1000);
         
         return () => clearInterval(refreshInterval);
@@ -90,12 +103,24 @@ const ManagerAttendance = ({ user }) => {
         }
     };
 
+    const loadTodayLogs = async () => {
+        try {
+            const today = moment().format('YYYY-MM-DD');
+            const logs = await attendanceService.getVerificationLogs(today);
+            setTodayLogs(Array.isArray(logs) ? logs : []);
+        } catch (error) {
+            console.error('Load verification logs error:', error);
+            setTodayLogs([]);
+        }
+    };
+
     const loadCompanyLocations = async () => {
         try {
             const locations = await attendanceService.getCompanyLocations();
             setCompanyLocations(locations);
         } catch (error) {
             console.error('Load locations error:', error);
+            setCompanyLocations([]);
         }
     };
 
@@ -165,6 +190,7 @@ const ManagerAttendance = ({ user }) => {
             // Force a small delay to ensure localStorage is written
             setTimeout(() => {
                 loadTodayStatus();
+                loadTodayLogs();
             }, 100);
             if (data?.message) {
                 message.success(data.message);
@@ -174,16 +200,41 @@ const ManagerAttendance = ({ user }) => {
         }
     };
 
+    const normalizeTime = (value) => {
+        if (!value) return null;
+        // Case: array [hour, min, sec, nanos]
+        if (Array.isArray(value)) {
+            const [h = 0, m = 0, s = 0] = value;
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const ss = String(s).padStart(2, '0');
+            return `${hh}:${mm}:${ss}`;
+        }
+        // Case: string "HH:mm:ss[.SSS...]"
+        if (typeof value === 'string') {
+            const parts = value.split(':');
+            if (parts.length >= 2) {
+                const [h, m, rest] = parts;
+                const s = (rest || '0').split(/[.]/)[0];
+                const hh = String(parseInt(h, 10)).padStart(2, '0');
+                const mm = String(parseInt(m, 10)).padStart(2, '0');
+                const ss = String(parseInt(s, 10)).padStart(2, '0');
+                return `${hh}:${mm}:${ss}`;
+            }
+        }
+        return null;
+    };
+
     const getWorkingHours = () => {
-        if (!todayStatus?.checkInTime) return '00:00';
-        
-        const checkIn = moment(todayStatus.checkInTime, 'HH:mm:ss');
-        const checkOut = todayStatus.checkOutTime 
-            ? moment(todayStatus.checkOutTime, 'HH:mm:ss')
-            : moment();
-        
+        const checkInStr = normalizeTime(todayStatus?.checkInTime);
+        if (!checkInStr) return '00h 00m';
+        const checkOutStr = normalizeTime(todayStatus?.checkOutTime);
+        const checkIn = moment(checkInStr, 'HH:mm:ss');
+        const checkOut = checkOutStr ? moment(checkOutStr, 'HH:mm:ss') : moment();
         const duration = moment.duration(checkOut.diff(checkIn));
-        return `${Math.floor(duration.asHours())}h ${duration.minutes()}m`;
+        const hours = Math.floor(duration.asHours());
+        const minutes = duration.minutes();
+        return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
     };
 
     const getAttendanceStatus = () => {
@@ -246,32 +297,29 @@ const ManagerAttendance = ({ user }) => {
                 </Row>
             </Card>
 
-            {/* Debug Info */}
-            <Card style={{ marginBottom: 24, borderRadius: 8, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
-                <Row justify="space-between" align="middle">
-                    <Col>
-                        <Space direction="vertical" size="small">
-                            <Text strong style={{ color: '#52c41a' }}>Debug Information</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Status: {JSON.stringify(todayStatus)}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                LocationPermission: {locationPermission}
-                            </Text>
-                        </Space>
-                    </Col>
-                    <Col>
-                        <Space>
-                            <Button size="small" onClick={loadTodayStatus}>Refresh Status</Button>
-                            <Button size="small" onClick={() => {
-                                localStorage.removeItem('attendance_mock_status');
-                                loadTodayStatus();
-                                message.info('Cleared mock data');
-                            }}>Clear Mock Data</Button>
-                        </Space>
-                    </Col>
-                </Row>
-            </Card>
+            {/* Debug Info hidden in production */}
+            {process.env.NODE_ENV !== 'production' && (
+                <Card style={{ marginBottom: 24, borderRadius: 8, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                    <Row justify="space-between" align="middle">
+                        <Col>
+                            <Space direction="vertical" size="small">
+                                <Text strong style={{ color: '#52c41a' }}>Debug Information</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Status: {JSON.stringify(todayStatus)}
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    LocationPermission: {locationPermission}
+                                </Text>
+                            </Space>
+                        </Col>
+                        <Col>
+                            <Space>
+                                <Button size="small" onClick={loadTodayStatus}>Refresh Status</Button>
+                            </Space>
+                        </Col>
+                    </Row>
+                </Card>
+            )}
 
             {/* Location Permission Alert */}
             {locationPermission === 'denied' && (
@@ -311,26 +359,26 @@ const ManagerAttendance = ({ user }) => {
                                     {getWorkingHours()}
                                 </Text>
                             </div>
-                            {todayStatus?.checkInTime && (
+                            {normalizeTime(todayStatus?.checkInTime) && (
                                 <>
                                     <Divider type="vertical" style={{ height: 40 }} />
                                     <div>
                                         <Text type="secondary">Check-in:</Text>
                                         <br />
                                         <Text strong style={{ fontSize: 16 }}>
-                                            {todayStatus.checkInTime}
+                                            {normalizeTime(todayStatus.checkInTime)}
                                         </Text>
                                     </div>
                                 </>
                             )}
-                            {todayStatus?.checkOutTime && (
+                            {normalizeTime(todayStatus?.checkOutTime) && (
                                 <>
                                     <Divider type="vertical" style={{ height: 40 }} />
                                     <div>
                                         <Text type="secondary">Check-out:</Text>
                                         <br />
                                         <Text strong style={{ fontSize: 16 }}>
-                                            {todayStatus.checkOutTime}
+                                            {normalizeTime(todayStatus.checkOutTime)}
                                         </Text>
                                     </div>
                                 </>
@@ -528,32 +576,32 @@ const ManagerAttendance = ({ user }) => {
 
             {/* Today Timeline */}
             <Card title="Lịch sử chấm công hôm nay" style={{ borderRadius: 8 }}>
-                {todayStatus?.timeline && todayStatus.timeline.length > 0 ? (
+                {todayLogs && todayLogs.length > 0 ? (
                     <Timeline mode="left">
-                        {todayStatus.timeline.map((item, index) => (
+                        {todayLogs.map((log) => (
                             <Timeline.Item
-                                key={index}
-                                color={item.type === 'check-in' ? 'green' : 'blue'}
+                                key={log.id}
+                                color={log.verificationType === 'CHECK_IN' ? 'green' : 'blue'}
                                 dot={<CheckCircleOutlined />}
                             >
                                 <Row justify="space-between">
                                     <Col>
                                         <Space>
                                             <Text strong>
-                                                {item.type === 'check-in' ? 'Check In' : 'Check Out'}
+                                                {log.verificationType === 'CHECK_IN' ? 'Check In' : 'Check Out'}
                                             </Text>
-                                            {item.verified && (
+                                            {(log.locationVerified || log.networkVerified) && (
                                                 <Badge status="success" text="Đã xác thực" />
                                             )}
                                         </Space>
                                     </Col>
                                     <Col>
-                                        <Text type="secondary">{item.time}</Text>
+                                        <Text type="secondary">{moment(log.createdAt).format('HH:mm:ss')}</Text>
                                     </Col>
                                 </Row>
-                                {item.location && (
+                                {(log.latitude && log.longitude) && (
                                     <Text type="secondary" style={{ fontSize: 12 }}>
-                                        <EnvironmentOutlined /> {item.location}
+                                        <EnvironmentOutlined /> {`${log.latitude.toFixed ? log.latitude.toFixed(6) : log.latitude}, ${log.longitude.toFixed ? log.longitude.toFixed(6) : log.longitude}`}
                                     </Text>
                                 )}
                             </Timeline.Item>

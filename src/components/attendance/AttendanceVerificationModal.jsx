@@ -1,18 +1,25 @@
 // components/attendance/AttendanceVerificationModal.jsx
-import React, { useState, useEffect } from 'react';
-import { 
-    Modal, Steps, Alert, Button, Result, Space, Progress, 
-    Card, Typography, Descriptions, Spin, message 
-} from 'antd';
-import { 
-    EnvironmentOutlined, 
-    GlobalOutlined, 
+import {
     CheckCircleOutlined,
     CloseCircleOutlined,
+    EnvironmentOutlined,
+    GlobalOutlined,
+    LaptopOutlined,
     LoadingOutlined,
-    WifiOutlined,
-    LaptopOutlined
+    WifiOutlined
 } from '@ant-design/icons';
+import {
+    Alert, Button,
+    Card,
+    Descriptions,
+    Modal,
+    Progress,
+    Result, Space,
+    Steps,
+    Typography,
+    message
+} from 'antd';
+import React, { useEffect, useState } from 'react';
 import attendanceService from '../../services/attendanceService';
 import locationService from '../../services/locationService';
 import deviceFingerprint from '../../utils/deviceFingerprint';
@@ -146,24 +153,9 @@ const AttendanceVerificationModal = ({ visible, type, onComplete, user, companyL
                 userAgent: navigator.userAgent
             };
 
-            let result;
-            try {
-                result = type === 'check-in' 
-                    ? await attendanceService.checkIn(attendanceData)
-                    : await attendanceService.checkOut(attendanceData);
-            } catch (err) {
-                // If service method doesn't exist, simulate success for demo
-                console.warn('Attendance service method not implemented, simulating success');
-                result = {
-                    success: true,
-                    message: `${type === 'check-in' ? 'Check-in' : 'Check-out'} thành công`,
-                    checkInTime: type === 'check-in' ? new Date().toLocaleTimeString() : undefined,
-                    checkOutTime: type === 'check-out' ? new Date().toLocaleTimeString() : undefined,
-                    locationVerification: {
-                        locationName: 'Văn phòng chính'
-                    }
-                };
-            }
+            const result = type === 'check-in' 
+                ? await attendanceService.checkIn(attendanceData)
+                : await attendanceService.checkOut(attendanceData);
 
             if (result.success) {
                 setCurrentStep(4);

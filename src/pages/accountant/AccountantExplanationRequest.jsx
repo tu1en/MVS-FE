@@ -1,28 +1,26 @@
+import {
+  CalendarOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined,
+  SendOutlined
+} from '@ant-design/icons';
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  Row,
+  Space,
+  Typography
+} from 'antd';
+import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { 
-  Card, 
-  Form, 
-  Input, 
-  DatePicker, 
-  Button, 
-  message, 
-  Row, 
-  Col,
-  Typography,
-  Space,
-  Alert,
-  Upload
-} from 'antd';
-import { 
-  FileTextOutlined, 
-  CalendarOutlined, 
-  SendOutlined,
-  ClockCircleOutlined,
-  UploadOutlined,
-  PictureOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import ExplanationService from '../../services/explanationService';
 
 
@@ -32,6 +30,8 @@ const { TextArea } = Input;
 const AccountantExplanationRequest = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
+  const navigate = useNavigate();
 
   const user = useSelector(state => state.auth.user);
 
@@ -54,6 +54,7 @@ const AccountantExplanationRequest = () => {
       
       message.success('Yêu cầu giải trình đã được gửi thành công!');
       form.resetFields();
+      navigate('/accountant/attendance-explanations?scope=mine');
       
     } catch (error) {
       console.error('Error submitting explanation:', error);

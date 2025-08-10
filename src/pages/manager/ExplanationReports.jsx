@@ -1,39 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  Table, 
-  DatePicker, 
-  Button, 
-  Space, 
-  Tag, 
-  message, 
-  Row, 
-  Col, 
-  Statistic, 
-  Select, 
-  Input,
-  Spin,
-  Alert,
-  Modal,
-  Popconfirm
-} from 'antd';
-import { 
-  FileTextOutlined, 
-  TeamOutlined, 
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CalendarOutlined,
-  UserOutlined,
-  DownloadOutlined,
-  EyeOutlined,
-  CheckOutlined,
-  CloseOutlined
+import {
+    CalendarOutlined,
+    CheckCircleOutlined,
+    CheckOutlined,
+    CloseCircleOutlined,
+    CloseOutlined,
+    DownloadOutlined,
+    ExclamationCircleOutlined,
+    EyeOutlined,
+    FileTextOutlined,
+    ReloadOutlined,
+    SearchOutlined,
+    TeamOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import {
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Input,
+    message,
+    Modal,
+    Popconfirm,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tabs,
+    Tag
+} from 'antd';
 import dayjs from 'dayjs';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const { Option } = Select;
@@ -62,6 +61,15 @@ const ExplanationReports = () => {
   });
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+  const roleStr = ((currentUser?.role || currentUser?.roleName || '') + '').toUpperCase();
+  const isAccountant = roleStr.includes('ACCOUNTANT');
+  const [viewScope, setViewScope] = useState(() => {
+    const url = new URL(window.location.href);
+    const init = url.searchParams.get('scope');
+    if (init === 'mine' || init === 'others' || init === 'all') return init;
+    return isAccountant ? 'others' : 'all';
+  }); // all | mine | others
 
   useEffect(() => {
     fetchReports();
@@ -251,6 +259,31 @@ const ExplanationReports = () => {
     return matchesSearch;
   });
 
+  const isMine = (record) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || 'null');
+      const myIdStr = stored?.id || localStorage.getItem('userId');
+      const myId = myIdStr ? parseInt(myIdStr, 10) : null;
+      if (myId && (record?.staff?.id || record?.staffId)) {
+        const staffId = record?.staff?.id || record?.staffId;
+        return Number(staffId) === myId;
+      }
+    } catch (_) {}
+    if (!currentUser) return false;
+    const myEmail = (currentUser.email || localStorage.getItem('email') || '').toLowerCase();
+    const myName = (currentUser.name || currentUser.fullName || '').toLowerCase();
+    const submitter = (record.submitterName || '').toLowerCase();
+    const staffEmail = (record.staff?.email || '').toLowerCase();
+    return (staffEmail && staffEmail === myEmail) || (submitter && (submitter === myEmail || submitter === myName));
+  };
+
+  const scopedReports = filteredReports.filter(r => {
+    if (viewScope === 'all') return true;
+    if (viewScope === 'mine') return isMine(r);
+    if (viewScope === 'others') return !isMine(r);
+    return true;
+  });
+
   const columns = [
     {
       title: 'Người gửi',
@@ -260,6 +293,11 @@ const ExplanationReports = () => {
         <Space>
           <UserOutlined />
           {text}
+          {isAccountant && (
+            <Tag color={text && isMine({ submitterName: text }) ? 'geekblue' : 'default'}>
+              {isMine({ submitterName: text }) ? 'Của tôi' : 'Khác'}
+            </Tag>
+          )}
         </Space>
       ),
     },
@@ -306,7 +344,7 @@ const ExplanationReports = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          {record.status === 'PENDING' && (
+          {record.status === 'PENDING' && (!isAccountant || (isAccountant && !isMine(record))) && (
             <>
               <Popconfirm
                 title="Phê duyệt yêu cầu"
@@ -467,22 +505,52 @@ const ExplanationReports = () => {
           </Row>
         </Card>
 
-        {/* Table */}
-        <Table
-          columns={columns}
-          dataSource={filteredReports}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: (page, size) => setPagination(prev => ({ ...prev, current: page, pageSize: size })),
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu giải trình`
-          }}
-        />
+        {/* Table with scope tabs for ACCOUNTANT */}
+        {isAccountant ? (
+          <>
+            <Tabs
+              activeKey={viewScope}
+              onChange={setViewScope}
+              items={[
+                { key: 'mine', label: 'Của tôi' },
+                { key: 'others', label: 'Của người khác' },
+                { key: 'all', label: 'Tất cả' }
+              ]}
+              style={{ marginBottom: 16 }}
+            />
+            <Table
+              columns={columns}
+              dataSource={scopedReports}
+              loading={loading}
+              rowKey="id"
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: scopedReports.length,
+                onChange: (page, size) => setPagination(prev => ({ ...prev, current: page, pageSize: size })),
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu giải trình`
+              }}
+            />
+          </>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={filteredReports}
+            loading={loading}
+            rowKey="id"
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: (page, size) => setPagination(prev => ({ ...prev, current: page, pageSize: size })),
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu giải trình`
+            }}
+          />
+        )}
       </Card>
 
       {/* Modal for viewing explanation details */}

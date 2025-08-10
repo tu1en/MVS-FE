@@ -7,7 +7,7 @@ import {
     Routes,
 } from "react-router-dom";
 import "./App.css";
-import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
+// import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
 import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
@@ -100,7 +100,7 @@ import LecturesPageNew from "./pages/LecturesPageNew.jsx";
 import MessagingPage from "./pages/MessagingPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx"; // Import a new page
 import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
-import TestUpload from "./pages/TestUpload.jsx";
+// import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
@@ -342,7 +342,7 @@ function App() {
               
               {/* Accountant Attendance Explanation Routes (single source of truth) */}
               <Route path="/accountant/attendance-history" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
-              <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} />
+              <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ExplanationReports /></ProtectedRoute>} />
               {/* Backward-compatible redirects */}
               <Route path="/accountant/explanation-status" element={<Navigate to="/accountant/attendance-explanations" replace />} />
               <Route path="/accountant/evidence-management" element={<Navigate to="/accountant/attendance-explanations" replace />} />
@@ -356,8 +356,7 @@ function App() {
 />
 
 
-              {/* Test Upload Page - Requires authentication */}
-              <Route path="/test-upload" element={<GuestRoute><TestUpload /></GuestRoute>} />
+              {/* Test Upload Page removed */}
 
               {/* Generic and Fallback - Requires authentication */}
               <Route path="/change-password" element={<GuestRoute><ChangePasswordPage /></GuestRoute>} />

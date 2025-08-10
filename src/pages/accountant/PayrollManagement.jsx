@@ -1,26 +1,26 @@
 import {
-  CalculatorOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  EyeOutlined,
-  FileExcelOutlined,
-  TeamOutlined
+    CalculatorOutlined,
+    CalendarOutlined,
+    DollarOutlined,
+    EyeOutlined,
+    FileExcelOutlined,
+    TeamOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  message,
-  Modal,
-  Progress,
-  Row,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag,
+    Tooltip
 } from 'antd';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -78,6 +78,10 @@ const PayrollManagement = () => {
         const gross = Number(record.proratedGrossSalary ?? 0);
         const net = Number(record.netSalary ?? 0);
         const actualWorkingDays = Number(record.actualWorkingDays ?? 0);
+        const actualWorkingHours = Number(record.actualWorkingHours ?? (actualWorkingDays * 8));
+        const standardMonthlyHours = Number(record.standardMonthlyHours ?? 0);
+        const calculationMethod = record.calculationMethod || (record.contractType === 'TEACHER' ? 'HOURLY' : 'MONTHLY');
+        const hourlySalary = Number(record.hourlySalary ?? 0);
 
         const startOfMonth = periodMoment.clone().startOf('month').format('YYYY-MM-DD');
         const endOfMonth = periodMoment.clone().endOf('month').format('YYYY-MM-DD');
@@ -90,12 +94,14 @@ const PayrollManagement = () => {
         department: record.contractType === 'TEACHER' ? 'Giảng dạy' : 'Hành chính',
         contractType: record.contractType,
         baseSalary,
-        teachingHours: 0, // Not available in new system
-        totalWorkingHours: actualWorkingDays * 8, // Estimate 8 hours per day
-        hourlyRate: 0,
+        teachingHours: calculationMethod === 'HOURLY' ? actualWorkingHours : 0,
+        totalWorkingHours: actualWorkingHours,
+        hourlyRate: calculationMethod === 'HOURLY' ? hourlySalary : 0,
         deductions: pit + si,
         grossPay: gross,
         totalSalary: net,
+        calculationMethod,
+        standardMonthlyHours,
         status: 'PROCESSED', // New system generates processed payroll
         processedDate: new Date().toISOString().split('T')[0],
         payPeriodStart: startOfMonth,
@@ -148,10 +154,13 @@ const PayrollManagement = () => {
       const period = selectedPeriod.format('YYYY-MM');
       
       // Generate CSV data from current payroll data
-      const csvHeader = 'Mã NV,Họ tên,Phòng ban,Loại HĐ,Lương CB,Tổng lương,Trạng thái\n';
-      const csvData = payrollData.map(row => 
-        `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${row.baseSalary},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`
-      ).join('\n');
+      const csvHeader = 'Mã NV,Họ tên,Phòng ban,Loại HĐ,Phương thức,Đơn giá (giờ),Lương tháng (gross),Tổng lương,Trạng thái\n';
+      const csvData = payrollData.map(row => {
+        const method = row.calculationMethod === 'HOURLY' ? 'Theo giờ' : 'Theo tháng';
+        const rate = row.calculationMethod === 'HOURLY' ? row.hourlyRate : '';
+        const monthly = row.calculationMethod === 'MONTHLY' ? row.baseSalary : '';
+        return `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${method},${rate},${monthly},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`;
+      }).join('\n');
       
       const csvContent = csvHeader + csvData;
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -251,11 +260,25 @@ const PayrollManagement = () => {
       ),
     },
     {
-      title: 'Lương cơ bản',
+      title: 'Phương thức',
+      dataIndex: 'calculationMethod',
+      key: 'calculationMethod',
+      width: 120,
+      render: (method) => method === 'HOURLY' ? <Tag color="blue">Theo giờ</Tag> : <Tag color="green">Theo tháng</Tag>,
+    },
+    {
+      title: 'Đơn giá (giờ)',
+      dataIndex: 'hourlyRate',
+      key: 'hourlyRate',
+      width: 150,
+      render: (rate, record) => record.calculationMethod === 'HOURLY' ? `${Number(rate || 0).toLocaleString()} VNĐ/giờ` : 'N/A',
+    },
+    {
+      title: 'Lương tháng (gross)',
       dataIndex: 'baseSalary',
       key: 'baseSalary',
-      width: 150,
-      render: (value) => `${value?.toLocaleString()} VNĐ`,
+      width: 180,
+      render: (value, record) => record.calculationMethod === 'MONTHLY' ? `${Number(value || 0)?.toLocaleString()} VNĐ` : 'N/A',
     },
     {
       title: 'Giờ dạy',

@@ -26,17 +26,19 @@ import {
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import attendanceService from '../../services/attendanceService';
 
-const { Option } = Select;
 const { Search } = Input;
+const { Option } = Select;
 
 const DailyShiftAttendance = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [selectedShift, setSelectedShift] = useState('morning');
+  const [dayMode, setDayMode] = useState('today'); // today | yesterday | last7 | last30 | custom
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({
     current: 1,
@@ -47,12 +49,21 @@ const DailyShiftAttendance = () => {
     totalRecords: 0,
     presentCount: 0,
     absentCount: 0,
-    lateCount: 0
+    lateCount: 0,
+    totalHours: 0
   });
 
   useEffect(() => {
     fetchLogs();
-  }, [pagination.current, pagination.pageSize, selectedDate, selectedShift]);
+  }, [pagination.current, pagination.pageSize, selectedDate]);
+
+  useEffect(() => {
+    if (dayMode === 'custom') return;
+    const today = dayjs();
+    if (dayMode === 'today') setSelectedDate(today);
+    if (dayMode === 'yesterday') setSelectedDate(today.subtract(1, 'day'));
+    if (dayMode === 'last7' || dayMode === 'last30') setSelectedDate(today);
+  }, [dayMode]);
 
   const fetchLogs = async () => {
     try {
@@ -64,61 +75,71 @@ const DailyShiftAttendance = () => {
         return;
       }
       
-      const params = {
-        date: selectedDate.format('YYYY-MM-DD'),
-        shift: selectedShift,
-        page: pagination.current - 1,
-        size: pagination.pageSize
-      };
-      
-      const response = await api.get('/attendance/daily-shift', { params });
-      const data = response.data.data || response.data;
-      
-      setLogs(data);
-      setPagination(prev => ({
-        ...prev,
-        total: response.data.totalElements || data.length
+      let data = [];
+      if (dayMode === 'last7' || dayMode === 'last30') {
+        const days = dayMode === 'last7' ? 7 : 30;
+        const requests = Array.from({ length: days }, (_, i) => {
+          const d = dayjs().subtract(i, 'day').format('YYYY-MM-DD');
+          return attendanceService.getDayLogs(d).catch(() => []);
+        });
+        const results = await Promise.all(requests);
+        data = results.flat().filter(Boolean);
+      } else {
+        const day = selectedDate.format('YYYY-MM-DD');
+        const raw = await attendanceService.getDayLogs(day);
+        data = Array.isArray(raw) ? raw : [];
+      }
+
+      const mapped = data.map((it, idx) => ({
+        id: idx + 1,
+        userName: it.userName || '',
+        role: it.role || 'STAFF',
+        date: it.date,
+        checkIn: it.checkInTime,
+        checkOut: it.checkOutTime,
+        status: it.status,
+        shift: it.shift || classifyShift(it.checkInTime),
       }));
-      
-      // Calculate statistics
-      const presentCount = data.filter(log => log.status === 'PRESENT').length;
-      const absentCount = data.filter(log => log.status === 'ABSENT').length;
-      const lateCount = data.filter(log => log.status === 'LATE').length;
-      
-      setStats({
-        totalRecords: data.length,
-        presentCount,
-        absentCount,
-        lateCount
-      });
+
+      setLogs(mapped);
+      setPagination(prev => ({ ...prev, total: mapped.length }));
+
+      const presentCount = mapped.filter(r => String(r.status).toUpperCase().includes('HOÀN THÀNH') || String(r.status).toUpperCase().includes('PRESENT')).length;
+      const absentCount = mapped.filter(r => String(r.status).toUpperCase().includes('ABSENT') || String(r.status).toUpperCase().includes('VẮNG')).length;
+      const lateCount = mapped.filter(r => String(r.status).toUpperCase().includes('LATE') || String(r.status).toUpperCase().includes('MUỘN')).length;
+      const totalHours = data.reduce((sum, it) => sum + (typeof it.workingHours === 'number' ? it.workingHours : 0), 0);
+
+      setStats({ totalRecords: mapped.length, presentCount, absentCount, lateCount, totalHours: Math.round(totalHours * 10) / 10 });
       
     } catch (error) {
       console.error('Error fetching shift attendance:', error);
-      message.error('Không thể tải dữ liệu chấm công theo ca');
+      message.error('Không thể tải báo cáo chấm công');
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
-      case 'PRESENT': return 'success';
-      case 'ABSENT': return 'error';
-      case 'LATE': return 'warning';
-      default: return 'default';
-    }
+    if (!status) return 'default';
+    const s = String(status).toUpperCase();
+    if (s.includes('PRESENT') || s.includes('HOÀN THÀNH')) return 'success';
+    if (s.includes('ABSENT') || s.includes('VẮNG')) return 'error';
+    if (s.includes('LATE') || s.includes('MUỘN')) return 'warning';
+    if (s.includes('ĐANG LÀM')) return 'processing';
+    return 'default';
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
-      case 'PRESENT': return <CheckCircleOutlined />;
-      case 'ABSENT': return <CloseCircleOutlined />;
-      case 'LATE': return <ExclamationCircleOutlined />;
-      default: return <ClockCircleOutlined />;
-    }
+    if (!status) return <ClockCircleOutlined />;
+    const s = String(status).toUpperCase();
+    if (s.includes('PRESENT') || s.includes('HOÀN THÀNH')) return <CheckCircleOutlined />;
+    if (s.includes('ABSENT') || s.includes('VẮNG')) return <CloseCircleOutlined />;
+    if (s.includes('LATE') || s.includes('MUỘN')) return <ExclamationCircleOutlined />;
+    return <ClockCircleOutlined />;
   };
 
   const getStatusText = (status) => {
+    if (!status) return '-';
     switch(status) {
       case 'PRESENT': return 'Có mặt';
       case 'ABSENT': return 'Vắng mặt';
@@ -132,8 +153,30 @@ const DailyShiftAttendance = () => {
       case 'morning': return 'Ca sáng';
       case 'afternoon': return 'Ca chiều';
       case 'evening': return 'Ca tối';
-      default: return shift;
+      default: return shift || '-';
     }
+  };
+
+  // Utilities to infer shift from check-in time when BE không trả shift
+  const normalizeToHour = (time) => {
+    if (!time) return null;
+    if (typeof time === 'string') {
+      const h = parseInt(time.split(':')[0] || '0', 10);
+      return isNaN(h) ? null : h;
+    }
+    if (Array.isArray(time)) {
+      const h = parseInt(time[0] ?? 0, 10);
+      return isNaN(h) ? null : h;
+    }
+    return null;
+  };
+
+  const classifyShift = (checkIn) => {
+    const h = normalizeToHour(checkIn);
+    if (h === null) return undefined;
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    return 'evening';
   };
 
   const handleRefresh = () => {
@@ -195,13 +238,13 @@ const DailyShiftAttendance = () => {
       title: 'Giờ vào',
       dataIndex: 'checkIn',
       key: 'checkIn',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : (Array.isArray(time) ? `${String(time[0]).padStart(2,'0')}:${String(time[1]).padStart(2,'0')}` : '-')),
     },
     {
       title: 'Giờ ra',
       dataIndex: 'checkOut',
       key: 'checkOut',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => (typeof time === 'string' ? time.substring(0, 5) : (Array.isArray(time) ? `${String(time[0]).padStart(2,'0')}:${String(time[1]).padStart(2,'0')}` : '-')),
     },
     {
       title: 'Trạng thái',
@@ -277,31 +320,33 @@ const DailyShiftAttendance = () => {
           <Row gutter={16}>
             <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                <CalendarOutlined /> Chọn ngày:
+                <CalendarOutlined /> Chọn nhanh:
               </label>
-              <DatePicker
-                value={selectedDate}
-                onChange={setSelectedDate}
-                format="DD/MM/YYYY"
-                style={{ width: '100%' }}
-                placeholder="Chọn ngày"
-              />
-            </Col>
-            <Col span={8}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                <ClockCircleOutlined /> Ca làm:
-              </label>
-              <Select
-                value={selectedShift}
-                onChange={setSelectedShift}
-                style={{ width: '100%' }}
-                placeholder="Chọn ca làm"
-              >
-                <Option value="morning">Ca sáng</Option>
-                <Option value="afternoon">Ca chiều</Option>
-                <Option value="evening">Ca tối</Option>
+              <Select value={dayMode} onChange={setDayMode} style={{ width: '100%' }}>
+                <Option value="today">Hôm nay</Option>
+                <Option value="yesterday">Hôm qua</Option>
+                <Option value="last7">7 ngày gần nhất</Option>
+                <Option value="last30">30 ngày gần nhất</Option>
+                <Option value="custom">Tùy chọn...</Option>
               </Select>
             </Col>
+            <Col span={8}>
+              {dayMode === 'custom' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    <CalendarOutlined /> Chọn ngày:
+                  </label>
+                  <DatePicker
+                    value={selectedDate}
+                    onChange={setSelectedDate}
+                    format="DD/MM/YYYY"
+                    style={{ width: '100%' }}
+                    placeholder="Chọn ngày"
+                  />
+                </div>
+              )}
+            </Col>
+            {/* Bỏ chọn ca vì dữ liệu lấy theo log xác thực trong ngày */}
             <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 <SearchOutlined /> Tìm kiếm:
@@ -329,7 +374,11 @@ const DailyShiftAttendance = () => {
             onChange: (page, size) => setPagination(prev => ({ ...prev, current: page, pageSize: size })),
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi ca ${getShiftText(selectedShift)}`
+            showTotal: (total, range) => {
+              if (dayMode === 'last7') return `${range[0]}-${range[1]} của ${total} bản ghi (7 ngày gần nhất)`;
+              if (dayMode === 'last30') return `${range[0]}-${range[1]} của ${total} bản ghi (30 ngày gần nhất)`;
+              return `${range[0]}-${range[1]} của ${total} bản ghi ${selectedDate ? 'ngày ' + selectedDate.format('DD/MM/YYYY') : ''}`;
+            }
           }}
         />
       </Card>
