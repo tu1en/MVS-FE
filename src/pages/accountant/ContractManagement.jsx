@@ -40,19 +40,27 @@ const ContractManagement = () => {
   const [staffContracts, setStaffContracts] = useState([]);
   const [candidatesReady, setCandidatesReady] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [candidatePosition, setCandidatePosition] = useState('');
-  const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState('');
+  const [filteredTeacherContracts, setFilteredTeacherContracts] = useState([]);
+  const [filteredStaffContracts, setFilteredStaffContracts] = useState([]);
   const [candidateForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   // Fetch data khi component mount
   useEffect(() => {
     fetchContracts();
     fetchCandidatesReady();
   }, []);
+
+  // Filter contracts when data changes
+  useEffect(() => {
+    filterContracts(searchText);
+  }, [teacherContracts, staffContracts, searchText]);
 
   // Lấy danh sách hợp đồng theo loại
   const fetchContracts = async () => {
@@ -65,6 +73,8 @@ const ContractManagement = () => {
       
       setTeacherContracts(teacherResponse.data);
       setStaffContracts(staffResponse.data);
+      setFilteredTeacherContracts(teacherResponse.data);
+      setFilteredStaffContracts(staffResponse.data);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       message.error('Không thể tải danh sách hợp đồng!');
@@ -268,61 +278,56 @@ const ContractManagement = () => {
     }
   };
 
-  // Xử lý xóa hợp đồng
-  const handleDeleteContract = async (id) => {
+  // Xử lý đánh dấu hợp đồng đã ký
+  const handleSignContract = async (id) => {
     try {
-      await axiosInstance.delete(`/contracts/${id}`);
-      message.success('Xóa hợp đồng thành công!');
+      await axiosInstance.put(`/contracts/${id}`, { status: 'SIGNED' });
+      message.success('Đã đánh dấu hợp đồng đã ký!');
       fetchContracts();
     } catch (error) {
-      console.error('Error deleting contract:', error);
-      message.error('Không thể xóa hợp đồng!');
+      console.error('Error signing contract:', error);
+      message.error('Không thể đánh dấu hợp đồng đã ký!');
     }
   };
 
   // Xử lý chỉnh sửa hợp đồng
   const handleEditContract = (record) => {
+    if (record.status === 'SIGNED') {
+      message.warning('Không thể chỉnh sửa hợp đồng đã ký!');
+      return;
+    }
+    
     console.log('🔍 DEBUG: Editing contract:', record);
     console.log('🔍 DEBUG: Contract salary fields:', {
       grossSalary: record.grossSalary,
       netSalary: record.netSalary,
       hourlySalary: record.hourlySalary,
-      salary: record.salary
     });
-
+    console.log('🔍 DEBUG: Contract type:', record.contractType);
+    
     setEditingContract(record);
     
     // Populate form with contract data
-    const formData = {
+    editForm.setFieldsValue({
       contractId: record.contractId,
       fullName: record.fullName,
       email: record.email,
       phoneNumber: record.phoneNumber,
       position: record.position,
-      // Populate salary fields from contract data (read-only)
-      grossSalary: record.grossSalary,
-      netSalary: record.netSalary,
-      hourlySalary: record.hourlySalary,
+      birthDate: record.birthDate ? moment(record.birthDate) : null,
+      citizenId: record.citizenId,
+      address: record.address,
+      qualification: record.qualification,
+      subject: record.subject,
+      educationLevel: record.educationLevel,
       startDate: record.startDate ? moment(record.startDate) : null,
       endDate: record.endDate ? moment(record.endDate) : null,
       status: record.status,
       contractTerms: record.contractTerms,
-      birthDate: record.birthDate ? moment(record.birthDate) : null,
-      cccd: record.citizenId,
-      address: record.address,
-      qualification: record.qualification,
-      subject: record.subject,
-      classLevel: record.classLevel || record.educationLevel, // Changed from level to classLevel (Lớp học)
-      // New working schedule fields
-      comments: record.comments, // Changed from evaluation to comments (Nhận xét)
-      workSchedule: record.workSchedule, // Thời gian làm việc
-      workShifts: record.workShifts ? (typeof record.workShifts === 'string' ? record.workShifts.split(',') : record.workShifts) : [], // Convert comma-separated string to array
-      workDays: record.workDays ? (typeof record.workDays === 'string' ? record.workDays.split(',') : record.workDays) : [] // Convert comma-separated string to array
-    };
-
-    console.log('🔍 DEBUG: Form data for edit:', formData);
-    form.setFieldsValue(formData);
-    setModalVisible(true);
+      evaluation: record.evaluation,
+    });
+    
+    setEditModalVisible(true);
   };
 
   // Generate Contract ID based on current date and sequence
@@ -443,11 +448,28 @@ const ContractManagement = () => {
     setCandidateModalVisible(true);
   };
 
-  // Mở modal tạo hợp đồng thủ công
-  const handleCreateManualContract = () => {
-    // Contract ID will be generated by backend
-    form.resetFields();
-    setModalVisible(true);
+  // Hàm tìm kiếm và lọc hợp đồng
+  const handleSearch = (value) => {
+    setSearchText(value);
+    filterContracts(value);
+  };
+
+  const filterContracts = (searchValue) => {
+    const filterData = (contracts) => {
+      if (!searchValue) return contracts;
+      
+      return contracts.filter(contract => {
+        const fullName = contract.fullName?.toLowerCase() || '';
+        const contractId = contract.contractId?.toString() || '';
+        const last4Digits = contractId.slice(-4);
+        const searchLower = searchValue.toLowerCase();
+        
+        return fullName.includes(searchLower) || last4Digits.includes(searchLower);
+      });
+    };
+    
+    setFilteredTeacherContracts(filterData(teacherContracts));
+    setFilteredStaffContracts(filterData(staffContracts));
   };
 
 
@@ -557,23 +579,31 @@ const ContractManagement = () => {
               style={{ color: '#1890ff' }}
             />
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button 
-              icon={<EditOutlined />} 
-              size="small" 
-              onClick={() => handleEditContract(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa hợp đồng này?"
-            onConfirm={() => handleDeleteContract(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Tooltip title="Xóa">
-              <Button icon={<DeleteOutlined />} size="small" danger />
+          {record.status !== 'SIGNED' && (
+            <Tooltip title="Chỉnh sửa">
+              <Button 
+                icon={<EditOutlined />} 
+                size="small" 
+                onClick={() => handleEditContract(record)}
+              />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {record.status !== 'SIGNED' ? (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn đánh dấu hợp đồng này đã ký?"
+              onConfirm={() => handleSignContract(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Tooltip title="Đánh dấu đã ký">
+                <Button icon={<EditOutlined />} size="small" style={{ color: '#52c41a' }} />
+              </Tooltip>
+            </Popconfirm>
+          ) : (
+            <Tooltip title="Hợp đồng đã ký">
+              <Button icon={<EditOutlined />} size="small" disabled style={{ color: '#999' }} />
+            </Tooltip>
+          )}
         </Space>
       )
     }
@@ -630,15 +660,15 @@ const ContractManagement = () => {
   return (
     <div className="contract-management">
       <Card title="Quản lý Hợp đồng" className="contract-card">
-        <div style={{ marginBottom: 16, textAlign: 'right' }}>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={handleCreateManualContract}
-            size="large"
-          >
-            Tạo hợp đồng thủ công
-          </Button>
+        <div style={{ marginBottom: 16 }}>
+          <Input.Search
+            placeholder="Tìm kiếm theo tên hoặc 4 số cuối ID hợp đồng"
+            value={searchText}
+            onChange={(e) => handleSearch(e.target.value)}
+            onSearch={handleSearch}
+            style={{ width: 400 }}
+            allowClear
+          />
         </div>
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
           <TabPane 
@@ -647,7 +677,7 @@ const ContractManagement = () => {
           >
             <Table
               columns={contractColumns}
-              dataSource={teacherContracts}
+              dataSource={filteredTeacherContracts}
               rowKey="id"
               loading={loading}
               pagination={{ 
@@ -664,7 +694,7 @@ const ContractManagement = () => {
           >
             <Table
               columns={contractColumns}
-              dataSource={staffContracts}
+              dataSource={filteredStaffContracts}
               rowKey="id"
               loading={loading}
               pagination={{ 
@@ -694,22 +724,22 @@ const ContractManagement = () => {
         </Tabs>
       </Card>
 
-      {/* Modal tạo/chỉnh sửa hợp đồng thủ công */}
+      {/* Modal chỉnh sửa hợp đồng */}
       <Modal
-        title={editingContract ? "Chỉnh sửa hợp đồng" : "Tạo hợp đồng mới"}
-        visible={modalVisible}
+        title="Chỉnh sửa hợp đồng"
+        visible={editModalVisible}
         onCancel={() => {
-          setModalVisible(false);
+          setEditModalVisible(false);
           setEditingContract(null);
-          form.resetFields();
+          editForm.resetFields();
         }}
         footer={null}
         width={800}
       >
         <Form
-          form={form}
+          form={editForm}
           layout="vertical"
-          onFinish={editingContract ? handleUpdateContract : handleCreateContract}
+          onFinish={handleUpdateContract}
         >
           <Form.Item name="contractId" label="ID Hợp đồng">
             <Input 
@@ -959,12 +989,12 @@ const ContractManagement = () => {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
-                {editingContract ? 'Cập nhật' : 'Tạo hợp đồng'}
+                Cập nhật hợp đồng
               </Button>
               <Button onClick={() => {
-                setModalVisible(false);
+                setEditModalVisible(false);
                 setEditingContract(null);
-                form.resetFields();
+                editForm.resetFields();
               }}>
                 Hủy
               </Button>
