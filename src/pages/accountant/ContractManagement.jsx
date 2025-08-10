@@ -23,7 +23,8 @@ import {
   EyeOutlined,
   UserOutlined,
   TeamOutlined,
-  FilePdfOutlined
+  FilePdfOutlined,
+  CheckOutlined
 } from '@ant-design/icons';
 import axiosInstance from '../../config/axiosInstance';
 import moment from 'moment';
@@ -40,19 +41,31 @@ const ContractManagement = () => {
   const [staffContracts, setStaffContracts] = useState([]);
   const [candidatesReady, setCandidatesReady] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [candidatePosition, setCandidatePosition] = useState('');
-  const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState('');
+  const [filteredTeacherContracts, setFilteredTeacherContracts] = useState([]);
+  const [filteredStaffContracts, setFilteredStaffContracts] = useState([]);
   const [candidateForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [renewModalVisible, setRenewModalVisible] = useState(false);
+  const [renewingContract, setRenewingContract] = useState(null);
+  const [renewForm] = Form.useForm();
+  const [completedContracts, setCompletedContracts] = useState(new Set());
 
   // Fetch data khi component mount
   useEffect(() => {
     fetchContracts();
     fetchCandidatesReady();
   }, []);
+
+  // Filter contracts when data changes
+  useEffect(() => {
+    filterContracts(searchText);
+  }, [teacherContracts, staffContracts, searchText]);
 
   // Lấy danh sách hợp đồng theo loại
   const fetchContracts = async () => {
@@ -65,6 +78,8 @@ const ContractManagement = () => {
       
       setTeacherContracts(teacherResponse.data);
       setStaffContracts(staffResponse.data);
+      setFilteredTeacherContracts(teacherResponse.data);
+      setFilteredStaffContracts(staffResponse.data);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       message.error('Không thể tải danh sách hợp đồng!');
@@ -210,9 +225,7 @@ const ContractManagement = () => {
 
       await axiosInstance.post('/contracts', contractData);
       message.success('Tạo hợp đồng thành công!');
-      setModalVisible(false);
       setCandidateModalVisible(false);
-      form.resetFields();
       candidateForm.resetFields();
       setSelectedCandidate(null);
       fetchContracts();
@@ -268,61 +281,92 @@ const ContractManagement = () => {
     }
   };
 
-  // Xử lý xóa hợp đồng
-  const handleDeleteContract = async (id) => {
+  // Xử lý đánh dấu hợp đồng hoàn thành (chỉ ẩn nút, không thay đổi trạng thái)
+  const handleCompleteContract = async (id) => {
     try {
-      await axiosInstance.delete(`/contracts/${id}`);
-      message.success('Xóa hợp đồng thành công!');
+      // Chỉ đánh dấu local để ẩn nút, không thay đổi trạng thái hợp đồng
+      setCompletedContracts(prev => new Set([...prev, id]));
+      message.success('Đã đánh dấu hợp đồng hoàn thành!');
+    } catch (error) {
+      console.error('Error marking contract as completed:', error);
+      message.error('Không thể đánh dấu hợp đồng hoàn thành!');
+    }
+  };
+
+  // Xử lý gia hạn hợp đồng
+  const handleRenewContract = (record) => {
+    console.log('Renewing contract:', record);
+    setRenewingContract(record);
+    
+    // Populate form with current contract dates
+    renewForm.setFieldsValue({
+      contractId: record.contractId,
+      fullName: record.fullName,
+      startDate: record.startDate ? moment(record.startDate) : null,
+      endDate: record.endDate ? moment(record.endDate) : null
+    });
+    
+    setRenewModalVisible(true);
+  };
+
+  // Xử lý cập nhật ngày hợp đồng (gia hạn)
+  const handleRenewContractSubmit = async (values) => {
+    try {
+      const renewData = {
+        startDate: values.startDate.format('YYYY-MM-DD'),
+        endDate: values.endDate.format('YYYY-MM-DD')
+      };
+      
+      await axiosInstance.put(`/contracts/${renewingContract.id}`, renewData);
+      message.success('Gia hạn hợp đồng thành công!');
+      setRenewModalVisible(false);
+      setRenewingContract(null);
+      renewForm.resetFields();
       fetchContracts();
     } catch (error) {
-      console.error('Error deleting contract:', error);
-      message.error('Không thể xóa hợp đồng!');
+      console.error('Error renewing contract:', error);
+      message.error('Không thể gia hạn hợp đồng!');
     }
   };
 
   // Xử lý chỉnh sửa hợp đồng
   const handleEditContract = (record) => {
+    if (record.status === 'EXPIRED') {
+      message.warning('Không thể chỉnh sửa hợp đồng đã hết hạn!');
+      return;
+    }
+    
     console.log('🔍 DEBUG: Editing contract:', record);
     console.log('🔍 DEBUG: Contract salary fields:', {
       grossSalary: record.grossSalary,
       netSalary: record.netSalary,
       hourlySalary: record.hourlySalary,
-      salary: record.salary
     });
-
+    console.log('🔍 DEBUG: Contract type:', record.contractType);
+    
     setEditingContract(record);
     
     // Populate form with contract data
-    const formData = {
+    editForm.setFieldsValue({
       contractId: record.contractId,
       fullName: record.fullName,
       email: record.email,
       phoneNumber: record.phoneNumber,
       position: record.position,
-      // Populate salary fields from contract data (read-only)
-      grossSalary: record.grossSalary,
-      netSalary: record.netSalary,
-      hourlySalary: record.hourlySalary,
+      birthDate: record.birthDate ? moment(record.birthDate) : null,
+      citizenId: record.citizenId,
+      address: record.address,
+      qualification: record.qualification,
+      subject: record.subject,
+      educationLevel: record.educationLevel,
       startDate: record.startDate ? moment(record.startDate) : null,
       endDate: record.endDate ? moment(record.endDate) : null,
       status: record.status,
       contractTerms: record.contractTerms,
-      birthDate: record.birthDate ? moment(record.birthDate) : null,
-      cccd: record.citizenId,
-      address: record.address,
-      qualification: record.qualification,
-      subject: record.subject,
-      classLevel: record.classLevel || record.educationLevel, // Changed from level to classLevel (Lớp học)
-      // New working schedule fields
-      comments: record.comments, // Changed from evaluation to comments (Nhận xét)
-      workSchedule: record.workSchedule, // Thời gian làm việc
-      workShifts: record.workShifts ? (typeof record.workShifts === 'string' ? record.workShifts.split(',') : record.workShifts) : [], // Convert comma-separated string to array
-      workDays: record.workDays ? (typeof record.workDays === 'string' ? record.workDays.split(',') : record.workDays) : [] // Convert comma-separated string to array
-    };
-
-    console.log('🔍 DEBUG: Form data for edit:', formData);
-    form.setFieldsValue(formData);
-    setModalVisible(true);
+      evaluation: record.evaluation,
+    });
+    
+    setEditModalVisible(true);
   };
 
   // Generate Contract ID based on current date and sequence
@@ -443,11 +487,28 @@ const ContractManagement = () => {
     setCandidateModalVisible(true);
   };
 
-  // Mở modal tạo hợp đồng thủ công
-  const handleCreateManualContract = () => {
-    // Contract ID will be generated by backend
-    form.resetFields();
-    setModalVisible(true);
+  // Hàm tìm kiếm và lọc hợp đồng
+  const handleSearch = (value) => {
+    setSearchText(value);
+    filterContracts(value);
+  };
+
+  const filterContracts = (searchValue) => {
+    const filterData = (contracts) => {
+      if (!searchValue) return contracts;
+      
+      return contracts.filter(contract => {
+        const fullName = contract.fullName?.toLowerCase() || '';
+        const contractId = contract.contractId?.toString() || '';
+        const last4Digits = contractId.slice(-4);
+        const searchLower = searchValue.toLowerCase();
+        
+        return fullName.includes(searchLower) || last4Digits.includes(searchLower);
+      });
+    };
+    
+    setFilteredTeacherContracts(filterData(teacherContracts));
+    setFilteredStaffContracts(filterData(staffContracts));
   };
 
 
@@ -460,7 +521,7 @@ const ContractManagement = () => {
     return Promise.resolve();
   };
 
-  // Xem hợp đồng dưới dạng PDF
+  // Xem hợp đồng dước dạng PDF
   const handleViewContractPDF = (contract) => {
     try {
       ContractPDFGenerator.generateContractPDF(contract);
@@ -519,36 +580,35 @@ const ContractManagement = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
-        let color, text;
-        switch (status) {
+        let color = 'blue';
+        let text = status;
+        
+        switch(status) {
           case 'ACTIVE':
             color = 'green';
             text = 'Đang hoạt động';
             break;
           case 'NEAR_EXPIRY':
             color = 'orange';
-            text = 'Gần hết hạn hợp đồng';
+            text = 'Sắp hết hạn';
             break;
           case 'EXPIRED':
             color = 'red';
-            text = 'Hết hạn hợp đồng';
-            break;
-          case 'TERMINATED':
-            color = 'volcano';
-            text = 'Đã chấm dứt';
+            text = 'Hết hạn';
             break;
           default:
-            color = 'default';
+            color = 'blue';
             text = status;
         }
+        
         return <Tag color={color}>{text}</Tag>;
       }
     },
     {
       title: 'Thao tác',
-      key: 'actions',
+      key: 'action',
       render: (_, record) => (
-        <Space>
+        <Space size="middle">
           <Tooltip title="Xem hợp đồng PDF">
             <Button 
               icon={<FilePdfOutlined />} 
@@ -562,20 +622,47 @@ const ContractManagement = () => {
               icon={<EditOutlined />} 
               size="small" 
               onClick={() => handleEditContract(record)}
+              disabled={record.status === 'EXPIRED' || completedContracts.has(record.id)}
+              style={{
+                backgroundColor: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#d9d9d9' : undefined,
+                borderColor: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#d9d9d9' : undefined,
+                color: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#999' : undefined
+              }}
+              title={
+                record.status === 'EXPIRED' ? 'Không thể chỉnh sửa hợp đồng đã hết hạn' :
+                completedContracts.has(record.id) ? 'Không thể chỉnh sửa hợp đồng đã hoàn thành' :
+                'Chỉnh sửa hợp đồng'
+              }
             />
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa hợp đồng này?"
-            onConfirm={() => handleDeleteContract(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Tooltip title="Xóa">
-              <Button icon={<DeleteOutlined />} size="small" danger />
+          {record.status === 'NEAR_EXPIRY' && (
+            <Tooltip title="Gia hạn hợp đồng">
+              <Button 
+                icon={<PlusOutlined />} 
+                size="small" 
+                onClick={() => handleRenewContract(record)}
+                style={{ color: '#fa8c16' }}
+              />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {!completedContracts.has(record.id) && (record.status === 'ACTIVE' || record.status === 'NEAR_EXPIRY') && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn đánh dấu hợp đồng này đã hoàn thành?"
+              onConfirm={() => handleCompleteContract(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Tooltip title="Đánh dấu hoàn thành">
+                <Button 
+                  icon={<CheckOutlined />} 
+                  size="small" 
+                  style={{ color: '#52c41a' }}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
-      )
+      ),
     }
   ];
 
@@ -630,15 +717,15 @@ const ContractManagement = () => {
   return (
     <div className="contract-management">
       <Card title="Quản lý Hợp đồng" className="contract-card">
-        <div style={{ marginBottom: 16, textAlign: 'right' }}>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={handleCreateManualContract}
-            size="large"
-          >
-            Tạo hợp đồng thủ công
-          </Button>
+        <div style={{ marginBottom: 16 }}>
+          <Input.Search
+            placeholder="Tìm kiếm theo tên hoặc 4 số cuối ID hợp đồng"
+            value={searchText}
+            onChange={(e) => handleSearch(e.target.value)}
+            onSearch={handleSearch}
+            style={{ width: 400 }}
+            allowClear
+          />
         </div>
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
           <TabPane 
@@ -647,7 +734,7 @@ const ContractManagement = () => {
           >
             <Table
               columns={contractColumns}
-              dataSource={teacherContracts}
+              dataSource={filteredTeacherContracts}
               rowKey="id"
               loading={loading}
               pagination={{ 
@@ -664,7 +751,7 @@ const ContractManagement = () => {
           >
             <Table
               columns={contractColumns}
-              dataSource={staffContracts}
+              dataSource={filteredStaffContracts}
               rowKey="id"
               loading={loading}
               pagination={{ 
@@ -694,22 +781,22 @@ const ContractManagement = () => {
         </Tabs>
       </Card>
 
-      {/* Modal tạo/chỉnh sửa hợp đồng thủ công */}
+      {/* Modal chỉnh sửa hợp đồng */}
       <Modal
-        title={editingContract ? "Chỉnh sửa hợp đồng" : "Tạo hợp đồng mới"}
-        visible={modalVisible}
+        title="Chỉnh sửa hợp đồng"
+        visible={editModalVisible}
         onCancel={() => {
-          setModalVisible(false);
+          setEditModalVisible(false);
           setEditingContract(null);
-          form.resetFields();
+          editForm.resetFields();
         }}
         footer={null}
         width={800}
       >
         <Form
-          form={form}
+          form={editForm}
           layout="vertical"
-          onFinish={editingContract ? handleUpdateContract : handleCreateContract}
+          onFinish={handleUpdateContract}
         >
           <Form.Item name="contractId" label="ID Hợp đồng">
             <Input 
@@ -959,12 +1046,12 @@ const ContractManagement = () => {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
-                {editingContract ? 'Cập nhật' : 'Tạo hợp đồng'}
+                Cập nhật hợp đồng
               </Button>
               <Button onClick={() => {
-                setModalVisible(false);
+                setEditModalVisible(false);
                 setEditingContract(null);
-                form.resetFields();
+                editForm.resetFields();
               }}>
                 Hủy
               </Button>
@@ -1223,6 +1310,109 @@ const ContractManagement = () => {
                 setCandidateModalVisible(false);
                 setSelectedCandidate(null);
                 candidateForm.resetFields();
+              }}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal gia hạn hợp đồng */}
+      <Modal
+        title="Gia hạn hợp đồng"
+        visible={renewModalVisible}
+        onCancel={() => {
+          setRenewModalVisible(false);
+          setRenewingContract(null);
+          renewForm.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={renewForm}
+          layout="vertical"
+          onFinish={handleRenewContractSubmit}
+        >
+          <Form.Item name="contractId" label="ID Hợp đồng">
+            <Input 
+              readOnly 
+              style={{ 
+                backgroundColor: '#f0f8ff', 
+                border: '1px solid #1890ff',
+                color: '#1890ff',
+                fontWeight: 'bold'
+              }} 
+            />
+          </Form.Item>
+
+          <Form.Item name="fullName" label="Họ và tên">
+            <Input 
+              readOnly 
+              style={{ backgroundColor: '#f5f5f5' }} 
+            />
+          </Form.Item>
+
+          <Form.Item 
+            name="startDate" 
+            label="Ngày bắt đầu mới" 
+            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày bắt đầu mới"
+            />
+          </Form.Item>
+
+          <Form.Item 
+            name="endDate" 
+            label="Ngày kết thúc mới" 
+            rules={[
+              { required: true, message: 'Vui lòng chọn ngày kết thúc!' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || !getFieldValue('startDate')) {
+                    return Promise.resolve();
+                  }
+                  if (value.isBefore(getFieldValue('startDate'), 'day')) {
+                    return Promise.reject(new Error('Ngày kết thúc không được trước ngày bắt đầu!'));
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày kết thúc mới"
+            />
+          </Form.Item>
+
+          <div style={{ 
+            backgroundColor: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: '6px', 
+            padding: '12px', 
+            marginBottom: '16px' 
+          }}>
+            <p style={{ margin: 0, color: '#fa8c16' }}>
+              <strong>Lưu ý:</strong> Chỉ có thể thay đổi ngày bắt đầu và ngày kết thúc. 
+              Các thông tin khác của hợp đồng sẽ được giữ nguyên.
+            </p>
+          </div>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Gia hạn hợp đồng
+              </Button>
+              <Button onClick={() => {
+                setRenewModalVisible(false);
+                setRenewingContract(null);
+                renewForm.resetFields();
               }}>
                 Hủy
               </Button>
