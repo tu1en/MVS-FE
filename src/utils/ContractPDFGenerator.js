@@ -19,18 +19,80 @@ class ContractPDFGenerator {
   }
 
   /**
+   * Translate work shifts from English to Vietnamese
+   * @param {string} shifts - Comma-separated work shifts in English
+   * @returns {string} - Work shifts in Vietnamese
+   */
+  static translateWorkShifts(shifts) {
+    if (!shifts) return 'N/A';
+    
+    const shiftTranslations = {
+      'morning': 'sáng',
+      'afternoon': 'chiều', 
+      'evening': 'tối',
+      'night': 'đêm'
+    };
+    
+    return shifts.split(',')
+      .map(shift => shift.trim().toLowerCase())
+      .map(shift => shiftTranslations[shift] || shift)
+      .join(', ');
+  }
+
+  /**
+   * Translate work days from English to Vietnamese
+   * @param {string} days - Comma-separated work days in English
+   * @returns {string} - Work days in Vietnamese
+   */
+  static translateWorkDays(days) {
+    if (!days) return 'N/A';
+    
+    const dayTranslations = {
+      'monday': 'thứ hai',
+      'tuesday': 'thứ ba',
+      'wednesday': 'thứ tư',
+      'thursday': 'thứ năm',
+      'friday': 'thứ sáu',
+      'saturday': 'thứ bảy',
+      'sunday': 'chủ nhật'
+    };
+    
+    return days.split(',')
+      .map(day => day.trim().toLowerCase())
+      .map(day => dayTranslations[day] || day)
+      .join(', ');
+  }
+
+  /**
    * Generate and display contract PDF
    * @param {Object} contract - Contract data object
    */
   static generateContractPDF(contract) {
     console.log('Generating PDF for contract:', contract);
+    
+    // Determine contract type based on contractType or position
+    const isTeacher = contract.contractType === 'TEACHER' || 
+                     (contract.position && contract.position.toLowerCase().includes('giáo viên'));
+    
+    if (isTeacher) {
+      this.generateTeacherContract(contract);
+    } else {
+      this.generateStaffContract(contract);
+    }
+  }
+
+  /**
+   * Generate Teacher Contract PDF (existing template)
+   * @param {Object} contract - Contract data object
+   */
+  static generateTeacherContract(contract) {
+    console.log('Generating Teacher PDF for contract:', contract);
     const doc = new jsPDF();
     
     // Add Vietnamese font support using FontManager
     FontManager.setVietnameseFont(doc, 'ARIAL', 12);
     
     // Extract contract details with fallback values
-    // Try both possible field names to handle mapping issues
     const fullName = this.getValue(contract.fullName);
     const birthDate = contract.birthDate ? moment(contract.birthDate).format('DD/MM/YYYY') : 'N/A';
     const citizenId = this.getValue(contract.citizenId || contract.cccd);
@@ -41,26 +103,26 @@ class ContractPDFGenerator {
     const startDate = contract.startDate ? moment(contract.startDate).format('DD/MM/YYYY') : 'N/A';
     const endDate = contract.endDate ? moment(contract.endDate).format('DD/MM/YYYY') : 'N/A';
     const salary = contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A';
-    const contractType = contract.type === 'teacher' ? 'Giáo viên' : 'Nhân viên';
+    const contractType = 'Giáo viên';
     const department = this.getValue(contract.department);
     const comments = this.getValue(contract.comments || contract.evaluation);
     const workSchedule = this.getValue(contract.workSchedule);
     const workShifts = contract.workShifts ? (Array.isArray(contract.workShifts) ? contract.workShifts.join(', ') : contract.workShifts) : 'N/A';
     const workDays = contract.workDays ? (Array.isArray(contract.workDays) ? contract.workDays.join(', ') : contract.workDays) : 'N/A';
     
-    console.log('Extracted PDF values:', { citizenId, classLevel, subject, comments, workSchedule });
+    console.log('Extracted Teacher PDF values:', { citizenId, classLevel, subject, comments, workSchedule });
     
     // Set document properties
     doc.setProperties({
       title: `Hợp đồng ${contractType} - ${fullName}`,
       subject: 'Hợp đồng lao động',
       author: 'ClassroomApp',
-      keywords: 'hợp đồng, lao động, giáo viên, nhân viên',
+      keywords: 'hợp đồng, lao động, giáo viên',
       creator: 'ClassroomApp'
     });
     
     // Add document header
-    this.addDocumentHeader(doc);
+    this.addDocumentHeader(doc, contract);
     
     // Add contract parties information
     let yPosition = this.addContractParties(doc, {
@@ -100,10 +162,78 @@ class ContractPDFGenerator {
   }
 
   /**
+   * Generate Staff Contract PDF (HR/Accountant template)
+   * @param {Object} contract - Contract data object
+   */
+  static generateStaffContract(contract) {
+    console.log('Generating Staff PDF for contract:', contract);
+    const doc = new jsPDF();
+    
+    // Add Vietnamese font support using FontManager
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    
+    // Extract contract details with fallback values
+    const fullName = this.getValue(contract.fullName);
+    const birthDate = contract.birthDate ? moment(contract.birthDate).format('DD/MM/YYYY') : 'N/A';
+    const citizenId = this.getValue(contract.citizenId || contract.cccd);
+    const address = this.getValue(contract.address);
+    const qualification = this.getValue(contract.qualification);
+    const position = this.getValue(contract.position);
+    const startDate = contract.startDate ? moment(contract.startDate).format('DD/MM/YYYY') : 'N/A';
+    const endDate = contract.endDate ? moment(contract.endDate).format('DD/MM/YYYY') : 'N/A';
+    const netSalary = contract.netSalary ? contract.netSalary.toLocaleString('vi-VN') : 
+                     (contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A');
+    // Get contract ID - prioritize contractId field from backend
+    const contractId = this.getValue(
+      contract.contractId || 
+      contract.id || 
+      contract.contractNumber || 
+      contract.number,
+      'N/A'
+    );
+    
+    console.log('Extracted Staff PDF values:', { fullName, position, netSalary, contractId });
+    
+    // Set document properties
+    doc.setProperties({
+      title: `Hợp đồng Nhân viên - ${fullName}`,
+      subject: 'Hợp đồng lao động',
+      author: 'ClassroomApp',
+      keywords: 'hợp đồng, lao động, nhân viên, hr, kế toán',
+      creator: 'ClassroomApp'
+    });
+    
+    // Add staff contract content
+    this.addStaffContractHeader(doc, contractId);
+    let yPosition = this.addStaffContractParties(doc, {
+      fullName,
+      birthDate,
+      qualification,
+      address
+    });
+    
+    yPosition = this.addStaffContractTerms(doc, yPosition, {
+      startDate,
+      endDate,
+      position
+    });
+    
+    yPosition = this.addStaffWorkingConditions(doc, yPosition);
+    yPosition = this.addStaffRightsObligations(doc, yPosition, netSalary);
+    yPosition = this.addStaffEmployerRightsObligations(doc, yPosition);
+    yPosition = this.addStaffImplementationClauses(doc, yPosition, startDate);
+    this.addStaffSignatures(doc, yPosition);
+    
+    // Open PDF in new tab
+    window.open(doc.output('bloburl'), '_blank');
+  }
+
+  /**
    * Add document header
    * @param {jsPDF} doc - PDF document instance
+   * @param {Object} contract - Contract data object
    */
-  static addDocumentHeader(doc) {
+  static addDocumentHeader(doc, contract) {
     doc.setCharSpace(0);
     // Ensure Vietnamese font is set for header
     FontManager.setVietnameseFont(doc, 'ARIAL', 14);
@@ -115,7 +245,16 @@ class ContractPDFGenerator {
     doc.text('HỢP ĐỒNG LAO ĐỘNG', 70, 50);
     doc.setFontSize(12);
     doc.text('(Về việc: Tuyển dụng giáo viên giảng dạy)', 60, 60);
-    doc.text('Số: ........../HĐLĐ', 20, 70);
+    
+    // Get contract ID - prioritize contractId field from backend
+    const contractId = this.getValue(
+      contract.contractId || 
+      contract.id || 
+      contract.contractNumber || 
+      contract.number,
+      'N/A'
+    );
+    doc.text(`Số: ${contractId}/HĐLĐ`, 20, 70);
     doc.text('Căn cứ:', 20, 80);
     
     let y = 90;
@@ -218,11 +357,13 @@ class ContractPDFGenerator {
       yPosition += 10;
     }
     if (terms.workShifts && terms.workShifts !== 'N/A') {
-      doc.text(`- Ca làm việc: ${terms.workShifts}`, 40, yPosition);
+      const vietnameseShifts = this.translateWorkShifts(terms.workShifts);
+      doc.text(`- Ca làm việc: ${vietnameseShifts}`, 40, yPosition);
       yPosition += 10;
     }
     if (terms.workDays && terms.workDays !== 'N/A') {
-      doc.text(`- Ngày trong tuần: ${terms.workDays}`, 40, yPosition);
+      const vietnameseDays = this.translateWorkDays(terms.workDays);
+      doc.text(`- Ngày trong tuần: ${vietnameseDays}`, 40, yPosition);
       yPosition += 10;
     }
     
@@ -535,6 +676,340 @@ class ContractPDFGenerator {
     doc.setFontSize(12);
     doc.text('(Ký và ghi rõ họ tên)', 25, yPosition);
     doc.text('(Ký và ghi rõ họ tên)', 125, yPosition);
+  }
+
+  // =================== STAFF CONTRACT METHODS ===================
+
+  /**
+   * Add staff contract header
+   * @param {jsPDF} doc - PDF document instance
+   * @param {string} contractId - Contract ID
+   */
+  static addStaffContractHeader(doc, contractId) {
+    // Left side - Center info
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('Trung tâm bồi dưỡng kiến thức', 20, 20);
+    doc.text('Minh Việt', 20, 30);
+    doc.text(`Số: ${contractId}/HĐLĐ`, 20, 40);
+    
+    // Right side - Vietnam header
+    doc.text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 105, 20);
+    doc.text('Độc lập – Tự do – Hạnh phúc', 125, 30);
+    doc.text('-------- o0o --------', 135, 40);
+    
+    // Main title
+    FontManager.setVietnameseFont(doc, 'ARIAL', 16);
+    doc.text('HỢP ĐỒNG LAO ĐỘNG', 75, 60);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('(Căn cứ Luật Lao động 2019 và các văn bản hiện hành)', 55, 70);
+  }
+
+  /**
+   * Add staff contract parties
+   * @param {jsPDF} doc - PDF document instance
+   * @param {Object} contractorInfo - Contractor information
+   * @returns {number} - Next Y position
+   */
+  static addStaffContractParties(doc, contractorInfo) {
+    let yPosition = 90;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    
+    // Party A (Employer)
+    const partyAText = doc.splitTextToSize('Chúng tôi, một bên là: Ông Nguyễn Văn An', 160);
+    doc.text(partyAText, 20, yPosition);
+    yPosition += partyAText.length * 7;
+    
+    doc.text('Quốc tịch: VIỆT NAM', 20, yPosition);
+    doc.text('Chức vụ: GIÁM ĐỐC', 120, yPosition);
+    yPosition += 10;
+    
+    const representText = doc.splitTextToSize('Đại diện cho (1): Trung tâm bồi dưỡng kiến thức Minh Việt', 160);
+    doc.text(representText, 20, yPosition);
+    yPosition += representText.length * 7;
+    
+    doc.text('Mã số thuế: 123456789', 20, yPosition);
+    doc.text('Điện thoại: 0123 456 789', 120, yPosition);
+    yPosition += 10;
+    
+    const addressText = doc.splitTextToSize('Địa chỉ: 123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh', 160);
+    doc.text(addressText, 20, yPosition);
+    yPosition += addressText.length * 7 + 10;
+    
+    // Party B (Employee)
+    const partyBText = doc.splitTextToSize(`Và một bên là Ông (Bà): ${contractorInfo.fullName}`, 160);
+    doc.text(partyBText, 20, yPosition);
+    yPosition += partyBText.length * 7;
+    
+    doc.text('Quốc tịch: Việt Nam', 20, yPosition);
+    yPosition += 10;
+    
+    doc.text(`Sinh ngày: ${contractorInfo.birthDate}`, 20, yPosition);
+    yPosition += 10;
+    
+    const qualificationText = doc.splitTextToSize(`Bằng cấp chuyên môn (2): ${contractorInfo.qualification}`, 160);
+    doc.text(qualificationText, 20, yPosition);
+    yPosition += qualificationText.length * 7;
+    
+    const addressEmployeeText = doc.splitTextToSize(`Địa chỉ thường trú: ${contractorInfo.address}`, 160);
+    doc.text(addressEmployeeText, 20, yPosition);
+    yPosition += addressEmployeeText.length * 7;
+    
+    doc.text('Số sổ BHXH (nếu có):', 20, yPosition);
+    yPosition += 10;
+    doc.text('Mã số thuế (nếu có):', 20, yPosition);
+    yPosition += 10;
+    
+    doc.text('Sau đây gọi tắt là Người lao động', 20, yPosition);
+    yPosition += 15;
+    
+    const agreementText = doc.splitTextToSize('Hai bên thỏa thuận ký kết hợp đồng lao động và cam kết làm đúng những điều khoản sau đây:', 160);
+    doc.text(agreementText, 20, yPosition);
+    yPosition += agreementText.length * 7 + 15;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add staff contract terms
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   * @param {Object} terms - Contract terms
+   * @returns {number} - Next Y position
+   */
+  static addStaffContractTerms(doc, yPosition, terms) {
+    // Add new page if needed
+    if (yPosition > 240) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 1: Thời hạn và công việc hợp đồng', 20, yPosition);
+    yPosition += 10;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('- Loại hợp đồng lao động (3): Xác định thời hạn', 30, yPosition);
+    yPosition += 10;
+    
+    doc.text(`Từ ngày ${terms.startDate} đến ${terms.endDate}`, 30, yPosition);
+    yPosition += 10;
+    
+    const workplaceText = doc.splitTextToSize('- Địa điểm làm việc (4): Trung tâm bồi dưỡng kiến thức Minh Việt', 160);
+    doc.text(workplaceText, 30, yPosition);
+    yPosition += workplaceText.length * 7;
+    
+    doc.text(`Chức danh chuyên môn: ${terms.position}`, 30, yPosition);
+    yPosition += 20;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add staff working conditions
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   * @returns {number} - Next Y position
+   */
+  static addStaffWorkingConditions(doc, yPosition) {
+    // Add new page if needed
+    if (yPosition > 240) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 2: Chế độ làm việc', 20, yPosition);
+    yPosition += 10;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    const workingTimeText = doc.splitTextToSize('- Thời gian làm việc (6): 8 giờ/ngày; 40 giờ/tuần. Sáng từ 08:30 – 12:00. Chiều từ 13:00 – 17:30', 160);
+    doc.text(workingTimeText, 30, yPosition);
+    yPosition += workingTimeText.length * 7;
+    
+    const equipmentText = doc.splitTextToSize('- Được cấp phát những dụng cụ làm việc gồm: Theo quy định của Trung tâm', 160);
+    doc.text(equipmentText, 30, yPosition);
+    yPosition += equipmentText.length * 7 + 15;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add staff rights and obligations
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   * @param {string} netSalary - Net salary
+   * @returns {number} - Next Y position
+   */
+  static addStaffRightsObligations(doc, yPosition, netSalary) {
+    // Add new page if needed
+    if (yPosition > 200) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 3: Nghĩa vụ và quyền lợi của người lao động', 20, yPosition);
+    yPosition += 15;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('1. Quyền lợi:', 30, yPosition);
+    yPosition += 10;
+    
+    doc.text('- Phương tiện đi lại làm việc (7): Tự túc', 30, yPosition);
+    yPosition += 10;
+    
+    doc.text(`- Mức lương căn bản (8): ${netSalary} VNĐ`, 30, yPosition);
+    yPosition += 10;
+    
+    doc.text('- Được trả lương vào (9): Trước ngày 05 của tháng tiếp theo', 30, yPosition);
+    yPosition += 10;
+    
+    const insuranceText = doc.splitTextToSize('- BHXH, BHYT, BHTN (10): Công ty 17%; người lao động 8% theo luật BHXH', 160);
+    doc.text(insuranceText, 30, yPosition);
+    yPosition += insuranceText.length * 7;
+    
+    const trainingText = doc.splitTextToSize('- Chế độ đào tạo (11): Theo yêu cầu công việc của Trung tâm', 160);
+    doc.text(trainingText, 30, yPosition);
+    yPosition += trainingText.length * 7;
+    
+    doc.text('- Trợ cấp và hỗ trợ khác (12)', 30, yPosition);
+    yPosition += 10;
+    
+    doc.text('Điện thoại: 500.000 VNĐ', 40, yPosition);
+    yPosition += 7;
+    doc.text('Xăng xe: 500.000 VNĐ', 40, yPosition);
+    yPosition += 7;
+    
+    const allowanceText = doc.splitTextToSize('Phụ cấp chuyên cần: Dựa vào bảng đánh giá năng suất, chuyên cần hàng tháng', 150);
+    doc.text(allowanceText, 40, yPosition);
+    yPosition += allowanceText.length * 7 + 10;
+    
+    doc.text('2. Nghĩa vụ:', 30, yPosition);
+    yPosition += 10;
+    
+    const obligationText1 = doc.splitTextToSize('- Hoàn thành những công việc theo yêu cầu và qui định trách nhiệm quyền hạn do Trung tâm giao và những điều đã cam kết trong hợp đồng lao động.', 160);
+    doc.text(obligationText1, 30, yPosition);
+    yPosition += obligationText1.length * 7;
+    
+    doc.text('- Bồi thường vi phạm và vật chất (13):', 30, yPosition);
+    yPosition += 10;
+    
+    const compensationText1 = doc.splitTextToSize('+ Người lao động phải bồi thường cho Trung tâm những thiệt hại về vật chất và chịu trách nhiệm trước pháp luật do làm trái nội qui, làm trái những qui định hiện hành về vệ sinh – an toàn lao động, phòng chống cháy nổ.', 160);
+    doc.text(compensationText1, 35, yPosition);
+    yPosition += compensationText1.length * 7;
+    
+    const compensationText2 = doc.splitTextToSize('+ Người lao động làm hư hỏng hoặc làm thất lạc, mất mát thiết bị dụng cụ phương tiện làm việc của Trung tâm phải có trách nhiệm bồi thường cho Trung tâm. Mức bồi thường và phương thức thanh toán do 2 bên thỏa thuận.', 160);
+    doc.text(compensationText2, 35, yPosition);
+    yPosition += compensationText2.length * 7 + 15;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add employer rights and obligations
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   * @returns {number} - Next Y position
+   */
+  static addStaffEmployerRightsObligations(doc, yPosition) {
+    // Add new page if needed
+    if (yPosition > 200) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 4: Nghĩa vụ và quyền hạn của người sử dụng lao động', 20, yPosition);
+    yPosition += 15;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('1. Nghĩa vụ:', 30, yPosition);
+    yPosition += 10;
+    
+    const obligation1Text = doc.splitTextToSize('- Bảo đảm việc làm và thực hiện đầy đủ những điều đã cam kết trong hợp đồng lao động.', 160);
+    doc.text(obligation1Text, 30, yPosition);
+    yPosition += obligation1Text.length * 7;
+    
+    const obligation2Text = doc.splitTextToSize('- Thanh toán đầy đủ, đúng thời hạn các chế độ và quyền lợi cho người lao động theo hợp đồng lao động, thỏa ước lao động tập thể.', 160);
+    doc.text(obligation2Text, 30, yPosition);
+    yPosition += obligation2Text.length * 7 + 10;
+    
+    doc.text('2. Quyền hạn:', 30, yPosition);
+    yPosition += 10;
+    
+    const right1Text = doc.splitTextToSize('- Điều hành người lao động hoàn thành công việc theo hợp đồng (bố trí, điều chuyển, tạm ngưng việc ……)', 160);
+    doc.text(right1Text, 30, yPosition);
+    yPosition += right1Text.length * 7;
+    
+    const right2Text = doc.splitTextToSize('- Tạm hoãn, chấm dứt hợp đồng lao động, kỷ luật người lao động theo quy định của pháp luật, thoả ước lao động tập thể và nội quy lao động của Doanh nghiệp.', 160);
+    doc.text(right2Text, 30, yPosition);
+    yPosition += right2Text.length * 7 + 15;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add implementation clauses
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   * @param {string} startDate - Contract start date
+   * @returns {number} - Next Y position
+   */
+  static addStaffImplementationClauses(doc, yPosition, startDate) {
+    // Add new page if needed
+    if (yPosition > 200) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 5: Điều khoản thi hành', 20, yPosition);
+    yPosition += 15;
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    const termination1Text = doc.splitTextToSize('- Khi muốn chấm dứt hợp đồng; mỗi bên phải thực hiện đúng qui định báo trước 30 ngày theo Điều 35 và Điều 36 của Bộ Luật Lao Động số 45/2019/QH14 ngày 20/11/2019 và có hiệu lực thi hành từ 01/01/2021.', 160);
+    doc.text(termination1Text, 30, yPosition);
+    yPosition += termination1Text.length * 7;
+    
+    const termination2Text = doc.splitTextToSize('- Những vấn đề về lao động không ghi trong hợp động lao động này thì áp dụng quy định của thỏa ước tập thể, trường hợp chưa có thỏa ước của tập thể thì áp dụng quy định của pháp luật lao động.', 160);
+    doc.text(termination2Text, 30, yPosition);
+    yPosition += termination2Text.length * 7;
+    
+    const effectiveText = doc.splitTextToSize(`- Hợp đồng lao động được làm thành 02 bản có giá trị ngang nhau, mỗi bên giữ một bản và có hiệu lực từ ngày ${startDate}. Khi hai bên ký kết phụ lục hợp đồng lao động thì nội dung của phụ lục hợp đồng lao động cũng có giá trị như các nội dung của bản hợp đồng lao động này.`, 160);
+    doc.text(effectiveText, 30, yPosition);
+    yPosition += effectiveText.length * 7;
+    
+    const locationText = doc.splitTextToSize('Hợp đồng này làm tại Văn phòng Trung tâm bồi dưỡng kiến thức Minh Việt ngày 01 tháng 12 năm 2022.', 160);
+    doc.text(locationText, 30, yPosition);
+    yPosition += locationText.length * 7 + 20;
+    
+    return yPosition;
+  }
+
+  /**
+   * Add staff contract signatures
+   * @param {jsPDF} doc - PDF document instance
+   * @param {number} yPosition - Current Y position
+   */
+  static addStaffSignatures(doc, yPosition) {
+    // Add new page if needed
+    if (yPosition > 240) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
+    doc.text('NGƯỜI LAO ĐỘNG', 40, yPosition);
+    doc.text('NGƯỜI SỬ DỤNG LAO ĐỘNG', 130, yPosition);
+    yPosition += 10;
+    
+    doc.text('(Ký tên)', 50, yPosition);
+    doc.text('(Ký tên, đóng dấu)', 145, yPosition);
+    yPosition += 10;
+    
+    doc.text('Ghi rõ họ và tên', 45, yPosition);
+    doc.text('Ghi rõ họ và tên', 140, yPosition);
   }
 }
 
