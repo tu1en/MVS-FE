@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import moment from 'moment';
+import FontManager from './FontManager';
 
 /**
  * Contract PDF Generator Utility
@@ -24,6 +25,9 @@ class ContractPDFGenerator {
   static generateContractPDF(contract) {
     console.log('Generating PDF for contract:', contract);
     const doc = new jsPDF();
+    
+    // Add Vietnamese font support using FontManager
+    FontManager.setVietnameseFont(doc, 'ARIAL', 12);
     
     // Extract contract details with fallback values
     // Try both possible field names to handle mapping issues
@@ -101,8 +105,8 @@ class ContractPDFGenerator {
    */
   static addDocumentHeader(doc) {
     doc.setCharSpace(0);
-    doc.setFont('helvetica');
-    doc.setFontSize(14);
+    // Ensure Vietnamese font is set for header
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
     doc.text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 55, 20);
     doc.setFontSize(12);
     doc.text('Độc lập - Tự do - Hạnh phúc', 75, 30);
@@ -139,39 +143,40 @@ class ContractPDFGenerator {
     let yPosition = 130;
     
     // Party A (Employer)
-    doc.setFontSize(14);
-    doc.text('1. Ben A (Ben thue):', 20, yPosition);
+    // Ensure Vietnamese font is set
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('1. Bên A (Bên thuê):', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('Trung tam boi duong kien thuc Minh Viet', 30, yPosition);
+    doc.text('Trung tâm bồi dưỡng kiến thức Minh Việt', 30, yPosition);
     yPosition += 10;
-    doc.text('Ma so thue: 123456789', 30, yPosition);
+    doc.text('Mã số thuế: 123456789', 30, yPosition);
     yPosition += 10;
-    doc.text('Dia chi: 123 Duong Le Loi, Quan 1, TP. Ho Chi Minh', 30, yPosition);
+    doc.text('Địa chỉ: 123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh', 30, yPosition);
     yPosition += 10;
-    doc.text('Dai dien: Ong Nguyen Van A', 30, yPosition);
+    doc.text('Đại diện: Ông Nguyễn Văn A', 30, yPosition);
     yPosition += 10;
-    doc.text('Chuc vu: Giam doc', 30, yPosition);
+    doc.text('Chức vụ: Giám đốc', 30, yPosition);
     yPosition += 10;
-    doc.text('So dien thoai: 0123 456 789    Email: info@minhviet.edu.vn', 30, yPosition);
+    doc.text('Số điện thoại: 0123 456 789    Email: info@minhviet.edu.vn', 30, yPosition);
     yPosition += 10;
     
     // Party B (Employee)
-    doc.setFontSize(14);
-    doc.text('2. Ben B (Ben duoc thue):', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('2. Bên B (Bên được thuê):', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text(`Ho va ten: ${contractorInfo.fullName}`, 30, yPosition);
+    doc.text(`Họ và tên: ${contractorInfo.fullName}`, 30, yPosition);
     yPosition += 10;
-    doc.text(`Sinh ngay: ${contractorInfo.birthDate}`, 30, yPosition);
+    doc.text(`Sinh ngày: ${contractorInfo.birthDate}`, 30, yPosition);
     yPosition += 10;
-    doc.text(`So CCCD: ${contractorInfo.citizenId}`, 30, yPosition);
+    doc.text(`Số CCCD: ${contractorInfo.citizenId}`, 30, yPosition);
     yPosition += 10;
-    doc.text(`Dia chi: ${contractorInfo.address}`, 30, yPosition);
+    doc.text(`Địa chỉ: ${contractorInfo.address}`, 30, yPosition);
     yPosition += 10;
-    doc.text(`So dien thoai: ${contractorInfo.phoneNumber || 'N/A'}    Email: ${contractorInfo.email || 'N/A'}`, 30, yPosition);
+    doc.text(`Số điện thoại: ${contractorInfo.phoneNumber || 'N/A'}    Email: ${contractorInfo.email || 'N/A'}`, 30, yPosition);
     yPosition += 10;
-    doc.text(`Trinh do chuyen mon: ${contractorInfo.qualification}`, 30, yPosition);
+    doc.text(`Trình độ chuyên môn: ${contractorInfo.qualification}`, 30, yPosition);
     yPosition += 10;
     
     return yPosition;
@@ -191,39 +196,44 @@ class ContractPDFGenerator {
       yPosition = 20;
     }
     
-    doc.setFontSize(14);
-    doc.text('Hai ben cung thong nhat ky ket hop dong voi cac dieu khoan sau:', 20, yPosition);
+    // Ensure Vietnamese font is set for contract terms
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Hai bên cùng thống nhất ký kết hợp đồng với các điều khoản sau:', 20, yPosition);
     yPosition += 10;
-    doc.text('Dieu 1: Noi dung hop dong', 20, yPosition);
+    doc.text('Điều 1: Nội dung hợp đồng', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('Ben A thue Ben B lam giao vien giang day voi noi dung cong viec nhu sau:', 30, yPosition);
+    doc.text('Bên A thuê Bên B làm giáo viên giảng dạy với nội dung công việc như sau:', 30, yPosition);
     yPosition += 10;
-    doc.text(`- Mon hoc giang day: ${terms.subject}`, 40, yPosition);
+    doc.text(`- Môn học giảng dạy: ${terms.subject}`, 40, yPosition);
     yPosition += 10;
-    doc.text(`- Lop hoc: ${terms.classLevel}`, 40, yPosition);
+    doc.text(`- Lớp học: ${terms.classLevel}`, 40, yPosition);
     yPosition += 10;
-    doc.text(`- Thoi gian giang day: Tu ${terms.startDate} den ${terms.endDate}`, 40, yPosition);
+    doc.text(`- Thời gian giảng dạy: Từ ${terms.startDate} đến ${terms.endDate}`, 40, yPosition);
     yPosition += 10;
     
     // Add working schedule information if available
     if (terms.workSchedule && terms.workSchedule !== 'N/A') {
-      doc.text(`- Thoi gian lam viec: ${terms.workSchedule}`, 40, yPosition);
+      doc.text(`- Thời gian làm việc: ${terms.workSchedule}`, 40, yPosition);
       yPosition += 10;
     }
     if (terms.workShifts && terms.workShifts !== 'N/A') {
-      doc.text(`- Ca lam viec: ${terms.workShifts}`, 40, yPosition);
+      doc.text(`- Ca làm việc: ${terms.workShifts}`, 40, yPosition);
       yPosition += 10;
     }
     if (terms.workDays && terms.workDays !== 'N/A') {
-      doc.text(`- Ngay trong tuan: ${terms.workDays}`, 40, yPosition);
+      doc.text(`- Ngày trong tuần: ${terms.workDays}`, 40, yPosition);
       yPosition += 10;
     }
     
-    doc.text('- Dia diem giang day: Trung tam boi duong kien thuc Minh Viet', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai tuan thu day du, dung chuong trinh day, dam bao chat luong hoc tap cua hoc sinh.', 40, yPosition);
-    yPosition += 10;
+    // Use splitTextToSize for long text to prevent cutting
+    const locationText = doc.splitTextToSize('- Địa điểm giảng dạy: Trung tâm bồi dưỡng kiến thức Minh Việt', 150);
+    doc.text(locationText, 40, yPosition);
+    yPosition += locationText.length * 7;
+    
+    const qualityText = doc.splitTextToSize('- Bên B phải tuân thủ đầy đủ, đúng chương trình dạy, đảm bảo chất lượng học tập của học sinh.', 150);
+    doc.text(qualityText, 40, yPosition);
+    yPosition += qualityText.length * 7;
     
     return yPosition;
   }
@@ -243,18 +253,20 @@ class ContractPDFGenerator {
     }
     
     // Article 2: Contract duration and working regime
-    doc.setFontSize(14);
-    doc.text('Dieu 2: Thoi han hop dong va che do lam viec', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 2: Thời hạn hợp đồng và chế độ làm việc', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('- Loai hop dong lao dong: Co ky han.', 30, yPosition);
+    doc.text('- Loại hợp đồng lao động: Có kỳ hạn.', 30, yPosition);
     yPosition += 10;
-    doc.text(`- Thoi han hop dong: Tu ${clauseData.startDate} den ${clauseData.endDate}`, 30, yPosition);
+    doc.text(`- Thời hạn hợp đồng: Từ ${clauseData.startDate} đến ${clauseData.endDate}`, 30, yPosition);
     yPosition += 10;
-    doc.text('- Thoi gian lam viec cua ben B: 8 gio/ngay.', 30, yPosition);
+    doc.text('- Thời gian làm việc của bên B: 8 giờ/ngày.', 30, yPosition);
     yPosition += 10;
-    doc.text('- Ben B duoc cap phat nhung dung cu lam viec gom: Cac tai lieu phuc vu cho giang day, dung cu giang day, thiet bi day hoc.', 30, yPosition);
-    yPosition += 10;
+    // Wrap equipment text
+    const equipmentText = doc.splitTextToSize('- Bên B được cấp phát những dụng cụ làm việc gồm: Các tài liệu phục vụ cho giảng dạy, dụng cụ giảng dạy, thiết bị dạy học.', 160);
+    doc.text(equipmentText, 30, yPosition);
+    yPosition += equipmentText.length * 7;
     
     // Add new page if needed
     if (yPosition > 260) {
@@ -263,19 +275,29 @@ class ContractPDFGenerator {
     }
     
     // Article 3: Salary and payment method
-    doc.setFontSize(14);
-    doc.text('Dieu 3: Muc luong va phuong thuc thanh toan', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 3: Mức lương và phương thức thanh toán', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text(`- Ben A dong y chi tra cho ben B muc luong viec giang day voi so tien la: ${clauseData.salary} dong/thang`, 30, yPosition);
+    // Wrap salary text
+    const salaryText = doc.splitTextToSize(`- Bên A đồng ý chi trả cho bên B mức lương việc giảng dạy với số tiền là: ${clauseData.salary} đồng/tháng`, 160);
+    doc.text(salaryText, 30, yPosition);
+    yPosition += salaryText.length * 7;
+    
+    const paymentText = doc.splitTextToSize('- Thời hạn trả tiền lương: Bên A sẽ trả tiền lương cho bên B 01 lần vào các ngày 5 hàng tháng.', 160);
+    doc.text(paymentText, 30, yPosition);
+    yPosition += paymentText.length * 7;
     yPosition += 10;
-    doc.text('- Thoi han tra tien luong: Ben A se tra tien luong cho ben B 01 lan vao cac ngay 5 hang thang.', 30, yPosition);
+    doc.text('- Phương thức thanh toán: chuyển khoản.', 30, yPosition);
     yPosition += 10;
-    doc.text('- Phuong thuc thanh toan: chuyen khoan.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co quyen dieu chinh muc luong theo hieu qua cong viec va cac yeu cau khac phat sinh ma khong can co su dong y cua ben B, nhung khong duoc thap hon qua 10% cua muc luong thang truoc do tai thoi diem dang chi tra luong cho ben B.', 30, yPosition);
-    yPosition += 15;
-    doc.text('- Ngoai muc luong ben A chi tra cho ben B, Ben B duoc huong tien thuong hang thang, hang ky, cuoi nam va cac khoan khac theo thoa thuan cua hai ben (neu co).', 30, yPosition);
+    // Wrap long salary adjustment text
+    const salaryAdjustText = doc.splitTextToSize('- Bên A có quyền điều chỉnh mức lương theo hiệu quả công việc và các yêu cầu khác phát sinh mà không cần có sự đồng ý của bên B, nhưng không được thấp hơn quá 10% của mức lương tháng trước đó tại thời điểm đang chi trả lương cho bên B.', 160);
+    doc.text(salaryAdjustText, 30, yPosition);
+    yPosition += salaryAdjustText.length * 7;
+    
+    const bonusText = doc.splitTextToSize('- Ngoài mức lương bên A chi trả cho bên B, Bên B được hưởng tiền thưởng hàng tháng, hàng kỳ, cuối năm và các khoản khác theo thỏa thuận của hai bên (nếu có).', 160);
+    doc.text(bonusText, 30, yPosition);
+    yPosition += bonusText.length * 7;
     yPosition += 15;
     
     // Continue with other articles (Rights and obligations, termination, etc.)
@@ -300,25 +322,38 @@ class ContractPDFGenerator {
     }
     
     // Article 4: Rights and obligations of Party A
-    doc.setFontSize(14);
-    doc.text('Dieu 4: Quyen va nghia vu cua ben A', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 4: Quyền và nghĩa vụ của bên A', 20, yPosition);
     yPosition += 10;
-    doc.text('4.1. Quyen loi cua ben A:', 25, yPosition);
+    doc.text('4.1. Quyền lợi của bên A:', 25, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('- Ben A co quyen yeu cau giao vien thuc hien dung noi dung giang day theo hop dong va co quyen kiem tra, danh gia chat luong giang day.', 35, yPosition);
+    // Wrap long rights text
+    const rightText1 = doc.splitTextToSize('- Bên A có quyền yêu cầu giáo viên thực hiện đúng nội dung giảng dạy theo hợp đồng và có quyền kiểm tra, đánh giá chất lượng giảng dạy.', 155);
+    doc.text(rightText1, 35, yPosition);
+    yPosition += rightText1.length * 7;
+    
+    const rightText2 = doc.splitTextToSize('- Bên A có quyền yêu cầu điều chỉnh phương pháp giảng dạy của Bên B nếu thấy không phù hợp với yêu cầu, tiêu chuẩn giảng dạy của bên A.', 155);
+    doc.text(rightText2, 35, yPosition);
+    yPosition += rightText2.length * 7;
+    
+    const rightText3 = doc.splitTextToSize('- Bên A có quyền chấm dứt hợp đồng ngay lập tức nếu Bên B vi phạm nghiêm trọng các quy định, nội quy của lớp học hoặc hợp đồng.', 155);
+    doc.text(rightText3, 35, yPosition);
+    yPosition += rightText3.length * 7;
+    doc.text('4.2. Nghĩa vụ của Bên A:', 25, yPosition);
     yPosition += 10;
-    doc.text('- Ben A co quyen yeu cau dieu chinh phuong phap giang day cua Ben B neu thay khong phu hop voi yeu cau, tieu chuan giang day cua ben A.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co quyen cham dut hop dong ngay lap tuc neu Ben B vi pham nghiem trong cac quy dinh, noi quy cua lop hoc hoac hop dong.', 35, yPosition);
-    yPosition += 10;
-    doc.text('4.2. Nghia vu cua Ben A:', 25, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co nghia vu cung cap day du co so vat chat, trang thiet bi, tai lieu, dung cu giang day can thiet cho Ben B.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A co nghia vu thanh toan dung han tien luong cho Ben B theo thoa thuan trong hop dong.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A khong co nghia vu cung cap bat ky ho tro nao ngoai cac dieu khoan da ghi trong hop dong.', 35, yPosition);
+    // Wrap obligations text
+    const obligText1 = doc.splitTextToSize('- Bên A có nghĩa vụ cung cấp đầy đủ cơ sở vật chất, trang thiết bị, tài liệu, dụng cụ giảng dạy cần thiết cho Bên B.', 155);
+    doc.text(obligText1, 35, yPosition);
+    yPosition += obligText1.length * 7;
+    
+    const obligText2 = doc.splitTextToSize('- Bên A có nghĩa vụ thanh toán đúng hạn tiền lương cho Bên B theo thỏa thuận trong hợp đồng.', 155);
+    doc.text(obligText2, 35, yPosition);
+    yPosition += obligText2.length * 7;
+    
+    const obligText3 = doc.splitTextToSize('- Bên A không có nghĩa vụ cung cấp bất kỳ hỗ trợ nào ngoài các điều khoản đã ghi trong hợp đồng.', 155);
+    doc.text(obligText3, 35, yPosition);
+    yPosition += obligText3.length * 7;
     yPosition += 10;
     
     // Add new page if needed
@@ -328,33 +363,54 @@ class ContractPDFGenerator {
     }
     
     // Article 5: Rights and obligations of Party B
-    doc.setFontSize(14);
-    doc.text('Dieu 5: Quyen va nghia vu cua ben B', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 5: Quyền và nghĩa vụ của bên B', 20, yPosition);
     yPosition += 10;
-    doc.text('5.1. Quyen loi cua ben B:', 25, yPosition);
+    doc.text('5.1. Quyền lợi của bên B:', 25, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('- Ben B co quyen yeu cau ben A thanh toan tien luong day du, dung han theo dieu 3 hop dong nay.', 35, yPosition);
+    doc.text('- Bên B có quyền yêu cầu bên A thanh toán tiền lương đầy đủ, đúng hạn theo điều 3 hợp đồng này.', 35, yPosition);
     yPosition += 10;
-    doc.text('- Ben B co quyen duoc yeu cau ho tro tai lieu, trang thiet bi day hoc tu ben A, nhung phai dam bao viec su dung nhung tai lieu nay chi phuc vu cho muc dich giang day o tren lop.', 35, yPosition);
+    // Wrap Party B rights text
+    const rightBText1 = doc.splitTextToSize('- Bên B có quyền được yêu cầu hỗ trợ tài liệu, trang thiết bị dạy học từ bên A, nhưng phải đảm bảo việc sử dụng những tài liệu này chỉ phục vụ cho mục đích giảng dạy ở trên lớp.', 155);
+    doc.text(rightBText1, 35, yPosition);
+    yPosition += rightBText1.length * 7;
+    
+    const rightBText2 = doc.splitTextToSize('- Bên B có quyền được nghỉ dạy trong trường hợp có lý do chính đáng và phải thông báo cho bên A trước 03 ngày.', 155);
+    doc.text(rightBText2, 35, yPosition);
+    yPosition += rightBText2.length * 7;
+    
+    const rightBText3 = doc.splitTextToSize('- Trường hợp bên A chậm thanh toán lương quá 15 ngày, bên B có quyền tạm ngưng giảng dạy cho đến khi được thanh toán.', 155);
+    doc.text(rightBText3, 35, yPosition);
+    yPosition += rightBText3.length * 7;
     yPosition += 10;
-    doc.text('- Ben B co quyen duoc nghi day trong truong hop co ly do chinh dang va phai thong bao cho ben A truoc 03 ngay.', 35, yPosition);
+    // Wrap work environment text
+    const workEnvText = doc.splitTextToSize('- Bên B được đảm bảo môi trường làm việc phù hợp và được hưởng các quyền lợi khác (nếu có).', 155);
+    doc.text(workEnvText, 35, yPosition);
+    yPosition += workEnvText.length * 7;
     yPosition += 10;
-    doc.text('- Truong hop ben A cham thanh toan luong qua 15 ngay, ben B co quyen tam ngung giang day cho den khi duoc thanh toan.', 35, yPosition);
+    doc.text('5.2. Nghĩa vụ của bên B:', 25, yPosition);
     yPosition += 10;
-    doc.text('- Ben B duoc dam bao moi truong lam viec phu hop va duoc huong cac quyen loi khac (neu co).', 35, yPosition);
-    yPosition += 10;
-    doc.text('5.2. Nghia vu cua ben B:', 25, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai thuc hien day du, dung chuong trinh day, dam bao chat luong hoc tap cua hoc sinh.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B khong duoc nghi day dot xuat ma khong co ly do chinh dang, truong hop nghi phai thong bao truoc it nhat 3 ngay.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai giu gin dao duc nghe nghiep, khong co hanh vi thieu chuyen nghiep hoac vi pham phap luat trong suot thoi gian lam viec, giao ket hop dong voi ben A.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B khong duoc tu y su dung tai lieu, chuong trinh day hoc cua ben A cho muc dich ca nhan, khong lien quan den cong viec ben A thue ben B.', 35, yPosition);
-    yPosition += 10;
-    doc.text('- Ben B phai tuan thu day du, dung noi quy, quy dinh cua lop hoc va cac yeu cau cua ben A.', 35, yPosition);
+    // Wrap Party B obligations text
+    const obligBText1 = doc.splitTextToSize('- Bên B phải thực hiện đầy đủ, đúng chương trình dạy, đảm bảo chất lượng học tập của học sinh.', 155);
+    doc.text(obligBText1, 35, yPosition);
+    yPosition += obligBText1.length * 7;
+    
+    const obligBText2 = doc.splitTextToSize('- Bên B không được nghỉ dạy đột xuất mà không có lý do chính đáng, trường hợp nghỉ phải thông báo trước ít nhất 3 ngày.', 155);
+    doc.text(obligBText2, 35, yPosition);
+    yPosition += obligBText2.length * 7;
+    
+    const obligBText3 = doc.splitTextToSize('- Bên B phải giữ gìn đạo đức nghề nghiệp, không có hành vi thiếu chuyên nghiệp hoặc vi phạm pháp luật trong suốt thời gian làm việc, giao kết hợp đồng với bên A.', 155);
+    doc.text(obligBText3, 35, yPosition);
+    yPosition += obligBText3.length * 7;
+    
+    const obligBText4 = doc.splitTextToSize('- Bên B không được tự ý sử dụng tài liệu, chương trình dạy học của bên A cho mục đích cá nhân, không liên quan đến công việc bên A thuê bên B.', 155);
+    doc.text(obligBText4, 35, yPosition);
+    yPosition += obligBText4.length * 7;
+    
+    const obligBText5 = doc.splitTextToSize('- Bên B phải tuân thủ đầy đủ, đúng nội quy, quy định của lớp học và các yêu cầu của bên A.', 155);
+    doc.text(obligBText5, 35, yPosition);
+    yPosition += obligBText5.length * 7;
     yPosition += 10;
     
     return yPosition;
@@ -374,21 +430,26 @@ class ContractPDFGenerator {
     }
     
     // Article 6: Contract termination
-    doc.setFontSize(14);
-    doc.text('Dieu 6: Cham dut hop dong', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 6: Chấm dứt hợp đồng', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('Hop dong se cham dut trong cac truong hop sau:', 30, yPosition);
+    doc.text('Hợp đồng sẽ chấm dứt trong các trường hợp sau:', 30, yPosition);
     yPosition += 10;
-    doc.text('- Het thoi han hop dong ma hai ben khong gia han.', 40, yPosition);
+    doc.text('- Hết thời hạn hợp đồng mà hai bên không gia hạn.', 40, yPosition);
     yPosition += 10;
-    doc.text('- Hai ben thoa thuan cham dut hop dong truoc thoi han.', 40, yPosition);
+    doc.text('- Hai bên thỏa thuận chấm dứt hợp đồng trước thời hạn.', 40, yPosition);
     yPosition += 10;
-    doc.text('- Mot trong hai ben vi pham nghiem trong dieu khoan hop dong thi ben con lai duoc don phuong cham dut hop dong.', 40, yPosition);
+    // Wrap termination text
+    const termText1 = doc.splitTextToSize('- Một trong hai bên vi phạm nghiêm trọng điều khoản hợp đồng thì bên còn lại được đơn phương chấm dứt hợp đồng.', 150);
+    doc.text(termText1, 40, yPosition);
+    yPosition += termText1.length * 7;
+    
+    const termText2 = doc.splitTextToSize('- Giáo viên không đáp ứng yêu cầu giảng dạy, chất lượng học sinh hoặc vi phạm nội quy của bên thuê đặt ra.', 150);
+    doc.text(termText2, 40, yPosition);
+    yPosition += termText2.length * 7;
     yPosition += 10;
-    doc.text('- Giao vien khong dap ung yeu cau giang day, chat luong hoc sinh hoac vi pham noi quy cua ben thue dat ra.', 40, yPosition);
-    yPosition += 10;
-    doc.text('- Ben A khong thuc hien thanh toan dung han va khong khac phuc sau 15 ngay.', 40, yPosition);
+    doc.text('- Bên A không thực hiện thanh toán đúng hạn và không khắc phục sau 15 ngày.', 40, yPosition);
     yPosition += 10;
     
     // Add new page if needed
@@ -398,15 +459,22 @@ class ContractPDFGenerator {
     }
     
     // Article 7: Contract violation handling
-    doc.setFontSize(14);
-    doc.text('Dieu 7: Xu li vi pham hop dong', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 7: Xử lý vi phạm hợp đồng', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('- Neu Ben B vi pham noi quy hoac tu y nghi day ma khong co ly do chinh dang, Ben A co quyen cham dut hop dong ngay lap tuc va khong thanh toan luong cho cac buoi day chua hoan thanh.', 30, yPosition);
-    yPosition += 15;
-    doc.text('- Neu Ben A khong thanh toan dung han, Ben B co quyen tam ngung giang day cho den khi duoc thanh toan day du.', 30, yPosition);
-    yPosition += 10;
-    doc.text('- Truong hop mot trong hai ben gay thiet hai do vi pham hop dong, ben bi thiet hai co quyen yeu cau boi thuong toan bo thiet hai do vi pham gay ra.', 30, yPosition);
+    // Wrap violation handling text
+    const violText1 = doc.splitTextToSize('- Nếu Bên B vi phạm nội quy hoặc tự ý nghỉ dạy mà không có lý do chính đáng, Bên A có quyền chấm dứt hợp đồng ngay lập tức và không thanh toán lương cho các buổi dạy chưa hoàn thành.', 160);
+    doc.text(violText1, 30, yPosition);
+    yPosition += violText1.length * 7;
+    
+    const violText2 = doc.splitTextToSize('- Nếu Bên A không thanh toán đúng hạn, Bên B có quyền tạm ngưng giảng dạy cho đến khi được thanh toán đầy đủ.', 160);
+    doc.text(violText2, 30, yPosition);
+    yPosition += violText2.length * 7;
+    
+    const violText3 = doc.splitTextToSize('- Trường hợp một trong hai bên gây thiệt hại do vi phạm hợp đồng, bên bị thiệt hại có quyền yêu cầu bồi thường toàn bộ thiệt hại do vi phạm gây ra.', 160);
+    doc.text(violText3, 30, yPosition);
+    yPosition += violText3.length * 7;
     yPosition += 15;
     
     return yPosition;
@@ -426,15 +494,22 @@ class ContractPDFGenerator {
     }
     
     // Article 8: Dispute resolution
-    doc.setFontSize(14);
-    doc.text('Dieu 8: Giai quyet tranh chap', 20, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('Điều 8: Giải quyết tranh chấp', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('Moi tranh chap phat sinh se duoc giai quyet thong qua thuong luong, hoa giai. Neu khong dat duoc thoa thuan, tranh chap se duoc dua ra toa an co tham quyen giai quyet.', 30, yPosition);
-    yPosition += 15;
-    doc.text('Hop dong nay co hieu luc tu ngay ky va duoc lap thanh 02 ban, moi ben giu 01 ban co gia tri phap ly nhu nhau.', 30, yPosition);
-    yPosition += 15;
-    doc.text('Hai ben cam ket thuc hien dung cac dieu khoan cua hop dong.', 30, yPosition);
+    // Wrap dispute resolution text
+    const disputeText1 = doc.splitTextToSize('Mọi tranh chấp phát sinh sẽ được giải quyết thông qua thương lượng, hòa giải. Nếu không đạt được thỏa thuận, tranh chấp sẽ được đưa ra tòa án có thẩm quyền giải quyết.', 160);
+    doc.text(disputeText1, 30, yPosition);
+    yPosition += disputeText1.length * 7;
+    
+    const disputeText2 = doc.splitTextToSize('Hợp đồng này có hiệu lực từ ngày ký và được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau.', 160);
+    doc.text(disputeText2, 30, yPosition);
+    yPosition += disputeText2.length * 7;
+    
+    const disputeText3 = doc.splitTextToSize('Hai bên cam kết thực hiện đúng các điều khoản của hợp đồng.', 160);
+    doc.text(disputeText3, 30, yPosition);
+    yPosition += disputeText3.length * 7;
     yPosition += 20;
     
     return yPosition;
@@ -453,13 +528,13 @@ class ContractPDFGenerator {
     }
     
     // Signatures
-    doc.setFontSize(14);
-    doc.text('DAI DIEN BEN A', 30, yPosition);
-    doc.text('DAI DIEN BEN B', 130, yPosition);
+    FontManager.setVietnameseFont(doc, 'ARIAL', 14);
+    doc.text('ĐẠI DIỆN BÊN A', 30, yPosition);
+    doc.text('ĐẠI DIỆN BÊN B', 130, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('(Ky va ghi ro ho ten)', 25, yPosition);
-    doc.text('(Ky va ghi ro ho ten)', 125, yPosition);
+    doc.text('(Ký và ghi rõ họ tên)', 25, yPosition);
+    doc.text('(Ký và ghi rõ họ tên)', 125, yPosition);
   }
 }
 
