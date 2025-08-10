@@ -28,9 +28,13 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add a response interceptor for global error handling
+// Add a response interceptor for global error handling and UTF-8 encoding fix
 axiosInstance.interceptors.response.use(
   (response) => {
+    // Fix Vietnamese encoding issues in response data
+    if (response.data && typeof response.data === 'object') {
+      response.data = fixVietnameseEncoding(response.data);
+    }
     return response;
   },
   (error) => {
@@ -65,5 +69,68 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Fix Vietnamese encoding issues in response data
+ */
+function fixVietnameseEncoding(data) {
+  if (!data) return data;
+  
+  if (Array.isArray(data)) {
+    return data.map(item => fixVietnameseEncoding(item));
+  }
+  
+  if (typeof data === 'object') {
+    const fixed = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === 'string') {
+        fixed[key] = fixVietnameseText(value);
+      } else if (typeof value === 'object') {
+        fixed[key] = fixVietnameseEncoding(value);
+      } else {
+        fixed[key] = value;
+      }
+    }
+    return fixed;
+  }
+  
+  if (typeof data === 'string') {
+    return fixVietnameseText(data);
+  }
+  
+  return data;
+}
+
+/**
+ * Fix common Vietnamese encoding issues in text
+ */
+function fixVietnameseText(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  return text
+    .replace(/Th\?/g, 'Thị')
+    .replace(/th\?/g, 'thị')
+    .replace(/Van h\?c/g, 'Văn học')
+    .replace(/van h\?c/g, 'văn học')
+    .replace(/l\?p/g, 'lớp')
+    .replace(/L\?p/g, 'Lớp')
+    .replace(/gi\?o/g, 'giáo')
+    .replace(/Gi\?o/g, 'Giáo')
+    .replace(/vi\?n/g, 'viên')
+    .replace(/Vi\?n/g, 'Viên')
+    .replace(/h\?c/g, 'học')
+    .replace(/H\?c/g, 'Học')
+    .replace(/to\?n/g, 'toán')
+    .replace(/To\?n/g, 'Toán')
+    .replace(/Nguy\?n/g, 'Nguyễn')
+    .replace(/nguy\?n/g, 'nguyễn')
+    .replace(/L\?/g, 'Lý')
+    .replace(/l\?/g, 'lý')
+    .replace(/B\?nh/g, 'Bình')
+    .replace(/b\?nh/g, 'bình')
+    .replace(/Huy/g, 'Huy') // Keep Huy as is
+    .replace(/K\?/g, 'Kỹ')
+    .replace(/k\?/g, 'kỹ');
+}
 
 export default axiosInstance; 
