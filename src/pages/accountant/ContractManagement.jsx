@@ -689,16 +689,7 @@ const ContractManagement = () => {
       dataIndex: 'position',
       key: 'position'
     },
-    {
-      title: 'Loại hợp đồng',
-      dataIndex: 'contractType',
-      key: 'contractType',
-      render: (type) => (
-        <Tag color={type === 'TEACHER' ? 'blue' : 'green'}>
-          {type === 'TEACHER' ? 'Giáo viên' : 'Nhân viên'}
-        </Tag>
-      )
-    },
+
     {
       title: 'Thao tác',
       key: 'actions',
@@ -1201,11 +1192,22 @@ const ContractManagement = () => {
                 </>
               );
             }
-            return null; // Don't show for HR/Accountant staff
           })()}
 
           <Form.Item name="position" label="Vị trí">
             <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />
+          </Form.Item>
+
+          <Form.Item 
+            name="contractType" 
+            label="Loại hợp đồng" 
+            rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}
+          >
+            <Select placeholder="Chọn loại hợp đồng">
+              <Option value="TEACHER">Giáo viên</Option>
+              <Option value="STAFF">Nhân viên HR</Option>
+              <Option value="STAFF">Kế toán viên</Option>
+            </Select>
           </Form.Item>
 
           {/* Offer Management Fields - Read Only */}
