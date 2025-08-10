@@ -373,15 +373,54 @@ const RecruitmentManagement = () => {
     }
   };
 
-  const fetchOffers = async () => {
-    try {
-      const res = await axiosInstance.get('/interview-schedules/accepted');
-      console.log('All offers from API:', res.data);
-      setOffers(res.data);
+                  const fetchOffers = async () => {
+                  try {
+                    // Lấy tất cả interview schedules để lọc ra những ứng viên đã hoàn thành phỏng vấn
+                    const res = await axiosInstance.get('/interview-schedules');
+                    const allInterviews = res.data;
+      
+      // Lọc ra những ứng viên có status COMPLETED (đã hoàn thành phỏng vấn)
+      const completedInterviews = allInterviews.filter(shouldShowInOffers);
+      
+      setOffers(completedInterviews);
     } catch (err) {
       console.error('Error fetching offers:', err);
       message.error('Không thể tải danh sách offer!');
     }
+  };
+
+  // Hàm mới: Lọc danh sách ứng viên đã duyệt để loại bỏ những người đã được duyệt phỏng vấn
+  const getFilteredApprovedApps = () => {
+    // Lọc ra những ứng viên đã được duyệt phỏng vấn (có status ACCEPTED, APPROVED hoặc COMPLETED)
+    const approvedInterviewEmails = pendingInterviews
+      .filter(interview => interview.status === 'ACCEPTED' || interview.status === 'APPROVED' || interview.status === 'COMPLETED')
+      .map(interview => interview.applicantEmail);
+    
+    // Loại bỏ những ứng viên đã được duyệt phỏng vấn khỏi danh sách "Lên lịch"
+    // Lịch phỏng vấn với trạng thái COMPLETED không hiển thị trong "Lên lịch" vì đã hoàn thành
+    return approvedApps.filter(app => !approvedInterviewEmails.includes(app.email));
+  };
+
+                  // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Lên lịch" hay không
+  const shouldShowInSchedule = (applicationId) => {
+    const interview = pendingInterviews.find(i => i.applicationId === applicationId);
+    // Hiển thị nếu không có lịch phỏng vấn hoặc lịch phỏng vấn chưa được duyệt
+    // Lịch phỏng vấn với trạng thái COMPLETED không hiển thị trong "Lên lịch" vì đã hoàn thành
+    return !interview || (interview.status !== 'ACCEPTED' && interview.status !== 'APPROVED' && interview.status !== 'COMPLETED');
+  };
+
+  // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Phỏng vấn chờ" hay không
+  const shouldShowInPending = (interview) => {
+    // Chỉ hiển thị những ứng viên chưa được duyệt
+    return interview.status !== 'APPROVED';
+  };
+
+  // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Quản Lý Offer" hay không
+  const shouldShowInOffers = (interview) => {
+    // Chỉ hiển thị những ứng viên đã hoàn thành phỏng vấn (COMPLETED)
+    // Không hiển thị APPROVED vì đó là trạng thái đã được duyệt cuối cùng
+    // Không hiển thị ACCEPTED vì đó là trạng thái tạm thời
+    return interview.status === 'COMPLETED';
   };
 
   const handlePlanSelect = (plan) => {
@@ -574,18 +613,21 @@ const RecruitmentManagement = () => {
     }
   };
 
-  const handleInterviewStatusChange = async (id, status, result) => {
-    try {
-      await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
-      message.success('Cập nhật kết quả phỏng vấn thành công!');
-      fetchPendingInterviews();
-      // Nếu status là ACCEPTED thì refresh danh sách offer
-      if (status === 'ACCEPTED') {
-        fetchOffers();
-      }
-    } catch (err) {
-      message.error('Không thể cập nhật kết quả phỏng vấn!');
-    }
+                  const handleInterviewStatusChange = async (id, status, result) => {
+                  try {
+                    await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+                    message.success('Cập nhật trạng thái thành công!');
+
+                    // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+                    await Promise.all([
+                      fetchPendingInterviews(),
+                      fetchInterviews(),
+                      fetchApprovedApps(),
+                      fetchOffers()
+                    ]);
+                  } catch (error) {
+                    message.error('Cập nhật trạng thái thất bại!');
+                  }
   };
 
   const handleOfferUpdate = async (id, offer) => {
@@ -727,10 +769,21 @@ const RecruitmentManagement = () => {
       }
 
       message.success('Đã duyệt ứng viên thành công!');
-      fetchOffers();
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        message.error(err.response.data.message);
+      
+      // Cập nhật state local ngay lập tức để ẩn ứng viên đã duyệt khỏi "Phỏng vấn chờ"
+      setPendingInterviews(prev => prev.filter(interview => interview.id !== id));
+      
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchPendingInterviews(),
+        fetchInterviews(),
+        fetchApprovedApps(),
+        fetchOffers()
+      ]);
+    } catch (error) {
+      console.error('Error approving candidate:', error);
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
       } else {
         message.error('Không thể duyệt ứng viên!');
       }
@@ -853,10 +906,50 @@ const RecruitmentManagement = () => {
       title: 'Trạng thái lịch',
       dataIndex: 'hasSchedule',
       render: (_, record) => {
-        const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
+        const interview = interviews.find(i => i.applicationId === record.id);
+        if (!interview) {
+          return (
+            <Tag color="orange" className="vietnamese-text">
+              Chưa lên lịch
+            </Tag>
+          );
+        }
+        
+        // Hiển thị trạng thái chi tiết
+        let color, text;
+        switch (interview.status) {
+          case 'SCHEDULED':
+            color = 'blue';
+            text = 'Đã lên lịch';
+            break;
+          case 'PENDING':
+            color = 'orange';
+            text = 'Chờ phỏng vấn';
+            break;
+          case 'COMPLETED':
+            color = 'gray';
+            text = 'Hoàn thành';
+            break;
+          case 'ACCEPTED':
+            color = 'green';
+            text = 'Đã duyệt';
+            break;
+          case 'APPROVED':
+            color = 'green';
+            text = 'Đã duyệt';
+            break;
+          case 'REJECTED':
+            color = 'red';
+            text = 'Từ chối';
+            break;
+          default:
+            color = 'default';
+            text = interview.status || 'Không xác định';
+        }
+        
         return (
-          <Tag color={hasSchedule ? 'green' : 'orange'} className="vietnamese-text">
-            {hasSchedule ? 'Đã lên lịch' : 'Chưa lên lịch'}
+          <Tag color={color} className="vietnamese-text">
+            {text}
           </Tag>
         );
       }
@@ -866,19 +959,13 @@ const RecruitmentManagement = () => {
       dataIndex: 'interviewTime',
       render: (_, record) => {
         const interview = interviews.find(i => i.applicationId === record.id);
-        console.log('Interview data for record', record.id, ':', interview);
         if (interview && interview.startTime && interview.endTime) {
           try {
-            console.log('Start time:', interview.startTime, 'Type:', typeof interview.startTime);
-            console.log('End time:', interview.endTime, 'Type:', typeof interview.endTime);
             // Parse startTime và endTime từ ISO format
             const startTime = dayjs(interview.startTime);
             const endTime = dayjs(interview.endTime);
-            console.log('Parsed startTime:', startTime.format('YYYY-MM-DD HH:mm:ss'));
-            console.log('Parsed endTime:', endTime.format('YYYY-MM-DD HH:mm:ss'));
             return <span className="vietnamese-text">{`${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`}</span>;
           } catch (error) {
-            console.error('Error formatting date:', interview.startTime, interview.endTime, error);
             return <span className="vietnamese-text">Lỗi định dạng</span>;
           }
         }
@@ -888,7 +975,9 @@ const RecruitmentManagement = () => {
     {
       title: 'Thao tác',
       render: (_, record) => {
-        const hasSchedule = interviews.some(interview => interview.applicationId === record.id);
+        const interview = interviews.find(i => i.applicationId === record.id);
+        const hasSchedule = !!interview;
+        
         return (
           <div className="space-x-2">
             {record.cvUrl && (
@@ -912,13 +1001,23 @@ const RecruitmentManagement = () => {
                 Lên lịch
               </Button>
             )}
-            {hasSchedule && (
+            {hasSchedule && interview.status !== 'COMPLETED' && (
               <Button 
                 size="small" 
                 onClick={() => openScheduleModal(record)}
                 className="vietnamese-text"
               >
                 Sửa lịch
+              </Button>
+            )}
+            {hasSchedule && interview.status === 'COMPLETED' && (
+              <Button 
+                size="small" 
+                type="dashed"
+                disabled
+                className="vietnamese-text"
+              >
+                Đã hoàn thành
               </Button>
             )}
             <Button 
@@ -950,8 +1049,6 @@ const RecruitmentManagement = () => {
       dataIndex: 'startTime', 
       render: (date, record) => {
         try {
-          console.log('Pending interview startTime:', date, 'Type:', typeof date);
-          console.log('Pending interview endTime:', record.endTime, 'Type:', typeof record.endTime);
           const startTime = dayjs(date);
           const endTime = dayjs(record.endTime);
           return <span className="vietnamese-text">{`${startTime.format('DD/MM/YYYY HH:mm')} - ${endTime.format('HH:mm')}`}</span>;
@@ -959,6 +1056,48 @@ const RecruitmentManagement = () => {
           console.error('Error formatting pending interview date:', date, record.endTime, error);
           return <span className="vietnamese-text">Lỗi định dạng</span>;
         }
+      }
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      render: (status) => {
+        let color, text;
+        switch (status) {
+          case 'SCHEDULED':
+            color = 'blue';
+            text = 'Đã lên lịch';
+            break;
+          case 'PENDING':
+            color = 'orange';
+            text = 'Chờ phỏng vấn';
+            break;
+          case 'COMPLETED':
+            color = 'gray';
+            text = 'Hoàn thành';
+            break;
+          case 'ACCEPTED':
+            color = 'green';
+            text = 'Đã duyệt';
+            break;
+          case 'APPROVED':
+            color = 'green';
+            text = 'Đã duyệt';
+            break;
+          case 'REJECTED':
+            color = 'red';
+            text = 'Từ chối';
+            break;
+          default:
+            color = 'default';
+            text = status || 'Không xác định';
+        }
+        
+        return (
+          <Tag color={color} className="vietnamese-text">
+            {text}
+          </Tag>
+        );
       }
     },
     {
@@ -1123,10 +1262,13 @@ const RecruitmentManagement = () => {
           >
             Duyệt ứng viên
           </Button>
+          
         </div>
       )
     }
   ];
+
+  
 
   return (
     <div className="p-6">
@@ -1172,15 +1314,27 @@ const RecruitmentManagement = () => {
         </Tabs.TabPane>
         
         <Tabs.TabPane tab="Lên lịch" key="schedule">
-          <Table columns={scheduleColumns} dataSource={approvedApps} rowKey="id" />
+          <Table 
+            columns={scheduleColumns} 
+            dataSource={getFilteredApprovedApps().filter(app => shouldShowInSchedule(app.id))} 
+            rowKey="id" 
+          />
         </Tabs.TabPane>
         
         <Tabs.TabPane tab="Phỏng vấn chờ" key="pending">
-          <Table columns={pendingInterviewColumns} dataSource={pendingInterviews} rowKey="id" />
+          <Table 
+            columns={pendingInterviewColumns} 
+            dataSource={pendingInterviews.filter(shouldShowInPending)} 
+            rowKey="id" 
+          />
         </Tabs.TabPane>
 
         <Tabs.TabPane tab="Quản Lý Offer" key="offers">
-          <Table columns={offerColumns} dataSource={offers} rowKey="id" />
+          <Table 
+            columns={offerColumns} 
+            dataSource={offers.filter(shouldShowInOffers)} 
+            rowKey="id" 
+          />
         </Tabs.TabPane>
       </Tabs>
 

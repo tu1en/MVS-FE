@@ -39,12 +39,15 @@ const RecruitmentApplyForm = ({ job, onSuccess }) => {
       
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
       } else if (err.response?.data) {
         errorMessage = err.response.data;
       } else if (err.message) {
         errorMessage = err.message;
       }
       
+      // Hiển thị thông báo lỗi cơ bản
       message.error(errorMessage);
     } finally {
       setUploading(false);

@@ -105,7 +105,19 @@ const RecruitmentModal = ({ visible, onCancel }) => {
       onCancel();
     } catch (err) {
       console.error('Error submitting application:', err);
-      message.error(`Không thể gửi đơn ứng tuyển: ${err.response?.data?.message || err.message}`);
+      
+      // Xử lý thông báo lỗi cơ bản
+      let errorMessage = `Không thể gửi đơn ứng tuyển: ${err.response?.data?.message || err.message}`;
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      message.error(errorMessage);
     }
   };
 
