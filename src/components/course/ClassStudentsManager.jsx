@@ -238,7 +238,8 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
 
     try {
       // API để xóa học viên khỏi lớp
-      await fetch(`http://localhost:8088/api/classes/${classId}/students/${studentId}`, {
+      // BE expects DELETE /api/classrooms/{classId}/students/{studentId}
+      await fetch(`http://localhost:8088/api/classrooms/${classId}/students/${studentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

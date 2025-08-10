@@ -1,6 +1,6 @@
 /* ✅ FIXED: Vietnamese font support */
 * {
-  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial Unicode MS', Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

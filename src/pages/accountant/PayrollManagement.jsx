@@ -1,26 +1,26 @@
 import {
-    CalculatorOutlined,
-    CalendarOutlined,
-    DollarOutlined,
-    EyeOutlined,
-    FileExcelOutlined,
-    TeamOutlined
+  CalculatorOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  EyeOutlined,
+  FileExcelOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    message,
-    Modal,
-    Progress,
-    Row,
-    Select,
-    Space,
-    Statistic,
-    Table,
-    Tag,
-    Tooltip
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  message,
+  Modal,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip
 } from 'antd';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -102,6 +102,7 @@ const PayrollManagement = () => {
         totalSalary: net,
         calculationMethod,
         standardMonthlyHours,
+        shiftSummary: record.shiftSummary || '',
         status: 'PROCESSED', // New system generates processed payroll
         processedDate: new Date().toISOString().split('T')[0],
         payPeriodStart: startOfMonth,
@@ -297,7 +298,14 @@ const PayrollManagement = () => {
       dataIndex: 'totalWorkingHours',
       key: 'totalWorkingHours',
       width: 120,
-      render: (value) => value ? `${parseFloat(value).toFixed(1)}h` : 'N/A',
+      render: (value, record) => (
+        <div>
+          <div>{value ? `${parseFloat(value).toFixed(1)}h` : 'N/A'}</div>
+          {record.contractType === 'TEACHER' && record.shiftSummary && (
+            <div style={{ color: '#8c8c8c', fontSize: 12 }}>{record.shiftSummary}</div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Tổng lương',

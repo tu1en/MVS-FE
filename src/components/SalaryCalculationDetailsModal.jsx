@@ -1,27 +1,26 @@
 import {
-  CalculatorOutlined,
-  ClockCircleOutlined,
-  DollarOutlined,
-  IdcardOutlined,
-  UserOutlined
+    CalculatorOutlined,
+    ClockCircleOutlined,
+    DollarOutlined,
+    IdcardOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import {
-  Alert,
-  Card,
-  Col,
-  Descriptions,
-  Divider,
-  Modal,
-  Row,
-  Space,
-  Spin,
-  Statistic,
-  Tag,
-  Typography,
-  message
+    Alert,
+    Card,
+    Col,
+    Descriptions,
+    Divider,
+    Modal,
+    Row,
+    Space,
+    Spin,
+    Statistic,
+    Tag,
+    Typography,
+    message
 } from 'antd';
 import React, { useEffect, useState } from 'react';
-import PayrollService from '../services/payrollService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -49,18 +48,18 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           period: employeeRecord.payPeriodStart ? employeeRecord.payPeriodStart.substring(0, 7) : new Date().toISOString().substring(0, 7),
           payPeriodStart: employeeRecord.payPeriodStart,
           payPeriodEnd: employeeRecord.payPeriodEnd,
-          contractDetails: {
+            contractDetails: {
             contractType: employeeRecord.contractType,
             position: employeeRecord.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên',
             department: employeeRecord.department,
-            workingHours: '8 giờ/ngày',
+            workingHours: employeeRecord.calculationMethod === 'HOURLY' ? 'Theo ca (tính theo giờ)' : '8 giờ/ngày',
             contractStatus: 'ACTIVE',
             contractStartDate: new Date().toISOString().split('T')[0],
             contractEndDate: null,
             contractSalary: employeeRecord.baseSalary,
             baseSalary: employeeRecord.baseSalary,
-            salaryType: 'GROSS',
-            hourlyRate: Math.round(employeeRecord.baseSalary / 176)
+            salaryType: employeeRecord.calculationMethod === 'HOURLY' ? 'HOURLY' : 'GROSS',
+            hourlyRate: employeeRecord.hourlyRate || (employeeRecord.baseSalary ? Math.round(employeeRecord.baseSalary / 176) : 0)
           },
           workingHoursSummary: {
             totalWorkingDays: 22,

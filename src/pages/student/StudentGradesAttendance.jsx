@@ -102,6 +102,23 @@ const StudentGradesAttendance = () => {
     return { average, total: validGrades.length, passed };
   };
 
+  // Chuẩn hóa hiển thị ngày (hỗ trợ String 'YYYY-MM-DD' hoặc mảng [yyyy, mm, dd])
+  const formatDate = (dateInput) => {
+    if (!dateInput) return 'N/A';
+    try {
+      let date;
+      if (Array.isArray(dateInput)) {
+        // [year, month, day] với month bắt đầu từ 1
+        date = new Date(dateInput[0], (dateInput[1] || 1) - 1, dateInput[2] || 1);
+      } else {
+        date = new Date(dateInput);
+      }
+      return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('vi-VN');
+    } catch {
+      return 'N/A';
+    }
+  };
+
   const getSelectedCourse = () => {
     return enrolledCourses.find(course => course.id.toString() === selectedCourseId);
   };
@@ -342,7 +359,7 @@ const StudentGradesAttendance = () => {
                       {attendanceHistory.map((record) => (
                         <tr key={record.id} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-4 py-2">
-                            {new Date(record.date).toLocaleDateString('vi-VN')}
+                            {formatDate(record.sessionDate || record.date)}
                           </td>
                           <td className="border border-gray-200 px-4 py-2">
                             {record.lectureTitle || `Buổi học ${record.id}`}

@@ -1,19 +1,33 @@
-import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { formatVietnameseText } from '../../utils/viTextUtils';
 import YouTubeEmbed from '../ui/YouTubeEmbed';
 
 const CourseDescription = ({ description, courseId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [lessons, setLessons] = useState([]);
   const [loadingLessons, setLoadingLessons] = useState(false);
-  const [showCurriculum, setShowCurriculum] = useState(false);
+  const [showCurriculum, setShowCurriculum] = useState(true);
+  const [showVideos, setShowVideos] = useState(false);
   
-  // Load lessons/curriculum when component mounts
+  // Load lessons/curriculum when component mounts or course changes
   useEffect(() => {
-    if (courseId && showCurriculum) {
+    if (courseId) {
       loadCourseLessons();
     }
-  }, [courseId, showCurriculum]);
+  }, [courseId]);
+
+  const normalizeLessons = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items.map((it) => ({
+      id: it.id,
+      title: formatVietnameseText(it.topicName || it.title || it.name),
+      description: formatVietnameseText(it.objectives || it.description || ''),
+      type: formatVietnameseText(it.lessonType || it.type || '').replace(/\bLy thuyt\b|\bLy thuyet\b/gi, 'Lý thuyết'),
+      duration: it.durationMinutes ? `${it.durationMinutes} phút` : it.duration,
+      materials: it.materials || it.lectureMaterials || [],
+    }));
+  };
 
   const loadCourseLessons = async () => {
     try {
@@ -35,7 +49,7 @@ const CourseDescription = ({ description, courseId }) => {
         const data = response.data;
         const lessonsArray = Array.isArray(data) ? data : 
                           (data && data.data && Array.isArray(data.data) ? data.data : []);
-        setLessons(lessonsArray);
+        setLessons(normalizeLessons(lessonsArray));
       } catch (templateError) {
         // If template lessons fail, try course lectures
         endpoint = `http://localhost:8088/api/courses/${courseId}/lectures`;
@@ -49,7 +63,7 @@ const CourseDescription = ({ description, courseId }) => {
         const data = response.data;
         const lessonsArray = Array.isArray(data) ? data : 
                           (data && data.data && Array.isArray(data.data) ? data.data : []);
-        setLessons(lessonsArray);
+        setLessons(normalizeLessons(lessonsArray));
       }
     } catch (error) {
       console.error('Error loading course curriculum:', error);
@@ -99,7 +113,25 @@ const CourseDescription = ({ description, courseId }) => {
     }
 
     // Ensure lessons is always an array
-    const validLessons = Array.isArray(lessons) ? lessons : [];
+    let validLessons = Array.isArray(lessons) ? lessons : [];
+    
+    // Fallback: parse curriculum from description lines if API chưa có dữ liệu
+    if (validLessons.length === 0 && description) {
+      const curriculumLines = description
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => /^✅\s*Tuần\s*\d+/i.test(l) || /^Tuần\s*\d+/i.test(l));
+      if (curriculumLines.length > 0) {
+        validLessons = curriculumLines.map((text, idx) => ({
+          id: `desc-${idx}`,
+          title: formatVietnameseText(text.replace(/^✅\s*/,'').trim()),
+          description: '',
+          type: undefined,
+          duration: undefined,
+          materials: [],
+        }));
+      }
+    }
     
     if (validLessons.length === 0) {
       return (
@@ -149,10 +181,10 @@ const CourseDescription = ({ description, courseId }) => {
       {description && (
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-100">
           <div className="text-sm text-gray-800 leading-relaxed space-y-2">
-            {displayLines.map((line, index) => (
+          {displayLines.map((line, index) => (
               <div 
                 key={index}
-                dangerouslySetInnerHTML={{ __html: formatText(line) }}
+                dangerouslySetInnerHTML={{ __html: formatText(formatVietnameseText(line)) }}
               />
             ))}
           </div>
@@ -181,21 +213,37 @@ const CourseDescription = ({ description, courseId }) => {
       {/* Video Section */}
       {videoLinks.length > 0 && (
         <div data-video-section className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-            🎬 Video học thử ({videoLinks.length} video)
-          </h3>
-          <div className="space-y-4">
-            {videoLinks.map((videoUrl, index) => (
-              <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                <div className="mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Video {index + 1}: Demo bài học
-                  </span>
-                </div>
-                <YouTubeEmbed url={videoUrl} />
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setShowVideos(!showVideos)}
+              className="flex items-center text-red-600 hover:text-red-800 font-medium"
+            >
+              <span className="mr-2">{showVideos ? '▼' : '▶'}</span>
+              Video học thử ({videoLinks.length} video)
+            </button>
+            {showVideos && (
+              <button
+                onClick={() => setShowVideos(false)}
+                className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                Ẩn video
+              </button>
+            )}
           </div>
+          {showVideos && (
+            <div className="space-y-4">
+              {videoLinks.map((videoUrl, index) => (
+                <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                  <div className="mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Video {index + 1}: Demo bài học
+                    </span>
+                  </div>
+                  <YouTubeEmbed url={videoUrl} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -230,6 +278,7 @@ const CourseDescription = ({ description, courseId }) => {
         {videoLinks.length > 0 && (
           <button 
             onClick={() => {
+              setShowVideos(true);
               const videoSection = document.querySelector('[data-video-section]');
               if (videoSection) {
                 videoSection.scrollIntoView({ behavior: 'smooth' });

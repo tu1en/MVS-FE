@@ -1,33 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Card, 
-  Tabs, 
-  Button, 
-  Table, 
-  Tag, 
-  Modal, 
-  Form, 
-  DatePicker, 
-  InputNumber, 
-  Input, 
-  message, 
-  Space,
-  Descriptions,
-  Tooltip,
-  Row,
-  Col,
-  Statistic
-} from 'antd';
-import { 
-  PlusOutlined, 
-  InfoCircleOutlined,
+import {
   CalendarOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
-import absenceService from '../../services/absenceService';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Form,
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Row,
+  Space,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip
+} from 'antd';
 import moment from 'moment';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import absenceService from '../../services/absenceService';
+import TimetableService from '../../services/timetableService';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;
@@ -43,6 +43,8 @@ const TeacherLeaveRequest = () => {
   const [submitting, setSubmitting] = useState(false);
   const [dateRange, setDateRange] = useState(null); // Thêm state để theo dõi dateRange
   const [dateStrings, setDateStrings] = useState(null); // Thêm state để lưu date strings
+  const [impactedEvents, setImpactedEvents] = useState([]); // Buổi học bị ảnh hưởng
+  const [loadingImpacted, setLoadingImpacted] = useState(false);
 
   // Fetch leave requests
   const fetchLeaveRequests = useCallback(async () => {
@@ -80,8 +82,84 @@ const TeacherLeaveRequest = () => {
         endDate: dateRange[1],
         numberOfDays: workingDays
       });
+
+      // Tải các buổi học bị ảnh hưởng trong khoảng ngày đã chọn
+      void loadImpactedClasses(dateRange[0], dateRange[1]);
     }
   }, [dateRange, dateStrings, form]);
+
+  // Tải danh sách buổi học bị ảnh hưởng trong khoảng nghỉ
+  const loadImpactedClasses = async (start, end) => {
+    try {
+      setLoadingImpacted(true);
+      const startDate = moment(start).format('YYYY-MM-DD');
+      const endDate = moment(end).format('YYYY-MM-DD');
+      const data = await TimetableService.getMyTimetable({ startDate, endDate });
+      const events = Array.isArray(data) ? data : (data?.data || []);
+      // Chuẩn hóa key thời gian và tiêu đề
+      const normalized = events
+        .map(ev => {
+          const startDt = ev.startDatetime || ev.startDateTime || ev.startTime || ev.start;
+          const endDt = ev.endDatetime || ev.endDateTime || ev.endTime || ev.end;
+          const title = ev.title || ev.name || ev.lessonTitle || ev.lectureTitle || 'Buổi học';
+          const classroomId = ev.classroomId || ev.classId || ev.classroom?.id;
+          const classroomName = ev.classroomName || ev.className || ev.classroom?.name;
+          return {
+            id: ev.id,
+            title,
+            classroomId,
+            classroomName,
+            start: startDt,
+            end: endDt,
+            raw: ev,
+          };
+        })
+        .filter(item => item.start && item.end);
+
+      setImpactedEvents(normalized);
+    } catch (err) {
+      console.error('Lỗi tải buổi học bị ảnh hưởng:', err);
+      setImpactedEvents([]);
+    } finally {
+      setLoadingImpacted(false);
+    }
+  };
+
+  // Cấu hình slot theo chuẩn hệ thống: bắt đầu 07:30, mỗi slot ≈ 120 phút
+  const SLOT_MINUTES = 120;
+  // Tính tổng hợp số buổi và số slot cần bù theo từng lớp
+  const makeupSummary = useMemo(() => {
+    const byClass = new Map();
+    const toMinutes = (start, end) => {
+      const s = moment(start);
+      const e = moment(end);
+      if (!s.isValid() || !e.isValid()) return 0;
+      return Math.max(0, e.diff(s, 'minutes'));
+    };
+    for (const ev of impactedEvents) {
+      const key = ev.classroomId || ev.classroomName || 'UNKNOWN';
+      const prev = byClass.get(key) || { classroomId: ev.classroomId, classroomName: ev.classroomName || 'Lớp không xác định', sessions: 0, minutes: 0, slots: 0 };
+      prev.sessions += 1;
+      const mins = toMinutes(ev.start, ev.end);
+      prev.minutes += mins;
+      // Quy đổi slot theo 120 phút/slot (tuân thủ ca/slot trong hệ thống)
+      prev.slots += Math.max(1, Math.round(mins / SLOT_MINUTES));
+      byClass.set(key, prev);
+    }
+    const rows = Array.from(byClass.values()).map((r, idx) => ({
+      key: r.classroomId ?? `row-${idx}`,
+      classroomName: r.classroomName,
+      sessions: r.sessions,
+      minutes: r.minutes,
+      slots: r.slots,
+    }));
+    const totals = rows.reduce((acc, r) => ({
+      sessions: acc.sessions + r.sessions,
+      minutes: acc.minutes + r.minutes,
+      slots: acc.slots + r.slots,
+    }), { sessions: 0, minutes: 0, slots: 0 });
+    return { rows, totals };
+  }, [impactedEvents]);
 
   // Calculate working days from string dates (DD/MM/YYYY format)
   const calculateWorkingDaysFromStrings = (startStr, endStr) => {
@@ -232,7 +310,7 @@ const TeacherLeaveRequest = () => {
         startDate: values.startDate.format('YYYY-MM-DD'),
         endDate: values.endDate.format('YYYY-MM-DD'),
         numberOfDays: values.numberOfDays,
-        description: values.description
+        description: buildDescriptionWithImpacted(values.description)
       };
 
       await absenceService.submitLeaveRequest(requestData);
@@ -241,6 +319,7 @@ const TeacherLeaveRequest = () => {
       form.resetFields();
       setDateRange(null); // Reset dateRange state
       setDateStrings(null); // Reset dateStrings state
+      setImpactedEvents([]);
       fetchLeaveRequests();
     } catch (error) {
       console.error('Error creating leave request:', error);
@@ -248,6 +327,22 @@ const TeacherLeaveRequest = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const buildDescriptionWithImpacted = (base) => {
+    if (!impactedEvents || impactedEvents.length === 0) return base;
+    const lines = impactedEvents
+      .slice(0, 15) // tránh mô tả quá dài
+      .map((ev, idx) => {
+        const start = moment(ev.start).format('DD/MM/YYYY HH:mm');
+        const end = moment(ev.end).format('HH:mm');
+        const cls = ev.classroomName ? ` - Lớp: ${ev.classroomName}` : '';
+        return `${idx + 1}. ${start} - ${end} • ${ev.title}${cls}`;
+      })
+      .join('\n');
+    const more = impactedEvents.length > 15 ? `\n... và ${impactedEvents.length - 15} buổi khác` : '';
+    const header = `\n\nCác buổi học bị ảnh hưởng (đề xuất dạy bù):\n`;
+    return `${base || ''}${header}${lines}${more}`.trim();
   };
 
   // Show details modal
@@ -437,6 +532,7 @@ const TeacherLeaveRequest = () => {
           form.resetFields();
           setDateRange(null); // Reset dateRange state
           setDateStrings(null); // Reset dateStrings state
+          setImpactedEvents([]);
         }}
         footer={null}
         width={600}
@@ -460,6 +556,60 @@ const TeacherLeaveRequest = () => {
               disabledDate={(current) => current && current < moment().startOf('day')}
             />
           </Form.Item>
+
+          {/* Danh sách buổi học bị ảnh hưởng */}
+          {dateRange && (
+            <Card size="small" style={{ marginBottom: 16 }} loading={loadingImpacted}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong>Buổi học bị ảnh hưởng trong khoảng nghỉ</strong>
+                <Tag color={impactedEvents.length > 0 ? 'orange' : 'green'}>
+                  {impactedEvents.length > 0 ? `${impactedEvents.length} buổi` : 'Không có'}
+                </Tag>
+              </div>
+              {impactedEvents.length > 0 ? (
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {impactedEvents.map((ev) => (
+                    <div key={`${ev.id}-${ev.start}`} style={{ padding: '6px 0', borderBottom: '1px dashed #f0f0f0' }}>
+                      <Space direction="vertical" size={0}>
+                        <span>
+                          <CalendarOutlined style={{ marginRight: 6 }} />
+                          {moment(ev.start).format('DD/MM/YYYY HH:mm')} - {moment(ev.end).format('HH:mm')}
+                        </span>
+                        <span style={{ color: '#555' }}>{ev.title}{ev.classroomName ? ` • ${ev.classroomName}` : ''}</span>
+                      </Space>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: '#666' }}>Không phát hiện buổi học nào trong khoảng này.</div>
+              )}
+            </Card>
+          )}
+
+          {/* Tổng hợp lớp cần bù */}
+          {dateRange && (
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong>Tổng hợp lớp cần bù</strong>
+                <Space>
+                  <Tag color="blue">{`Tổng buổi: ${makeupSummary.totals.sessions}`}</Tag>
+                  <Tag color="purple">{`≈ Tổng slot (120p): ${makeupSummary.totals.slots}`}</Tag>
+                </Space>
+              </div>
+              <Table
+                size="small"
+                pagination={false}
+                dataSource={makeupSummary.rows}
+                columns={[
+                  { title: 'Lớp', dataIndex: 'classroomName', key: 'classroomName' },
+                  { title: 'Số buổi', dataIndex: 'sessions', key: 'sessions', align: 'right' },
+                  { title: 'Tổng phút', dataIndex: 'minutes', key: 'minutes', align: 'right' },
+                  { title: '≈ Số slot (120p)', dataIndex: 'slots', key: 'slots', align: 'right' },
+                ]}
+                locale={{ emptyText: 'Không có buổi nào bị ảnh hưởng' }}
+              />
+            </Card>
+          )}
 
           <Row gutter={16}>
             <Col span={12}>
@@ -521,6 +671,7 @@ const TeacherLeaveRequest = () => {
                 form.resetFields();
                 setDateRange(null); // Reset dateRange state
                 setDateStrings(null); // Reset dateStrings state
+                setImpactedEvents([]);
               }}>
                 Hủy
               </Button>

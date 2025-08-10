@@ -471,7 +471,6 @@ const ScheduleManager = ({
             >
               {tab === 'list' && '📋 Danh sách'}
               {tab === 'calendar' && '📅 Xem lịch phòng'}
-              {tab === 'validation' && '🔍 Kiểm tra'}
             </button>
           ))}
         </nav>

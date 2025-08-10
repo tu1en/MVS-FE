@@ -1,5 +1,5 @@
-import { CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, DatePicker, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, TimePicker, message } from 'antd';
+import { CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Card, DatePicker, Divider, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, TimePicker, message } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import { managerService } from '../../services/managerService';
@@ -14,18 +14,69 @@ const ManageSchedule = () => {
   const [form] = Form.useForm();
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [rooms, setRooms] = useState([]);
+
+  // reschedule modal
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleForm] = Form.useForm();
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+
+  const isMomentLike = (v) => v && (moment.isMoment(v) || (typeof v === 'object' && 'format' in v));
+  const formatTime = (v) => {
+    if (!v) return '';
+    if (moment.isMoment(v)) return v.format('HH:mm');
+    if (typeof v === 'string') return v;
+    return '';
+  };
+  const normalizeSchedule = (n) => ({
+    id: n.id,
+    title: n.title || n.name || `Schedule ${n.id}`,
+    description: n.description,
+    teacher: n.teacher || n.teacherDto || null,
+    teacherId: n.teacherId,
+    classroom: n.classroom || n.classroomDto || null,
+    classroomId: n.classroomId,
+    courseName: n.classroom?.subject || n.classroom?.courseName || n.courseName || '',
+    date: n.date || n.scheduleDate || n.day,
+    startTime: n.startTime || n.start || n.beginTime,
+    endTime: n.endTime || n.end || n.finishTime,
+    status: n.status || 'SCHEDULED',
+  });
+
+  const classroomMap = () => {
+    const map = new Map();
+    (classrooms || []).forEach(c => map.set(c.id, c));
+    return map;
+  };
+  const teacherMap = () => {
+    const map = new Map();
+    (teachers || []).forEach(t => map.set(t.id, t));
+    return map;
+  };
 
   useEffect(() => {
     fetchSchedules();
     fetchTeachers();
     fetchClassrooms();
+    fetchRooms();
   }, []);
 
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const data = await managerService.getSchedules();
-      setSchedules(data);
+      const res = await managerService.getSchedules();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const cMap = new Map();
+      list.forEach(n => { if (n.classroom) cMap.set(n.classroom.id, n.classroom); });
+      const normalized = list.map(n => {
+        const base = normalizeSchedule(n);
+        if (!base.courseName) {
+          const cls = cMap.get(base.classroomId) || (classrooms || []).find(c => c.id === base.classroomId);
+          base.courseName = cls?.subject || cls?.courseName || '';
+        }
+        return base;
+      });
+      setSchedules(normalized);
     } catch (error) {
       console.error('Error fetching schedules:', error);
       message.error('Không thể tải danh sách lịch học');
@@ -36,8 +87,9 @@ const ManageSchedule = () => {
 
   const fetchTeachers = async () => {
     try {
-      const data = await managerService.getTeachers();
-      setTeachers(data);
+      const res = await managerService.getTeachers();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      setTeachers(list);
     } catch (error) {
       console.error('Error fetching teachers:', error);
       message.error('Không thể tải danh sách giáo viên');
@@ -46,11 +98,21 @@ const ManageSchedule = () => {
 
   const fetchClassrooms = async () => {
     try {
-      const data = await managerService.getClassrooms();
-      setClassrooms(data);
+      const res = await managerService.getClassrooms();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      setClassrooms(list);
     } catch (error) {
       console.error('Error fetching classrooms:', error);
       message.error('Không thể tải danh sách lớp học');
+    }
+  };
+
+  const fetchRooms = async () => {
+    try {
+      const data = await managerService.getRooms();
+      setRooms(data?.data || data || []);
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
     }
   };
 
@@ -62,6 +124,63 @@ const ManageSchedule = () => {
     } catch (error) {
       console.error('Error deleting schedule:', error);
       message.error('Không thể xóa lịch học');
+    }
+  };
+
+  const openReschedule = (record) => {
+    setRescheduleTarget(record);
+    rescheduleForm.setFieldsValue({
+      classroomId: record.classroom?.id || record.classroomId,
+      teacherId: record.teacher?.id || record.teacherId,
+      date: record.date ? moment(record.date) : null,
+      startTime: record.startTime ? moment(record.startTime, 'HH:mm') : null,
+      endTime: record.endTime ? moment(record.endTime, 'HH:mm') : null,
+    });
+    setRescheduleOpen(true);
+  };
+
+  const handleRescheduleSubmit = async (values) => {
+    try {
+      // 1) Validate conflicts: room/teacher between date range (same day)
+      const payload = {
+        roomId: values.roomId,
+        teacherId: values.teacherId,
+        schedule: {
+          date: values.date.format('YYYY-MM-DD'),
+          startTime: values.startTime.format('HH:mm'),
+          endTime: values.endTime.format('HH:mm'),
+        },
+        startDate: values.date.format('YYYY-MM-DD'),
+        endDate: values.date.format('YYYY-MM-DD'),
+      };
+      const conflicts = await managerService.checkScheduleConflicts(payload);
+      const conflictList = conflicts?.data || conflicts || [];
+      if (Array.isArray(conflictList) && conflictList.length > 0) {
+        message.error('Trùng lịch (phòng/giáo viên). Vui lòng chọn khung giờ/giảng viên/phòng khác.');
+        return;
+      }
+
+      // 2) Update the schedule
+      const updated = {
+        classroomId: values.classroomId,
+        teacherId: values.teacherId,
+        roomId: values.roomId,
+        date: values.date.format('YYYY-MM-DD'),
+        startTime: values.startTime.format('HH:mm'),
+        endTime: values.endTime.format('HH:mm'),
+        title: rescheduleTarget?.title,
+        description: rescheduleTarget?.description,
+        status: rescheduleTarget?.status || 'SCHEDULED',
+      };
+      await managerService.updateSchedule(rescheduleTarget.id, updated);
+      message.success('Đổi lịch thành công');
+      setRescheduleOpen(false);
+      setRescheduleTarget(null);
+      rescheduleForm.resetFields();
+      fetchSchedules();
+    } catch (error) {
+      console.error('Error rescheduling:', error);
+      message.error('Không thể đổi lịch buổi học');
     }
   };
 
@@ -122,6 +241,11 @@ const ManageSchedule = () => {
       key: 'title',
     },
     {
+      title: 'Khóa học',
+      dataIndex: 'courseName',
+      key: 'courseName',
+    },
+    {
       title: 'Giáo viên',
       dataIndex: 'teacher',
       key: 'teacher',
@@ -137,19 +261,19 @@ const ManageSchedule = () => {
       title: 'Ngày',
       dataIndex: 'date',
       key: 'date',
-      render: (date) => date ? moment(date).format('DD/MM/YYYY') : ''
+      render: (date) => date ? (isMomentLike(date) ? date.format?.('DD/MM/YYYY') : moment(date).isValid() ? moment(date).format('DD/MM/YYYY') : date) : ''
     },
     {
       title: 'Giờ bắt đầu',
       dataIndex: 'startTime',
       key: 'startTime',
-      render: (time) => time || ''
+      render: (time) => formatTime(time)
     },
     {
       title: 'Giờ kết thúc',
       dataIndex: 'endTime',
       key: 'endTime',
-      render: (time) => time || ''
+      render: (time) => formatTime(time)
     },
     {
       title: 'Trạng thái',
@@ -191,6 +315,15 @@ const ManageSchedule = () => {
         </Space>
       ),
     },
+    {
+      title: 'Đổi lịch',
+      key: 'reschedule',
+      render: (_, record) => (
+        <Button icon={<SwapOutlined />} onClick={() => openReschedule(record)}>
+          Đổi lịch
+        </Button>
+      )
+    }
   ];
 
   return (
@@ -321,6 +454,55 @@ const ManageSchedule = () => {
                 </Button>
               </Space>
             </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Reschedule modal */}
+        <Modal
+          title={`Đổi lịch buổi học${rescheduleTarget ? ` - ${rescheduleTarget.title}` : ''}`}
+          open={rescheduleOpen}
+          onCancel={() => setRescheduleOpen(false)}
+          footer={null}
+          width={640}
+        >
+          <Form form={rescheduleForm} layout="vertical" onFinish={handleRescheduleSubmit}>
+            <Form.Item label="Lớp" name="classroomId" rules={[{ required: true, message: 'Chọn lớp học' }]}> 
+              <Select placeholder="Chọn lớp" disabled>
+                {classrooms.map(c => (
+                  <Option key={c.id} value={c.id}>{c.name}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item label="Giáo viên" name="teacherId" rules={[{ required: true, message: 'Chọn giáo viên' }]}> 
+              <Select placeholder="Chọn giáo viên">
+                {teachers.map(t => (
+                  <Option key={t.id} value={t.id}>{t.fullName || t.username}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+              <Form.Item label="Phòng" name="roomId" rules={[{ required: true, message: 'Chọn phòng' }]}> 
+              <Select placeholder="Chọn phòng">
+                {rooms.map(r => (
+                  <Option key={r.id} value={r.id}>{r.roomName || r.roomCode || r.name}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item label="Ngày mới" name="date" rules={[{ required: true, message: 'Chọn ngày' }]}>
+              <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            </Form.Item>
+            <Space>
+              <Form.Item label="Giờ bắt đầu" name="startTime" rules={[{ required: true, message: 'Chọn giờ bắt đầu' }]}>
+                <TimePicker format="HH:mm" />
+              </Form.Item>
+              <Form.Item label="Giờ kết thúc" name="endTime" rules={[{ required: true, message: 'Chọn giờ kết thúc' }]}>
+                <TimePicker format="HH:mm" />
+              </Form.Item>
+            </Space>
+            <Divider />
+            <Space style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+              <Button onClick={() => setRescheduleOpen(false)}>Hủy</Button>
+              <Button type="primary" htmlType="submit">Xác nhận đổi lịch</Button>
+            </Space>
           </Form>
         </Modal>
       </Card>

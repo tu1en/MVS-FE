@@ -60,7 +60,16 @@ const TeachingHistoryPage = () => {
             title: 'Ngày Dạy',
             dataIndex: 'lectureDate',
             key: 'lectureDate',
-            render: (date) => moment(date).format('DD/MM/YYYY')
+            render: (date) => {
+                // hỗ trợ LocalDate (array [y,m,d]) hoặc string
+                if (!date) return 'N/A';
+                if (Array.isArray(date) && date.length >= 3) {
+                    const d = moment({ year: date[0], month: (date[1] || 1) - 1, day: date[2] });
+                    return d.isValid() ? d.format('DD/MM/YYYY') : 'N/A';
+                }
+                const m = moment(date);
+                return m.isValid() ? m.format('DD/MM/YYYY') : 'N/A';
+            }
         },
         {
             title: 'Thời Gian Ghi Nhận',
@@ -68,7 +77,17 @@ const TeachingHistoryPage = () => {
             key: 'clockInTime',
             render: (time) => (
                 <span style={{ color: '#52c41a', fontWeight: 500 }}>
-                    {moment(time).format('HH:mm:ss, DD/MM/YYYY')}
+                    {(() => {
+                        if (!time) return 'N/A';
+                        // hỗ trợ LocalDateTime mảng [y,m,d,h,mi,s] hoặc string
+                        if (Array.isArray(time)) {
+                            const [y, M, d, h = 0, mi = 0, s = 0] = time;
+                            const m = moment({ year: y, month: (M || 1) - 1, day: d, hour: h, minute: mi, second: s });
+                            return m.isValid() ? m.format('HH:mm:ss, DD/MM/YYYY') : 'N/A';
+                        }
+                        const m = moment(time);
+                        return m.isValid() ? m.format('HH:mm:ss, DD/MM/YYYY') : 'N/A';
+                    })()}
                 </span>
             )
         }

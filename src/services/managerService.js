@@ -111,6 +111,20 @@ export const managerService = {
   },
 
   /**
+   * Get rooms list
+   * @returns {Promise<Array>}
+   */
+  async getRooms() {
+    try {
+      const response = await apiClient.get('/rooms');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Create a new classroom
    * @param {Object} classroomData - Classroom data
    * @returns {Promise<Object>} Created classroom
@@ -161,7 +175,7 @@ export const managerService = {
    */
   async getTeachers() {
     try {
-      const response = await apiClient.get('/manager/teachers');
+      const response = await apiClient.get('/users/teachers');
       return response.data;
     } catch (error) {
       console.error('Error fetching teachers:', error);
@@ -176,7 +190,7 @@ export const managerService = {
    */
   async createSchedule(scheduleData) {
     try {
-      const response = await apiClient.post('/manager/schedules', scheduleData);
+      const response = await apiClient.post('/schedules', scheduleData);
       return response.data;
     } catch (error) {
       console.error('Error creating schedule:', error);
@@ -190,7 +204,7 @@ export const managerService = {
    */
   async getSchedules() {
     try {
-      const response = await apiClient.get('/manager/schedules');
+      const response = await apiClient.get('/schedules');
       return response.data;
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -205,7 +219,7 @@ export const managerService = {
    */
   async deleteSchedule(scheduleId) {
     try {
-      await apiClient.delete(`/manager/schedules/${scheduleId}`);
+      await apiClient.delete(`/schedules/${scheduleId}`);
     } catch (error) {
       console.error('Error deleting schedule:', error);
       throw error;
@@ -381,10 +395,55 @@ export const managerService = {
    */
   async updateSchedule(scheduleId, scheduleData) {
     try {
-      const response = await apiClient.put(`/manager/schedules/${scheduleId}`, scheduleData);
+      const response = await apiClient.put(`/schedules/${scheduleId}`, scheduleData);
       return response.data;
     } catch (error) {
       console.error('Error updating schedule:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check schedule conflicts (room/teacher/time range)
+   * @param {Object} payload { roomId, teacherId, schedule, startDate, endDate }
+   * @returns {Promise<Object>} conflicts result
+   */
+  async checkScheduleConflicts(payload) {
+    try {
+      const response = await apiClient.post('/classes/check-schedule-conflicts', payload);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking schedule conflicts:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get room availability summary
+   */
+  async getRoomAvailability(roomId, startDate, endDate) {
+    try {
+      const response = await apiClient.get('/classes/room-availability', {
+        params: { roomId, startDate, endDate },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting room availability:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get teacher availability summary
+   */
+  async getTeacherAvailability(teacherId, startDate, endDate) {
+    try {
+      const response = await apiClient.get('/classes/teacher-availability', {
+        params: { teacherId, startDate, endDate },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting teacher availability:', error);
       throw error;
     }
   },

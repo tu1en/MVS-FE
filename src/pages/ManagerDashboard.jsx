@@ -3,8 +3,8 @@ import { Card, Col, Row, Statistic, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import { managerService } from '../services/managerService';
 import { useBackButton } from '../hooks/useBackButton';
+import { managerService } from '../services/managerService';
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
@@ -121,7 +121,7 @@ export default function ManagerDashboard() {
           </button>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý khóa học</h2>
           <p className="text-gray-600">Quản lý thông tin khóa học và lớp học</p>
           <button 
@@ -130,7 +130,7 @@ export default function ManagerDashboard() {
           >
             Quản lý khóa học
           </button>
-        </div>
+        </div> */}
         
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">📊 Import Excel Templates</h2>

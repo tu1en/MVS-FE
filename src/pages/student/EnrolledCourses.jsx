@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ClassroomService from '../../services/classroomService';
+import courseService from '../../services/courseService';
 
 const { Title, Text } = Typography;
 
@@ -42,39 +43,25 @@ const EnrolledCourses = () => {
       const enrolled = Array.isArray(enrolledData?.data) ? enrolledData.data : (Array.isArray(enrolledData) ? enrolledData : []);
       setCourses(enrolled);
 
-      // Load all available public courses
+      // Load all available public courses (đúng endpoint /api/public/courses)
       try {
-        const allCoursesResponse = await fetch('/api/courses/public');
-        if (allCoursesResponse.ok) {
-          const allCoursesData = await allCoursesResponse.json();
-          const list = allCoursesData?.data || allCoursesData || [];
-          const transformedCourses = (Array.isArray(list) ? list : []).map((course) => ({
-            id: course.id ?? course.course_id ?? course.class_id,
-            className: fallback(course.name ?? course.title, 'Khóa học'),
-            description: fallback(course.description, 'Đang cập nhật'),
-            teacherName: fallback(course.teacherName ?? course.instructor, 'Đang cập nhật'),
-            price: course.enrollment_fee ?? course.price ?? 0,
-            duration:
-              course.duration ??
-              (Number.isFinite(Number(course.total_weeks)) ? `${Number(course.total_weeks)} tuần` : '—'),
-            students:
-              Number.isFinite(Number(course.max_students_per_template))
-                ? Number(course.max_students_per_template)
-                : Number.isFinite(Number(course.students))
-                ? Number(course.students)
-                : 0,
-            rating: Number.isFinite(Number(course.rating)) ? Number(course.rating) : 4.5,
-            level: fallback(course.level, 'Cơ bản'),
-            isEnrolled: false,
-            progress: 0,
-            subject: course.subject,
-          }));
-
-          setAllCourses(transformedCourses);
-        } else {
-          console.error('Failed to fetch all courses');
-          setAllCourses([]);
-        }
+        const response = await courseService.getPublicCourses();
+        const list = Array.isArray(response?.data) ? response.data : (response?.data?.data || []);
+        const transformedCourses = (Array.isArray(list) ? list : []).map((course) => ({
+          id: course.id,
+          className: fallback(course.name, 'Khóa học'),
+          description: fallback(course.description, 'Đang cập nhật'),
+          teacherName: fallback(course.instructorName, 'Đang cập nhật'),
+          price: Number(course.enrollmentFee) || 0,
+          duration: Number.isFinite(Number(course.totalWeeks)) ? `${Number(course.totalWeeks)} tuần` : '—',
+          students: Number.isFinite(Number(course.maxStudentsPerTemplate)) ? Number(course.maxStudentsPerTemplate) : 0,
+          rating: 4.5,
+          level: fallback(course.level, 'Cơ bản'),
+          isEnrolled: false,
+          progress: 0,
+          subject: course.subject,
+        }));
+        setAllCourses(transformedCourses);
       } catch (error) {
         console.error('Error loading all courses:', error);
         setAllCourses([]);
@@ -90,7 +77,12 @@ const EnrolledCourses = () => {
   };
 
   const handleEnrollClick = (course) => {
-    navigate(`/enroll/${course.id}`);
+    const pageId = '544090102127045';
+    const msg = encodeURIComponent(
+      `Xin đăng ký khóa: ${fallback(course?.className, 'Khóa học')} (ID: ${course?.id}). ` +
+      `Tài khoản: ${user?.fullName || user?.username || 'học viên'}.`
+    );
+    window.open(`https://www.facebook.com/messages/t/${pageId}?text=${msg}`, '_blank');
   };
 
   const normalizeEnrolled = (enrolledCourse) => {
@@ -307,7 +299,7 @@ const EnrolledCourses = () => {
                   ) : (
                     <div className="space-y-2">
                       <button
-                        onClick={() => navigate(`/course-preview/${course.id}`)}
+                        onClick={() => navigate(`/public/courses/${course.id}`)}
                         className="w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                       >
                         👀 Xem chi tiết

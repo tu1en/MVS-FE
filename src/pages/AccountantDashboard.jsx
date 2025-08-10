@@ -3,6 +3,7 @@ import {
     ContainerOutlined,
     DollarOutlined,
     FileTextOutlined,
+    FolderOpenOutlined,
     StopOutlined,
     UserOutlined
 } from '@ant-design/icons';
@@ -163,7 +164,7 @@ const AccountantDashboard = () => {
       <Title level={3}>Quản lý Điểm danh</Title>
       <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
         <Col xs={24} sm={12} md={8}>
-          <Card hoverable title="Giải trình vi phạm" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-explanations')}>
+          <Card hoverable title="Giải trình vi phạm" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/explanation-request')}>
             <FileTextOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
             <div>Gửi giải trình cho các vi phạm điểm danh</div>
           </Card>
@@ -172,6 +173,12 @@ const AccountantDashboard = () => {
           <Card hoverable title="Trạng thái giải trình" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-explanations')}>
             <CalendarOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
             <div>Xem trạng thái các giải trình đã gửi</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Minh chứng" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/evidence')}>
+            <FolderOpenOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
+            <div>Quản lý và tải lên minh chứng theo giải trình</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8}>

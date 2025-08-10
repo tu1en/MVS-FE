@@ -64,7 +64,6 @@ import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
-import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
@@ -107,9 +106,11 @@ import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnounceme
 import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
-import AccountantPayrollGeneration from './pages/accountant/AccountantPayrollGeneration.jsx';
+// Removed legacy placeholder: AccountantPayrollGeneration
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollManagement from './pages/accountant/PayrollManagement';
+import ShiftAttendanceReport from './pages/accountant/ShiftAttendanceReport.jsx';
+import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 
 // Public Course Pages
 import EnrollmentRequestsManager from './pages/manager/EnrollmentRequestsManager.jsx';
@@ -309,7 +310,6 @@ function App() {
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
-              <Route path="/manager/courses" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageCourses /></ProtectedRoute>} />
               <Route path="/manager/course-templates" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CourseManagementSystem /></ProtectedRoute>} />
               <Route path="/manager/schedule" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManageSchedule /></ProtectedRoute>} />
               <Route path="/manager/schedule/create" element={<ProtectedRoute allowedRoles={["MANAGER"]}><CreateSchedulePage /></ProtectedRoute>} />
@@ -343,17 +343,14 @@ function App() {
               {/* Accountant Attendance Explanation Routes (single source of truth) */}
               <Route path="/accountant/attendance-history" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
               <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ExplanationReports /></ProtectedRoute>} />
+              <Route path="/accountant/evidence" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} />
               {/* Backward-compatible redirects */}
               <Route path="/accountant/explanation-status" element={<Navigate to="/accountant/attendance-explanations" replace />} />
-              <Route path="/accountant/evidence-management" element={<Navigate to="/accountant/attendance-explanations" replace />} />
-<Route 
-  path="/accountant/attendance-reports" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><DailyShiftAttendance /></ProtectedRoute>} 
-/>
-<Route 
-  path="/accountant/payroll-generation" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantPayrollGeneration /></ProtectedRoute>} 
-/>
+              <Route path="/accountant/evidence-management" element={<Navigate to="/accountant/evidence" replace />} />
+              <Route 
+                path="/accountant/attendance-reports" 
+                element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ShiftAttendanceReport /></ProtectedRoute>} 
+              />
 
 
               {/* Test Upload Page removed */}

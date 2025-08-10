@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import FirebaseMaterialService from '../../services/firebaseMaterialService';
 import { showNotification } from '../../utils/courseManagementUtils';
+import { formatVietnameseText } from '../../utils/viTextUtils';
 import ClassStudentsManager from './ClassStudentsManager';
 import CreateAssignmentModal from './CreateAssignmentModal';
 import CreateLectureModal from './CreateLectureModal';
@@ -524,10 +525,10 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 flex items-center">
                 <span className="text-2xl mr-3">🏫</span>
-                {classData.className || classData.class_name || 'Lớp học'}
+                {formatVietnameseText(classData.className || classData.class_name || 'Lớp học')}
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                ID: {classData.id} • Template: {classData.courseTemplateName || classData.template_name || 'N/A'}
+                ID: {classData.id} • Template: {formatVietnameseText(classData.courseTemplateName || classData.template_name || 'N/A')}
               </p>
             </div>
             <button
@@ -584,15 +585,15 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Tên lớp:</span>
-                          <span className="font-medium">{classData.className || classData.class_name}</span>
+                          <span className="font-medium">{formatVietnameseText(classData.className || classData.class_name)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Giáo viên:</span>
-                          <span className="font-medium">{classData.teacherName || classData.teacher_name}</span>
+                          <span className="font-medium">{formatVietnameseText(classData.teacherName || classData.teacher_name)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Phòng học:</span>
-                          <span className="font-medium">{classData.roomName || classData.room_name}</span>
+                          <span className="font-medium">{formatVietnameseText(classData.roomName || classData.room_name)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Học viên:</span>
@@ -637,7 +638,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                   {classData.description && (
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-medium text-gray-900 mb-2">Mô tả</h4>
-                      <p className="text-sm text-gray-700">{classData.description}</p>
+                      <p className="text-sm text-gray-700">{formatVietnameseText(classData.description)}</p>
                     </div>
                   )}
                 </div>
@@ -655,17 +656,17 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                       {classLessons.map((lesson, index) => (
                         <div key={lesson.id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                           <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2">
-                                Tuần {lesson.weekNumber || lesson.week}
-                              </span>
-                              <h5 className="font-medium text-gray-900 inline">{lesson.topicName || lesson.topic}</h5>
-                            </div>
+                             <div>
+                               <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2">
+                                 Tuần {lesson.weekNumber || lesson.week}
+                               </span>
+                                <h5 className="font-medium text-gray-900 inline">{formatVietnameseText(lesson.topicName || lesson.topic || '')}</h5>
+                             </div>
                             <span className="text-xs text-gray-500">{lesson.durationMinutes || 120} phút</span>
                           </div>
-                          {lesson.lessonType && (
+                           {lesson.lessonType && (
                             <div className="text-sm text-gray-600 mb-2">
-                              <span className="font-medium">Loại:</span> {lesson.lessonType}
+                              <span className="font-medium">Loại:</span> {formatVietnameseText(lesson.lessonType).replace(/\bLy thuyt\b|\bLy thuyet\b/gi, 'Lý thuyết')}
                             </div>
                           )}
                           {lesson.objectives && (
@@ -907,7 +908,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                   classId={classData.id}
                   className={classData.className || classData.class_name}
                   maxStudents={classData.maxStudents || 30}
-                  onClose={() => {}} // Keep modal open
+                  onClose={() => setActiveTab('overview')}
                 />
               )}
             </>

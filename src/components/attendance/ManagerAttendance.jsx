@@ -297,7 +297,7 @@ const ManagerAttendance = ({ user }) => {
                 </Row>
             </Card>
 
-            {/* Debug Info hidden in production */}
+            {/* Debug Info hidden in production
             {process.env.NODE_ENV !== 'production' && (
                 <Card style={{ marginBottom: 24, borderRadius: 8, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
                     <Row justify="space-between" align="middle">
@@ -319,7 +319,7 @@ const ManagerAttendance = ({ user }) => {
                         </Col>
                     </Row>
                 </Card>
-            )}
+            )} */}
 
             {/* Location Permission Alert */}
             {locationPermission === 'denied' && (

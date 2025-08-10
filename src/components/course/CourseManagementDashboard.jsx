@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import courseService from '../../services/courseService';
 import { formatDate, showNotification } from '../../utils/courseManagementUtils';
@@ -334,7 +334,7 @@ const CourseManagementDashboard = ({ onImportTemplate, onManageTemplates, onView
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center">
             <span className="text-3xl mr-3">🎓</span>
-            Course Management Dashboard
+            Bảng điều khiển Quản lý Khóa học
           </h1>
           <p className="text-gray-600 mt-1">
             Tổng quan hệ thống quản lý khóa học với thống kê real-time

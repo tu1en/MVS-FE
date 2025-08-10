@@ -68,7 +68,7 @@ const ExplanationReports = () => {
     const url = new URL(window.location.href);
     const init = url.searchParams.get('scope');
     if (init === 'mine' || init === 'others' || init === 'all') return init;
-    return isAccountant ? 'others' : 'all';
+    return isAccountant ? 'mine' : 'all';
   }); // all | mine | others
 
   useEffect(() => {
@@ -344,7 +344,7 @@ const ExplanationReports = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          {record.status === 'PENDING' && (!isAccountant || (isAccountant && !isMine(record))) && (
+          {!isAccountant && record.status === 'PENDING' && (
             <>
               <Popconfirm
                 title="Phê duyệt yêu cầu"
@@ -377,6 +377,14 @@ const ExplanationReports = () => {
           >
             Xem
           </Button>
+          {isAccountant && (
+            <Button
+              size="small"
+              onClick={() => navigate(`/accountant/evidence?violationId=${encodeURIComponent(record.violationId || record.id)}`)}
+            >
+              Minh chứng
+            </Button>
+          )}
         </Space>
       ),
     },

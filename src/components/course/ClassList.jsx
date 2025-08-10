@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
-import { formatVietnameseText } from '../../utils/vietnameseTextUtils';
+import { formatVietnameseText } from '../../utils/viTextUtils';
 
 const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
   const [classes, setClasses] = useState([]);
@@ -46,16 +46,34 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
     }
   };
 
-  // Format status for display
+  // Format status for display (chuẩn hóa 100% tiếng Việt)
   const getStatusDisplay = (status) => {
-    const statusMap = {
-      'active': { text: 'Đang hoạt động', color: 'bg-green-100 text-green-800', icon: '🟢' },
-      'inactive': { text: 'Không hoạt động', color: 'bg-gray-100 text-gray-800', icon: '⚪' },
-      'completed': { text: 'Đã hoàn thành', color: 'bg-blue-100 text-blue-800', icon: '🔵' },
-      'cancelled': { text: 'Đã hủy', color: 'bg-red-100 text-red-800', icon: '🔴' }
+    const raw = (status || '').toString();
+    const upper = raw.toUpperCase();
+
+    // Map cho các trạng thái viết HOA từ BE
+    const upperMap = {
+      'ACTIVE': { text: 'Đang hoạt động', color: 'bg-green-100 text-green-800', icon: '🟢' },
+      'PLANNING': { text: 'Đang lên kế hoạch', color: 'bg-yellow-100 text-yellow-800', icon: '🟡' },
+      'COMPLETED': { text: 'Đã hoàn thành', color: 'bg-blue-100 text-blue-800', icon: '🔵' },
+      'CANCELLED': { text: 'Đã hủy', color: 'bg-red-100 text-red-800', icon: '🔴' },
+      'INACTIVE': { text: 'Không hoạt động', color: 'bg-gray-100 text-gray-800', icon: '⚪' }
     };
-    
-    return statusMap[status] || { text: status || 'Không xác định', color: 'bg-gray-100 text-gray-800', icon: '❓' };
+
+    if (upperMap[upper]) return upperMap[upper];
+
+    // Map cho các trạng thái viết thường từ FE
+    const lowerMap = {
+      'active': { text: 'Đang hoạt động', color: 'bg-green-100 text-green-800', icon: '🟢' },
+      'planning': { text: 'Đang lên kế hoạch', color: 'bg-yellow-100 text-yellow-800', icon: '🟡' },
+      'completed': { text: 'Đã hoàn thành', color: 'bg-blue-100 text-blue-800', icon: '🔵' },
+      'cancelled': { text: 'Đã hủy', color: 'bg-red-100 text-red-800', icon: '🔴' },
+      'inactive': { text: 'Không hoạt động', color: 'bg-gray-100 text-gray-800', icon: '⚪' }
+    };
+
+    if (lowerMap[raw]) return lowerMap[raw];
+
+    return { text: 'Không xác định', color: 'bg-gray-100 text-gray-800', icon: '❓' };
   };
 
   // Format date for display

@@ -12,11 +12,12 @@ import { Button, Card, Divider, Form, Input, Space, Spin, Tag, Typography, Uploa
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ROLE } from '../../constants/constants';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
+import FileUploadService from '../../services/fileUploadService';
 import SubmissionService from '../../services/submissionService';
 import UTF8EncodingFixer from '../../utils/utf8EncodingFixer';
-import { ROLE } from '../../constants/constants';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -129,14 +130,20 @@ const AssignmentDetail = () => {
                     const uploadPromises = fileList
                         .filter(file => file.originFileObj)
                         .map(async (file) => {
-                            console.log('Uploading file:', file.originFileObj);
-                            const formData = new FormData();
-                            formData.append('file', file.originFileObj);
-                            const response = await AssignmentService.uploadFile(file.originFileObj);
-                            console.log('File upload response:', response);
+                            console.log('Uploading file (Firebase preferred):', file.originFileObj);
+                            // Wrap FileUploadService (callback-style) to Promise
+                            const uploaded = await new Promise((resolve, reject) => {
+                                FileUploadService.uploadFile({
+                                    file: file.originFileObj,
+                                    onSuccess: (data) => resolve(data),
+                                    onError: (err) => reject(err),
+                                    onProgress: () => {}
+                                }, 'assignments');
+                            });
+                            console.log('File upload response:', uploaded);
                             return {
-                                fileName: file.originFileObj.name,
-                                fileUrl: response.url
+                                fileName: uploaded?.name || file.originFileObj.name,
+                                fileUrl: uploaded?.url
                             };
                         });
                     

@@ -13,6 +13,7 @@ import {
     UploadOutlined
 } from '@ant-design/icons';
 import {
+    App as AntApp,
     Badge,
     Button,
     Card,
@@ -20,6 +21,7 @@ import {
     DatePicker,
     Form,
     Input,
+    InputNumber,
     Modal,
     Popconfirm,
     Row,
@@ -31,8 +33,7 @@ import {
     Tag,
     Tooltip,
     Typography,
-    Upload,
-    message
+    Upload
 } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
@@ -46,6 +47,7 @@ const { TextArea } = Input;
 
 const AccountantEvidencePage = () => {
   const navigate = useNavigate();
+  const { message: messageApi } = AntApp.useApp();
   const [loading, setLoading] = useState(false);
   const [statistics, setStatistics] = useState({});
   const [evidenceList, setEvidenceList] = useState([]);
@@ -76,7 +78,38 @@ const AccountantEvidencePage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
+  // Validate violationId exists before upload
+  const preValidateViolationId = async (violationId) => {
+    try {
+      if (!violationId || Number.isNaN(Number(violationId))) {
+        messageApi.error('Mã vi phạm phải là số hợp lệ');
+        return false;
+      }
+      // This API returns 400 if violationId không tồn tại
+      await accountantEvidenceService.getEvidenceByViolation(Number(violationId));
+      return true;
+    } catch (err) {
+      messageApi.error(`Không tìm thấy vi phạm với ID: ${violationId}`);
+      return false;
+    }
+  };
+
   useEffect(() => {
+    // Prefill violationId from query if present
+    try {
+      const url = new URL(window.location.href);
+      const vId = url.searchParams.get('violationId');
+      if (vId) {
+        setSelectedViolationId(vId);
+        // prefill upload forms
+        const vNum = Number(vId);
+        if (!Number.isNaN(vNum)) {
+          uploadForm?.setFieldsValue({ violationId: vNum });
+          bulkUploadForm?.setFieldsValue({ violationId: vNum });
+        }
+      }
+    } catch (_) {}
+
     loadData();
   }, []);
 
@@ -110,7 +143,7 @@ const AccountantEvidencePage = () => {
       setAllReviewed(allReviewedResp.data || []);
       
     } catch (error) {
-      message.error('Không thể tải dữ liệu');
+      messageApi.error('Không thể tải dữ liệu');
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
@@ -120,11 +153,19 @@ const AccountantEvidencePage = () => {
   const handleUpload = async (values) => {
     try {
       setLoading(true);
+      const ok = await preValidateViolationId(values.violationId);
+      if (!ok) { setLoading(false); return; }
       
       const formData = new FormData();
       // Use violationId from the form input instead of a placeholder
       formData.append('violationId', values.violationId);
-      formData.append('file', values.file[0].originFileObj);
+      const fileList = values.file;
+      if (!fileList || fileList.length === 0) {
+        messageApi.error('Vui lòng chọn file');
+        setLoading(false);
+        return;
+      }
+      formData.append('file', fileList[0].originFileObj);
       formData.append('description', values.description);
       formData.append('evidenceType', values.evidenceType);
       formData.append('category', values.category);
@@ -132,14 +173,14 @@ const AccountantEvidencePage = () => {
       const response = await accountantEvidenceService.uploadSupportingEvidence(formData);
       
       if (response.data) {
-        message.success('Tải lên minh chứng thành công');
+        messageApi.success('Tải lên minh chứng thành công');
         setUploadModalVisible(false);
         uploadForm.resetFields();
         loadData();
       }
       
     } catch (error) {
-      message.error('Lỗi khi tải lên minh chứng');
+      messageApi.error('Lỗi khi tải lên minh chứng');
       console.error('Upload error:', error);
     } finally {
       setLoading(false);
@@ -149,13 +190,21 @@ const AccountantEvidencePage = () => {
   const handleBulkUpload = async (values) => {
     try {
       setLoading(true);
+      const ok = await preValidateViolationId(values.violationId);
+      if (!ok) { setLoading(false); return; }
       
       const formData = new FormData();
       // Use violationId provided by the form for bulk upload
       formData.append('violationId', values.violationId);
       formData.append('category', values.category);
       
-      values.files.forEach(file => {
+      const fileList = values.files || [];
+      if (!fileList.length) {
+        messageApi.error('Vui lòng chọn ít nhất 1 file');
+        setLoading(false);
+        return;
+      }
+      fileList.forEach(file => {
         formData.append('files', file.originFileObj);
       });
       
@@ -168,14 +217,14 @@ const AccountantEvidencePage = () => {
       const response = await accountantEvidenceService.bulkUploadEvidence(formData);
       
       if (response.data) {
-        message.success(`Đã tải lên ${response.data.length} files thành công`);
+        messageApi.success(`Đã tải lên ${response.data.length} files thành công`);
         setBulkUploadModalVisible(false);
         bulkUploadForm.resetFields();
         loadData();
       }
       
     } catch (error) {
-      message.error('Lỗi khi tải lên nhiều files');
+      messageApi.error('Lỗi khi tải lên nhiều files');
       console.error('Bulk upload error:', error);
     } finally {
       setLoading(false);
@@ -187,14 +236,14 @@ const AccountantEvidencePage = () => {
       setLoading(true);
       
       await accountantEvidenceService.addNotes(selectedEvidence.id, values.notes);
-      message.success('Đã thêm ghi chú thành công');
+      messageApi.success('Đã thêm ghi chú thành công');
       
       setNotesModalVisible(false);
       notesForm.resetFields();
       loadData();
       
     } catch (error) {
-      message.error('Lỗi khi thêm ghi chú');
+      messageApi.error('Lỗi khi thêm ghi chú');
       console.error('Add notes error:', error);
     } finally {
       setLoading(false);
@@ -204,20 +253,20 @@ const AccountantEvidencePage = () => {
   const handleMarkReviewed = async (evidenceId) => {
     try {
       await accountantEvidenceService.markAsReviewed(evidenceId);
-      message.success('Đã đánh dấu đã xem xét');
+      messageApi.success('Đã đánh dấu đã xem xét');
       loadData();
     } catch (error) {
-      message.error('Lỗi khi đánh dấu đã xem xét');
+      messageApi.error('Lỗi khi đánh dấu đã xem xét');
     }
   };
 
   const handleDelete = async (evidenceId) => {
     try {
       await accountantEvidenceService.deleteEvidence(evidenceId);
-      message.success('Đã xóa minh chứng thành công');
+      messageApi.success('Đã xóa minh chứng thành công');
       loadData();
     } catch (error) {
-      message.error('Lỗi khi xóa minh chứng');
+      messageApi.error('Lỗi khi xóa minh chứng');
     }
   };
 
@@ -226,7 +275,7 @@ const AccountantEvidencePage = () => {
       const response = await accountantEvidenceService.generateDownloadUrl(evidenceId);
       window.open(response.data, '_blank');
     } catch (error) {
-      message.error('Lỗi khi tải xuống file');
+      messageApi.error('Lỗi khi tải xuống file');
     }
   };
 
@@ -247,10 +296,10 @@ const AccountantEvidencePage = () => {
       link.click();
       link.remove();
       
-      message.success('Đã xuất báo cáo thành công');
+      messageApi.success('Đã xuất báo cáo thành công');
       
     } catch (error) {
-      message.error('Lỗi khi xuất báo cáo');
+      messageApi.error('Lỗi khi xuất báo cáo');
     } finally {
       setLoading(false);
     }
@@ -692,15 +741,20 @@ const AccountantEvidencePage = () => {
           <Form.Item
             name="violationId"
             label="Mã vi phạm"
-            rules={[{ required: true, message: 'Vui lòng nhập mã vi phạm' }]}
+            rules={[
+              { required: true, message: 'Vui lòng nhập mã vi phạm' },
+              { type: 'number', transform: (v) => (typeof v === 'string' ? Number(v) : v), message: 'Mã vi phạm phải là số' }
+            ]}
           >
-            <Input placeholder="Ví dụ: VP001, VP002..." />
+            <InputNumber style={{ width: '100%' }} min={1} placeholder="Nhập ID vi phạm (số)" />
           </Form.Item>
 
           <Form.Item
             name="file"
             label="Chọn file"
             rules={[{ required: true, message: 'Vui lòng chọn file' }]}
+            valuePropName="fileList"
+            getValueFromEvent={(e) => Array.isArray(e) ? e : e?.fileList}
           >
             <Upload
               beforeUpload={() => false}
@@ -778,15 +832,20 @@ const AccountantEvidencePage = () => {
           <Form.Item
             name="violationId"
             label="Mã vi phạm"
-            rules={[{ required: true, message: 'Vui lòng nhập mã vi phạm' }]}
+            rules={[
+              { required: true, message: 'Vui lòng nhập mã vi phạm' },
+              { type: 'number', transform: (v) => (typeof v === 'string' ? Number(v) : v), message: 'Mã vi phạm phải là số' }
+            ]}
           >
-            <Input placeholder="Ví dụ: VP001, VP002..." />
+            <InputNumber style={{ width: '100%' }} min={1} placeholder="Nhập ID vi phạm (số)" />
           </Form.Item>
 
           <Form.Item
             name="files"
             label="Chọn nhiều files"
             rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 file' }]}
+            valuePropName="fileList"
+            getValueFromEvent={(e) => Array.isArray(e) ? e : e?.fileList}
           >
             <Upload
               beforeUpload={() => false}

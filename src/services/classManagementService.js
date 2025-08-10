@@ -145,7 +145,9 @@ const classManagementService = {
    * @returns {Promise<Object>} Enrollment result
    */
   enrollStudent: (classId, studentId) => {
-    return apiClient.post(API_CONFIG.ENDPOINTS.ENROLL_STUDENT(classId, studentId));
+    // BE expects: POST /api/classrooms/{classId}/enrollments with body { studentId }
+    const url = `${API_CONFIG.ENDPOINTS.CLASSROOMS_BY_ID(classId)}/enrollments`;
+    return apiClient.post(url, { studentId });
   },
 
   /**

@@ -1,5 +1,6 @@
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { Button, Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
+import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import apiClient from '../../services/apiClient';
 import { safeDataSource } from '../../utils/tableUtils';
@@ -123,13 +124,26 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
       showMessageBox('Lỗi', 'Không có phiên điểm danh được chọn.');
       return;
     }
+    // Ràng buộc: không cho phép điểm danh sau 24 giờ kể từ thời điểm kết thúc phiên
+    try {
+      const endTime = selectedSession?.rawData?.endTime || selectedSession?.rawData?.expiresAt || selectedSession?.rawData?.end;
+      if (endTime) {
+        const end = dayjs(endTime);
+        const now = dayjs();
+        if (end.isValid() && now.diff(end, 'hour') > 24) {
+          message.error('Không thể điểm danh: đã quá 24 giờ kể từ khi kết thúc phiên.');
+          return;
+        }
+      }
+    } catch {}
     
     setLoading(true);
     try {
       // Transform attendance data for API
       const attendanceRecords = attendanceData.map(student => ({
         studentId: student.userId,
-        status: student.isPresent ? 'PRESENT' : 'ABSENT'
+        status: student.isPresent ? 'PRESENT' : 'ABSENT',
+        note: student.comment || ''
       }));
       
       const submitData = {
