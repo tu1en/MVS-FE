@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import courseService from '../../services/courseService';
 
 const CourseCatalog = () => {
   const [courses, setCourses] = useState([]);
@@ -12,151 +13,57 @@ const CourseCatalog = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
-  // Mock data - Replace with real API call
-  const mockCourses = [
-    {
-      id: 1,
-      title: 'React.js Cơ Bản',
-      description: 'Học React.js từ cơ bản đến nâng cao với các dự án thực tế',
-      instructor: 'Nguyễn Văn A',
-      price: 1500000,
-      originalPrice: 2000000,
-      duration: '40 giờ',
-      students: 1250,
-      rating: 4.8,
-      level: 'Cơ bản',
-      category: 'frontend',
-      image: '/api/placeholder/300/200',
-      tags: ['React', 'JavaScript', 'Frontend'],
-      features: [
-        '40 giờ video bài giảng',
-        '15 dự án thực hành',
-        'Chứng chỉ hoàn thành',
-        'Hỗ trợ 24/7'
-      ],
-      objectives: [
-        'Nắm vững các khái niệm cơ bản của React',
-        'Xây dựng ứng dụng web động',
-        'Quản lý state hiệu quả với Redux',
-        'Deploy ứng dụng lên production'
-      ]
-    },
-    {
-      id: 2,
-      title: 'Node.js & Express Backend',
-      description: 'Phát triển API và backend mạnh mẽ với Node.js và Express',
-      instructor: 'Trần Thị B',
-      price: 1800000,
-      originalPrice: 2500000,
-      duration: '50 giờ',
-      students: 980,
-      rating: 4.7,
-      level: 'Trung cấp',
-      category: 'backend',
-      image: '/api/placeholder/300/200',
-      tags: ['Node.js', 'Express', 'MongoDB'],
-      features: [
-        '50 giờ video chi tiết',
-        '20 dự án backend',
-        'Microservices architecture',
-        'Database optimization'
-      ],
-      objectives: [
-        'Xây dựng RESTful APIs',
-        'Quản lý database MongoDB',
-        'Authentication & Authorization',
-        'Deploy với Docker'
-      ]
-    },
-    {
-      id: 3,
-      title: 'Full-Stack JavaScript',
-      description: 'Trở thành Full-Stack Developer với JavaScript hoàn chỉnh',
-      instructor: 'Lê Văn C',
-      price: 2500000,
-      originalPrice: 3500000,
-      duration: '80 giờ',
-      students: 750,
-      rating: 4.9,
-      level: 'Nâng cao',
-      category: 'fullstack',
-      image: '/api/placeholder/300/200',
-      tags: ['React', 'Node.js', 'MongoDB', 'Full-Stack'],
-      features: [
-        '80 giờ intensive training',
-        '3 dự án lớn end-to-end',
-        'Mentoring 1-on-1',
-        'Job placement support'
-      ],
-      objectives: [
-        'Phát triển ứng dụng full-stack',
-        'Microservices với Docker',
-        'CI/CD với GitHub Actions',
-        'Cloud deployment (AWS/GCP)'
-      ]
-    },
-    {
-      id: 4,
-      title: 'Python Data Science',
-      description: 'Khai phá dữ liệu và Machine Learning với Python',
-      instructor: 'Phạm Văn D',
-      price: 2000000,
-      originalPrice: 2800000,
-      duration: '60 giờ',
-      students: 890,
-      rating: 4.6,
-      level: 'Trung cấp',
-      category: 'data',
-      image: '/api/placeholder/300/200',
-      tags: ['Python', 'Data Science', 'Machine Learning'],
-      features: [
-        '60 giờ hands-on practice',
-        'Real-world datasets',
-        'Jupyter notebooks',
-        'Portfolio projects'
-      ],
-      objectives: [
-        'Data analysis với Pandas',
-        'Visualization với Matplotlib',
-        'Machine Learning cơ bản',
-        'Deploy ML models'
-      ]
-    }
-  ];
-
-  const categories = [
-    { id: 'all', name: 'Tất cả khóa học', count: mockCourses.length },
-    { id: 'frontend', name: 'Frontend', count: mockCourses.filter(c => c.category === 'frontend').length },
-    { id: 'backend', name: 'Backend', count: mockCourses.filter(c => c.category === 'backend').length },
-    { id: 'fullstack', name: 'Full-Stack', count: mockCourses.filter(c => c.category === 'fullstack').length },
-    { id: 'data', name: 'Data Science', count: mockCourses.filter(c => c.category === 'data').length }
-  ];
-
+  // Load courses from API
   useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => {
-      setCourses(mockCourses);
-      setFilteredCourses(mockCourses);
-      setLoading(false);
-    }, 1000);
+    loadCourses();
   }, []);
+
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      const response = await courseService.getPublicCourses();
+      const courseData = response.data || [];
+      
+      setCourses(courseData);
+      setFilteredCourses(courseData);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      // Fallback to empty array instead of mock data
+      setCourses([]);
+      setFilteredCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Danh mục chuẩn cho cấp 3
+  const categories = [
+    { id: 'all', name: 'Tất cả khóa học', count: courses.length },
+    { id: 'Toán', name: 'Toán', count: courses.filter(c => (c.subject||'').toLowerCase()==='toán' || (c.subject||'').toLowerCase()==='toan').length },
+    { id: 'Vật lý', name: 'Vật lý', count: courses.filter(c => (c.subject||'').toLowerCase().includes('vật') || (c.subject||'').toLowerCase().includes('vat')).length },
+    { id: 'Hóa học', name: 'Hóa học', count: courses.filter(c => (c.subject||'').toLowerCase().includes('hóa') || (c.subject||'').toLowerCase().includes('hoa')).length },
+    { id: 'Ngữ văn', name: 'Ngữ văn', count: courses.filter(c => (c.subject||'').toLowerCase().includes('văn') || (c.subject||'').toLowerCase().includes('van')).length },
+    { id: 'Tiếng Anh', name: 'Tiếng Anh', count: courses.filter(c => (c.subject||'').toLowerCase().includes('anh')).length },
+    { id: 'Sinh học', name: 'Sinh học', count: courses.filter(c => (c.subject||'').toLowerCase().includes('sinh')).length }
+  ].filter(cat => cat.count > 0 || cat.id === 'all');
 
   useEffect(() => {
     let filtered = courses;
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(course => course.category === selectedCategory);
+      const sel = selectedCategory.toLowerCase();
+      filtered = filtered.filter(course => (course.subject||'').toLowerCase().includes(sel));
     }
 
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(course => 
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        (course.title || course.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.instructor || course.teacherName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.subject || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.tags && course.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 
@@ -323,7 +230,7 @@ const CourseCatalog = () => {
                 <div className="p-6">
                   <div className="mb-2">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {course.title}
+                      {course.title || course.name}
                     </h3>
                     <p className="text-gray-600 text-sm line-clamp-2">
                       {course.description}
@@ -332,18 +239,23 @@ const CourseCatalog = () => {
 
                   <div className="mb-4">
                     <p className="text-sm text-gray-500 mb-2">
-                      👨‍🏫 {course.instructor}
+                      👨‍🏫 {course.instructor || course.teacherName || 'Đang cập nhật'}
                     </p>
                     <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span>⏱️ {course.duration}</span>
-                      <span>👥 {course.students.toLocaleString()} học viên</span>
+                      <span>⏱️ {course.duration || `${course.total_weeks || 0} tuần`}</span>
+                      <span>👥 {course.max_students_per_template || course.students || 0} học viên</span>
                     </div>
                   </div>
 
                   {/* Tags */}
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-1">
-                      {course.tags.map(tag => (
+                      {course.subject && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                          {course.subject}
+                        </span>
+                      )}
+                      {course.tags && course.tags.map(tag => (
                         <span 
                           key={tag}
                           className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
@@ -358,17 +270,17 @@ const CourseCatalog = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <span className="text-2xl font-bold text-blue-600">
-                        {formatPrice(course.price)}
+                        {course.enrollment_fee === 0 ? 'Miễn phí' : formatPrice(course.enrollment_fee || course.price || 0)}
                       </span>
-                      {course.originalPrice > course.price && (
+                      {course.originalPrice && course.originalPrice > (course.enrollment_fee || course.price) && (
                         <span className="text-sm text-gray-500 line-through ml-2">
                           {formatPrice(course.originalPrice)}
                         </span>
                       )}
                     </div>
-                    {course.originalPrice > course.price && (
+                    {course.originalPrice && course.originalPrice > (course.enrollment_fee || course.price) && (
                       <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                        Giảm {Math.round((1 - course.price / course.originalPrice) * 100)}%
+                        Giảm {Math.round((1 - (course.enrollment_fee || course.price) / course.originalPrice) * 100)}%
                       </div>
                     )}
                   </div>

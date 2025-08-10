@@ -1,31 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Space, 
-  message, 
-  Select, 
-  DatePicker, 
-  Modal,
-  Statistic,
-  Row,
-  Col,
-  Tag,
-  Tooltip,
-  Progress
-} from 'antd';
-import { 
-  DollarOutlined, 
-  DownloadOutlined, 
-  EyeOutlined,
-  TeamOutlined,
+import {
+  CalculatorOutlined,
   CalendarOutlined,
-  FileExcelOutlined
+  DollarOutlined,
+  EyeOutlined,
+  FileExcelOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
-import axiosInstance from '../../config/axiosInstance';
-import PayrollService from '../../services/payrollService';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  message,
+  Modal,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip
+} from 'antd';
 import moment from 'moment';
+import React, { useEffect, useState } from 'react';
+import SalaryCalculationDetailsModal from '../../components/SalaryCalculationDetailsModal';
+import PayrollService from '../../services/payrollService';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
@@ -42,6 +42,8 @@ const PayrollManagement = () => {
   });
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [salaryDetailsModalVisible, setSalaryDetailsModalVisible] = useState(false);
+  const [selectedPayrollId, setSelectedPayrollId] = useState(null);
 
   // Helper functions
   const getDepartmentFromStaff = (staffId) => {
@@ -61,17 +63,46 @@ const PayrollManagement = () => {
   const loadPayrollData = async () => {
     setLoading(true);
     try {
-      const year = selectedPeriod.year();
-      const month = selectedPeriod.month() + 1;
+      const periodMoment = selectedPeriod || moment();
+      const period = periodMoment.format('YYYY-MM');
       
-      // Call real payroll API using service
-      const response = await PayrollService.getPayrollByMonth(year, month);
-      const payrollRecords = response.content || [];
+      // Generate payroll for all employees using new TopCV system
+      const response = await PayrollService.generateBulkPayroll(period);
+      const payrollRecords = response.payrollResults || [];
       
       // Transform API data to match frontend format
-      const transformedData = payrollRecords.map(record => 
-        PayrollService.transformPayrollRecord(record)
-      );
+      const transformedData = payrollRecords.map(record => {
+        const baseSalary = Number(record.contractSalary ?? 0);
+        const pit = Number(record.topCVResult?.personalIncomeTax ?? 0);
+        const si = Number(record.topCVResult?.insuranceDetails?.totalEmployeeContribution ?? 0);
+        const gross = Number(record.proratedGrossSalary ?? 0);
+        const net = Number(record.netSalary ?? 0);
+        const actualWorkingDays = Number(record.actualWorkingDays ?? 0);
+
+        const startOfMonth = periodMoment.clone().startOf('month').format('YYYY-MM-DD');
+        const endOfMonth = periodMoment.clone().endOf('month').format('YYYY-MM-DD');
+
+        return ({
+        id: `${record.userId}_${period}`,
+        userId: record.userId,
+        fullName: record.userName,
+        email: record.userEmail || '',
+        department: record.contractType === 'TEACHER' ? 'Giảng dạy' : 'Hành chính',
+        contractType: record.contractType,
+        baseSalary,
+        teachingHours: 0, // Not available in new system
+        totalWorkingHours: actualWorkingDays * 8, // Estimate 8 hours per day
+        hourlyRate: 0,
+        deductions: pit + si,
+        grossPay: gross,
+        totalSalary: net,
+        status: 'PROCESSED', // New system generates processed payroll
+        processedDate: new Date().toISOString().split('T')[0],
+        payPeriodStart: startOfMonth,
+        payPeriodEnd: endOfMonth,
+        generatedAt: new Date().toISOString()
+      });
+      });
 
       setPayrollData(transformedData);
       
@@ -95,17 +126,13 @@ const PayrollManagement = () => {
   const handleGeneratePayroll = async () => {
     setLoading(true);
     try {
-      const year = selectedPeriod.year();
-      const month = selectedPeriod.month() + 1;
+      const current = selectedPeriod || moment();
+      const period = current.format('YYYY-MM');
       
-      // Calculate start and end dates for the month
-      const startDate = selectedPeriod.startOf('month').format('YYYY-MM-DD');
-      const endDate = selectedPeriod.endOf('month').format('YYYY-MM-DD');
+      // Call new bulk payroll generation API using TopCV calculations
+      const response = await PayrollService.generateBulkPayroll(period);
       
-      // Call real bulk payroll generation API using service
-      const response = await PayrollService.generateBulkPayroll(startDate, endDate);
-      
-      message.success(`Đã tạo bảng lương cho ${response.length} nhân viên!`);
+      message.success(`Đã tạo bảng lương cho ${response.totalEmployees} nhân viên!`);
       loadPayrollData();
     } catch (error) {
       console.error('Error generating payroll:', error);
@@ -118,34 +145,29 @@ const PayrollManagement = () => {
   const handleExportExcel = async () => {
     try {
       setLoading(true);
-      const year = selectedPeriod.year();
-      const month = selectedPeriod.month() + 1;
+      const period = selectedPeriod.format('YYYY-MM');
       
-      const startDate = selectedPeriod.startOf('month').format('YYYY-MM-DD');
-      const endDate = selectedPeriod.endOf('month').format('YYYY-MM-DD');
+      // Generate CSV data from current payroll data
+      const csvHeader = 'Mã NV,Họ tên,Phòng ban,Loại HĐ,Lương CB,Tổng lương,Trạng thái\n';
+      const csvData = payrollData.map(row => 
+        `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${row.baseSalary},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`
+      ).join('\n');
       
-      const response = await axiosInstance.get('/payroll/export/excel', {
-        params: { startDate, endDate },
-        responseType: 'blob'
-      });
-      
-      // Create blob and download
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
+      const csvContent = csvHeader + csvData;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Payroll_${year}_${month}.xlsx`;
+      link.download = `Payroll_${period}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      message.success('Đã xuất file Excel thành công!');
+      message.success('Đã xuất file CSV thành công!');
     } catch (error) {
-      console.error('Error exporting Excel:', error);
-      message.error('Lỗi khi xuất file Excel: ' + (error.response?.data?.message || error.message));
+      console.error('Error exporting CSV:', error);
+      message.error('Lỗi khi xuất file: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -153,8 +175,8 @@ const PayrollManagement = () => {
 
   const handleProcessPayroll = async (payrollId) => {
     try {
-      await PayrollService.processPayroll(payrollId);
-      message.success('Đã xử lý bảng lương thành công!');
+      // New system generates already processed payroll
+      message.success('Bảng lương đã được xử lý!');
       loadPayrollData();
     } catch (error) {
       console.error('Error processing payroll:', error);
@@ -164,18 +186,38 @@ const PayrollManagement = () => {
 
   const handleMarkAsPaid = async (payrollId) => {
     try {
-      await PayrollService.markPayrollAsPaid(payrollId);
+      // Update local state to mark as paid
+      setPayrollData(prevData => 
+        prevData.map(item => 
+          item.id === payrollId ? { ...item, status: 'PAID' } : item
+        )
+      );
       message.success('Đã đánh dấu là đã trả lương!');
-      loadPayrollData();
     } catch (error) {
       console.error('Error marking as paid:', error);
-      message.error('Lỗi khi đánh dấu đã trả lương: ' + (error.response?.data?.message || error.message));
+      message.error('Lỗi khi đánh dấu đã trả lương: ' + error.message);
     }
   };
 
   const showEmployeeDetail = (employee) => {
     setSelectedEmployee(employee);
     setDetailModalVisible(true);
+  };
+
+  const showSalaryCalculationDetails = (record) => {
+    // Prefer backend TopCV breakdown if present; fallback to simple split
+    const backendPIT = record.topCVResult?.personalIncomeTax ?? null;
+    const backendSI = record.topCVResult?.insuranceDetails?.totalEmployeeContribution ?? null;
+    setSelectedEmployee({
+      ...record,
+      topCVDetails: {
+        grossSalary: record.grossPay,
+        personalIncomeTax: backendPIT !== null ? Number(backendPIT) : record.deductions * 0.7,
+        socialInsurance: backendSI !== null ? Number(backendSI) : record.deductions * 0.3,
+        netSalary: record.totalSalary
+      }
+    });
+    setSalaryDetailsModalVisible(true);
   };
 
   const columns = [
@@ -272,10 +314,20 @@ const PayrollManagement = () => {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 200,
+      width: 250,
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Xem chi tiết">
+          <Tooltip title="Xem chi tiết tính lương">
+            <Button 
+              icon={<CalculatorOutlined />} 
+              size="small"
+              type="default"
+              onClick={() => showSalaryCalculationDetails(record)}
+            >
+              Chi tiết
+            </Button>
+          </Tooltip>
+          <Tooltip title="Xem thông tin cơ bản">
             <Button 
               icon={<EyeOutlined />} 
               size="small" 
@@ -369,8 +421,9 @@ const PayrollManagement = () => {
             <Space>
               <span>Kỳ lương:</span>
               <MonthPicker
+                allowClear={false}
                 value={selectedPeriod}
-                onChange={setSelectedPeriod}
+                onChange={(val) => setSelectedPeriod(val || moment())}
                 format="MM/YYYY"
                 placeholder="Chọn tháng"
               />
@@ -390,7 +443,7 @@ const PayrollManagement = () => {
                 icon={<FileExcelOutlined />}
                 onClick={handleExportExcel}
               >
-                Xuất Excel
+                Xuất CSV
               </Button>
             </Space>
           </Col>
@@ -401,7 +454,7 @@ const PayrollManagement = () => {
           <Col span={24}>
             <span>Tiến độ xử lý: </span>
             <Progress
-              percent={Math.round((statistics.processedCount / statistics.totalEmployees) * 100)}
+              percent={statistics.totalEmployees > 0 ? Math.round((statistics.processedCount / statistics.totalEmployees) * 100) : 0}
               status={statistics.processedCount === statistics.totalEmployees ? 'success' : 'active'}
               showInfo={true}
             />
@@ -499,6 +552,14 @@ const PayrollManagement = () => {
           </div>
         )}
       </Modal>
+
+      {/* Salary Calculation Details Modal */}
+      <SalaryCalculationDetailsModal
+        visible={salaryDetailsModalVisible}
+        onCancel={() => setSalaryDetailsModalVisible(false)}
+        payrollId={selectedPayrollId}
+        employeeRecord={selectedEmployee}
+      />
     </div>
   );
 };

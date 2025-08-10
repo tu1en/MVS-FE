@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import courseService from '../../services/courseService';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
-import { 
-  formatDate, 
-  getStatusBadge, 
-  showNotification, 
-  showConfirmDialog,
+import courseService from '../../services/courseService';
+import {
+  debounce,
   downloadFile,
-  debounce 
+  getStatusBadge,
+  showConfirmDialog,
+  showNotification
 } from '../../utils/courseManagementUtils';
+import CourseDescription from './CourseDescription';
 
 const CourseTemplateManager = forwardRef(({ 
   onCreateClass, 
@@ -200,7 +200,7 @@ const CourseTemplateManager = forwardRef(({
         <div className="relative">
           <input
             type="text"
-            placeholder="🔍 Tìm kiếm khóa học..."
+            placeholder="Tìm kiếm khóa học..."
             value={state.filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -216,14 +216,15 @@ const CourseTemplateManager = forwardRef(({
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Tất cả môn học</option>
-          <option value="Lập trình">Lập trình</option>
-          <option value="Thiết kế">Thiết kế</option>
-          <option value="Marketing">Marketing</option>
-          <option value="Khoa học dữ liệu">Khoa học dữ liệu</option>
-          <option value="Kinh doanh">Kinh doanh</option>
+          <option value="Toán">Toán</option>
+          <option value="Vật lý">Vật lý</option>
+          <option value="Hóa học">Hóa học</option>
+          <option value="Ngữ văn">Ngữ văn</option>
+          <option value="Tiếng Anh">Tiếng Anh</option>
+          <option value="Sinh học">Sinh học</option>
         </select>
 
-        <select
+        {/* <select
           value={state.filters.status}
           onChange={(e) => handleFilterChange('status', e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -232,7 +233,7 @@ const CourseTemplateManager = forwardRef(({
           <option value="active">Hoạt động</option>
           <option value="draft">Nháp</option>
           <option value="pending">Chờ duyệt</option>
-        </select>
+        </select> */}
 
         <div className="flex space-x-2">
           <button
@@ -309,118 +310,123 @@ const CourseTemplateManager = forwardRef(({
     }
 
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Khóa học
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Môn học
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thống kê
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {state.templates.map((template) => (
-                <tr key={template.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 mb-1">
-                        {template.name}
-                      </div>
-                      <div className="text-sm text-gray-500 max-w-xs truncate mb-1">
-                        {template.description}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        Tạo: {formatDate(template.createdAt)} • {template.createdBy || 'N/A'}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {template.subject || 'Chưa phân loại'}
+      <div className="grid grid-cols-1 gap-6">
+        {state.templates.map((template) => (
+          <div key={template.id} className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow">
+            <div className="p-6">
+              {/* Header Section */}
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                    <span className="mr-2 text-2xl">
+                      {template.subject === 'Computer Science' && '💻'}
+                      {template.subject === 'Web Development' && '🌐'}
+                      {template.subject === 'Database Technology' && '🗄️'}
+                      {template.subject === 'Mobile Development' && '📱'}
+                      {template.subject?.includes('Data') && '🧠'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="space-y-1">
-                      <div>
-                        <span className="font-medium">{template.totalWeeks || 0}</span> tuần • 
-                        <span className="font-medium ml-1">{template.lessonCount || 0}</span> bài
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {state.classes.filter(c => c.courseTemplateId === template.id).length} lớp đã tạo
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {(() => {
-                      const statusConfig = getStatusBadge(template.status);
-                      return (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-                          {statusConfig.label}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => onCreateClass(template)}
-                        className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
-                        title="Tạo lớp học từ template này"
-                      >
-                        <span className="mr-1">➕</span>
-                        Tạo lớp
-                      </button>
-                      <button
-                        onClick={() => onViewTemplate(template)}
-                        className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-green-600 hover:bg-green-50 hover:border-green-400 transition-colors"
-                        title="Xem chi tiết template"
-                      >
-                        <span className="mr-1">👁️</span>
-                        Xem
-                      </button>
-                      <button
-                        onClick={() => handleExport(template)}
-                        disabled={state.loading.export}
-                        className="inline-flex items-center px-3 py-1 border border-purple-300 rounded-md text-purple-600 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Export template ra Excel"
-                      >
-                        <span className="mr-1">
-                          {state.loading.export ? '⏳' : '⬇️'}
-                        </span>
-                        Export
-                      </button>
-                      <button
-                        onClick={() => handleDelete(template)}
-                        className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors"
-                        title="Xóa template"
-                      >
-                        <span className="mr-1">🗑️</span>
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {template.name}
+                  </div>
+                  
+                  {/* Price and Stats Row */}
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    {template.enrollmentFee && (
+                      <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">
+                        💰 {new Intl.NumberFormat('vi-VN').format(template.enrollmentFee)} VNĐ
+                      </span>
+                    )}
+                    <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+                      📅 {template.totalWeeks || 0} tuần
+                    </span>
+                    <span className="bg-purple-100 text-purple-800 text-sm px-3 py-1 rounded-full">
+                      📚 {template.lessonCount || 0} bài học
+                    </span>
+                    <span className="bg-orange-100 text-orange-800 text-sm px-3 py-1 rounded-full">
+                      👥 Tối đa {template.maxStudentsPerTemplate || '40'} học viên
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="ml-4 flex flex-col items-end">
+                  {(() => {
+                    const statusConfig = getStatusBadge(template.status);
+                    return (
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig.bg} ${statusConfig.text} mb-2`}>
+                        {statusConfig.label}
+                      </span>
+                    );
+                  })()}
+                  <span className="text-xs text-gray-500">
+                    {state.classes.filter(c => c.courseTemplateId === template.id).length} lớp đã tạo
+                  </span>
+                </div>
+              </div>
+
+              {/* Course Description */}
+              <div className="mb-4">
+                <CourseDescription 
+                  description={template.description} 
+                  courseId={template.id} 
+                />
+              </div>
+
+              {/* Subject and Created Info */}
+              <div className="flex justify-between items-center mb-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                    📂 {template.subject || 'Chưa phân loại'}
+                  </span>
+                  {/* <span className="text-xs text-gray-500">
+                    🗓️ Tạo: {formatDate(template.createdAt)} • {template.createdBy || ''}
+                  </span> */}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => onCreateClass(template)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  title="Tạo lớp học từ template này"
+                >
+                  <span className="mr-2">➕</span>
+                  Tạo lớp học
+                </button>
+                <button
+                  onClick={() => onViewTemplate(template)}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  title="Xem chi tiết template"
+                >
+                  <span className="mr-2">👁️</span>
+                  Xem chi tiết
+                </button>
+                {/* <button
+                  onClick={() => handleExport(template)}
+                  disabled={state.loading.export}
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Export template ra Excel"
+                >
+                  <span className="mr-2">
+                    {state.loading.export ? '⏳' : '⬇️'}
+                  </span>
+                  Export Excel
+                </button> */}
+                <button
+                  onClick={() => handleDelete(template)}
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                  title="Xóa template"
+                >
+                  <span className="mr-2">🗑️</span>
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
 
         {/* Pagination */}
         {state.pagination.total > state.pagination.pageSize && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6 rounded-lg shadow">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
                 Hiển thị {((state.pagination.current - 1) * state.pagination.pageSize) + 1} đến{' '}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { showNotification } from '../../utils/courseManagementUtils';
+import courseService from '../../services/courseService';
+import enrollmentService from '../../services/enrollmentService';
 
 const EnrollCourse = () => {
   const { courseId } = useParams();
@@ -17,48 +19,6 @@ const EnrollCourse = () => {
     agreeRefund: false
   });
 
-  // Mock course data
-  const mockCourseDetail = {
-    1: {
-      id: 1,
-      title: 'React.js Cơ Bản',
-      description: 'Học React.js từ cơ bản đến nâng cao với các dự án thực tế',
-      instructor: 'Nguyễn Văn A',
-      price: 1500000,
-      originalPrice: 2000000,
-      duration: '40 giờ',
-      students: 1250,
-      rating: 4.8,
-      level: 'Cơ bản',
-      features: [
-        '40 giờ video bài giảng chất lượng cao',
-        '15 dự án thực hành từ cơ bản đến nâng cao',
-        'Chứng chỉ hoàn thành có giá trị',
-        'Hỗ trợ 24/7 từ mentor',
-        'Truy cập học liệu suốt đời',
-        'Cập nhật nội dung mới nhất'
-      ]
-    },
-    2: {
-      id: 2,
-      title: 'Node.js & Express Backend',
-      description: 'Phát triển API và backend mạnh mẽ với Node.js và Express',
-      instructor: 'Trần Thị B',
-      price: 1800000,
-      originalPrice: 2500000,
-      duration: '50 giờ',
-      students: 980,
-      rating: 4.7,
-      level: 'Trung cấp',
-      features: [
-        '50 giờ video chi tiết',
-        '20 dự án backend',
-        'Microservices architecture',
-        'Database optimization'
-      ]
-    }
-  };
-
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login', { 
@@ -70,14 +30,48 @@ const EnrollCourse = () => {
       return;
     }
 
-    // Load course data
-    setLoading(true);
-    setTimeout(() => {
-      const courseData = mockCourseDetail[courseId];
-      setCourse(courseData);
-      setLoading(false);
-    }, 1000);
+    loadCourseData();
   }, [courseId, isAuthenticated, navigate]);
+
+  const loadCourseData = async () => {
+    try {
+      setLoading(true);
+      const response = await courseService.getCourseById(courseId);
+      const courseData = response.data;
+      
+      if (courseData) {
+        // Transform API data to match component expectations
+        const transformedCourse = {
+          id: courseData.id,
+          title: courseData.title || courseData.name,
+          description: courseData.description,
+          instructor: courseData.instructor || courseData.teacherName || 'Đang cập nhật',
+          price: courseData.enrollment_fee || courseData.price || 0,
+          originalPrice: courseData.originalPrice || (courseData.enrollment_fee || courseData.price || 0) * 1.3,
+          duration: courseData.duration || `${courseData.total_weeks || 0} tuần`,
+          students: courseData.max_students_per_template || courseData.students || 0,
+          rating: courseData.rating || 4.5,
+          level: courseData.level || 'Cơ bản',
+          features: courseData.features || [
+            `${courseData.total_weeks || 8} tuần học`,
+            'Tài liệu đầy đủ',
+            'Chứng chỉ hoàn thành',
+            'Hỗ trợ 24/7',
+            'Truy cập học liệu suốt đời'
+          ]
+        };
+        
+        setCourse(transformedCourse);
+      } else {
+        setCourse(null);
+      }
+    } catch (error) {
+      console.error('Error loading course data:', error);
+      setCourse(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { 
@@ -100,25 +94,31 @@ const EnrollCourse = () => {
     try {
       setEnrolling(true);
 
-      // Mock enrollment API call
+      // Real enrollment API call
       const enrollmentRequest = {
         courseId: course.id,
-        userId: user.id,
         paymentMethod: enrollmentData.paymentMethod,
-        amount: course.price
+        amount: course.price,
+        userAgreements: {
+          terms: enrollmentData.agreeTerms,
+          refundPolicy: enrollmentData.agreeRefund
+        }
       };
 
       console.log('🎯 Enrollment request:', enrollmentRequest);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      showNotification(`Đăng ký khóa học "${course.title}" thành công! 🎉`, 'success');
+      const response = await enrollmentService.enrollInCourse(enrollmentRequest);
       
-      // Redirect to course page
-      setTimeout(() => {
-        navigate(`/student/courses/${course.id}`);
-      }, 1000);
+      if (response.success || response.data) {
+        showNotification(`Đăng ký khóa học "${course.title}" thành công! 🎉`, 'success');
+        
+        // Redirect to enrolled courses page
+        setTimeout(() => {
+          navigate('/student/courses');
+        }, 1000);
+      } else {
+        throw new Error(response.message || 'Enrollment failed');
+      }
 
     } catch (error) {
       console.error('Enrollment error:', error);

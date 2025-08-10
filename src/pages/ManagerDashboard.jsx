@@ -244,6 +244,18 @@ export default function ManagerDashboard() {
             Xem lịch sử cá nhân
           </button>
         </div>
+
+        {/* Button chấm công */}
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+          <h3 className="text-xl font-semibold mb-2">Chấm công</h3>
+          <p className="text-gray-600">Thực hiện chấm công hàng ngày</p>
+          <button 
+            className="mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/attendance')}
+          >
+            Chấm công
+          </button>
+        </div>
       </div>
     </div>
   );

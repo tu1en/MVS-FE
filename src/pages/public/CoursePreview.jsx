@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import courseService from '../../services/courseService';
 
 const CoursePreview = () => {
   const { courseId } = useParams();
@@ -10,167 +11,72 @@ const CoursePreview = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Mock course data - Replace with real API call
-  const mockCourseDetail = {
-    1: {
-      id: 1,
-      title: 'React.js Cơ Bản',
-      description: 'Học React.js từ cơ bản đến nâng cao với các dự án thực tế. Khóa học này sẽ giúp bạn nắm vững các khái niệm cơ bản của React và có thể xây dựng ứng dụng web động chuyên nghiệp.',
-      instructor: 'Nguyễn Văn A',
-      instructorBio: '5+ năm kinh nghiệm Frontend Developer tại các công ty công nghệ hàng đầu. Chuyên gia React.js và JavaScript.',
-      instructorAvatar: '/api/placeholder/100/100',
-      price: 1500000,
-      originalPrice: 2000000,
-      duration: '40 giờ',
-      students: 1250,
-      rating: 4.8,
-      totalRatings: 234,
-      level: 'Cơ bản',
-      category: 'frontend',
-      image: '/api/placeholder/800/400',
-      tags: ['React', 'JavaScript', 'Frontend'],
-      features: [
-        '40 giờ video bài giảng chất lượng cao',
-        '15 dự án thực hành từ cơ bản đến nâng cao',
-        'Chứng chỉ hoàn thành có giá trị',
-        'Hỗ trợ 24/7 từ mentor',
-        'Truy cập học liệu suốt đời',
-        'Cập nhật nội dung mới nhất'
-      ],
-      objectives: [
-        'Nắm vững các khái niệm cơ bản của React (Components, Props, State)',
-        'Xây dựng ứng dụng web động và tương tác cao',
-        'Quản lý state hiệu quả với Context API và Redux',
-        'Tích hợp APIs và xử lý dữ liệu',
-        'Deploy ứng dụng lên production (Netlify, Vercel)',
-        'Best practices và coding standards trong React'
-      ],
-      curriculum: [
-        {
-          module: 1,
-          title: 'Giới thiệu và Cài đặt',
-          duration: '3 giờ',
-          lessons: [
-            'Tổng quan về React.js',
-            'Cài đặt môi trường development',
-            'Create React App',
-            'JSX và Virtual DOM'
+  // Load course from API
+  useEffect(() => {
+    loadCourseDetail();
+  }, [courseId]);
+
+  const loadCourseDetail = async () => {
+    try {
+      setLoading(true);
+      const response = await courseService.getCourseById(courseId);
+      const courseData = response.data;
+      
+      if (courseData) {
+        // Transform API data to match component expectations
+        const transformedCourse = {
+          id: courseData.id,
+          title: courseData.title || courseData.name,
+          description: courseData.description,
+          instructor: courseData.instructor || courseData.teacherName || 'Đang cập nhật',
+          instructorBio: courseData.instructorBio || '5+ năm kinh nghiệm giảng dạy',
+          instructorAvatar: courseData.instructorAvatar || '/api/placeholder/100/100',
+          price: courseData.enrollment_fee || courseData.price || 0,
+          originalPrice: courseData.originalPrice,
+          duration: courseData.duration || `${courseData.total_weeks || 0} tuần`,
+          students: courseData.max_students_per_template || courseData.students || 0,
+          rating: courseData.rating || 4.5,
+          totalRatings: courseData.totalRatings || 50,
+          level: courseData.level || 'Cơ bản',
+          category: courseData.category || courseData.subject || 'Programming',
+          image: courseData.image || '/api/placeholder/800/400',
+          tags: courseData.tags || [courseData.subject].filter(Boolean),
+          features: courseData.features || [
+            `${courseData.total_weeks || 8} tuần học`,
+            'Tài liệu đầy đủ',
+            'Chứng chỉ hoàn thành',
+            'Hỗ trợ 24/7'
+          ],
+          objectives: courseData.objectives || [
+            'Nắm vững kiến thức cơ bản',
+            'Thực hành với dự án thực tế',
+            'Phát triển kỹ năng chuyên môn'
+          ],
+          curriculum: courseData.curriculum || [],
+          reviews: courseData.reviews || [],
+          requirements: courseData.requirements || [
+            'Kiến thức cơ bản về máy tính',
+            'Máy tính có kết nối internet',
+            'Sẵn sàng học hỏi và thực hành'
+          ],
+          targetAudience: courseData.targetAudience || [
+            'Sinh viên muốn học thêm kỹ năng',
+            'Người mới bắt đầu',
+            'Chuyên viên muốn nâng cao trình độ'
           ]
-        },
-        {
-          module: 2,
-          title: 'Components và Props',
-          duration: '5 giờ',
-          lessons: [
-            'Functional vs Class Components',
-            'Props và PropTypes',
-            'Component Composition',
-            'Conditional Rendering'
-          ]
-        },
-        {
-          module: 3,
-          title: 'State và Event Handling',
-          duration: '6 giờ',
-          lessons: [
-            'useState Hook',
-            'Event Handling trong React',
-            'Form Handling',
-            'Controlled vs Uncontrolled Components'
-          ]
-        },
-        {
-          module: 4,
-          title: 'Advanced Hooks',
-          duration: '8 giờ',
-          lessons: [
-            'useEffect Hook',
-            'useContext Hook',
-            'useReducer Hook',
-            'Custom Hooks'
-          ]
-        },
-        {
-          module: 5,
-          title: 'Routing và Navigation',
-          duration: '6 giờ',
-          lessons: [
-            'React Router setup',
-            'Dynamic Routing',
-            'Protected Routes',
-            'Navigation và Link'
-          ]
-        },
-        {
-          module: 6,
-          title: 'State Management',
-          duration: '8 giờ',
-          lessons: [
-            'Context API deep dive',
-            'Redux fundamentals',
-            'Redux Toolkit',
-            'Async Actions với Redux Thunk'
-          ]
-        },
-        {
-          module: 7,
-          title: 'Dự án thực tế',
-          duration: '4 giờ',
-          lessons: [
-            'Todo App với Local Storage',
-            'Weather App với API',
-            'E-commerce Shopping Cart',
-            'Social Media Dashboard'
-          ]
-        }
-      ],
-      reviews: [
-        {
-          id: 1,
-          student: 'Trần Thị B',
-          rating: 5,
-          comment: 'Khóa học rất chi tiết và dễ hiểu. Giảng viên giải thích rất tốt!',
-          date: '2025-01-15'
-        },
-        {
-          id: 2,
-          student: 'Lê Văn C',
-          rating: 5,
-          comment: 'Học xong đã có thể làm dự án thực tế. Rất hài lòng!',
-          date: '2025-01-10'
-        },
-        {
-          id: 3,
-          student: 'Phạm Thị D',
-          rating: 4,
-          comment: 'Nội dung tốt, có thể cần thêm một số ví dụ nâng cao.',
-          date: '2025-01-05'
-        }
-      ],
-      requirements: [
-        'Kiến thức cơ bản về HTML, CSS',
-        'Hiểu biết JavaScript ES6+',
-        'Máy tính có kết nối internet',
-        'Sẵn sàng thực hành và làm bài tập'
-      ],
-      targetAudience: [
-        'Sinh viên IT muốn học Frontend',
-        'Developer muốn chuyển sang React',
-        'Freelancer muốn mở rộng kỹ năng',
-        'Người mới bắt đầu với React.js'
-      ]
+        };
+        
+        setCourse(transformedCourse);
+      } else {
+        setCourse(null);
+      }
+    } catch (error) {
+      console.error('Error loading course detail:', error);
+      setCourse(null);
+    } finally {
+      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => {
-      const courseData = mockCourseDetail[courseId];
-      setCourse(courseData);
-      setLoading(false);
-    }, 1000);
-  }, [courseId]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { 

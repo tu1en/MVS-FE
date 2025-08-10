@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
+import { formatVietnameseText } from '../../utils/vietnameseTextUtils';
 
 const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
   const [classes, setClasses] = useState([]);
@@ -78,15 +79,15 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg">
+    <div className="bg-white border border-gray-200 rounded-lg vietnamese-text">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Danh sách Lớp học</h3>
+        <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">Danh sách Lớp học</h3>
         </div>
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-500">Đang tải danh sách lớp học...</p>
-          </div>
+          <p className="text-gray-500 vietnamese-body">Đang tải danh sách lớp học...</p>
+        </div>
         </div>
       </div>
     );
@@ -94,17 +95,17 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
 
   if (error) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="bg-white border border-gray-200 rounded-lg vietnamese-text">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Danh sách Lớp học</h3>
+          <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">Danh sách Lớp học</h3>
         </div>
         <div className="p-6">
           <div className="text-center py-8 text-red-500">
             <div className="text-4xl mb-2">❌</div>
-            <p>{error}</p>
+            <p className="vietnamese-body">{error}</p>
             <button 
               onClick={loadClasses}
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 button-vietnamese"
             >
               Thử lại
             </button>
@@ -116,17 +117,17 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
 
   if (classes.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="bg-white border border-gray-200 rounded-lg vietnamese-text">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Danh sách Lớp học</h3>
+          <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">Danh sách Lớp học</h3>
         </div>
         <div className="p-6">
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">🏢</div>
-            <p>Chưa có lớp học nào. Chọn template để tạo lớp học!</p>
+            <p className="vietnamese-body">Chưa có lớp học nào. Chọn template để tạo lớp học!</p>
             <button 
               onClick={loadClasses}
-              className="mt-2 text-blue-500 hover:text-blue-700 text-sm"
+              className="mt-2 text-blue-500 hover:text-blue-700 text-sm button-vietnamese"
             >
               🔄 Tải lại
             </button>
@@ -137,14 +138,14 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg">
+    <div className="bg-white border border-gray-200 rounded-lg vietnamese-text crisp-text">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">
+        <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">
           Danh sách Lớp học ({classes.length})
         </h3>
         <button 
           onClick={loadClasses}
-          className="text-blue-500 hover:text-blue-700 text-sm flex items-center"
+          className="text-blue-500 hover:text-blue-700 text-sm flex items-center button-vietnamese"
           disabled={loading}
         >
           <span className="mr-1">🔄</span>
@@ -157,10 +158,10 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
             const statusInfo = getStatusDisplay(classItem.status);
             
             return (
-              <div key={classItem.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={classItem.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow vietnamese-text">
                 <div className="flex justify-between items-start mb-3">
-                  <h4 className="text-lg font-semibold text-gray-900 truncate">
-                    {classItem.className || classItem.class_name || 'Unnamed Class'}
+                  <h4 className="text-lg font-semibold text-gray-900 truncate vietnamese-heading crisp-text fix-vietnamese-diacritics">
+                    {formatVietnameseText(classItem.className || classItem.class_name || 'Unnamed Class')}
                   </h4>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} flex items-center`}>
                     <span className="mr-1">{statusInfo.icon}</span>
@@ -168,38 +169,38 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-sm vietnamese-body">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Template:</span>
-                    <span className="font-medium">
-                      {classItem.courseTemplateName || classItem.template_name || 'N/A'}
+                    <span className="text-gray-600 vietnamese-text">Template:</span>
+                    <span className="font-medium vietnamese-text crisp-text fix-vietnamese-diacritics">
+                      {formatVietnameseText(classItem.courseTemplateName || classItem.template_name || 'N/A')}
                     </span>
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Giáo viên:</span>
-                    <span className="font-medium">
-                      {classItem.teacherName || classItem.teacher_name || 'N/A'}
+                    <span className="text-gray-600 vietnamese-text">Giáo viên:</span>
+                    <span className="font-medium vietnamese-text crisp-text fix-vietnamese-diacritics">
+                      {formatVietnameseText(classItem.teacherName || classItem.teacher_name || 'N/A')}
                     </span>
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Phòng học:</span>
-                    <span className="font-medium">
-                      {classItem.roomName || classItem.room_name || 'N/A'}
+                    <span className="text-gray-600 vietnamese-text">Phòng học:</span>
+                    <span className="font-medium vietnamese-text crisp-text fix-vietnamese-diacritics">
+                      {formatVietnameseText(classItem.roomName || classItem.room_name || 'N/A')}
                     </span>
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Học viên:</span>
-                    <span className="font-medium">
+                    <span className="text-gray-600 vietnamese-text">Học viên:</span>
+                    <span className="font-medium vietnamese-text">
                       {classItem.currentStudents || 0}/{classItem.maxStudents || 0}
                     </span>
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Thời gian:</span>
-                    <span className="font-medium text-xs">
+                    <span className="text-gray-600 vietnamese-text">Thời gian:</span>
+                    <span className="font-medium text-xs vietnamese-text">
                       {formatDate(classItem.startDate)} → {formatDate(classItem.endDate)}
                     </span>
                   </div>
@@ -207,8 +208,8 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
 
                 {classItem.description && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-600 line-clamp-2">
-                      {classItem.description}
+                    <p className="text-xs text-gray-600 line-clamp-2 vietnamese-body crisp-text fix-vietnamese-diacritics">
+                      {formatVietnameseText(classItem.description)}
                     </p>
                   </div>
                 )}
@@ -229,7 +230,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => onClassDetail ? onClassDetail(classItem) : console.log('Class detail:', classItem)}
-                        className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 flex items-center"
+                        className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 flex items-center button-vietnamese"
                         title="Quản lý chi tiết lớp học"
                       >
                         <span className="mr-1">📚</span>
@@ -238,7 +239,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
                       
                       <button
                         onClick={() => onClassEdit ? onClassEdit(classItem) : console.log('Class edit:', classItem)}
-                        className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 flex items-center"
+                        className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 flex items-center button-vietnamese"
                         title="Chỉnh sửa lớp học"
                       >
                         <span className="mr-1">✏️</span>

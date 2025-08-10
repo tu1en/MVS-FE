@@ -1,10 +1,10 @@
 import { App as AntApp } from "antd";
 import { useEffect } from "react";
 import {
-  Navigate,
-  Route,
-  BrowserRouter as Router,
-  Routes,
+    Navigate,
+    Route,
+    BrowserRouter as Router,
+    Routes,
 } from "react-router-dom";
 import "./App.css";
 import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
@@ -46,8 +46,8 @@ import RealtimeAttendancePage from './pages/teacher/RealtimeAttendancePage.jsx';
 import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
 import TeacherAnnouncementsPage from "./pages/teacher/TeacherAnnouncementsPage.jsx";
-import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherCourseManagement from "./pages/teacher/TeacherCourseManagement.jsx";
+import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
@@ -58,12 +58,12 @@ import VideoConference from './pages/teacher/VideoConference.jsx';
 import Whiteboard from './pages/teacher/Whiteboard.jsx';
 
 // Manager Pages
+import CourseManagementSystem from "./components/course/CourseManagementSystem.jsx";
 import CreateAnnouncement from "./pages/manager/CreateAnnouncement.jsx";
 import CreateSchedulePage from "./pages/manager/CreateSchedulePage.jsx";
 import ManagerEditProfile from "./pages/manager/EditProfile.jsx";
 import LeaveManagement from "./pages/manager/LeaveManagement.jsx";
 import ManageAnnouncements from "./pages/manager/ManageAnnouncements.jsx";
-import CourseManagementSystem from "./components/course/CourseManagementSystem.jsx";
 import ManageCourses from "./pages/manager/ManageCourses.jsx";
 import ManagerMessages from "./pages/manager/ManagerMessages.jsx";
 import ManagerReports from "./pages/manager/ManagerReports.js";
@@ -107,16 +107,18 @@ import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnounceme
 import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
+import AccountantPayrollGeneration from './pages/accountant/AccountantPayrollGeneration.jsx';
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollManagement from './pages/accountant/PayrollManagement';
-import AccountantPayrollGeneration from './pages/accountant/AccountantPayrollGeneration.jsx';
 
 // Public Course Pages
+import EnrollmentRequestsManager from './pages/manager/EnrollmentRequestsManager.jsx';
+import DebugPublicCourses from './pages/public/DebugPublicCourses.jsx';
 import PublicCourseDashboard from './pages/public/PublicCourseDashboard.jsx';
 import PublicCourseDetail from './pages/public/PublicCourseDetail.jsx';
-import DebugPublicCourses from './pages/public/DebugPublicCourses.jsx';
-import EnrollmentRequestsManager from './pages/manager/EnrollmentRequestsManager.jsx';
 
+// Attendance Components
+import AttendanceModule from './components/attendance/AttendanceModule.jsx';
 
 // A component to redirect based on user role
 const RoleBasedRedirect = ({ targetPath }) => {
@@ -326,6 +328,7 @@ function App() {
               <Route path="/manager/leave-management" element={<ProtectedRoute allowedRoles={["MANAGER"]}><LeaveManagement /></ProtectedRoute>} />
               <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
               <Route path="/manager/enrollment-requests" element={<ProtectedRoute allowedRoles={["MANAGER"]}><EnrollmentRequestsManager /></ProtectedRoute>} />
+              <Route path="/manager/attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><AttendanceModule /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
@@ -335,21 +338,14 @@ function App() {
 
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
+              <Route path="/accountant/attendance" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AttendanceModule /></ProtectedRoute>} />
               
-              {/* Accountant Attendance Explanation Routes */}
+              {/* Accountant Attendance Explanation Routes (single source of truth) */}
               <Route path="/accountant/attendance-history" element={<ProtectedRoute allowedRoles={["ACCOUNTANT", "TEACHER"]}><PersonalAttendanceHistory /></ProtectedRoute>} />
-<Route 
-  path="/accountant/attendance-explanations" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
-/>
-<Route 
-  path="/accountant/explanation-status" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
-/>
-<Route 
-  path="/accountant/evidence-management" 
-  element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} 
-/>
+              <Route path="/accountant/attendance-explanations" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEvidencePage /></ProtectedRoute>} />
+              {/* Backward-compatible redirects */}
+              <Route path="/accountant/explanation-status" element={<Navigate to="/accountant/attendance-explanations" replace />} />
+              <Route path="/accountant/evidence-management" element={<Navigate to="/accountant/attendance-explanations" replace />} />
 <Route 
   path="/accountant/attendance-reports" 
   element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><DailyShiftAttendance /></ProtectedRoute>} 

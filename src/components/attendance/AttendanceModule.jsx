@@ -1,13 +1,12 @@
-import React, { useContext, useState } from 'react';
-import { AuthContext } from '../../context/AuthContext';
-import StudentAttendance from './StudentAttendance';
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import TeacherAttendance from './TeacherAttendance';
 import ManagerAttendance from './ManagerAttendance';
 import { Alert } from 'antd';
 
 // Main Attendance Module Component
 const AttendanceModule = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useAuth();
   
   // State for message box
   const [messageBox, setMessageBox] = useState({ visible: false, title: '', message: '' });
@@ -54,36 +53,56 @@ const AttendanceModule = () => {
     );
   }
 
-  // Determine user role and render appropriate component
-  const getUserRole = (roleId) => {
-    switch (roleId) {
-      case 1:
-        return 'STUDENT';
-      case 2:
-        return 'TEACHER';
-      case 3:
-        return 'MANAGER';
-      case 4:
-        return 'ADMIN';
-      case 5:
-        return 'ACCOUNTANT';
-      default:
-        return 'UNKNOWN';
+  // Determine user role from user object
+  const getUserRole = (user) => {
+    if (!user) return 'UNKNOWN';
+    
+    // Check if user has role string (from AuthContext)
+    if (user.role) {
+      const role = user.role.replace('ROLE_', ''); // Remove ROLE_ prefix if exists
+      return role;
     }
+    
+    // Fallback: check roleId (numeric)
+    if (user.roleId) {
+      switch (user.roleId) {
+        case 1:
+          return 'STUDENT';
+        case 2:
+          return 'TEACHER';
+        case 3:
+          return 'MANAGER';
+        case 4:
+          return 'ADMIN';
+        case 5:
+          return 'ACCOUNTANT';
+        default:
+          return 'UNKNOWN';
+      }
+    }
+    
+    return 'UNKNOWN';
   };
 
-  const userRole = getUserRole(user.roleId);
+  const userRole = getUserRole(user);
+  
+  // Debug: log user info and role
+  console.log('AttendanceModule - User:', user);
+  console.log('AttendanceModule - Determined role:', userRole);
 
   // Render the appropriate attendance component based on user role
   const renderAttendanceComponent = () => {
     switch (userRole) {
       case 'STUDENT':
         return (
-          <StudentAttendance 
-            onLogout={logout}
-            showMessageBox={showMessageBox}
-            user={user}
-          />
+          <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <Alert
+              message="Tính năng đang phát triển"
+              description="Tính năng điểm danh cho học sinh đang được phát triển."
+              type="info"
+              showIcon
+            />
+          </div>
         );
       case 'TEACHER':
         return (

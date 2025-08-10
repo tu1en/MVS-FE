@@ -1,33 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  Table, 
-  DatePicker, 
-  Button, 
-  Space, 
-  Tag, 
-  message, 
-  Row, 
-  Col, 
-  Statistic, 
-  Select, 
-  Input,
-  Spin,
-  Alert
-} from 'antd';
-import { 
-  ClockCircleOutlined, 
-  TeamOutlined, 
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CalendarOutlined,
-  UserOutlined
+import {
+    CalendarOutlined,
+    CheckCircleOutlined,
+    ClockCircleOutlined,
+    CloseCircleOutlined,
+    ExclamationCircleOutlined,
+    ReloadOutlined,
+    SearchOutlined,
+    TeamOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import {
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Input,
+    message,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag
+} from 'antd';
 import dayjs from 'dayjs';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const { Option } = Select;
@@ -59,6 +57,13 @@ const DailyShiftAttendance = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
+      
+      if (!selectedDate) {
+        message.warning("Vui lòng chọn ngày để tải dữ liệu.");
+        setLoading(false);
+        return;
+      }
+      
       const params = {
         date: selectedDate.format('YYYY-MM-DD'),
         shift: selectedShift,

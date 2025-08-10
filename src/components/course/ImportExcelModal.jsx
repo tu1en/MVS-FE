@@ -1,16 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import courseService from '../../services/courseService';
-import RoomSelector from '../room/RoomSelector';
-import { 
-  validateImportForm, 
-  parseExcelFile, 
-  showNotification, 
-  showConfirmDialog,
+import {
+  downloadFile,
   formatFileSize,
   getCurrentUserId,
-  downloadFile 
+  parseExcelFile,
+  showConfirmDialog,
+  showNotification,
+  validateImportForm
 } from '../../utils/courseManagementUtils';
+import RoomSelector from '../room/RoomSelector';
 
 const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -147,7 +147,7 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
       console.log('API response received:', response);
       
       const roomMsg = formData.selectedRoom ? ` với phòng ${formData.selectedRoom.name || formData.selectedRoom.building + '-' + formData.selectedRoom.number}` : '';
-      showNotification(`Tạo khóa học thành công! "${formData.courseName}"${roomMsg}. Giáo viên có thể được gán sau khi hoàn thành.`, 'success');
+      showNotification(`Tạo khóa học thành công! "${formData.courseName}"${roomMsg}. Giáo viên sẽ được gợi ý theo ca làm việc và chuyên môn khi tạo lớp.`, 'success');
       
       // Reset form and close modal
       handleReset();
@@ -305,11 +305,12 @@ const ImportExcelModal = ({ visible, onCancel, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Chọn môn học</option>
-                      <option value="Lập trình">Lập trình</option>
-                      <option value="Thiết kế">Thiết kế</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Khoa học dữ liệu">Khoa học dữ liệu</option>
-                      <option value="Kinh doanh">Kinh doanh</option>
+                      <option value="Toán">Toán</option>
+                      <option value="Vật lý">Vật lý</option>
+                      <option value="Hóa học">Hóa học</option>
+                      <option value="Ngữ văn">Ngữ văn</option>
+                      <option value="Tiếng Anh">Tiếng Anh</option>
+                      <option value="Sinh học">Sinh học</option>
                     </select>
                   </div>
 

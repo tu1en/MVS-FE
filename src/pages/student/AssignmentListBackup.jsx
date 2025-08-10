@@ -73,7 +73,9 @@ const AssignmentListBackup = () => {
                     <Card 
                         key={assignment.id}
                         className="border border-gray-200 hover:shadow-md transition-shadow"
-                        bodyStyle={{ padding: '20px' }}
+                        styles={{
+                          body: { padding: '20px' }
+                        }}
                     >
                         <div className="flex justify-between items-start">
                             <div className="flex-1">

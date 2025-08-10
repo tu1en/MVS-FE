@@ -1,10 +1,10 @@
 import {
-  CalendarOutlined,
-  ContainerOutlined,
-  DollarOutlined,
-  FileTextOutlined,
-  StopOutlined,
-  UserOutlined
+    CalendarOutlined,
+    ContainerOutlined,
+    DollarOutlined,
+    FileTextOutlined,
+    StopOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
@@ -169,7 +169,7 @@ const AccountantDashboard = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8}>
-          <Card hoverable title="Trạng thái giải trình" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/explanation-status')}>
+          <Card hoverable title="Trạng thái giải trình" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-explanations')}>
             <CalendarOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
             <div>Xem trạng thái các giải trình đã gửi</div>
           </Card>
@@ -190,6 +190,12 @@ const AccountantDashboard = () => {
           <Card hoverable title="Báo Cáo Chấm Công" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance-reports')}>
             <CalendarOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
             <div>Báo cáo chấm công và thống kê</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card hoverable title="Chấm công" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/attendance')}>
+            <UserOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
+            <div>Thực hiện chấm công hàng ngày</div>
           </Card>
         </Col>
       </Row>

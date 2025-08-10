@@ -1,16 +1,14 @@
-import { App, Button, Modal } from 'antd';
+import { App, Modal } from 'antd';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
-const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = false }) => {
+const LectureList = ({ courseId, courseName, isStudentView = false }) => {
   const navigate = useNavigate();
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [creatingData, setCreatingData] = useState(false);
   const [lastLoadedCourseId, setLastLoadedCourseId] = useState(null);
 
   // Get message API from App context
@@ -95,31 +93,6 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
     }
   }, [courseId, lastLoadedCourseId, loadLectures, loading]);
 
-  const createSampleLectures = async () => {
-    try {
-      setCreatingData(true);
-      const token = localStorage.getItem('token');
-      
-      // Gọi API để tạo bài giảng mẫu
-      await axios.post(`http://localhost:8088/api/courses/${courseId}/sample-lectures`, {}, {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Tải lại danh sách bài giảng sau khi tạo
-      await loadLectures();
-      
-      message.success('Đã tạo bài giảng mẫu thành công');
-    } catch (error) {
-      console.error('Error creating sample lectures:', error);
-      message.error('Không thể tạo bài giảng mẫu: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setCreatingData(false);
-    }
-  };
-
   const renderYouTubeEmbed = (url) => {
     if (!url || !url.includes('youtube.com/embed/')) return null;
     
@@ -137,60 +110,6 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
         ></iframe>
       </div>
     );
-  };
-  const handleDeleteLecture = async (lectureId, lectureTitle) => {
-    // Only allow deleting in teacher view
-    if (isStudentView) return;
-    
-    Modal.confirm({
-      title: 'Xác nhận xóa bài giảng',
-      content: `Bạn có chắc chắn muốn xóa bài giảng "${lectureTitle || 'này'}"? Tất cả tài liệu bên trong cũng sẽ bị xóa.`,
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          setDeletingId(lectureId);
-          const token = localStorage.getItem('token');
-          
-          const response = await fetch(`http://localhost:8088/api/courses/${courseId}/lectures/${lectureId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': token ? `Bearer ${token}` : '',
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to delete lecture: ${response.status}`);
-          }
-
-          // Remove from local state
-          setLectures(prev => prev.filter(lecture => lecture.id !== lectureId));
-          message.success('Đã xóa bài giảng thành công');
-          console.log('Lecture deleted successfully');
-          
-        } catch (error) {
-          console.error('Error deleting lecture:', error);
-          message.error('Lỗi xóa bài giảng: ' + error.message);
-        } finally {
-          setDeletingId(null);
-        }
-      },
-      onCancel() {
-        console.log('Delete cancelled');
-      }
-    });
-  };
-  const handleEditLecture = (lecture) => {
-    // Only allow editing in teacher view
-    if (isStudentView) return;
-    
-    if (onEditLecture) {
-      onEditLecture(lecture);
-    } else {
-      console.warn('onEditLecture callback not provided');
-    }
   };
   const handleStartLecture = (lecture) => {
     // Only allow starting lecture in teacher view
@@ -264,14 +183,6 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
       {lectures.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500 mb-4">Chưa có bài giảng nào cho khóa học này.</p>
-          <Button
-            type="primary"
-            loading={creatingData}
-            onClick={createSampleLectures}
-            className="mt-4"
-          >
-            Tạo bài giảng mẫu
-          </Button>
         </div>
       ) : (
         <div className="space-y-6">
@@ -345,21 +256,10 @@ const LectureList = ({ courseId, courseName, onEditLecture, isStudentView = fals
               {!isStudentView && (
                 <div className="mt-4 flex space-x-2">
                   <button 
-                    onClick={() => handleEditLecture(lecture)}
-                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    Chỉnh sửa
-                  </button>                <button 
                     onClick={() => handleStartLecture(lecture)}
                     className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
                   >
                     Bắt đầu
-                  </button><button 
-                    onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
-                    disabled={deletingId === lecture.id}
-                    className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400"
-                  >
-                    {deletingId === lecture.id ? 'Đang xóa...' : 'Xóa'}
                   </button>
                 </div>
               )}

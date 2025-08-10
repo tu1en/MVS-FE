@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import FirebaseMaterialService from '../../services/firebaseMaterialService';
 import { showNotification } from '../../utils/courseManagementUtils';
+import ClassStudentsManager from './ClassStudentsManager';
 import CreateAssignmentModal from './CreateAssignmentModal';
 import CreateLectureModal from './CreateLectureModal';
 import LectureDetailModal from './LectureDetailModal';
@@ -18,6 +19,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showLectureDetailModal, setShowLectureDetailModal] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState(null);
+  const [showStudentsManager, setShowStudentsManager] = useState(false);
 
   // Load class details when modal opens
   useEffect(() => {
@@ -225,7 +227,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
 
 
   const formatDate = (dateInput) => {
-    if (!dateInput) return 'N/A';
+    if (!dateInput) return 'Chưa xác định';
     
     try {
       let date;
@@ -436,8 +438,18 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
   // Handle lecture success
   const handleLectureSuccess = (lectureData) => {
     setShowLectureModal(false);
-    setLectures(prev => [lectureData, ...prev]); // Add to state
-    showNotification('Bài giảng đã được thêm vào lớp học', 'success');
+    setSelectedLecture(null); // Clear selected lecture
+    
+    // Check if this is an edit (lecture has id) or create (new lecture)
+    if (selectedLecture && selectedLecture.id) {
+      // Update existing lecture
+      setLectures(prev => prev.map(l => l.id === lectureData.id ? lectureData : l));
+      showNotification('Đã cập nhật bài giảng thành công', 'success');
+    } else {
+      // Add new lecture
+      setLectures(prev => [lectureData, ...prev]);
+      showNotification('Đã thêm bài giảng mới thành công', 'success');
+    }
   };
 
   // Handle assignment success
@@ -445,6 +457,51 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
     setShowAssignmentModal(false);
     setAssignments(prev => [assignmentData, ...prev]); // Add to state
     showNotification('Bài tập đã được thêm vào lớp học', 'success');
+  };
+
+  // ✅ NEW: Lecture management functions
+  const handleMoveLecture = (index, direction) => {
+    const newLectures = [...lectures];
+    if (direction === 'up' && index > 0) {
+      [newLectures[index], newLectures[index - 1]] = [newLectures[index - 1], newLectures[index]];
+    } else if (direction === 'down' && index < lectures.length - 1) {
+      [newLectures[index], newLectures[index + 1]] = [newLectures[index + 1], newLectures[index]];
+    }
+    setLectures(newLectures);
+    showNotification('Đã thay đổi thứ tự bài giảng', 'success');
+  };
+
+  const handleEditLecture = (lecture) => {
+    // Set lecture data for editing and open modal
+    setSelectedLecture(lecture);
+    setShowLectureModal(true);
+  };
+
+  const handleDeleteLecture = async (lecture) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa bài giảng "${lecture.title}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8088/api/lectures/${lecture.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setLectures(prev => prev.filter(l => l.id !== lecture.id));
+        showNotification('Đã xóa bài giảng thành công', 'success');
+      } else {
+        throw new Error('Failed to delete lecture');
+      }
+    } catch (error) {
+      console.error('Error deleting lecture:', error);
+      showNotification('Lỗi khi xóa bài giảng: ' + error.message, 'error');
+    }
   };
 
   if (!visible || !classData) return null;
@@ -539,7 +596,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Học viên:</span>
-                          <span className="font-medium">{classData.currentStudents || 0}/{classData.maxStudents || 0}</span>
+                          <span className="font-medium">{classData.currentStudents || 0}/{classData.maxStudents || 30}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Thời gian:</span>
@@ -698,26 +755,74 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h4 className="text-lg font-medium text-gray-900">Bài giảng ({lectures.length})</h4>
-                    <button 
-                      onClick={() => setShowLectureModal(true)}
-                      className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center"
-                    >
-                      <span className="mr-2">➕</span>
-                      Thêm bài giảng
-                    </button>
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={() => {
+                          setSelectedLecture(null); // Clear for new lecture
+                          setShowLectureModal(true);
+                        }}
+                        className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center"
+                      >
+                        <span className="mr-2">➕</span>
+                        Thêm bài giảng
+                      </button>
+                    </div>
                   </div>
                   
                   {lectures.length > 0 ? (
                     <div className="space-y-3">
-                      {lectures.map(lecture => (
+                      {lectures.map((lecture, index) => (
                         <div key={lecture.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                           <div className="flex justify-between items-start">
-                            <div>
-                              <h5 className="font-medium text-gray-900">{lecture.title}</h5>
-                              <p className="text-sm text-gray-600">Thời lượng: {lecture.duration}</p>
+                            <div className="flex items-start space-x-3 flex-1">
+                              {/* Drag Handle & Order */}
+                              <div className="flex flex-col items-center space-y-1">
+                                <span className="text-xs text-gray-500">#{index + 1}</span>
+                                <div className="cursor-move text-gray-400 hover:text-gray-600">
+                                  ⋮⋮
+                                </div>
+                              </div>
+                              
+                              {/* Lecture Info */}
+                              <div className="flex-1">
+                                <h5 className="font-medium text-gray-900">{lecture.title}</h5>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {lecture.lectureDate ? `📅 ${lecture.lectureDate}` : '📅 Chưa xác định'}
+                                  {lecture.duration ? ` • ⏱️ ${lecture.duration}` : ''}
+                                </p>
+                                {lecture.content && (
+                                  <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                                    {lecture.content.substring(0, 100)}...
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-3">
+                            
+                            {/* Actions */}
+                            <div className="flex items-center space-x-2 ml-4">
                               {getStatusBadge(lecture.status)}
+                              
+                              {/* Sort Buttons */}
+                              <div className="flex flex-col space-y-1">
+                                <button 
+                                  onClick={() => handleMoveLecture(index, 'up')}
+                                  disabled={index === 0}
+                                  className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Di chuyển lên"
+                                >
+                                  ⬆️
+                                </button>
+                                <button 
+                                  onClick={() => handleMoveLecture(index, 'down')}
+                                  disabled={index === lectures.length - 1}
+                                  className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Di chuyển xuống"
+                                >
+                                  ⬇️
+                                </button>
+                              </div>
+                              
+                              {/* Main Actions */}
                               <button 
                                 onClick={() => {
                                   setSelectedLecture(lecture);
@@ -725,7 +830,21 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                                 }}
                                 className="text-blue-500 hover:text-blue-700 text-sm font-medium px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
                               >
-                                📚 Chi tiết & Bài tập
+                                📚 Chi tiết
+                              </button>
+                              
+                              <button 
+                                onClick={() => handleEditLecture(lecture)}
+                                className="text-orange-500 hover:text-orange-700 text-sm font-medium px-3 py-1 rounded border border-orange-200 hover:bg-orange-50"
+                              >
+                                ✏️ Sửa
+                              </button>
+                              
+                              <button 
+                                onClick={() => handleDeleteLecture(lecture)}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1 rounded border border-red-200 hover:bg-red-50"
+                              >
+                                🗑️ Xóa
                               </button>
                             </div>
                           </div>
@@ -736,6 +855,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                     <div className="text-center py-12 text-gray-500">
                       <div className="text-4xl mb-2">🎓</div>
                       <p>Chưa có bài giảng nào</p>
+                      <p className="text-sm text-gray-400 mt-2">Mỗi bài học sẽ tự động có 1 bài giảng tương ứng</p>
                     </div>
                   )}
                 </div>
@@ -783,20 +903,12 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
 
               {/* Students Tab */}
               {activeTab === 'students' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-lg font-medium text-gray-900">Học viên ({classData.currentStudents || 0})</h4>
-                    <button className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 flex items-center">
-                      <span className="mr-2">👥</span>
-                      Quản lý học viên
-                    </button>
-                  </div>
-                  
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="text-4xl mb-2">👥</div>
-                    <p>Chức năng quản lý học viên đang phát triển</p>
-                  </div>
-                </div>
+                <ClassStudentsManager 
+                  classId={classData.id}
+                  className={classData.className || classData.class_name}
+                  maxStudents={classData.maxStudents || 30}
+                  onClose={() => {}} // Keep modal open
+                />
               )}
             </>
           )}
@@ -822,11 +934,15 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
           onSuccess={handleUploadSuccess}
         />
 
-        {/* Create Lecture Modal */}
+        {/* Create/Edit Lecture Modal */}
         <CreateLectureModal
           visible={showLectureModal}
           classData={classData}
-          onCancel={() => setShowLectureModal(false)}
+          lectureData={selectedLecture} // Pass selected lecture for editing
+          onCancel={() => {
+            setShowLectureModal(false);
+            setSelectedLecture(null);
+          }}
           onSuccess={handleLectureSuccess}
         />
 
@@ -852,6 +968,16 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
             setLectures(prev => prev.map(l => l.id === updatedLecture.id ? updatedLecture : l));
           }}
         />
+
+        {/* Students Manager Modal */}
+        {showStudentsManager && (
+          <ClassStudentsManager
+            classId={classData.id}
+            className={classData.className || classData.class_name}
+            maxStudents={classData.maxStudents || 30}
+            onClose={() => setShowStudentsManager(false)}
+          />
+        )}
       </div>
     </div>
   );

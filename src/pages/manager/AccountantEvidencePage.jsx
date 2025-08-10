@@ -52,6 +52,8 @@ const AccountantEvidencePage = () => {
   const [filteredEvidence, setFilteredEvidence] = useState([]);
   const [pendingReview, setPendingReview] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [reviewedByMe, setReviewedByMe] = useState([]);
+  const [allReviewed, setAllReviewed] = useState([]);
   
   // Modal states
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -98,6 +100,14 @@ const AccountantEvidencePage = () => {
       // Load templates
       const templatesResponse = await accountantEvidenceService.getTemplates();
       setTemplates(templatesResponse.data);
+
+      // Load reviewed-by-me list
+      const reviewedResp = await accountantEvidenceService.getReviewedByMe();
+      setReviewedByMe(reviewedResp.data || []);
+
+      // Load all reviewed overview
+      const allReviewedResp = await accountantEvidenceService.getAllReviewed();
+      setAllReviewed(allReviewedResp.data || []);
       
     } catch (error) {
       message.error('Không thể tải dữ liệu');
@@ -112,7 +122,8 @@ const AccountantEvidencePage = () => {
       setLoading(true);
       
       const formData = new FormData();
-      formData.append('violationId', selectedViolationId || 1); // Mock violation ID
+      // Use violationId from the form input instead of a placeholder
+      formData.append('violationId', values.violationId);
       formData.append('file', values.file[0].originFileObj);
       formData.append('description', values.description);
       formData.append('evidenceType', values.evidenceType);
@@ -140,7 +151,8 @@ const AccountantEvidencePage = () => {
       setLoading(true);
       
       const formData = new FormData();
-      formData.append('violationId', selectedViolationId || 1);
+      // Use violationId provided by the form for bulk upload
+      formData.append('violationId', values.violationId);
       formData.append('category', values.category);
       
       values.files.forEach(file => {
@@ -609,33 +621,59 @@ const AccountantEvidencePage = () => {
           </Card>
         </TabPane>
 
-        <TabPane tab="Mẫu biểu" key="3">
-          <Row gutter={[16, 16]}>
-            {templates.map((template, index) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={index}>
-                <Card
-                  hoverable
-                  cover={
-                    <div style={{ padding: 20, textAlign: 'center' }}>
-                      <FileTextOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-                    </div>
-                  }
-                  actions={[
-                    <DownloadOutlined key="download" onClick={() => window.open(template.downloadUrl)} />
-                  ]}
-                >
-                  <Card.Meta
-                    title={template.name}
-                    description={template.description}
-                  />
-                  <Tag color="blue" style={{ marginTop: 8 }}>
-                    {template.category}
-                  </Tag>
-                </Card>
-              </Col>
-            ))}
-          </Row>
+        <TabPane tab={`Đã xem xét bởi tôi (${reviewedByMe.length})`} key="3">
+          <Card>
+            <Table
+              columns={evidenceColumns}
+              dataSource={reviewedByMe}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+            />
+          </Card>
         </TabPane>
+
+        <TabPane tab={`Tổng đã xem xét (${allReviewed.length})`} key="4">
+          <Card>
+            <Table
+              columns={evidenceColumns}
+              dataSource={allReviewed}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+            />
+          </Card>
+        </TabPane>
+
+        {templates && templates.length > 0 && (
+          <TabPane tab="Mẫu biểu" key="5">
+            <Row gutter={[16, 16]}>
+              {templates.map((template, index) => (
+                <Col xs={24} sm={12} md={8} lg={6} key={index}>
+                  <Card
+                    hoverable
+                    cover={
+                      <div style={{ padding: 20, textAlign: 'center' }}>
+                        <FileTextOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                      </div>
+                    }
+                    actions={[
+                      <DownloadOutlined key="download" onClick={() => window.open(template.downloadUrl)} />
+                    ]}
+                  >
+                    <Card.Meta
+                      title={template.name}
+                      description={template.description}
+                    />
+                    <Tag color="blue" style={{ marginTop: 8 }}>
+                      {template.category}
+                    </Tag>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </TabPane>
+        )}
       </Tabs>
 
       {/* Upload Modal */}

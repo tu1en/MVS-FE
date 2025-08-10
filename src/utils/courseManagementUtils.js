@@ -120,9 +120,10 @@ export const validateClassForm = (formData) => {
   }
 
   if (!formData.teacherId) validation.teacherId = 'Vui lòng chọn giáo viên';
-  if (!formData.roomId) validation.roomId = 'Vui lòng chọn phòng học';
+  // roomId có thể được tự gán hoặc chọn thủ công, không bắt buộc ở đây
+  // if (!formData.roomId) validation.roomId = 'Vui lòng chọn phòng học';
   if (!formData.startDate) validation.startDate = 'Vui lòng chọn ngày bắt đầu';
-  if (!formData.endDate) validation.endDate = 'Vui lòng chọn ngày kết thúc';
+  // End date có thể để trống: BE sẽ tự tính nếu không nhập
   
   if (formData.startDate && formData.endDate && 
       new Date(formData.startDate) >= new Date(formData.endDate)) {
@@ -190,28 +191,89 @@ export const parseExcelFile = (file) => {
       return;
     }
 
-    // For now, use a more realistic mock that simulates Excel parsing
-    // This would be replaced with actual SheetJS implementation in production
     const reader = new FileReader();
     reader.onload = (e) => {
+      // Real Excel parsing using SheetJS
+      // Install: npm install xlsx
       try {
-        // Simulate processing time like real Excel parsing
-        setTimeout(() => {
-          // Generate more realistic mock data based on file size/name
-          const mockData = [];
-          const baseWeeks = Math.min(15, Math.max(5, Math.floor(file.size / 1000))); // Simulate based on file size
-          
-          for (let i = 1; i <= baseWeeks; i++) {
-            mockData.push({
-              week: i,
-              topic: `Chủ đề tuần ${i}`,
-              type: i % 3 === 0 ? 'Lý thuyết + Thực hành' : (i % 2 === 0 ? 'Thực hành' : 'Lý thuyết'),
-              duration: i % 3 === 0 ? 180 : 120
+        // Import SheetJS - use dynamic import with .then()
+        import('xlsx').then((XLSX) => {
+          try {
+            const arrayBuffer = e.target.result;
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            
+            // Get first worksheet
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert to JSON with headers
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+              header: 1, // Use first row as headers
+              defval: '', // Default value for empty cells
+              raw: false // Format all cells as text
             });
+            
+            if (jsonData.length === 0) {
+              reject(new Error('File Excel trống hoặc không có dữ liệu'));
+              return;
+            }
+            
+            // Process the data
+            const headers = jsonData[0];
+            const rows = jsonData.slice(1);
+            
+            const processedData = rows
+              .filter(row => row.some(cell => cell && cell.toString().trim())) // Remove empty rows
+              .map((row, index) => {
+                const rowData = {};
+                headers.forEach((header, colIndex) => {
+                  if (header) {
+                    const cellValue = row[colIndex] || '';
+                    // Map common Vietnamese Excel headers to expected format
+                    let fieldName = header.toString().toLowerCase().trim();
+                    
+                    // Common field mappings
+                    if (fieldName.includes('tuần') || fieldName.includes('week')) {
+                      fieldName = 'week';
+                    } else if (fieldName.includes('chủ đề') || fieldName.includes('topic')) {
+                      fieldName = 'topic';
+                    } else if (fieldName.includes('loại') || fieldName.includes('type')) {
+                      fieldName = 'type';
+                    } else if (fieldName.includes('thời gian') || fieldName.includes('duration')) {
+                      fieldName = 'duration';
+                    }
+                    
+                    rowData[fieldName] = cellValue.toString().trim();
+                  }
+                });
+                
+                // Ensure required fields exist with defaults
+                return {
+                  week: rowData.week || index + 1,
+                  topic: rowData.topic || `Chủ đề tuần ${index + 1}`,
+                  type: rowData.type || 'Lý thuyết',
+                  duration: parseInt(rowData.duration) || 120,
+                  ...rowData
+                };
+              });
+            
+            if (processedData.length === 0) {
+              reject(new Error('Không tìm thấy dữ liệu hợp lệ trong file Excel'));
+              return;
+            }
+            
+            console.log('Excel parsing successful:', processedData);
+            resolve(processedData);
+            
+          } catch (parseError) {
+            console.error('Excel parsing error:', parseError);
+            reject(new Error(`Lỗi đọc file Excel: ${parseError.message}`));
           }
-          
-          resolve(mockData);
-        }, 500); // Simulate processing time
+        }).catch(importError => {
+          console.error('Error importing XLSX:', importError);
+          reject(new Error('Không thể tải thư viện đọc Excel. Vui lòng cài đặt package xlsx.'));
+        });
+        
       } catch (error) {
         reject(new Error('Không thể xử lý file Excel: ' + error.message));
       }

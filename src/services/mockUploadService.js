@@ -1,86 +1,123 @@
 import { message } from 'antd';
+import axiosInstance from '../config/axiosInstance';
 
 /**
- * Mock upload service using base64 encoding
- * Completely bypasses backend file upload issues
- * Stores images as base64 data URLs for immediate display
+ * Real file upload service using backend API
+ * Handles file uploads to the server with proper error handling
  */
-const MockUploadService = {
+const FileUploadService = {
   /**
-   * Mock upload file using base64 encoding
+   * Upload file to server
    * @param {File} file - The file to upload
    * @param {Function} onProgress - Progress callback
-   * @returns {Promise<string>} - The base64 data URL
+   * @returns {Promise<string>} - The file URL from server
    */
   async uploadFile(file, onProgress = null) {
     try {
-      console.log('Starting mock base64 upload:', file.name);
+      console.log('Starting file upload:', file.name);
       
-      // Validate file type - accept all image types
+      // Validate file type
       const allowedTypes = [
         'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 
-        'image/bmp', 'image/webp', 'image/svg+xml', 'image/tiff'
+        'image/bmp', 'image/webp', 'image/svg+xml', 'image/tiff',
+        'application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ];
       
       if (!allowedTypes.includes(file.type)) {
-        throw new Error(`Loại file không được hỗ trợ: ${file.type}. Chỉ chấp nhận các file ảnh.`);
+        throw new Error(`Loại file không được hỗ trợ: ${file.type}`);
       }
       
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
       if (file.size > maxSize) {
-        throw new Error('File quá lớn. Kích thước tối đa là 5MB.');
+        throw new Error('File quá lớn. Kích thước tối đa là 50MB.');
       }
       
-      // Simulate upload progress
-      if (onProgress) {
-        onProgress(20);
-        await new Promise(resolve => setTimeout(resolve, 200));
-        onProgress(50);
-        await new Promise(resolve => setTimeout(resolve, 200));
-        onProgress(80);
-        await new Promise(resolve => setTimeout(resolve, 200));
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'uploads'); // Optional folder organization
+      
+      // Upload with progress tracking
+      const response = await axiosInstance.post('/api/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+          }
+        },
+      });
+      
+      const fileUrl = response.data.url || response.data.data?.url;
+      if (!fileUrl) {
+        throw new Error('Server không trả về URL file');
       }
       
-      // Convert file to base64
-      const base64 = await this.fileToBase64(file);
+      console.log('File upload successful:', fileUrl);
+      message.success(`Tải file "${file.name}" thành công!`);
       
-      if (onProgress) {
-        onProgress(100);
-      }
-      
-      console.log('Mock base64 upload successful, size:', base64.length);
-      message.success(`Tải file "${file.name}" thành công! (Chế độ tạm thời)`);
-      
-      return base64;
+      return fileUrl;
       
     } catch (error) {
-      console.error('Mock upload error:', error);
-      message.error(`Lỗi tải file: ${error.message}`);
+      console.error('File upload error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Lỗi tải file không xác định';
+      message.error(`Lỗi tải file: ${errorMessage}`);
       throw error;
     }
   },
-  
+
   /**
-   * Convert file to base64 data URL
-   * @param {File} file - The file to convert
-   * @returns {Promise<string>} - Base64 data URL
+   * Upload multiple files
+   * @param {FileList} files - Files to upload
+   * @param {Function} onProgress - Progress callback
+   * @returns {Promise<Array>} - Array of file URLs
    */
-  fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+  async uploadMultipleFiles(files, onProgress = null) {
+    try {
+      const uploadPromises = Array.from(files).map((file, index) => 
+        this.uploadFile(file, (progress) => {
+          if (onProgress) {
+            const totalProgress = ((index * 100) + progress) / files.length;
+            onProgress(Math.round(totalProgress));
+          }
+        })
+      );
       
-      reader.onload = () => {
-        resolve(reader.result);
-      };
+      const results = await Promise.all(uploadPromises);
+      return results;
       
-      reader.onerror = () => {
-        reject(new Error('Không thể đọc file'));
-      };
+    } catch (error) {
+      console.error('Multiple file upload error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete file from server
+   * @param {string} fileUrl - URL of file to delete
+   * @returns {Promise<boolean>} - Success status
+   */
+  async deleteFile(fileUrl) {
+    try {
+      await axiosInstance.delete('/api/files/delete', {
+        data: { fileUrl }
+      });
       
-      reader.readAsDataURL(file);
-    });
+      message.success('Xóa file thành công');
+      return true;
+      
+    } catch (error) {
+      console.error('File deletion error:', error);
+      message.error('Lỗi xóa file');
+      return false;
+    }
   }
 };
 
-export default MockUploadService;
+export default FileUploadService;

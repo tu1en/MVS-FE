@@ -37,6 +37,7 @@ const API_CONFIG = {
     CLASS_STUDENTS: (id) => `/classrooms/${id}/students`,
     ENROLL_STUDENT: (classId, studentId) =>
       `/classrooms/${classId}/enroll/${studentId}`,
+    UNENROLL_STUDENT: (classId, studentId) => `/classes/${classId}/students/${studentId}`,
 
     // Assignment endpoints
     ASSIGNMENTS: "/v1/assignments",
@@ -96,6 +97,9 @@ const API_CONFIG = {
 
     // Teachers endpoints (for class assignment)
     TEACHERS: "/users/teachers",
+
+    // Students endpoints (for class enrollment)
+    STUDENTS: "/users/students",
 
     // Materials endpoints
     MATERIALS: "/materials",

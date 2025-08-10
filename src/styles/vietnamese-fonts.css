@@ -63,7 +63,11 @@
 /* Sửa lỗi hiển thị dấu thanh tiếng Việt */
 .fix-vietnamese-diacritics {
   font-variant-ligatures: none;
-  font-feature-settings: "kern" 1, "liga" 0;
+  font-feature-settings: "kern" 1, "liga" 0, "mark" 1, "mkmk" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  unicode-bidi: isolate;
 }
 
 /* Cải thiện độ rõ nét của chữ */
@@ -131,4 +135,30 @@
   .vietnamese-body {
     -webkit-font-smoothing: subpixel-antialiased;
   }
+}
+
+/* Đặc biệt xử lý UTF-8 encoding và Unicode tiếng Việt */
+.vietnamese-utf8-fix {
+  font-family: 'Inter', 'Roboto', 'Segoe UI', 'Arial Unicode MS', sans-serif;
+  font-feature-settings: "mark" 1, "mkmk" 1, "kern" 1;
+  unicode-bidi: isolate;
+  text-rendering: optimizeLegibility;
+  direction: ltr;
+}
+
+/* Force UTF-8 rendering cho toàn bộ ứng dụng */
+html, body, * {
+  -webkit-locale: "vi-VN";
+  -moz-locale: "vi-VN";
+}
+
+/* Override cho Ant Design components */
+.ant-select-item-option-content,
+.ant-table-cell,
+.ant-typography,
+.ant-input,
+.ant-btn {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-feature-settings: "mark" 1, "mkmk" 1, "kern" 1 !important;
+  text-rendering: optimizeLegibility !important;
 }

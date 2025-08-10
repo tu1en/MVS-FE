@@ -589,11 +589,8 @@ const ClassroomService = {
       } else if (Array.isArray(response.data)) {
         classrooms = response.data;
       } else {
-        console.warn('Unexpected response format, using mock data');
-        classrooms = [
-          { id: 1, name: "Toán Cao Cấp", section: "A", subject: "MATH101" },
-          { id: 2, name: "Lập Trình Cơ Bản", section: "B", subject: "CS101" }
-        ];
+        console.warn('Unexpected response format, returning empty array');
+        classrooms = [];
       }
       
       return { 
@@ -604,16 +601,11 @@ const ClassroomService = {
     } catch (error) {
       console.error('Error fetching teacher courses:', error);
       
-      // Provide mock data as fallback
-      console.log('Using mock classroom data due to API error');
-      const mockData = [
-        { id: 1, name: "Toán Cao Cấp", section: "A", subject: "MATH101" },
-        { id: 2, name: "Lập Trình Cơ Bản", section: "B", subject: "CS101" }
-      ];
-      
+      // Return empty data when API fails
+      console.error('API request failed, returning empty data');
       return {
-        data: mockData,
-        totalElements: mockData.length,
+        data: [],
+        totalElements: 0,
         error: error.message
       };
     }

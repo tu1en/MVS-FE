@@ -63,7 +63,9 @@ const WeeklyTimetable = ({ schedule }) => {
                 backgroundColor: day.isSame(dayjs(), 'day') ? '#e6f7ff' : '#f0f2f5',
                 borderBottom: '1px solid #d9d9d9'
               }}
-              bodyStyle={{ minHeight: '200px', padding: '12px' }}
+              styles={{
+                body: { minHeight: '200px', padding: '12px' }
+              }}
             >
               {eventsByDay[index].length > 0 ? (
                 eventsByDay[index].map(event => (

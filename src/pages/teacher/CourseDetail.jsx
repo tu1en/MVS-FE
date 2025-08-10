@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import CreateLectureModal from '../../components/teacher/CreateLectureModal';
-import EditClassroomModal from '../../components/teacher/EditClassroomModal';
+
 import LectureList from '../../components/teacher/LectureList';
 import StudentListTab from '../../components/teacher/StudentListTab';
 import { ROLE } from '../../constants/constants';
@@ -15,12 +14,9 @@ const CourseDetail = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState('lectures');
-  const [editingLecture, setEditingLecture] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const auth = useSelector((state) => state.auth);
 
@@ -40,17 +36,6 @@ const CourseDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLectureCreated = () => {
-    setShowCreateModal(false);
-    setEditingLecture(null);
-    loadCourseDetail();
-  };
-
-  const handleEditLecture = (lecture) => {
-    setEditingLecture(lecture);
-    setShowCreateModal(true);
   };
 
   const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
@@ -172,7 +157,7 @@ const CourseDetail = () => {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'lectures' && <LectureList lectures={course.lectures || []} courseId={courseId} courseName={course.name} onEditLecture={handleEditLecture} />}
+        {activeTab === 'lectures' && <LectureList lectures={course.lectures || []} courseId={courseId} courseName={course.name} />}
         {activeTab === 'students' && <StudentListTab classroomId={parseInt(courseId)} />}
         {activeTab === 'exams' && <ExamManagementTab />}
       </div>
@@ -184,10 +169,6 @@ const CourseDetail = () => {
           <button onClick={handleUploadMaterial} disabled={!selectedFile || isUploading} className="ml-4 px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-400">{isUploading ? 'Uploading...' : 'Upload'}</button>
         </div>
       </div>
-
-      <CreateLectureModal open={showCreateModal} onCancel={() => { setShowCreateModal(false); setEditingLecture(null); }} onSuccess={handleLectureCreated} courseId={parseInt(courseId)} editingLecture={editingLecture} />
-
-      <EditClassroomModal visible={isEditModalOpen} onCancel={() => setIsEditModalOpen(false)} onOk={(updatedClassroom) => { setCourse(updatedClassroom); setIsEditModalOpen(false); }} classroom={course} />
     </div>
   );
 };

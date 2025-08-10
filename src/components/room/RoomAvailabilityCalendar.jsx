@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import roomService from '../../services/roomService';
 import { showNotification } from '../../utils/courseManagementUtils';
 
@@ -15,12 +15,14 @@ const RoomAvailabilityCalendar = ({
     currentDate: selectedDate || new Date().toISOString().split('T')[0],
     weekDates: [],
     loading: false,
-    viewMode: 'week' // 'week' | 'day'
+    viewMode: 'week', // 'week' | 'day'
+    selectedSlot: null // { date, startTime }
   });
 
-  // Time slots for the calendar (7:00 AM to 10:00 PM)
+  // Time slots for the calendar aligned with school periods (start at 07:30)
+  // 30-minute granularity from 07:30 to 22:00 to khớp với mặc định các ca 07:30-09:30, ...
   const timeSlots = [
-    '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+    '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
     '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
     '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
     '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'
@@ -160,19 +162,26 @@ const RoomAvailabilityCalendar = ({
 
   // Handle time slot click
   const handleTimeSlotClick = (date, startTime) => {
-    if (onTimeSlotSelect && !isTimeSlotBooked(date, startTime)) {
-      const endTime = timeSlots[timeSlots.indexOf(startTime) + 1] || '22:30';
+    if (isTimeSlotBooked(date, startTime)) return;
+
+    // Lưu highlight cục bộ để người dùng thấy phản hồi ngay
+    setState(prev => ({ ...prev, selectedSlot: { date, startTime } }));
+
+    const endTime = timeSlots[timeSlots.indexOf(startTime) + 1] || '22:30';
+    if (onTimeSlotSelect) {
       onTimeSlotSelect({
         room: state.selectedRoom,
         date,
         startTime,
         endTime
       });
+    } else {
+      showNotification(`Đã chọn ${date} • ${startTime} - ${endTime} tại phòng ${state.selectedRoom?.name || `${state.selectedRoom?.building}-${state.selectedRoom?.number}`}`, 'info');
     }
   };
 
   return (
-    <div className={`room-availability-calendar ${className}`}>
+    <div className={`room-availability-calendar vietnamese-text ${className}`}>
       {/* Room Selector */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -181,7 +190,7 @@ const RoomAvailabilityCalendar = ({
         <select
           value={state.selectedRoom?.id || ''}
           onChange={(e) => {
-            const room = state.rooms.find(r => r.id === parseInt(e.target.value));
+            const room = state.rooms.find(r => String(r.id) === String(e.target.value));
             handleRoomSelect(room);
           }}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -306,13 +315,22 @@ const RoomAvailabilityCalendar = ({
                             <td
                               key={day.date}
                               onClick={() => handleTimeSlotClick(day.date, time)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleTimeSlotClick(day.date, time);
+                                }
+                              }}
                               className={`
                                 px-2 py-2 text-xs border-r border-gray-200 cursor-pointer transition-colors
                                 ${isBooked ? 
                                   'bg-red-100 hover:bg-red-200' : 
-                                  'hover:bg-green-100'
+                                   'hover:bg-green-100'
                                 }
                                 ${onTimeSlotSelect && !isBooked ? 'cursor-pointer' : ''}
+                                 ${state.selectedSlot && state.selectedSlot.date === day.date && state.selectedSlot.startTime === time ? 'ring-2 ring-blue-500' : ''}
                               `}
                             >
                               {isBooked ? (

@@ -1,35 +1,35 @@
 import {
-    ArrowLeftOutlined,
-    ArrowRightOutlined,
-    BookOutlined,
-    CalendarOutlined,
-    ClockCircleOutlined,
-    EnvironmentOutlined,
-    ExclamationCircleOutlined
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  EnvironmentOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import {
-    App,
-    Avatar,
-    Badge,
-    Button,
-    Calendar,
-    Card,
-    Col,
-    Descriptions,
-    List,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Tag,
-    Typography
+  App,
+  Avatar,
+  Badge,
+  Button,
+  Calendar,
+  Card,
+  Col,
+  Descriptions,
+  List,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Tag,
+  Typography
 } from 'antd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import weekday from 'dayjs/plugin/weekday';
-import { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TimetableService from '../services/timetableService';
 
 const { Option } = Select;
@@ -43,6 +43,8 @@ dayjs.locale('vi');
 
 const TimetableView = () => {
   const { message } = App.useApp();
+  
+  // State management với loading control
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -50,34 +52,71 @@ const TimetableView = () => {
   const [viewMode, setViewMode] = useState('month');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Ref để track last fetch params và prevent duplicate calls
+  const lastFetchRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
-  useEffect(() => {
-    fetchSchedule();
-  }, [selectedDate, viewMode]);
-
-  const fetchSchedule = async () => {
+  // Optimized fetchSchedule với debounce và duplicate prevention
+  const fetchSchedule = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      // Cancel previous request if still pending
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       
       const startDate = selectedDate.startOf(viewMode).format('YYYY-MM-DD');
       const endDate = selectedDate.endOf(viewMode).format('YYYY-MM-DD');
+      const params = { startDate, endDate, viewMode };
+      const paramsKey = JSON.stringify(params);
       
-      console.log('Fetching timetable for:', { startDate, endDate, viewMode });
+      // Prevent duplicate API calls
+      if (lastFetchRef.current === paramsKey && !loading) {
+        console.log('📅 TimetableView: Skipping duplicate fetch for:', params);
+        return;
+      }
       
-      // Use TimetableService to fetch my timetable (for students)
+      if (loading) {
+        console.log('📅 TimetableView: Already loading, skipping fetch');
+        return;
+      }
+      
+      lastFetchRef.current = paramsKey;
+      setLoading(true);
+      setError(null);
+      
+      console.log('📅 TimetableView: Fetching timetable for:', params);
+      
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+      
+      // Use TimetableService to fetch my timetable
       const data = await TimetableService.getMyTimetable({
         startDate,
         endDate
       });
       
-      console.log('Timetable data received:', data);
-      setEvents(Array.isArray(data) ? data : []);
+      console.log('📅 TimetableView: Response received:', data);
+      
+      // Validate and set data
+      if (Array.isArray(data)) {
+        setEvents(data);
+      } else {
+        console.warn('⚠️ TimetableView: Invalid response format:', data);
+        setEvents([]);
+      }
       
     } catch (error) {
-      console.error('Error fetching schedule:', error);
+      // Ignore aborted requests
+      if (error.name === 'AbortError') {
+        console.log('📅 TimetableView: Request aborted');
+        return;
+      }
+      
+      console.error('❌ TimetableView: Error fetching schedule:', error);
       setError(error);
       
+      // Handle different error types
       if (error.response?.status === 404) {
         message.warning('Không tìm thấy lịch học cho khoảng thời gian này');
         setEvents([]);
@@ -90,10 +129,50 @@ const TimetableView = () => {
       }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
-  };
+  }, [selectedDate, viewMode, loading, message]);
 
-  const getListData = (value) => {
+  // Effect với debounce và cleanup
+  useEffect(() => {
+    // Debounce để tránh multiple calls khi user thay đổi nhanh
+    const timeoutId = setTimeout(() => {
+      fetchSchedule();
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+      // Cancel any pending request when component unmounts or deps change
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchSchedule]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Event handler với optimization để prevent API spam
+  const handleModalClose = useCallback(() => {
+    setModalVisible(false);
+    setSelectedEvent(null);
+  }, []);
+
+  const showEventDetails = useCallback((event) => {
+    if (!event) return;
+    console.log('📅 TimetableView: Showing event details for:', event);
+    setSelectedEvent(event);
+    setModalVisible(true);
+  }, []);
+
+  // Memoized event data processing
+  const getListData = useCallback((value) => {
     if (!Array.isArray(events) || events.length === 0) return [];
     
     const dateEvents = events.filter(event => {
@@ -107,7 +186,7 @@ const TimetableView = () => {
       content: event.title || 'Không có tiêu đề',
       event: event
     }));
-  };
+  }, [events]);
 
   const getEventType = (type) => {
     switch (type?.toLowerCase()) {
@@ -166,7 +245,8 @@ const TimetableView = () => {
     }
   };
 
-  const cellRender = (current, info) => {
+  // Optimized cell render với click handler
+  const cellRender = useCallback((current, info) => {
     if (info.type !== 'date') return info.originNode;
     
     const listData = getListData(current);
@@ -187,7 +267,11 @@ const TimetableView = () => {
                     textOverflow: 'ellipsis',
                     maxWidth: '80px'
                   }}
-                  onClick={() => showEventDetails(item.event)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showEventDetails(item.event);
+                  }}
                 >
                   {item.content}
                 </span>
@@ -197,51 +281,48 @@ const TimetableView = () => {
         ))}
       </ul>
     );
-  };
+  }, [getListData, showEventDetails]);
 
-  const showEventDetails = (event) => {
-    setSelectedEvent(event);
-    setModalVisible(true);
-  };
-
-  const getTodayEvents = () => {
+  // Memoized event lists
+  const todayEvents = useMemo(() => {
     const today = dayjs().format('YYYY-MM-DD');
     return events.filter(event => 
       dayjs(event.startDatetime).format('YYYY-MM-DD') === today
     );
-  };
+  }, [events]);
 
-  const getUpcomingEvents = () => {
+  const upcomingEvents = useMemo(() => {
     const today = dayjs();
     return events
       .filter(event => dayjs(event.startDatetime).isAfter(today))
       .sort((a, b) => dayjs(a.startDatetime).diff(dayjs(b.startDatetime)))
       .slice(0, 5);
-  };
+  }, [events]);
 
-  // Week view functions
-  const handlePrevWeek = () => {
-    setSelectedDate(selectedDate.subtract(1, 'week'));
-  };
+  // Week view handlers
+  const handlePrevWeek = useCallback(() => {
+    setSelectedDate(prev => prev.subtract(1, 'week'));
+  }, []);
 
-  const handleNextWeek = () => {
-    setSelectedDate(selectedDate.add(1, 'week'));
-  };
+  const handleNextWeek = useCallback(() => {
+    setSelectedDate(prev => prev.add(1, 'week'));
+  }, []);
 
-  const formatTime = (dateTime) => {
+  const formatTime = useCallback((dateTime) => {
     if (!dateTime) return '';
     return dayjs(dateTime).format('HH:mm');
-  };
+  }, []);
 
-  const renderWeekView = () => {
+  // Optimized week view render
+  const renderWeekView = useCallback(() => {
     const startOfWeek = selectedDate.startOf('week');
     const endOfWeek = selectedDate.endOf('week');
     const days = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, 'day'));
 
     const eventsByDay = days.map(day => {
       return events
-        .filter(event => dayjs(event.start_datetime || event.startTime).isSame(day, 'day'))
-        .sort((a, b) => dayjs(a.start_datetime || a.startTime).diff(dayjs(b.start_datetime || b.startTime)));
+        .filter(event => dayjs(event.startDatetime || event.startTime).isSame(day, 'day'))
+        .sort((a, b) => dayjs(a.startDatetime || a.startTime).diff(dayjs(b.startDatetime || b.startTime)));
     });
 
     return (
@@ -279,7 +360,9 @@ const TimetableView = () => {
                   backgroundColor: day.isSame(dayjs(), 'day') ? '#e6f7ff' : '#f0f2f5',
                   borderBottom: '1px solid #d9d9d9'
                 }}
-                bodyStyle={{ minHeight: '200px', padding: '12px' }}
+                styles={{
+                  body: { minHeight: '200px', padding: '12px' }
+                }}
               >
                 {eventsByDay[index].length > 0 ? (
                   eventsByDay[index].map(event => (
@@ -289,14 +372,14 @@ const TimetableView = () => {
                       style={{ 
                         marginBottom: '8px',
                         cursor: 'pointer',
-                        borderColor: getEventColor(event.event_type || event.type)
+                        borderColor: getEventColor(event.eventType || event.type)
                       }}
                       onClick={() => showEventDetails(event)}
                     >
                       <Text strong>{event.title}</Text>
                       <div style={{ marginTop: '4px' }}>
-                        <Tag color={getEventType(event.event_type || event.type)}>
-                          {formatTime(event.start_datetime || event.startTime)} - {formatTime(event.end_datetime || event.endTime)}
+                        <Tag color={getEventType(event.eventType || event.type)}>
+                          {formatTime(event.startDatetime || event.startTime)} - {formatTime(event.endDatetime || event.endTime)}
                         </Tag>
                       </div>
                       <div style={{ marginTop: '4px' }}>
@@ -313,7 +396,7 @@ const TimetableView = () => {
         </Row>
       </Card>
     );
-  };
+  }, [selectedDate, events, viewMode, handlePrevWeek, handleNextWeek, formatTime, showEventDetails]);
 
   return (
     <div style={{ padding: '24px' }}>
@@ -357,112 +440,114 @@ const TimetableView = () => {
         {/* Sidebar - Only show in month view */}
         {viewMode === 'month' && (
           <div style={{ width: '320px' }}>
-          {/* Today's Events */}
-          <Card 
-            title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <ClockCircleOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
-                Lịch hôm nay
-              </div>
-            }
-            size="small"
-            style={{ marginBottom: '16px' }}
-          >
-            <List
+            {/* Today's Events */}
+            <Card 
+              title={
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <ClockCircleOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                  Lịch hôm nay
+                </div>
+              }
               size="small"
-              dataSource={getTodayEvents()}
-              locale={{ emptyText: 'Không có lịch học hôm nay' }}
-              renderItem={item => (
-                <List.Item 
-                  style={{ padding: '8px 0', cursor: 'pointer' }}
-                  onClick={() => showEventDetails(item)}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar 
-                        icon={getEventIcon(item.eventType)} 
-                        style={{ backgroundColor: getEventColor(item.eventType) }}
-                        size="small"
-                      />
-                    }
-                    title={
-                      <span style={{ fontSize: '13px' }}>{item.title}</span>
-                    }
-                    description={
-                      <div style={{ fontSize: '11px' }}>
-                        {dayjs(item.startDatetime).format('HH:mm')} - {dayjs(item.endDatetime).format('HH:mm')}
-                        <br />
-                        {item.location}
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
+              style={{ marginBottom: '16px' }}
+            >
+              <List
+                size="small"
+                dataSource={todayEvents}
+                locale={{ emptyText: 'Không có lịch học hôm nay' }}
+                renderItem={item => (
+                  <List.Item 
+                    style={{ padding: '8px 0', cursor: 'pointer' }}
+                    onClick={() => showEventDetails(item)}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar 
+                          icon={getEventIcon(item.eventType)} 
+                          style={{ backgroundColor: getEventColor(item.eventType) }}
+                          size="small"
+                        />
+                      }
+                      title={
+                        <span style={{ fontSize: '13px' }}>{item.title}</span>
+                      }
+                      description={
+                        <div style={{ fontSize: '11px' }}>
+                          {dayjs(item.startDatetime).format('HH:mm')} - {dayjs(item.endDatetime).format('HH:mm')}
+                          <br />
+                          {item.location}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
 
-          {/* Upcoming Events */}
-          <Card 
-            title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <CalendarOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                Sắp tới
-              </div>
-            }
-            size="small"
-          >
-            <List
+            {/* Upcoming Events */}
+            <Card 
+              title={
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <CalendarOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                  Sắp tới
+                </div>
+              }
               size="small"
-              dataSource={getUpcomingEvents()}
-              locale={{ emptyText: 'Không có lịch sắp tới' }}
-              renderItem={item => (
-                <List.Item 
-                  style={{ padding: '8px 0', cursor: 'pointer' }}
-                  onClick={() => showEventDetails(item)}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar 
-                        icon={getEventIcon(item.eventType)} 
-                        style={{ backgroundColor: getEventColor(item.eventType) }}
-                        size="small"
-                      />
-                    }
-                    title={
-                      <span style={{ fontSize: '13px' }}>{item.title}</span>
-                    }
-                    description={
-                      <div style={{ fontSize: '11px' }}>
-                        {dayjs(item.startDatetime).format('DD/MM - HH:mm')}
-                        <br />
-                        {item.location}
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </div>
+            >
+              <List
+                size="small"
+                dataSource={upcomingEvents}
+                locale={{ emptyText: 'Không có lịch sắp tới' }}
+                renderItem={item => (
+                  <List.Item 
+                    style={{ padding: '8px 0', cursor: 'pointer' }}
+                    onClick={() => showEventDetails(item)}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar 
+                          icon={getEventIcon(item.eventType)} 
+                          style={{ backgroundColor: getEventColor(item.eventType) }}
+                          size="small"
+                        />
+                      }
+                      title={
+                        <span style={{ fontSize: '13px' }}>{item.title}</span>
+                      }
+                      description={
+                        <div style={{ fontSize: '11px' }}>
+                          {dayjs(item.startDatetime).format('DD/MM - HH:mm')}
+                          <br />
+                          {item.location}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </div>
         )}
       </div>
 
-      {/* Event Details Modal */}
+      {/* Event Details Modal - Fixed modal state management */}
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            {selectedEvent && getEventIcon(selectedEvent.event_type || selectedEvent.type)}
+            {selectedEvent && getEventIcon(selectedEvent.eventType)}
             <span style={{ marginLeft: '8px' }}>Chi tiết lịch học</span>
           </div>
         }
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={handleModalClose}
         footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
+          <Button key="close" onClick={handleModalClose}>
             Đóng
           </Button>
         ]}
         width={600}
+        destroyOnClose={true} // Ensures clean modal state
+        maskClosable={true}
       >
         {selectedEvent && (
           <Descriptions bordered column={1}>

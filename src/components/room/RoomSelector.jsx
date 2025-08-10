@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import roomService from '../../services/roomService';
 import { showNotification } from '../../utils/courseManagementUtils';
 
@@ -115,7 +115,7 @@ const RoomSelector = ({
   const roomsToDisplay = getRoomsToDisplay();
 
   return (
-    <div className={`room-selector ${className}`}>
+    <div className={`room-selector vietnamese-text ${className}`}>
       {/* Search Mode Toggle */}
       <div className="mb-4">
         <div className="flex items-center space-x-4 mb-3">
@@ -175,8 +175,8 @@ const RoomSelector = ({
           onChange={(e) => handleFilterChange('type', e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
         >
-          <option value="">Tất cả loại phòng</option>
-          <option value="lecture">Phòng gi강ng</option>
+           <option value="">Tất cả loại phòng</option>
+           <option value="lecture">Phòng giảng</option>
           <option value="lab">Phòng thí nghiệm</option>
           <option value="computer">Phòng máy tính</option>
           <option value="seminar">Phòng seminar</option>

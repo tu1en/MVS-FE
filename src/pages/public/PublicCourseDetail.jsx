@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
+import CourseDescription from '../../components/course/CourseDescription';
 
 const PublicCourseDetail = () => {
   const { id } = useParams();
@@ -150,9 +151,10 @@ const PublicCourseDetail = () => {
               <div className="lg:col-span-2">
                 <div className="mb-8">
                   <h2 className="text-2xl font-semibold mb-4">Mô tả khóa học</h2>
-                  <p className="text-gray-700 leading-relaxed">
-                    {course.description || 'Chưa có mô tả cho khóa học này.'}
-                  </p>
+                  <CourseDescription 
+                    description={course.description} 
+                    courseId={course.id || id}
+                  />
                 </div>
                 
                 {course.objectives && (

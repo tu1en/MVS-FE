@@ -81,7 +81,9 @@ const ManagerAttendance = ({ user }) => {
 
     const loadTodayStatus = async () => {
         try {
+            console.log('Loading today status...');
             const status = await attendanceService.getTodayStatus();
+            console.log('Got today status:', status);
             setTodayStatus(status);
         } catch (error) {
             console.error('Refresh status error:', error);
@@ -131,19 +133,44 @@ const ManagerAttendance = ({ user }) => {
 
     const handleCheckOut = () => {
         if (locationPermission === 'denied') {
-            message.error('Cần quyền truy cập vị trí để check-out');
+            Modal.confirm({
+                title: 'Yêu cầu quyền truy cập vị trí',
+                content: 'Bạn cần cho phép truy cập vị trí để check-out. Vui lòng bật định vị trong cài đặt trình duyệt.',
+                okText: 'Thử lại',
+                cancelText: 'Hủy',
+                onOk: () => {
+                    checkLocationPermission();
+                }
+            });
             return;
         }
+        
+        if (!todayStatus?.hasCheckedIn) {
+            message.warning('Bạn cần check-in trước khi check-out');
+            return;
+        }
+        
+        if (todayStatus?.hasCheckedOut) {
+            message.info('Bạn đã check-out hôm nay rồi');
+            return;
+        }
+        
         setVerificationModal({ visible: true, type: 'check-out' });
     };
 
     const handleVerificationComplete = (success, data) => {
         setVerificationModal({ visible: false, type: null });
         if (success) {
-            loadTodayStatus();
+            console.log('Verification successful, reloading status...', data);
+            // Force a small delay to ensure localStorage is written
+            setTimeout(() => {
+                loadTodayStatus();
+            }, 100);
             if (data?.message) {
                 message.success(data.message);
             }
+        } else {
+            console.log('Verification failed', data);
         }
     };
 
@@ -214,6 +241,33 @@ const ManagerAttendance = ({ user }) => {
                             <Text type="secondary" style={{ fontSize: 16 }}>
                                 {currentTime.format('dddd, DD/MM/YYYY')}
                             </Text>
+                        </Space>
+                    </Col>
+                </Row>
+            </Card>
+
+            {/* Debug Info */}
+            <Card style={{ marginBottom: 24, borderRadius: 8, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                <Row justify="space-between" align="middle">
+                    <Col>
+                        <Space direction="vertical" size="small">
+                            <Text strong style={{ color: '#52c41a' }}>Debug Information</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                Status: {JSON.stringify(todayStatus)}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                LocationPermission: {locationPermission}
+                            </Text>
+                        </Space>
+                    </Col>
+                    <Col>
+                        <Space>
+                            <Button size="small" onClick={loadTodayStatus}>Refresh Status</Button>
+                            <Button size="small" onClick={() => {
+                                localStorage.removeItem('attendance_mock_status');
+                                loadTodayStatus();
+                                message.info('Cleared mock data');
+                            }}>Clear Mock Data</Button>
                         </Space>
                     </Col>
                 </Row>
@@ -349,20 +403,15 @@ const ManagerAttendance = ({ user }) => {
 
                 <Col xs={24} md={12}>
                     <Card
-                        hoverable={todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut}
+                        hoverable={true}
                         style={{ 
                             borderRadius: 8,
                             background: (todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut)
                                 ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
                                 : '#f0f0f0',
-                            cursor: (todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut) 
-                                ? 'pointer' 
-                                : 'not-allowed'
+                            cursor: 'pointer'
                         }}
-                        onClick={(todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut) 
-                            ? handleCheckOut 
-                            : undefined
-                        }
+                        onClick={handleCheckOut}
                     >
                         <div style={{ textAlign: 'center', padding: '20px 0' }}>
                             <LogoutOutlined style={{ 
@@ -396,12 +445,10 @@ const ManagerAttendance = ({ user }) => {
                                 }
                                 size="large"
                                 danger={todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut}
-                                disabled={!todayStatus?.hasCheckedIn || todayStatus?.hasCheckedOut}
+                                disabled={false}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (todayStatus?.hasCheckedIn && !todayStatus?.hasCheckedOut) {
-                                        handleCheckOut();
-                                    }
+                                    handleCheckOut();
                                 }}
                                 icon={<CheckCircleOutlined />}
                                 style={{ 

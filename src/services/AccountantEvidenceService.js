@@ -52,6 +52,20 @@ class AccountantEvidenceService {
   }
 
   /**
+   * Get evidence files reviewed by current accountant
+   */
+  async getReviewedByMe() {
+    return api.get('/accountant/evidence/reviewed-by-me');
+  }
+
+  /**
+   * Get all reviewed evidence (read-only overview)
+   */
+  async getAllReviewed() {
+    return api.get('/accountant/evidence/all-reviewed');
+  }
+
+  /**
    * Add accountant notes to evidence file
    * @param {number} evidenceId - Evidence ID
    * @param {string} notes - Accountant notes

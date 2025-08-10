@@ -1,16 +1,52 @@
-import React, { useState } from 'react';
-import { showNotification } from '../../utils/courseManagementUtils';
+import React, { useEffect, useState } from 'react';
 import FirebaseMaterialService from '../../services/firebaseMaterialService';
+import { showNotification } from '../../utils/courseManagementUtils';
 
 const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
   const [uploadData, setUploadData] = useState({
     title: '',
     description: '',
     file: null,
-    type: 'document'
+    type: 'document',
+    lectureId: null, // ✅ NEW: Kết nối với bài giảng cụ thể
+    targetType: 'general' // 'general' hoặc 'lecture'
   });
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [lectures, setLectures] = useState([]); // ✅ NEW: Danh sách bài giảng
+  const [loadingLectures, setLoadingLectures] = useState(false);
+
+  // ✅ NEW: Load lectures when modal opens
+  useEffect(() => {
+    if (visible && classData) {
+      loadLectures();
+    }
+  }, [visible, classData]);
+
+  const loadLectures = async () => {
+    setLoadingLectures(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8088/api/lectures/classroom/${classData.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLectures(Array.isArray(data) ? data : data.data || []);
+      } else {
+        console.warn('Failed to load lectures:', response.status);
+        setLectures([]);
+      }
+    } catch (error) {
+      console.error('Error loading lectures:', error);
+      setLectures([]);
+    }
+    setLoadingLectures(false);
+  };
 
   const fileTypes = [
     { value: 'document', label: '📄 Tài liệu', accept: '.pdf,.doc,.docx,.txt' },
@@ -88,6 +124,12 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
       return;
     }
 
+    // ✅ NEW: Validate lecture selection
+    if (uploadData.targetType === 'lecture' && !uploadData.lectureId) {
+      showNotification('Vui lòng chọn bài giảng để gắn tài liệu', 'warning');
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -96,7 +138,9 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
         fileSize: formatFileSize(uploadData.file.size),
         title: uploadData.title,
         type: uploadData.type,
-        classId: classData.id
+        classId: classData.id,
+        targetType: uploadData.targetType,
+        lectureId: uploadData.lectureId
       });
 
       // Check if Firebase is available
@@ -110,7 +154,10 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
         title: uploadData.title.trim(),
         description: uploadData.description.trim() || 'Uploaded material',
         type: uploadData.type,
-        uploadedBy: getCurrentUserId()
+        uploadedBy: getCurrentUserId(),
+        // ✅ NEW: Include lecture information
+        targetType: uploadData.targetType,
+        lectureId: uploadData.targetType === 'lecture' ? uploadData.lectureId : null
       };
 
       // Upload to Firebase Storage
@@ -131,7 +178,9 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
         title: '',
         description: '',
         file: null,
-        type: 'document'
+        type: 'document',
+        lectureId: null,
+        targetType: 'general'
       });
 
       // Close modal and refresh
@@ -158,9 +207,15 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
   const uploadToBackend = async () => {
     const formData = new FormData();
     formData.append('file', uploadData.file);
+    formData.append('title', uploadData.title.trim());
     formData.append('description', uploadData.description.trim() || 'Uploaded material');
     formData.append('category', uploadData.type || 'General');
     formData.append('uploadedBy', 'User ' + getCurrentUserId());
+    // ✅ NEW: Include lecture information for backend
+    formData.append('targetType', uploadData.targetType);
+    if (uploadData.targetType === 'lecture' && uploadData.lectureId) {
+      formData.append('lectureId', uploadData.lectureId);
+    }
     
     const token = localStorage.getItem('token');
     const headers = {};
@@ -187,7 +242,9 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
       title: '',
       description: '',
       file: null,
-      type: 'document'
+      type: 'document',
+      lectureId: null,
+      targetType: 'general'
     });
 
     // Close modal and refresh
@@ -329,6 +386,67 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
                     placeholder="Mô tả ngắn về tài liệu này..."
                   />
                 </div>
+
+                {/* ✅ NEW: Target Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gắn vào</label>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="general"
+                          checked={uploadData.targetType === 'general'}
+                          onChange={(e) => setUploadData(prev => ({ ...prev, targetType: e.target.value, lectureId: null }))}
+                          className="mr-2 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm">📚 Tài liệu chung của lớp</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="lecture"
+                          checked={uploadData.targetType === 'lecture'}
+                          onChange={(e) => setUploadData(prev => ({ ...prev, targetType: e.target.value }))}
+                          className="mr-2 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm">🎓 Tài liệu cho bài giảng cụ thể</span>
+                      </label>
+                    </div>
+
+                    {/* Lecture Selection */}
+                    {uploadData.targetType === 'lecture' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Chọn bài giảng <span className="text-red-500">*</span>
+                        </label>
+                        {loadingLectures ? (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500 mr-2"></div>
+                            Đang tải danh sách bài giảng...
+                          </div>
+                        ) : lectures.length > 0 ? (
+                          <select
+                            value={uploadData.lectureId || ''}
+                            onChange={(e) => setUploadData(prev => ({ ...prev, lectureId: e.target.value || null }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="">Chọn bài giảng...</option>
+                            {lectures.map(lecture => (
+                              <option key={lecture.id} value={lecture.id}>
+                                🎓 {lecture.title || lecture.name} {lecture.lectureDate ? `(${lecture.lectureDate})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
+                            📝 Chưa có bài giảng nào. Tạo bài giảng trước khi upload tài liệu riêng.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -344,7 +462,8 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
             </button>
             <button
               onClick={handleUpload}
-              disabled={!uploadData.file || !uploadData.title.trim() || uploading}
+              disabled={!uploadData.file || !uploadData.title.trim() || uploading || 
+                       (uploadData.targetType === 'lecture' && !uploadData.lectureId)}
               className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {uploading ? (

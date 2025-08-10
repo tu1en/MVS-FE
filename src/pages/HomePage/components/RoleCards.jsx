@@ -179,7 +179,9 @@ export default function RoleCards() {
         width={800}
         centered
         closeIcon={<CloseOutlined style={{ fontSize: '20px', color: '#666' }} />}
-        bodyStyle={{ padding: '24px' }}
+        styles={{
+          body: { padding: '24px' }
+        }}
       >
         {selectedBlog && (
           <div className="blog-detail-modal">

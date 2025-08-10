@@ -46,15 +46,14 @@ class PayrollService {
   }
 
   /**
-   * Generate bulk payroll for all staff
-   * @param {string} startDate - Pay period start date (YYYY-MM-DD)
-   * @param {string} endDate - Pay period end date (YYYY-MM-DD)
+   * Generate bulk payroll for all staff using new TopCV system
+   * @param {string} period - Pay period (YYYY-MM format)
    * @returns {Promise} API response
    */
-  static async generateBulkPayroll(startDate, endDate) {
+  static async generateBulkPayroll(period) {
     try {
-      const response = await axiosInstance.post('/payroll/generate/bulk', null, {
-        params: { startDate, endDate }
+      const response = await axiosInstance.post('/payroll/generate/all', null, {
+        params: { period }
       });
       return response.data;
     } catch (error) {
@@ -64,39 +63,88 @@ class PayrollService {
   }
 
   /**
-   * Generate payroll for a specific staff member
-   * @param {number} staffId - Staff member ID
-   * @param {string} startDate - Pay period start date
-   * @param {string} endDate - Pay period end date
+   * Generate payroll for a specific staff member using new TopCV system
+   * @param {number} userId - User ID
+   * @param {string} period - Pay period (YYYY-MM format)
    * @returns {Promise} API response
    */
-  static async generatePayroll(staffId, startDate, endDate) {
+  static async generatePayroll(userId, period) {
     try {
-      const response = await axiosInstance.post(`/payroll/generate/${staffId}`, null, {
-        params: { startDate, endDate }
+      const response = await axiosInstance.post(`/payroll/generate/user/${userId}`, null, {
+        params: { period }
       });
       return response.data;
     } catch (error) {
-      console.error(`Error generating payroll for staff ${staffId}:`, error);
+      console.error(`Error generating payroll for user ${userId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Preview payroll calculation for a staff member
-   * @param {number} staffId - Staff member ID
-   * @param {string} startDate - Pay period start date
-   * @param {string} endDate - Pay period end date
+   * Preview payroll calculation for a staff member using new TopCV system
+   * @param {number} userId - User ID
+   * @param {string} period - Pay period (YYYY-MM format)
    * @returns {Promise} API response
    */
-  static async previewPayroll(staffId, startDate, endDate) {
+  static async previewPayroll(userId, period) {
     try {
-      const response = await axiosInstance.get(`/payroll/preview/${staffId}`, {
-        params: { startDate, endDate }
+      const response = await axiosInstance.get(`/payroll/preview/user/${userId}`, {
+        params: { period }
       });
       return response.data;
     } catch (error) {
-      console.error(`Error previewing payroll for staff ${staffId}:`, error);
+      console.error(`Error previewing payroll for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate payroll by contract type using new TopCV system
+   * @param {string} contractType - Contract type (TEACHER, ACCOUNTANT, etc.)
+   * @param {string} period - Pay period (YYYY-MM format)
+   * @returns {Promise} API response
+   */
+  static async generatePayrollByContractType(contractType, period) {
+    try {
+      const response = await axiosInstance.post(`/payroll/generate/contract-type/${contractType}`, null, {
+        params: { period }
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error generating payroll for contract type ${contractType}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payroll history for a user
+   * @param {number} userId - User ID
+   * @param {string} fromPeriod - From period (YYYY-MM)
+   * @param {string} toPeriod - To period (YYYY-MM)
+   * @returns {Promise} API response
+   */
+  static async getPayrollHistory(userId, fromPeriod, toPeriod) {
+    try {
+      const response = await axiosInstance.get(`/payroll/history/user/${userId}`, {
+        params: { fromPeriod, toPeriod }
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting payroll history for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get TopCV calculation example
+   * @returns {Promise} API response
+   */
+  static async getTopCVExample() {
+    try {
+      const response = await axiosInstance.get('/payroll/topcv-example');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting TopCV example:', error);
       throw error;
     }
   }
@@ -228,6 +276,60 @@ class PayrollService {
       payPeriodEnd: record.payPeriodEnd,
       generatedAt: record.generatedAt
     };
+  }
+
+  /**
+   * Find HR payroll by user and period (new HR module)
+   * GET /api/hr/salary/payroll/user/{userId}?year&month
+   */
+  static async getHrPayrollForUserPeriod(userId, year, month) {
+    try {
+      const response = await axiosInstance.get(`/hr/salary/payroll/user/${userId}`, {
+        params: { year, month }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate HR payroll for a user and period (creates if missing)
+   * POST /api/hr/salary/calculate?userId&year&month
+   */
+  static async calculateHrPayroll(userId, year, month) {
+    const response = await axiosInstance.post('/hr/salary/calculate', null, {
+      params: { userId, year, month }
+    });
+    return response.data;
+  }
+
+  /**
+   * Get detailed salary calculation breakdown for a payroll record
+   * @param {number} payrollId - Payroll record ID  
+   * @returns {Promise} API response
+   */
+  static async getSalaryCalculationDetails(payrollId) {
+    try {
+      console.log('📊 Getting salary calculation details for payrollId:', payrollId);
+      console.log('📊 Request URL:', `/hr/salary/payroll/${payrollId}/details`);
+      
+      const response = await axiosInstance.get(`/hr/salary/payroll/${payrollId}/details`);
+      
+      console.log('📊 Salary calculation details response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Error getting salary calculation details for payroll ${payrollId}:`, error);
+      console.error('❌ Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      throw error;
+    }
   }
 }
 

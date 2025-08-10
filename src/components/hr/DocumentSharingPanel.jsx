@@ -394,7 +394,9 @@ const DocumentSharingPanel = ({
                   marginBottom: '8px',
                   border: selectedDocument?.id === document.id ? '2px solid #1890ff' : '1px solid #f0f0f0'
                 }}
-                bodyStyle={{ padding: '12px' }}
+                styles={{
+                  body: { padding: '12px' }
+                }}
               >
                 <Row gutter={[8, 8]} align="middle">
                   <Col flex="auto">
@@ -562,7 +564,9 @@ const DocumentSharingPanel = ({
         footer={null}
         width="90%"
         style={{ top: 20 }}
-        bodyStyle={{ height: '80vh', padding: 0 }}
+        styles={{
+          body: { height: '80vh', padding: 0 }
+        }}
       >
         {selectedDocument && (
           <div style={{ 

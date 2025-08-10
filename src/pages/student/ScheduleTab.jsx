@@ -168,7 +168,9 @@ const ScheduleTab = ({ schedule }) => {
           <Col xs={24} sm={12} lg={8} key={event.id}>
             <Card 
               className="h-full"
-              bodyStyle={{ padding: '16px' }}
+              styles={{
+                body: { padding: '16px' }
+              }}
               title={
                 <div className="flex justify-between items-start">
                   <Text strong className="text-base">{event.title}</Text>

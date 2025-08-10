@@ -539,7 +539,7 @@ function NavigationBar() {
       category: "Điểm danh",
       items: [
         { name: 'Giải trình vi phạm', path: '/accountant/attendance-explanations', icon: '📝' },
-        { name: 'Xem trạng thái giải trình', path: '/accountant/explanation-status', icon: '📊' }
+        // { name: 'Xem trạng thái giải trình', path: '/accountant/explanation-status', icon: '📊' }
       ]
     },
     {

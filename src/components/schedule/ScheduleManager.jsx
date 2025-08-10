@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import RoomSelector from '../room/RoomSelector';
-import RoomAvailabilityCalendar from '../room/RoomAvailabilityCalendar';
+import React, { useEffect, useState } from 'react';
 import useScheduleValidation from '../../hooks/useScheduleValidation';
+import classManagementService from '../../services/classManagementService';
+import roomService from '../../services/roomService';
 import { showNotification } from '../../utils/courseManagementUtils';
+import RoomAvailabilityCalendar from '../room/RoomAvailabilityCalendar';
+import RoomSelector from '../room/RoomSelector';
 
 const ScheduleManager = ({ 
   classData = null, 
   existingSchedule = [],
   onScheduleChange = null,
   onScheduleValidate = null,
-  mode = 'create' // 'create' | 'edit' | 'view'
+  mode = 'create', // 'create' | 'edit' | 'view'
+  // Thông tin bổ sung để kiểm tra GV và auto-assign phòng
+  teacherId = null,
+  startDate = null,
+  endDate = null,
+  weeklySchedule = null
 }) => {
   const [state, setState] = useState({
     scheduleItems: [],
@@ -49,8 +56,8 @@ const ScheduleManager = ({
       lessonName: lesson.topicName,
       week: lesson.weekNumber || (index + 1),
       date: null, // To be set by user
-      startTime: '08:00', // Default start time
-      endTime: '10:00', // Default end time
+      startTime: '07:30', // Default start time (slot 1)
+      endTime: '09:30', // Default end time (120 phút)
       room: null,
       status: 'draft',
       duration: lesson.durationMinutes || 120
@@ -66,8 +73,8 @@ const ScheduleManager = ({
       lessonName: 'Bài học mới',
       week: state.scheduleItems.length + 1,
       date: null,
-      startTime: '08:00',
-      endTime: '10:00',
+      startTime: '07:30',
+      endTime: '09:30',
       room: null,
       status: 'draft'
     };
@@ -202,12 +209,21 @@ const ScheduleManager = ({
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Danh sách lịch học</h3>
         {mode !== 'view' && (
-          <button
-            onClick={addScheduleItem}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            ➕ Thêm tiết học
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={addScheduleItem}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              ➕ Thêm tiết học
+            </button>
+            <button
+              onClick={autoAssignRooms}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+              title="Tự gán phòng trống theo từng tiết"
+            >
+              🏫 Tự gán phòng
+            </button>
+          </div>
         )}
       </div>
 
@@ -320,6 +336,76 @@ const ScheduleManager = ({
       )}
     </div>
   );
+
+  // Auto-assign rooms for each schedule item
+  const autoAssignRooms = async () => {
+    if (!Array.isArray(state.scheduleItems) || state.scheduleItems.length === 0) {
+      showNotification('Chưa có tiết học để gán phòng', 'warning');
+      return;
+    }
+    try {
+      const updated = await Promise.all(
+        state.scheduleItems.map(async (item) => {
+          if (!item.date || !item.startTime || !item.endTime) return item;
+          try {
+            const res = await roomService.getAvailableRooms({
+              date: item.date,
+              startTime: item.startTime,
+              endTime: item.endTime,
+              minCapacity: classData?.expectedStudents || 0,
+              building: item.room?.building,
+              type: item.room?.type,
+              classId: classData?.id || undefined
+            });
+            const rooms = res.data?.data || res.data || [];
+            if (Array.isArray(rooms) && rooms.length > 0) {
+              return { ...item, room: rooms[0] };
+            }
+          } catch (e) {
+            // ignore item level errors, continue others
+          }
+          return item;
+        })
+      );
+      setState(prev => ({ ...prev, scheduleItems: updated }));
+      if (onScheduleChange) onScheduleChange(updated);
+      showNotification('Đã tự gán phòng cho các tiết khả dụng', 'success');
+    } catch (error) {
+      console.error('Auto-assign rooms error:', error);
+      showNotification('Lỗi khi tự gán phòng', 'error');
+    }
+  };
+
+  // Check teacher availability against current weekly schedule
+  const checkTeacherAvailability = async () => {
+    if (!teacherId) {
+      showNotification('Vui lòng chọn giáo viên ở bước trước', 'warning');
+      return;
+    }
+    if (!weeklySchedule || !startDate || !endDate) {
+      showNotification('Thiếu thông tin lịch để kiểm tra giáo viên', 'warning');
+      return;
+    }
+    try {
+      const payload = {
+        subject: classData?.template?.subject || '',
+        schedule: JSON.stringify(weeklySchedule),
+        startDate,
+        endDate
+      };
+      const res = await classManagementService.getAvailableTeachers(payload);
+      const list = res.data?.data || res.data || [];
+      const ok = list.some(t => String(t.id) === String(teacherId));
+      if (ok) {
+        showNotification('Giáo viên không bị trùng lịch trong khoảng thời gian đã chọn', 'success');
+      } else {
+        showNotification('Giáo viên đang bận trong một hoặc nhiều buổi. Vui lòng chọn giáo viên khác hoặc đổi lịch.', 'error');
+      }
+    } catch (error) {
+      console.error('Check teacher availability error:', error);
+      showNotification('Không kiểm tra được lịch giáo viên', 'error');
+    }
+  };
 
   const renderValidationTab = () => (
     <div className="space-y-4">
