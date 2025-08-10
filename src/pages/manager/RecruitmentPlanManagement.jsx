@@ -115,6 +115,13 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
 
   const columns = [
     {
+      title: 'Thứ tự',
+      dataIndex: 'index',
+      key: 'index',
+      width: 80,
+      render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
+    },
+    {
       title: 'Tên kế hoạch',
       dataIndex: 'title',
       key: 'title',
