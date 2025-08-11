@@ -1,26 +1,26 @@
 import {
-  CalculatorOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  EyeOutlined,
-  FileExcelOutlined,
-  TeamOutlined
+    CalculatorOutlined,
+    CalendarOutlined,
+    DollarOutlined,
+    EyeOutlined,
+    FileExcelOutlined,
+    TeamOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  message,
-  Modal,
-  Progress,
-  Row,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag,
+    Tooltip
 } from 'antd';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -102,11 +102,16 @@ const PayrollManagement = () => {
         totalSalary: net,
         calculationMethod,
         standardMonthlyHours,
+        totalWorkingDays: Number(record.totalWorkingDays ?? (standardMonthlyHours ? standardMonthlyHours / 8 : 0)),
+        actualWorkingDays,
+        topCVResult: record.topCVResult || null,
         shiftSummary: record.shiftSummary || '',
         status: 'PROCESSED', // New system generates processed payroll
         processedDate: new Date().toISOString().split('T')[0],
         payPeriodStart: startOfMonth,
         payPeriodEnd: endOfMonth,
+        contractStartDate: record.contractStartDate || null,
+        contractEndDate: record.contractEndDate || null,
         generatedAt: new Date().toISOString()
       });
       });

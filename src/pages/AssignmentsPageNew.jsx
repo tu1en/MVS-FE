@@ -107,14 +107,31 @@ function AssignmentsPageNew() {
       setClassrooms(response.data || []);
     } catch (error) {
       console.error('Error fetching teacher classrooms:', error);
-      // If error, set some mock classrooms for testing
-      const mockClassrooms = [
-        { id: 1, name: 'Lớp 10A1' },
-        { id: 2, name: 'Lớp 11A2' },
-        { id: 3, name: 'Lớp 12A3' }
-      ];
-      setTeacherClassrooms(mockClassrooms);
-      setClassrooms(mockClassrooms);
+      // Không dùng mock data – giữ rỗng để UI thể hiện đúng trạng thái
+      setTeacherClassrooms([]);
+      setClassrooms([]);
+    }
+  };
+
+  // Load classrooms theo ngữ cảnh URL (nếu có courseId thì lấy đúng lớp đó)
+  const loadClassroomsForContext = async () => {
+    try {
+      if (courseId) {
+        const result = await ClassroomService.getClassroomById(courseId);
+        const classroom = result?.data;
+        if (classroom) {
+          setClassrooms([classroom]);
+          // Set mặc định trường classroomId trong form tạo bài tập
+          assignmentForm.setFieldsValue({ classroomId: classroom.id });
+        } else {
+          setClassrooms([]);
+        }
+      } else if (userRole === 'TEACHER') {
+        await fetchTeacherClassrooms();
+      }
+    } catch (e) {
+      console.error('Error loading classrooms for context:', e);
+      setClassrooms([]);
     }
   };
 
@@ -165,6 +182,8 @@ function AssignmentsPageNew() {
         const past = assignments.filter(a => new Date(a.dueDate) < new Date());
         setUpcomingAssignments(upcoming);
         setPastAssignments(past);
+        // Đồng thời tải danh sách lớp theo context để dropdown có dữ liệu
+        await loadClassroomsForContext();
         
         // For teachers, fetch submissions data for all assignments to enable proper filtering
         if (userRole === 'TEACHER') {
@@ -365,13 +384,26 @@ function AssignmentsPageNew() {
   };
 
   const handleCreateAssignment = async (values) => {
-    if (!classroomId) {
+    // Chuẩn hóa dueDate từ Antd DatePicker (Dayjs/Moment) sang Moment để so sánh/chuyển đổi chính xác
+    const dueMoment = moment.isMoment(values?.dueDate)
+      ? values.dueDate
+      : values?.dueDate?.toDate
+        ? moment(values.dueDate.toDate())
+        : moment(values?.dueDate);
+
+    // Validate due date strictly > now để tránh @Future fail ở BE
+    if (!dueMoment.isValid() || !dueMoment.isAfter(moment())) {
+      message.error('Hạn nộp phải ở tương lai (sau thời điểm hiện tại).');
+      return;
+    }
+    const selectedClassroomId = values.classroomId;
+    if (!selectedClassroomId) {
       message.error("Vui lòng chọn lớp học.");
       return;
     }
 
     // Convert classroomId from object to number if needed
-    const finalClassroomId = typeof classroomId === 'object' ? classroomId.id : classroomId;
+    const finalClassroomId = typeof selectedClassroomId === 'object' ? selectedClassroomId.id : selectedClassroomId;
     
     // Check if finalClassroomId is a valid number
     if (isNaN(parseInt(finalClassroomId))) {
@@ -385,7 +417,8 @@ function AssignmentsPageNew() {
       const assignmentData = {
         title: values.title,
         description: values.description,
-        dueDate: values.dueDate.toISOString(),
+        // Gửi LocalDateTime (không timezone) để backend @Future không bị lệch múi giờ
+        dueDate: dueMoment.format('YYYY-MM-DDTHH:mm:ss'),
         points: values.points || values.maxScore || 10, // Backend expects 'points', not 'maxScore'
         classroomId: finalClassroomId, // Use the extracted ID
       };
@@ -1330,7 +1363,22 @@ function AssignmentsPageNew() {
               format="YYYY-MM-DD HH:mm:ss"
               placeholder="Chọn hạn nộp"
               style={{ width: '100%' }}
-              disabledDate={(current) => current && current < new Date().setHours(0,0,0,0)}
+              disabledDate={(current) => current && current < moment().startOf('day')}
+              disabledTime={(date) => {
+                if (!date) return {};
+                const now = moment();
+                if (date.isSame(now, 'day')) {
+                  const disabledHours = Array.from({ length: now.hour() }, (_, i) => i);
+                  const disabledMinutes = Array.from({ length: now.minute() }, (_, i) => i);
+                  const disabledSeconds = Array.from({ length: now.second() }, (_, i) => i);
+                  return {
+                    disabledHours: () => disabledHours,
+                    disabledMinutes: () => disabledMinutes,
+                    disabledSeconds: () => disabledSeconds,
+                  };
+                }
+                return {};
+              }}
             />
           </Form.Item>
           

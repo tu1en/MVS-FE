@@ -2,10 +2,10 @@ import { Lock, LogOut, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { logout, syncFromLocalStorage } from '../store/slices/authSlice';
+import { syncFromLocalStorage } from '../store/slices/authSlice';
 import { performLogout } from '../utils/authUtils';
-import RegisterModal from './RegisterModal';
 import NotificationBell from './NotificationBell';
+import RegisterModal from './RegisterModal';
 
 /**
  * Header component for the application
@@ -86,7 +86,7 @@ function Header() {
               to="/courses" 
               className="text-gray-700 hover:text-primary font-medium transition-colors"
             >
-              Browse Courses
+              Khoá học
             </Link>
           </nav>
         </div>

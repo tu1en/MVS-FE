@@ -7,7 +7,6 @@ import {
   MessageCircle,
   RefreshCw,
   Share2,
-  Star,
   User,
   Users
 } from 'lucide-react';
@@ -42,9 +41,9 @@ const PublicCourseDetail = () => {
 
   const normalizeCourse = (raw) => {
     const d = raw?.data ?? raw;
-    const startDate = d.startDate || d.start_date || null;
-    const endDate = d.endDate || d.end_date || null;
-    let totalWeeks = d.totalWeeks || d.total_weeks || d.weeks || null;
+    const startDate = d.startDate || d.start_date || d.start_time || d.start || null;
+    const endDate = d.endDate || d.end_date || d.end_time || d.end || null;
+    let totalWeeks = d.totalWeeks || d.total_weeks || d.weeks || d.durationWeeks || null;
     if (!totalWeeks && startDate && endDate) {
       try {
         const s = new Date(startDate);
@@ -56,22 +55,22 @@ const PublicCourseDetail = () => {
     return {
       id: d.id,
       // Names & description
-      name: d.name || d.className || d.courseTemplateName,
+      name: d.name || d.className || d.courseTemplateName || d.templateName || d.title,
       className: d.className,
-      description: d.description,
-      subject: d.subject || d.courseTemplateName,
+      description: d.description || d.courseTemplateDescription || d.templateDescription || d.overview || '',
+      subject: d.subject || d.subjectName || d.courseTemplateName,
       // Dates
       startDate,
       endDate,
       totalWeeks,
       // Capacity
-      currentStudents: d.currentStudents || d.currentEnrollment || d.enrolled || 0,
-      maxStudents: d.maxStudents || d.maxStudentsPerTemplate || d.capacity || 0,
+      currentStudents: d.currentStudents || d.currentEnrollment || d.enrolled || d.students || 0,
+      maxStudents: d.maxStudents || d.maxStudentsPerTemplate || d.capacity || d.max_students || 0,
       // Tuition/public
-      tuitionFee: d.tuitionFee || d.enrollmentFee || d.enrollment_fee,
+      tuitionFee: d.tuitionFee || d.enrollmentFee || d.enrollment_fee || d.fee,
       isPublic: d.isPublic === true || d.public === true,
       // Teacher
-      teacherName: d.teacherName || d.instructorName || d.teacher_name || null,
+      teacherName: d.teacherName || d.instructorName || d.teacher_name || d.teacher?.fullName || null,
       // Lessons
       lessonCount: d.lessonCount || (Array.isArray(d.lessons) ? d.lessons.length : undefined),
       // Ratings (nếu BE không có thì để undefined, không random)
@@ -95,7 +94,19 @@ const PublicCourseDetail = () => {
         const response = await courseService.getPublicCourseDetail(id);
         data = response.data;
       }
-      setCourse(normalizeCourse(data));
+      const normalized = normalizeCourse(data);
+      setCourse(normalized);
+      // Nếu là route lớp công khai /public/classes/:id hoặc chưa có số bài học, gọi thêm API lessons để bổ sung
+      try {
+        if (!normalized.lessonCount || normalized.lessonCount === 0) {
+          const resLessons = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CLASSES_LESSONS(id)}`);
+          if (resLessons.ok) {
+            const lessonPayload = await resLessons.json();
+            const lessons = Array.isArray(lessonPayload?.data) ? lessonPayload.data : (Array.isArray(lessonPayload) ? lessonPayload : []);
+            setCourse(prev => ({ ...prev, lessonCount: Array.isArray(lessons) ? lessons.length : prev.lessonCount }));
+          }
+        }
+      } catch (_) {}
       setError(null);
     } catch (error) {
       console.error('Lỗi khi tải khóa học:', error);
@@ -131,12 +142,25 @@ const PublicCourseDetail = () => {
 
   // Helper functions (không dùng dữ liệu ngẫu nhiên)
   const getCourseStats = (c) => {
-    const durationWeeks = c?.totalWeeks
-      ? `${c.totalWeeks} tuần`
-      : (c?.startDate && c?.endDate ? undefined : undefined);
+    let durationWeeks;
+    // Ưu tiên hiển thị tổng số buổi (slot) nếu đã có danh sách bài học
+    if (Number.isFinite(c?.lessonCount) && c.lessonCount > 0) {
+      durationWeeks = `${c.lessonCount} buổi`;
+    } else if (c?.totalWeeks) {
+      durationWeeks = `${c.totalWeeks} tuần`;
+    } else if (c?.startDate && c?.endDate) {
+      try {
+        const s = new Date(c.startDate);
+        const e = new Date(c.endDate);
+        const diffDays = Math.max(0, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+        durationWeeks = `${Math.max(1, Math.ceil(diffDays / 7))} tuần`;
+      } catch (_) {
+        durationWeeks = undefined;
+      }
+    }
     return {
-      rating: c?.rating,
-      totalRatings: c?.totalRatings,
+      rating: undefined,
+      totalRatings: undefined,
       students: c?.currentStudents ?? 0,
       maxStudents: c?.maxStudents ?? 0,
       duration: durationWeeks,
@@ -164,8 +188,7 @@ const PublicCourseDetail = () => {
 
   const tabs = [
     { id: 'overview', label: 'Tổng quan', icon: BookOpen },
-    { id: 'instructor', label: 'Giảng viên', icon: User },
-    { id: 'reviews', label: 'Đánh giá', icon: Star }
+    { id: 'instructor', label: 'Giảng viên', icon: User }
   ];
 
   if (loading || authLoading) {
@@ -324,15 +347,7 @@ const PublicCourseDetail = () => {
                     </h1>
                     
                       <div className="flex items-center gap-6 text-sm">
-                        {Number.isFinite(stats.rating) && (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span className="font-semibold">{Number.isFinite(stats.rating) ? stats.rating.toFixed(1) : '—'}</span>
-                            {Number.isFinite(stats.totalRatings) && (
-                              <span className="text-gray-500">({stats.totalRatings} đánh giá)</span>
-                            )}
-                          </div>
-                        )}
+                        {/* Ẩn đánh giá trên header */}
                         <div className="flex items-center gap-1 text-gray-600">
                           <Users className="w-4 h-4" />
                           <span>{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''} học viên</span>
@@ -378,10 +393,7 @@ const PublicCourseDetail = () => {
                     <div className="text-2xl font-bold text-purple-600">{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''}</div>
                     <div className="text-sm text-gray-600">Học viên</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{Number.isFinite(stats.rating) ? stats.rating.toFixed(1) : '—'}</div>
-                    <div className="text-sm text-gray-600">Đánh giá</div>
-                  </div>
+                  {/* Ẩn ô đánh giá trong quick stats */}
                 </div>
               </div>
 
@@ -471,25 +483,7 @@ const PublicCourseDetail = () => {
                     </div>
                   )}
 
-                  {/* Reviews Tab */}
-                  {activeTab === 'reviews' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-bold text-gray-900">Đánh giá từ học viên</h3>
-                        <div className="flex items-center gap-2">
-                          <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                          <span className="font-semibold">{Number.isFinite(stats.rating) ? stats.rating.toFixed(1) : '—'}</span>
-                          <span className="text-gray-600">({stats.totalRatings} đánh giá)</span>
-                        </div>
-                      </div>
-                      
-                      <div className="text-center py-12 bg-gray-50 rounded-xl">
-                        <Star className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h4 className="text-lg font-semibold text-gray-700 mb-2">Chưa có đánh giá</h4>
-                        <p className="text-gray-500">Hãy là người đầu tiên đánh giá khóa học này!</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Ẩn tab đánh giá */}
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import API_CONFIG from '../../config/api-config';
 import { formatVietnameseText } from '../../utils/viTextUtils';
 import YouTubeEmbed from '../ui/YouTubeEmbed';
 
@@ -33,41 +34,65 @@ const CourseDescription = ({ description, courseId }) => {
     try {
       setLoadingLessons(true);
       const token = localStorage.getItem('token');
-      
-      // Try to get lessons from course template first
-      let endpoint = `http://localhost:8088/api/course-templates/${courseId}/lessons`;
-      
+
+      const headers = {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Content-Type': 'application/json'
+      };
+
+      // 1) Thử lấy theo lớp: /api/classes/{id}/lessons
       try {
-        const response = await axios.get(endpoint, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        // Ensure we always work with arrays
-        const data = response.data;
-        const lessonsArray = Array.isArray(data) ? data : 
-                          (data && data.data && Array.isArray(data.data) ? data.data : []);
+        const resClass = await axios.get(
+          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CLASSES_LESSONS(courseId)}`,
+          { headers }
+        );
+        const payload = resClass.data;
+        const lessonsArray = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : [];
+        if (Array.isArray(lessonsArray) && lessonsArray.length > 0) {
+          setLessons(normalizeLessons(lessonsArray));
+          return;
+        }
+      } catch (_) {}
+
+      // 2) Thử theo course template: /api/course-templates/{id}/lessons
+      try {
+        const resTemplate = await axios.get(
+          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_LESSONS(courseId)}`,
+          { headers }
+        );
+        const payload = resTemplate.data;
+        const lessonsArray = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : [];
+        if (Array.isArray(lessonsArray) && lessonsArray.length > 0) {
+          setLessons(normalizeLessons(lessonsArray));
+          return;
+        }
+      } catch (_) {}
+
+      // 3) Thử theo courses lectures: /api/courses/{id}/lectures
+      try {
+        const resCourse = await axios.get(
+          `${API_CONFIG.BASE_URL}/courses/${courseId}/lectures`,
+          { headers }
+        );
+        const payload = resCourse.data;
+        const lessonsArray = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : [];
         setLessons(normalizeLessons(lessonsArray));
-      } catch (templateError) {
-        // If template lessons fail, try course lectures
-        endpoint = `http://localhost:8088/api/courses/${courseId}/lectures`;
-        const response = await axios.get(endpoint, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        const data = response.data;
-        const lessonsArray = Array.isArray(data) ? data : 
-                          (data && data.data && Array.isArray(data.data) ? data.data : []);
-        setLessons(normalizeLessons(lessonsArray));
+      } catch (error) {
+        console.error('Error loading course curriculum:', error);
+        setLessons([]);
       }
-    } catch (error) {
-      console.error('Error loading course curriculum:', error);
-      setLessons([]);
     } finally {
       setLoadingLessons(false);
     }

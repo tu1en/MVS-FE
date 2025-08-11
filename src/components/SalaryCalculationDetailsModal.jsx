@@ -40,31 +40,37 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
       console.log('🔄 Modal: Starting to fetch TopCV salary details...');
       console.log('🔄 Modal: employeeRecord received:', employeeRecord);
       
-      // For the new TopCV system, create mock details from the employeeRecord
+      // Tạo dữ liệu hiển thị từ record thực tế; Việt hóa hoàn toàn
       if (employeeRecord && employeeRecord.topCVDetails) {
+        const isTeacher = employeeRecord.contractType === 'TEACHER' || employeeRecord.calculationMethod === 'HOURLY';
+        const totalWorkingDays = employeeRecord.totalWorkingDays || (employeeRecord.standardMonthlyHours ? employeeRecord.standardMonthlyHours / 8 : 22);
+        const actualWorkingDays = employeeRecord.actualWorkingDays || Math.round((employeeRecord.totalWorkingHours || 0) / 8);
+        const regularHours = employeeRecord.totalWorkingHours || (actualWorkingDays * 8);
+        const hourlyRate = isTeacher ? (employeeRecord.hourlyRate || 0) : Math.round((employeeRecord.baseSalary || 0) / 176);
+
         const mockDetails = {
           employeeId: employeeRecord.userId,
           employeeName: employeeRecord.fullName,
           period: employeeRecord.payPeriodStart ? employeeRecord.payPeriodStart.substring(0, 7) : new Date().toISOString().substring(0, 7),
           payPeriodStart: employeeRecord.payPeriodStart,
           payPeriodEnd: employeeRecord.payPeriodEnd,
-            contractDetails: {
+          contractDetails: {
             contractType: employeeRecord.contractType,
             position: employeeRecord.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên',
             department: employeeRecord.department,
-            workingHours: employeeRecord.calculationMethod === 'HOURLY' ? 'Theo ca (tính theo giờ)' : '8 giờ/ngày',
+            workingHours: isTeacher ? 'Theo giờ (từ chấm công)' : '8 giờ/ngày',
             contractStatus: 'ACTIVE',
             contractStartDate: new Date().toISOString().split('T')[0],
             contractEndDate: null,
             contractSalary: employeeRecord.baseSalary,
             baseSalary: employeeRecord.baseSalary,
-            salaryType: employeeRecord.calculationMethod === 'HOURLY' ? 'HOURLY' : 'GROSS',
-            hourlyRate: employeeRecord.hourlyRate || (employeeRecord.baseSalary ? Math.round(employeeRecord.baseSalary / 176) : 0)
+            salaryType: isTeacher ? 'THEO_GIO' : 'GROSS',
+            hourlyRate
           },
           workingHoursSummary: {
-            totalWorkingDays: 22,
-            actualWorkingDays: Math.round(employeeRecord.totalWorkingHours / 8) || 22,
-            regularHours: employeeRecord.totalWorkingHours || 176,
+            totalWorkingDays,
+            actualWorkingDays,
+            regularHours,
             overtimeHours: 0
           },
           salaryCalculationSteps: {
@@ -75,10 +81,10 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             step5_WeekendPay: 0,
             grossSalary: employeeRecord.grossPay,
             deductions: {
-              socialInsurance: Math.round(employeeRecord.topCVDetails.socialInsurance || (employeeRecord.deductions * 0.3)),
-              healthInsurance: Math.round(employeeRecord.baseSalary * 0.015),
-              unemploymentInsurance: Math.round(employeeRecord.baseSalary * 0.01),
-              personalIncomeTax: Math.round(employeeRecord.topCVDetails.personalIncomeTax || (employeeRecord.deductions * 0.7)),
+              socialInsurance: isTeacher ? 0 : Math.round(employeeRecord.topCVDetails.socialInsurance || (employeeRecord.deductions * 0.3)),
+              healthInsurance: isTeacher ? 0 : Math.round((employeeRecord.baseSalary || 0) * 0.015),
+              unemploymentInsurance: isTeacher ? 0 : Math.round((employeeRecord.baseSalary || 0) * 0.01),
+              personalIncomeTax: isTeacher ? 0 : Math.round(employeeRecord.topCVDetails.personalIncomeTax || (employeeRecord.deductions * 0.7)),
               latePenalty: 0,
               absentPenalty: 0,
               totalDeductions: employeeRecord.deductions
@@ -87,12 +93,12 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           },
           calculationFormulas: [
             `Lương cơ bản (hợp đồng): ${formatCurrency(employeeRecord.baseSalary)}`,
-            `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
+            isTeacher ? `Lương theo giờ = Đơn giá giờ × (Ngày công × 8h)` : `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
             `Lương thô = ${formatCurrency(employeeRecord.grossPay)}`,
-            `BHXH (8%) = ${formatCurrency(employeeRecord.baseSalary * 0.08)}`,
-            `BHYT (1.5%) = ${formatCurrency(employeeRecord.baseSalary * 0.015)}`,
-            `BHTN (1%) = ${formatCurrency(employeeRecord.baseSalary * 0.01)}`,
-            `Thuế TNCN (lũy tiến) = ${formatCurrency(employeeRecord.topCVDetails?.personalIncomeTax || 0)}`,
+            isTeacher ? `BHXH (8%) = 0 VNĐ` : `BHXH (8%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.08)}`,
+            isTeacher ? `BHYT (1.5%) = 0 VNĐ` : `BHYT (1.5%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.015)}`,
+            isTeacher ? `BHTN (1%) = 0 VNĐ` : `BHTN (1%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.01)}`,
+            isTeacher ? `Thuế TNCN (lũy tiến) = 0 VNĐ` : `Thuế TNCN (lũy tiến) = ${formatCurrency(employeeRecord.topCVDetails?.personalIncomeTax || 0)}`,
             `Lương thực nhận = ${formatCurrency(employeeRecord.totalSalary)}`
           ]
         };
@@ -193,10 +199,10 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
               <Col span={12}>
                 <Descriptions column={1} size="small" bordered>
                   <Descriptions.Item label="Ngày bắt đầu hợp đồng">
-                    {formatDate(details.contractDetails?.contractStartDate)}
+                    {formatDate(details.contractDetails?.contractStartDate || employeeRecord?.contractStartDate)}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày kết thúc hợp đồng">
-                    {formatDate(details.contractDetails?.contractEndDate)}
+                    {formatDate(details.contractDetails?.contractEndDate || employeeRecord?.contractEndDate)}
                   </Descriptions.Item>
                   <Descriptions.Item label="Lương theo hợp đồng">
                     <Text strong style={{ color: '#1890ff' }}>

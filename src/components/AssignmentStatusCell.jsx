@@ -12,8 +12,18 @@ const AssignmentStatusCell = ({ assignmentId }) => {
       try {
         setLoading(true);
         const submissions = await AssignmentService.getSubmissionsForAssignment(assignmentId);
+        // Chỉ đếm những submission thực sự đã nộp (có thời điểm nộp hoặc nội dung/tệp)
+        const realSubmissions = Array.isArray(submissions)
+          ? submissions.filter((s) => {
+              const submittedAt = s.submittedAt || s.submissionDate;
+              const hasText = !!(s.submissionText || s.comment);
+              const hasFile = !!(s.fileSubmissionUrl || s.attachmentUrl);
+              const hasScore = s.score !== undefined && s.score !== null;
+              return submittedAt || hasText || hasFile || hasScore;
+            })
+          : [];
         if (isMounted) {
-          setSubmissionCount(submissions.length);
+          setSubmissionCount(realSubmissions.length);
         }
       } catch (error)
       {
