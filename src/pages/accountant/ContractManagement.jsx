@@ -55,6 +55,19 @@ const ContractManagement = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [completedContracts, setCompletedContracts] = useState(new Set());
 
+  // Helper: parse various date shapes to moment safely
+  const parseToMoment = (value) => {
+    if (!value) return null;
+    if (moment.isMoment(value)) return value;
+    // Try strict known formats first
+    const formats = ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601];
+    const m = moment(value, formats, true);
+    if (m.isValid()) return m;
+    // Fallback loose parse
+    const m2 = moment(value);
+    return m2.isValid() ? m2 : null;
+  };
+
   // Fetch data khi component mount
   useEffect(() => {
     fetchContracts();
@@ -299,14 +312,14 @@ const ContractManagement = () => {
       email: record.email,
       phoneNumber: record.phoneNumber,
       position: record.position,
-      birthDate: record.birthDate ? moment(record.birthDate) : null,
+      birthDate: parseToMoment(record.birthDate),
       citizenId: record.citizenId,
       address: record.address,
       qualification: record.qualification,
       subject: record.subject,
       educationLevel: record.educationLevel,
-      startDate: record.startDate ? moment(record.startDate) : null,
-      endDate: record.endDate ? moment(record.endDate) : null,
+      startDate: parseToMoment(record.startDate),
+      endDate: parseToMoment(record.endDate),
       status: record.status,
       contractTerms: record.contractTerms,
       evaluation: record.evaluation,

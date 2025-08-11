@@ -19,6 +19,27 @@ class ContractPDFGenerator {
   }
 
   /**
+   * Format various date shapes to 'DD/MM/YYYY' safely.
+   * Accepts Moment, ISO string, 'YYYY-MM-DD', 'DD/MM/YYYY', etc.
+   * Returns defaultValue when invalid.
+   * @param {*} value
+   * @param {string} defaultValue
+   */
+  static formatDate(value, defaultValue = 'N/A') {
+    if (!value) return defaultValue;
+    // Prefer handling Moment inputs directly
+    if (moment.isMoment(value)) {
+      return value.isValid() ? value.format('DD/MM/YYYY') : defaultValue;
+    }
+    // Try strict known formats first
+    const strict = moment(value, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601], true);
+    if (strict.isValid()) return strict.format('DD/MM/YYYY');
+    // Fallback loose parse
+    const loose = moment(value);
+    return loose.isValid() ? loose.format('DD/MM/YYYY') : defaultValue;
+  }
+
+  /**
    * Translate work shifts from English to Vietnamese
    * @param {string} shifts - Comma-separated work shifts in English
    * @returns {string} - Work shifts in Vietnamese
@@ -94,14 +115,14 @@ class ContractPDFGenerator {
     
     // Extract contract details with fallback values
     const fullName = this.getValue(contract.fullName);
-    const birthDate = contract.birthDate ? moment(contract.birthDate).format('DD/MM/YYYY') : 'N/A';
+    const birthDate = this.formatDate(contract.birthDate);
     const citizenId = this.getValue(contract.citizenId || contract.cccd);
     const address = this.getValue(contract.address);
     const qualification = this.getValue(contract.qualification);
     const subject = this.getValue(contract.subject || contract.position);
     const classLevel = this.getValue(contract.classLevel || contract.educationLevel || contract.level);
-    const startDate = contract.startDate ? moment(contract.startDate).format('DD/MM/YYYY') : 'N/A';
-    const endDate = contract.endDate ? moment(contract.endDate).format('DD/MM/YYYY') : 'N/A';
+    const startDate = this.formatDate(contract.startDate);
+    const endDate = this.formatDate(contract.endDate);
     const salary = contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A';
     const contractType = 'Giáo viên';
     const department = this.getValue(contract.department);
