@@ -51,9 +51,8 @@ const ContractManagement = () => {
   const [candidateForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [renewModalVisible, setRenewModalVisible] = useState(false);
-  const [renewingContract, setRenewingContract] = useState(null);
-  const [renewForm] = Form.useForm();
+  // Bộ lọc trạng thái hợp đồng
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [completedContracts, setCompletedContracts] = useState(new Set());
 
   // Fetch data khi component mount
@@ -65,7 +64,7 @@ const ContractManagement = () => {
   // Filter contracts when data changes
   useEffect(() => {
     filterContracts(searchText);
-  }, [teacherContracts, staffContracts, searchText]);
+  }, [teacherContracts, staffContracts, searchText, statusFilter]);
 
   // Lấy danh sách hợp đồng theo loại
   const fetchContracts = async () => {
@@ -274,41 +273,7 @@ const ContractManagement = () => {
     }
   };
 
-  // Xử lý gia hạn hợp đồng
-  const handleRenewContract = (record) => {
-    console.log('Renewing contract:', record);
-    setRenewingContract(record);
-    
-    // Populate form with current contract dates
-    renewForm.setFieldsValue({
-      contractId: record.contractId,
-      fullName: record.fullName,
-      startDate: record.startDate ? moment(record.startDate) : null,
-      endDate: record.endDate ? moment(record.endDate) : null
-    });
-    
-    setRenewModalVisible(true);
-  };
-
-  // Xử lý cập nhật ngày hợp đồng (gia hạn)
-  const handleRenewContractSubmit = async (values) => {
-    try {
-      const renewData = {
-        startDate: values.startDate.format('YYYY-MM-DD'),
-        endDate: values.endDate.format('YYYY-MM-DD')
-      };
-      
-      await axiosInstance.put(`/contracts/${renewingContract.id}`, renewData);
-      message.success('Gia hạn hợp đồng thành công!');
-      setRenewModalVisible(false);
-      setRenewingContract(null);
-      renewForm.resetFields();
-      fetchContracts();
-    } catch (error) {
-      console.error('Error renewing contract:', error);
-      message.error('Không thể gia hạn hợp đồng!');
-    }
-  };
+  // ĐÃ XÓA: Tính năng gia hạn hợp đồng
 
   // Xử lý chỉnh sửa hợp đồng
   const handleEditContract = (record) => {
@@ -365,29 +330,18 @@ const ContractManagement = () => {
     console.log('🔄 REFACTORED: Selected candidate for contract creation:', candidate);
     setSelectedCandidate(candidate);
     setCandidateModalVisible(true);
-    
     // Reset form trước khi set dữ liệu mới
     candidateForm.resetFields();
     
+    // Không tự động gán loại hợp đồng theo vị trí nữa. Người dùng sẽ chọn trong Select.
+
     try {
       // Lấy dữ liệu offer từ backend (với logic mutually exclusive salary)
       console.log('🔄 REFACTORED: Fetching mutually exclusive salary data for candidate ID:', candidate.id);
-      const response = await axiosInstance.get(`/contracts/candidates/${candidate.id}/offer-data`);
+      const response = await axiosInstance.get(`/contracts/candidates/${candidate.id}/offer`);
       const offerData = response.data;
       
       console.log('🔄 REFACTORED: Received mutually exclusive salary data:', offerData);
-      
-      // Xác định loại hợp đồng dựa trên vị trí (vẫn cần cho contractType)
-      const jobTitle = candidate.jobTitle ? candidate.jobTitle.toLowerCase() : '';
-      let contractType = 'STAFF'; // Default
-      
-      if (jobTitle.includes('giáo viên') || jobTitle.includes('teacher')) {
-        contractType = 'TEACHER';
-      } else if (jobTitle.includes('kế toán') || jobTitle.includes('accountant')) {
-        contractType = 'ACCOUNTANT';
-      } else if (jobTitle.includes('quản lý') || jobTitle.includes('manager')) {
-        contractType = 'MANAGER';
-      }
       
       // Generate Contract ID
       const contractId = generateContractId();
@@ -415,9 +369,9 @@ const ContractManagement = () => {
         phoneNumber: candidate.phoneNumber || '',
         address: candidate.address || '',
         birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
-        position: candidate.jobTitle,
+        position: candidate.position,
         department: 'Phòng Giáo vụ', // Default department
-        contractType: contractType,
+        // contractType: để người dùng chọn
         status: 'ACTIVE',
         // 🔄 REFACTORED: Mutually exclusive salary data từ backend
         comments: offerData.comments || 'Chưa có nhận xét',
@@ -443,9 +397,9 @@ const ContractManagement = () => {
         phoneNumber: candidate.phoneNumber || '',
         address: candidate.address || '',
         birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
-        position: candidate.jobTitle,
+        position: candidate.position,
         department: 'Phòng Giáo vụ',
-        contractType: contractType,
+        // contractType: để người dùng chọn
         status: 'ACTIVE',
         comments: 'Chưa có nhận xét',
         // Tất cả salary fields để null khi có lỗi
@@ -464,28 +418,51 @@ const ContractManagement = () => {
 
   const filterContracts = (searchValue) => {
     const filterData = (contracts) => {
-      if (!searchValue) return contracts;
-      
-      return contracts.filter(contract => {
-        const fullName = contract.fullName?.toLowerCase() || '';
-        const contractId = contract.contractId?.toString() || '';
-        const last4Digits = contractId.slice(-4);
-        const searchLower = searchValue.toLowerCase();
-        
-        return fullName.includes(searchLower) || last4Digits.includes(searchLower);
-      });
+      let result = contracts;
+
+      // Lọc theo từ khóa tìm kiếm (tên hoặc 4 số cuối ID)
+      if (searchValue) {
+        result = result.filter(contract => {
+          const fullName = contract.fullName?.toLowerCase() || '';
+          const contractId = contract.contractId?.toString() || '';
+          const last4Digits = contractId.slice(-4);
+          const searchLower = searchValue.toLowerCase();
+          return fullName.includes(searchLower) || last4Digits.includes(searchLower);
+        });
+      }
+
+      // Lọc theo trạng thái
+      if (statusFilter !== 'ALL') {
+        result = result.filter(contract => contract.status === statusFilter);
+      }
+
+      return result;
     };
-    
+
     setFilteredTeacherContracts(filterData(teacherContracts));
     setFilteredStaffContracts(filterData(staffContracts));
   };
 
 
 
-  // Hàm validate ngày sinh (ít nhất 20 tuổi) - Đã bỏ validate tuổi theo yêu cầu
+  // Hàm validate ngày sinh: không được ở tương lai
   const validateBirthDate = (_, value) => {
     if (!value) {
       return Promise.reject(new Error('Vui lòng chọn ngày sinh'));
+    }
+    if (value.isAfter(moment(), 'day')) {
+      return Promise.reject(new Error('Ngày sinh không được ở tương lai!'));
+    }
+    return Promise.resolve();
+  };
+
+  // Hàm validate ngày bắt đầu: không được ở quá khứ
+  const validateStartDate = (_, value) => {
+    if (!value) {
+      return Promise.reject(new Error('Vui lòng chọn ngày bắt đầu'));
+    }
+    if (value.isBefore(moment(), 'day')) {
+      return Promise.reject(new Error('Ngày bắt đầu không được ở quá khứ!'));
     }
     return Promise.resolve();
   };
@@ -604,16 +581,7 @@ const ContractManagement = () => {
               }
             />
           </Tooltip>
-          {record.status === 'NEAR_EXPIRY' && (
-            <Tooltip title="Gia hạn hợp đồng">
-              <Button 
-                icon={<PlusOutlined />} 
-                size="small" 
-                onClick={() => handleRenewContract(record)}
-                style={{ color: '#fa8c16' }}
-              />
-            </Tooltip>
-          )}
+          {/* ĐÃ XÓA nút Gia hạn hợp đồng */}
           {!completedContracts.has(record.id) && (record.status === 'ACTIVE' || record.status === 'NEAR_EXPIRY') && (
             <Popconfirm
               title="Bạn có chắc chắn muốn đánh dấu hợp đồng này đã hoàn thành?"
@@ -677,7 +645,7 @@ const ContractManagement = () => {
   return (
     <div className="contract-management">
       <Card title="Quản lý Hợp đồng" className="contract-card">
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Input.Search
             placeholder="Tìm kiếm theo tên hoặc 4 số cuối ID hợp đồng"
             value={searchText}
@@ -686,6 +654,16 @@ const ContractManagement = () => {
             style={{ width: 400 }}
             allowClear
           />
+          <Select
+            style={{ width: 220 }}
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+          >
+            <Option value="ALL">Tất cả trạng thái</Option>
+            <Option value="ACTIVE">Đang hoạt động</Option>
+            <Option value="NEAR_EXPIRY">Sắp hết hạn</Option>
+            <Option value="EXPIRED">Hết hạn</Option>
+          </Select>
         </div>
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
           <TabPane 
@@ -791,7 +769,12 @@ const ContractManagement = () => {
               { validator: validateBirthDate }
             ]}
           > 
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày sinh" />
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày sinh" 
+              disabledDate={(current) => current && moment(current?.toDate ? current.toDate() : current).isAfter(moment().endOf('day'))} 
+            />
           </Form.Item>
 
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ!' }]}>
@@ -991,17 +974,57 @@ const ContractManagement = () => {
             </>
           )}
 
-          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[
+            { required: true, message: 'Vui lòng chọn ngày bắt đầu!' },
+            () => ({
+              validator(_, value) {
+                if (!value) return Promise.resolve();
+                if (moment(value).isBefore(moment().startOf('day'), 'day')) {
+                  return Promise.reject(new Error('Ngày bắt đầu không được là ngày trong quá khứ!'));
+                }
+                return Promise.resolve();
+              }
+            })
+          ]}>
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              disabledDate={(current) => current && moment(current?.toDate ? current.toDate() : current).isBefore(moment().startOf('day'), 'day')} 
+            />
           </Form.Item>
 
-          <Form.Item name="endDate" label="Ngày kết thúc">
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          <Form.Item 
+            name="endDate" 
+            label="Ngày kết thúc"
+            dependencies={['startDate']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const start = getFieldValue('startDate');
+                  if (!value || !start) return Promise.resolve();
+                  if (moment(value?.toDate ? value.toDate() : value).isSameOrBefore(moment(start?.toDate ? start.toDate() : start), 'day')) {
+                    return Promise.reject(new Error('Ngày kết thúc phải sau Ngày bắt đầu!'));
+                  }
+                  return Promise.resolve();
+                }
+              })
+            ]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              disabled={!editForm?.getFieldValue || !editForm.getFieldValue('startDate')}
+              disabledDate={(current) => {
+                const start = editForm?.getFieldValue ? editForm.getFieldValue('startDate') : null;
+                if (!start) return true; // require selecting start date first
+                const startM = moment(start?.toDate ? start.toDate() : start).startOf('day');
+                const curM = moment.isMoment(current) ? current.clone().startOf('day') : moment(current?.toDate ? current.toDate() : current).startOf('day');
+                if (!startM.isValid() || !curM.isValid()) return true;
+                return !curM.isAfter(startM);
+              }}
+            />
           </Form.Item>
-
-          <Form.Item name="contractTerms" label="Điều khoản hợp đồng">
-            <TextArea rows={4} placeholder="Nhập điều khoản hợp đồng" />
-          </Form.Item>
+          {/* removed contractTerms per request */}
 
           <Form.Item>
             <Space>
@@ -1062,7 +1085,7 @@ const ContractManagement = () => {
               { validator: validateBirthDate }
             ]}
           > 
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày sinh" />
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày sinh" disabledDate={(current) => current && current > moment().endOf('day')} />
           </Form.Item>
 
           <Form.Item name="email" label="Email">
@@ -1085,12 +1108,11 @@ const ContractManagement = () => {
             <Input placeholder="Nhập trình độ chuyên môn" />
           </Form.Item>
 
-          {/* Subject and Class Level fields - Only for Teachers */}
+          {/* Subject and Class Level fields - Only for Teachers (based on selected contractType) */}
           {(() => {
-            const position = candidatePosition.toLowerCase();
-            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
-                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
-            
+            const selectedType = candidateForm?.getFieldValue ? candidateForm.getFieldValue('contractType') : null;
+            const isTeacher = selectedType === 'TEACHER';
+
             if (isTeacher) {
               return (
                 <>
@@ -1107,12 +1129,11 @@ const ContractManagement = () => {
             return null; // Don't show for HR/Accountant staff
           })()}
 
-          {/* Working Schedule Fields - Only for Teachers */}
+          {/* Working Schedule Fields - Only for Teachers (based on selected contractType) */}
           {(() => {
-            const position = candidatePosition.toLowerCase();
-            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
-                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
-            
+            const selectedType = candidateForm?.getFieldValue ? candidateForm.getFieldValue('contractType') : null;
+            const isTeacher = selectedType === 'TEACHER';
+
             if (isTeacher) {
               return (
                 <>
@@ -1173,9 +1194,8 @@ const ContractManagement = () => {
             rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}
           >
             <Select placeholder="Chọn loại hợp đồng">
-              <Option value="TEACHER">Giáo viên</Option>
-              <Option value="STAFF">Nhân viên HR</Option>
-              <Option value="STAFF">Kế toán viên</Option>
+              <Option value="TEACHER">Hợp đồng Giáo viên</Option>
+              <Option value="STAFF">Hợp đồng Nhân viên</Option>
             </Select>
           </Form.Item>
 
@@ -1193,83 +1213,133 @@ const ContractManagement = () => {
             />
           </Form.Item>
 
-          {/* Conditional rendering based on position */}
+          {/* REFACTORED: All positions show all salary fields with mutual exclusivity */}
           {(() => {
-            const position = candidatePosition.toLowerCase();
-            // ✅ FIX: More robust teacher detection
-            const isTeacher = position.includes('giáo viên') || position.includes('teacher') || 
-                             (selectedCandidate && selectedCandidate.contractType === 'TEACHER');
-            console.log('Teacher detection - position:', position, 'isTeacher:', isTeacher, 'contractType:', selectedCandidate?.contractType);
+            // Get current form values to determine which salary type is active
+            const formValues = candidateForm.getFieldsValue();
+            const hasHourly = formValues.hourlySalary && formValues.hourlySalary > 0;
+            const hasGrossNet = (formValues.grossSalary && formValues.grossSalary > 0) || 
+                               (formValues.netSalary && formValues.netSalary > 0);
             
-            if (isTeacher) {
-              // Teachers: only show hourly salary
-              return (
+            console.log(' Salary field states:', {
+              hasHourly,
+              hasGrossNet,
+              hourlySalary: formValues.hourlySalary,
+              grossSalary: formValues.grossSalary,
+              netSalary: formValues.netSalary
+            });
+            
+            return (
+              <>
+                {/* READ-ONLY: Lương theo giờ từ dữ liệu duyệt ứng viên */}
                 <Form.Item name="hourlySalary" label="Lương theo giờ">
                   <InputNumber
                     style={{ 
                       width: '100%',
-                      backgroundColor: '#f0f8ff', 
-                      border: '1px solid #52c41a',
-                      color: '#52c41a',
-                      fontWeight: 'bold'
+                      backgroundColor: hasHourly ? '#f0f8ff' : '#f5f5f5',
+                      border: hasHourly ? '2px solid #52c41a' : '1px solid #d9d9d9',
+                      color: hasHourly ? '#52c41a' : '#999',
+                      fontWeight: hasHourly ? 'bold' : 'normal'
                     }}
-                    placeholder="Lương theo giờ cho Giáo viên"
+                    placeholder="Lấy từ duyệt ứng viên"
                     readOnly
+                    disabled
                     formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
                     parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
                   />
                 </Form.Item>
-              );
-            } else {
-              // Manager/Accountant: show gross and net salary
-              return (
-                <>
-                  <Form.Item name="grossSalary" label="Lương GROSS">
-                    <InputNumber
-                      style={{ 
-                        width: '100%',
-                        backgroundColor: '#f0f8ff', 
-                        border: '1px solid #52c41a',
-                        color: '#52c41a',
-                        fontWeight: 'bold'
-                      }}
-                      placeholder="Lương GROSS cho Manager/Kế toán"
-                      readOnly
-                      formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                      parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                    />
-                  </Form.Item>
 
-                  <Form.Item name="netSalary" label="Lương NET">
-                    <InputNumber
-                      style={{ 
-                        width: '100%',
-                        backgroundColor: '#f0f8ff', 
-                        border: '1px solid #52c41a',
-                        color: '#52c41a',
-                        fontWeight: 'bold'
-                      }}
-                      placeholder="Lương NET cho Manager/Kế toán"
-                      readOnly
-                      formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                      parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                    />
-                  </Form.Item>
-                </>
-              );
-            }
+                {/* READ-ONLY: Lương GROSS từ dữ liệu duyệt ứng viên */}
+                <Form.Item name="grossSalary" label="Lương GROSS">
+                  <InputNumber
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: hasGrossNet ? '#f0f8ff' : '#f5f5f5',
+                      border: hasGrossNet ? '2px solid #52c41a' : '1px solid #d9d9d9',
+                      color: hasGrossNet ? '#52c41a' : '#999',
+                      fontWeight: hasGrossNet ? 'bold' : 'normal'
+                    }}
+                    placeholder="Lấy từ duyệt ứng viên"
+                    readOnly
+                    disabled
+                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                  />
+                </Form.Item>
+
+                {/* READ-ONLY: Lương NET từ dữ liệu duyệt ứng viên */}
+                <Form.Item name="netSalary" label="Lương NET">
+                  <InputNumber
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: hasGrossNet ? '#f0f8ff' : '#f5f5f5',
+                      border: hasGrossNet ? '2px solid #52c41a' : '1px solid #d9d9d9',
+                      color: hasGrossNet ? '#52c41a' : '#999',
+                      fontWeight: hasGrossNet ? 'bold' : 'normal'
+                    }}
+                    placeholder="Lấy từ duyệt ứng viên"
+                    readOnly
+                    disabled
+                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                  />
+                </Form.Item>
+              </>
+            );
           })()}
 
-          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[
+            { required: true, message: 'Vui lòng chọn ngày bắt đầu!' },
+            () => ({
+              validator(_, value) {
+                if (!value) return Promise.resolve();
+                if (moment(value?.toDate ? value.toDate() : value).isBefore(moment().startOf('day'), 'day')) {
+                  return Promise.reject(new Error('Ngày bắt đầu không được là ngày trong quá khứ!'));
+                }
+                return Promise.resolve();
+              }
+            })
+          ]}>
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              disabledDate={(current) => {
+                if (!current) return false;
+                const curM = moment(current?.toDate ? current.toDate() : current).startOf('day');
+                return curM.isBefore(moment().startOf('day'));
+              }} 
+            />
           </Form.Item>
 
-          <Form.Item name="endDate" label="Ngày kết thúc">
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-          </Form.Item>
-
-          <Form.Item name="contractTerms" label="Điều khoản hợp đồng">
-            <TextArea rows={4} placeholder="Nhập điều khoản hợp đồng" />
+          <Form.Item 
+            name="endDate" 
+            label="Ngày kết thúc"
+            dependencies={['startDate']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const start = getFieldValue('startDate');
+                  if (!value || !start) return Promise.resolve();
+                  if (moment(value?.toDate ? value.toDate() : value).isSameOrBefore(moment(start?.toDate ? start.toDate() : start), 'day')) {
+                    return Promise.reject(new Error('Ngày kết thúc phải sau Ngày bắt đầu!'));
+                  }
+                  return Promise.resolve();
+                }
+              })
+            ]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              disabledDate={(current) => {
+                const start = candidateForm?.getFieldValue ? candidateForm.getFieldValue('startDate') : null;
+                if (!start) return true; // require selecting start date first
+                const startM = moment(start?.toDate ? start.toDate() : start).startOf('day');
+                const curM = moment.isMoment(current) ? current.clone().startOf('day') : moment(current?.toDate ? current.toDate() : current).startOf('day');
+                if (!startM.isValid() || !curM.isValid()) return true;
+                return !curM.isAfter(startM);
+              }}
+            />
           </Form.Item>
 
           <Form.Item>
@@ -1289,108 +1359,7 @@ const ContractManagement = () => {
         </Form>
       </Modal>
 
-      {/* Modal gia hạn hợp đồng */}
-      <Modal
-        title="Gia hạn hợp đồng"
-        visible={renewModalVisible}
-        onCancel={() => {
-          setRenewModalVisible(false);
-          setRenewingContract(null);
-          renewForm.resetFields();
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={renewForm}
-          layout="vertical"
-          onFinish={handleRenewContractSubmit}
-        >
-          <Form.Item name="contractId" label="ID Hợp đồng">
-            <Input 
-              readOnly 
-              style={{ 
-                backgroundColor: '#f0f8ff', 
-                border: '1px solid #1890ff',
-                color: '#1890ff',
-                fontWeight: 'bold'
-              }} 
-            />
-          </Form.Item>
-
-          <Form.Item name="fullName" label="Họ và tên">
-            <Input 
-              readOnly 
-              style={{ backgroundColor: '#f5f5f5' }} 
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="startDate" 
-            label="Ngày bắt đầu mới" 
-            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              placeholder="Chọn ngày bắt đầu mới"
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="endDate" 
-            label="Ngày kết thúc mới" 
-            rules={[
-              { required: true, message: 'Vui lòng chọn ngày kết thúc!' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || !getFieldValue('startDate')) {
-                    return Promise.resolve();
-                  }
-                  if (value.isBefore(getFieldValue('startDate'), 'day')) {
-                    return Promise.reject(new Error('Ngày kết thúc không được trước ngày bắt đầu!'));
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              placeholder="Chọn ngày kết thúc mới"
-            />
-          </Form.Item>
-
-          <div style={{ 
-            backgroundColor: '#fff7e6', 
-            border: '1px solid #ffd591', 
-            borderRadius: '6px', 
-            padding: '12px', 
-            marginBottom: '16px' 
-          }}>
-            <p style={{ margin: 0, color: '#fa8c16' }}>
-              <strong>Lưu ý:</strong> Chỉ có thể thay đổi ngày bắt đầu và ngày kết thúc. 
-              Các thông tin khác của hợp đồng sẽ được giữ nguyên.
-            </p>
-          </div>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                Gia hạn hợp đồng
-              </Button>
-              <Button onClick={() => {
-                setRenewModalVisible(false);
-                setRenewingContract(null);
-                renewForm.resetFields();
-              }}>
-                Hủy
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* ĐÃ XÓA Modal gia hạn hợp đồng */}
     </div>
   );
 };
