@@ -99,9 +99,9 @@ const ContractManagement = () => {
     }
   };
 
-  // 🔄 REWRITTEN: Xử lý tạo hợp đồng mới với lương theo giờ từ Quản Lý Offer
+  // 🔄 REFACTORED: Xử lý tạo hợp đồng mới với mutually exclusive salary fields
   const handleCreateContract = async (values) => {
-    console.log('🔄 REWRITTEN: Creating contract with values:', values);
+    console.log('🔄 REFACTORED: Creating contract with mutually exclusive salary values:', values);
     
     // Validate required fields
     if (!values.fullName || values.fullName.trim() === '') {
@@ -116,6 +116,29 @@ const ContractManagement = () => {
       message.error('Vui lòng nhập vị trí công việc!');
       return;
     }
+    
+    // 🔄 NEW: Validate mutually exclusive salary logic
+    const hasHourly = values.hourlySalary && values.hourlySalary > 0;
+    const hasGross = values.grossSalary && values.grossSalary > 0;
+    const hasNet = values.netSalary && values.netSalary > 0;
+    const hasGrossOrNet = hasGross || hasNet;
+    
+    if (!hasHourly && !hasGrossOrNet) {
+      message.error('Vui lòng có ít nhất một loại lương (theo giờ hoặc GROSS/NET)!');
+      return;
+    }
+    
+    if (hasHourly && hasGrossOrNet) {
+      message.error('Không thể có cả lương theo giờ và lương GROSS/NET cùng lúc!');
+      return;
+    }
+    
+    console.log('🔍 SALARY VALIDATION PASSED:', {
+      hasHourly,
+      hasGross,
+      hasNet,
+      hasGrossOrNet
+    });
     if (!values.startDate) {
       message.error('Vui lòng chọn ngày bắt đầu!');
       return;
@@ -140,83 +163,55 @@ const ContractManagement = () => {
         userId = Date.now(); // Simple timestamp-based ID
       }
 
-      // 🔄 REWRITTEN: Determine contract type and validate salary based on position
-      const position = values.position || '';
-      const isTeacher = position.toLowerCase().includes('giáo viên') || 
-                       position.toLowerCase().includes('teacher') || 
-                       values.contractType === 'TEACHER';
+      // 🔄 REFACTORED: Handle salary based on mutually exclusive fields
+    let finalSalary = 0;
+    let salaryType = '';
+    
+    if (hasHourly) {
+      // For hourly salary, estimate monthly: hourly * 80 hours
+      finalSalary = values.hourlySalary * 80;
+      salaryType = 'Hourly';
+      console.log('💰 HOURLY SALARY: ', values.hourlySalary, 'VND/hour, Estimated Monthly:', finalSalary);
+    } else if (hasGross) {
+      // Use gross salary
+      finalSalary = values.grossSalary;
+      salaryType = 'Gross';
+      console.log('💰 GROSS SALARY:', finalSalary, 'VND/month');
+    } else if (hasNet) {
+      // Use net salary
+      finalSalary = values.netSalary;
+      salaryType = 'Net';
+      console.log('💰 NET SALARY:', finalSalary, 'VND/month');
+    }    
       
-      const contractType = isTeacher ? 'TEACHER' : 'STAFF';
-      
-      console.log('🔄 REWRITTEN: Contract type determination:', {
-        position,
-        isTeacher,
-        contractType,
-        hourlySalary: values.hourlySalary,
-        grossSalary: values.grossSalary,
-        netSalary: values.netSalary
-      });
-
-      // 🔄 REWRITTEN: Validate salary based on contract type
-      let salary = 0;
-      if (isTeacher) {
-        // ✅ FOR TEACHERS: Validate hourly salary from Offer Management
-        if (!values.hourlySalary || values.hourlySalary <= 0) {
-          message.error('Vui lòng nhập lương theo giờ hợp lệ cho giáo viên!');
-          return;
-        }
-        salary = values.hourlySalary;
-        console.log('🎓 TEACHER: Using hourly salary:', salary, 'VND/hour');
-        
-      } else {
-        // ✅ FOR STAFF: Validate gross salary
-        if (!values.grossSalary || values.grossSalary <= 0) {
-          message.error('Vui lòng nhập lương gross hợp lệ cho nhân viên!');
-          return;
-        }
-        salary = values.grossSalary;
-        console.log('👥 STAFF: Using gross salary:', salary, 'VND');
-      }
-
-      // 🔄 REWRITTEN: Contract data structure with proper salary field handling
+      // 🔄 REFACTORED: Enhanced contract data with mutually exclusive salary fields
       const contractData = {
+        contractId: values.contractId,
         userId: userId,
-        contractId: values.contractId || generateContractId(),
-        fullName: values.fullName || '',
-        email: values.email || '',
+        fullName: values.fullName,
+        email: values.email,
         phoneNumber: values.phoneNumber || '',
-        contractType: contractType,
-        position: values.position || '',
-        department: values.department || 'Không xác định',
-        salary: salary, // Main salary field for compatibility
-        workingHours: values.workingHours || '8h/ngày',
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
-        status: 'ACTIVE',
-        contractTerms: values.contractTerms || '',
-        createdBy: 'Accountant',
-        // Custom fields
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        citizenId: values.cccd || values.citizenId || '',
         address: values.address || '',
-        qualification: values.qualification || '',
-        subject: values.subject || '',
-        classLevel: values.classLevel || values.level || '', // Changed from educationLevel to classLevel (Lớp học)
-        // 🔄 REWRITTEN: Updated field names and added working schedule
-        comments: values.comments || '', // Changed from evaluation to comments (Nhận xét)
-        workSchedule: values.workSchedule || '', // New field: Thời gian làm việc
-        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''), // Convert array to comma-separated string
-        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''), // Convert array to comma-separated string
-        // ✅ FOR TEACHERS: Only send hourly salary from Offer Management
-        grossSalary: isTeacher ? null : (values.grossSalary || null),
-        netSalary: isTeacher ? null : (values.netSalary || null),
-        hourlySalary: isTeacher ? (values.hourlySalary || null) : null,
-        offer: values.offer || ''
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        position: values.position,
+        department: values.department || 'Phòng Giáo vụ',
+        contractType: values.contractType || 'STAFF',
+        salary: finalSalary, // Main salary field for compatibility
+        workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
+        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
+        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : moment().add(2, 'years').format('YYYY-MM-DD'),
+        status: values.status || 'ACTIVE',
+        contractTerms: values.contractTerms || 'Điều khoản hợp đồng chuẩn',
+        comments: values.comments || 'Hợp đồng được tạo từ ứng viên đã duyệt',
+        // 🔄 REFACTORED: Mutually exclusive salary fields - chỉ một trong ba có giá trị
+        hourlySalary: hasHourly ? values.hourlySalary : null,
+        grossSalary: hasGross ? values.grossSalary : null,
+        netSalary: hasNet ? values.netSalary : null,
+        salaryType: salaryType // Additional info for logging
       };
 
-      console.log('🔄 REWRITTEN: Contract data being sent to backend:', contractData);
+      console.log('🔄 REFACTORED: Sending contract creation request with mutually exclusive salary data:', contractData);
       console.log('🔄 REWRITTEN: Salary field breakdown:', {
-        isTeacher,
         salary: contractData.salary,
         hourlySalary: contractData.hourlySalary,
         grossSalary: contractData.grossSalary,
@@ -224,29 +219,15 @@ const ContractManagement = () => {
       });
 
       await axiosInstance.post('/contracts', contractData);
-      message.success('Tạo hợp đồng thành công!');
+      message.success(`Tạo hợp đồng thành công cho ${values.fullName} với lương ${salaryType}!`);
       setCandidateModalVisible(false);
       candidateForm.resetFields();
       setSelectedCandidate(null);
       fetchContracts();
       fetchCandidatesReady();
     } catch (error) {
-      console.error('❌ Error creating contract:', error);
-      console.error('❌ Error response:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Full error object:', JSON.stringify(error.response?.data, null, 2));
-      
-      // More detailed error message
-      let errorMessage = 'An unexpected error occurred';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      message.error(`Không thể tạo hợp đồng! ${errorMessage}`);
+      console.error('🔄 REFACTORED Error creating contract:', error);
+      message.error('Có lỗi xảy ra khi tạo hợp đồng!');
     }
   };
 
@@ -379,112 +360,100 @@ const ContractManagement = () => {
     return `${sequence}${month}${year}`;
   };
 
-  // 🔄 REWRITTEN: Mở modal tạo hợp đồng từ ứng viên đã duyệt với lương theo giờ từ Quản Lý Offer
+  // 🔄 REFACTORED: Mở modal tạo hợp đồng với logic lương mutually exclusive
   const handleSelectCandidate = async (candidate) => {
-    console.log('🔄 REWRITTEN: Creating contract for approved candidate:', candidate);
+    console.log('🔄 REFACTORED: Selected candidate for contract creation:', candidate);
     setSelectedCandidate(candidate);
-  
-    // Xác định loại vị trí để xử lý lương phù hợp
-    const position = candidate.position || candidate.jobTitle || candidate.role || '';
-    const contractType = candidate.contractType || '';
-    const isTeacher = position.toLowerCase().includes('giáo viên') || 
-                     position.toLowerCase().includes('teacher') || 
-                     contractType === 'TEACHER';
+    setCandidateModalVisible(true);
     
-    console.log('🔍 REWRITTEN DEBUG: Candidate analysis:', {
-      position,
-      contractType,
-      isTeacher,
-      candidateId: candidate.userId || candidate.id
-    });
+    // Reset form trước khi set dữ liệu mới
+    candidateForm.resetFields();
     
-    // Set effective position for UI logic
-    const effectivePosition = isTeacher ? 'giáo viên' : position;
-    setCandidatePosition(effectivePosition);
-    
-    // Set basic candidate information
-    candidateForm.setFieldsValue({
-      fullName: candidate.fullName || '',
-      email: candidate.email || '',
-      phoneNumber: candidate.phoneNumber || '',
-      position: effectivePosition, // Changed from position to effectivePosition
-      startDate: '',
-      endDate: '',
-      status: 'ACTIVE',
-      contractTerms: ''
-    });
-    
-    // 🔄 REWRITTEN: Fetch offer data with focus on hourly salary for teachers
     try {
-      const candidateId = candidate.userId || candidate.id || 1;
-      console.log('🔄 REWRITTEN: Fetching offer data from editable Offer Management for candidate ID:', candidateId);
+      // Lấy dữ liệu offer từ backend (với logic mutually exclusive salary)
+      console.log('🔄 REFACTORED: Fetching mutually exclusive salary data for candidate ID:', candidate.id);
+      const response = await axiosInstance.get(`/contracts/candidates/${candidate.id}/offer-data`);
+      const offerData = response.data;
       
-      const offerResponse = await axiosInstance.get(`/contracts/candidates/${candidateId}/offer`);
-      const offerData = offerResponse.data;
+      console.log('🔄 REFACTORED: Received mutually exclusive salary data:', offerData);
       
-      console.log('🔄 REWRITTEN: Received offer data from backend:', offerData);
-      console.log('🔄 REWRITTEN: Salary breakdown - Hourly:', offerData.hourlySalary, 'Gross:', offerData.grossSalary, 'Net:', offerData.netSalary);
+      // Xác định loại hợp đồng dựa trên vị trí (vẫn cần cho contractType)
+      const jobTitle = candidate.jobTitle ? candidate.jobTitle.toLowerCase() : '';
+      let contractType = 'STAFF'; // Default
       
-      // 🔄 REWRITTEN: Process salary data based on position type
-      const formValues = {
-        comments: offerData.comments || 'Chưa có nhận xét' // Changed from evaluation to comments
-      };
-      
-      if (isTeacher) {
-        // ✅ FOR TEACHERS: Only use hourly salary from editable Offer Management
-        console.log('🎓 REWRITTEN TEACHER: Using hourly salary from editable Offer Management');
-        
-        if (offerData.hourlySalary && offerData.hourlySalary > 0) {
-          formValues.hourlySalary = offerData.hourlySalary;
-          console.log('✅ TEACHER: Set hourly salary from Offer Management:', offerData.hourlySalary, 'VND/hour');
-        } else {
-          formValues.hourlySalary = 100000; // Default 100k VND/hour
-          console.log('⚠️ TEACHER: Using default hourly salary: 100,000 VND/hour');
-        }
-        
-        // Don't set gross/net salary for teachers
-        formValues.grossSalary = null;
-        formValues.netSalary = null;
-        
-      } else {
-        // ✅ FOR STAFF: Use gross and net salary
-        console.log('👥 REWRITTEN STAFF: Using gross and net salary from Offer Management');
-        
-        formValues.grossSalary = offerData.grossSalary || 15000000; // Default 15M VND
-        formValues.netSalary = offerData.netSalary || 12000000;     // Default 12M VND
-        formValues.hourlySalary = null; // Don't set hourly salary for staff
-        
-        console.log('✅ STAFF: Set gross salary:', formValues.grossSalary, 'VND, net salary:', formValues.netSalary, 'VND');
+      if (jobTitle.includes('giáo viên') || jobTitle.includes('teacher')) {
+        contractType = 'TEACHER';
+      } else if (jobTitle.includes('kế toán') || jobTitle.includes('accountant')) {
+        contractType = 'ACCOUNTANT';
+      } else if (jobTitle.includes('quản lý') || jobTitle.includes('manager')) {
+        contractType = 'MANAGER';
       }
       
-      console.log('🔄 REWRITTEN: Final form values for contract creation:', formValues);
-      candidateForm.setFieldsValue(formValues);
+      // Generate Contract ID
+      const contractId = generateContractId();
       
-      message.success(`✅ Đã tải thông tin lương từ Quản Lý Offer ${isTeacher ? '(Lương theo giờ)' : '(Lương gross/net)'}`);
+      // 🔄 NEW: Validate mutually exclusive salary logic
+      const hasHourly = offerData.hourlySalary && offerData.hourlySalary > 0;
+      const hasGross = offerData.grossSalary && offerData.grossSalary > 0;
+      const hasNet = offerData.netSalary && offerData.netSalary > 0;
+      
+      console.log('🔍 SALARY VALIDATION:', {
+        hasHourly,
+        hasGross, 
+        hasNet,
+        hourlySalary: offerData.hourlySalary,
+        grossSalary: offerData.grossSalary,
+        netSalary: offerData.netSalary
+      });
+      
+      // Điền thông tin cơ bản vào form
+      candidateForm.setFieldsValue({
+        contractId: contractId,
+        userId: candidate.id,
+        fullName: candidate.fullName,
+        email: candidate.email,
+        phoneNumber: candidate.phoneNumber || '',
+        address: candidate.address || '',
+        birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
+        position: candidate.jobTitle,
+        department: 'Phòng Giáo vụ', // Default department
+        contractType: contractType,
+        status: 'ACTIVE',
+        // 🔄 REFACTORED: Mutually exclusive salary data từ backend
+        comments: offerData.comments || 'Chưa có nhận xét',
+        // Backend đã đảm bảo chỉ một loại lương có giá trị, các loại khác sẽ là null
+        hourlySalary: offerData.hourlySalary,
+        grossSalary: offerData.grossSalary,
+        netSalary: offerData.netSalary
+      });
+      
+      console.log('🔄 REFACTORED: Form populated with mutually exclusive salary data.');
       
     } catch (error) {
-      console.error('🔄 REWRITTEN ERROR: Failed to fetch offer data:', error);
-      message.error('❌ Không thể tải thông tin lương từ Quản Lý Offer!');
+      console.error('🔄 REFACTORED Error fetching offer data:', error);
+      message.error('Không thể lấy dữ liệu offer cho ứng viên này!');
       
-      // Set appropriate default values based on position
-      const defaultValues = {
-        comments: 'Chưa có nhận xét' // Changed from evaluation to comments
-      };
-      
-      if (isTeacher) {
-        defaultValues.hourlySalary = 100000; // 100k VND/hour for teachers
-        defaultValues.grossSalary = null;
-        defaultValues.netSalary = null;
-      } else {
-        defaultValues.grossSalary = 15000000; // 15M VND for staff
-        defaultValues.netSalary = 12000000;   // 12M VND for staff
-        defaultValues.hourlySalary = null;
-      }
-      
-      candidateForm.setFieldsValue(defaultValues);
+      // Fallback: điền thông tin cơ bản không có offer data
+      const contractId = generateContractId();
+      candidateForm.setFieldsValue({
+        contractId: contractId,
+        userId: candidate.id,
+        fullName: candidate.fullName,
+        email: candidate.email,
+        phoneNumber: candidate.phoneNumber || '',
+        address: candidate.address || '',
+        birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
+        position: candidate.jobTitle,
+        department: 'Phòng Giáo vụ',
+        contractType: contractType,
+        status: 'ACTIVE',
+        comments: 'Chưa có nhận xét',
+        // Tất cả salary fields để null khi có lỗi
+        hourlySalary: null,
+        grossSalary: null,
+        netSalary: null
+      });
     }
-    
-    setCandidateModalVisible(true);
   };
 
   // Hàm tìm kiếm và lọc hợp đồng
