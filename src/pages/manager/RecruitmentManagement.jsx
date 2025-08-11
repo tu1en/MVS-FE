@@ -35,26 +35,6 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
           style={{ width: '150px' }}
           placeholder="Nhập lương GROSS"
         />
-        <Button 
-          size="small" 
-          onClick={() => {
-            const currentValue = parseInt(grossSalary) || 1000000;
-            handleGrossChange(currentValue + 1000000);
-          }}
-        >
-          +1 triệu
-        </Button>
-        <Button 
-          size="small"
-          onClick={() => {
-            const currentValue = parseInt(grossSalary) || 1000000;
-            if (currentValue > 1000000) {
-              handleGrossChange(currentValue - 1000000);
-            }
-          }}
-        >
-          -1 triệu
-        </Button>
         {grossSalary && (
                       <Button 
               size="small" 
@@ -130,7 +110,7 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
 };
 
 // Component cho cột Lương NET với input
-const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
+const NetSalaryColumn = ({ offer, recordId, contractType, numberOfDependents, onOfferUpdate }) => {
   const [netSalary, setNetSalary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [inputNetSalary, setInputNetSalary] = useState(null);
@@ -146,7 +126,9 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
       
       setLoading(true);
       try {
-        const response = await axiosInstance.get(`/interview-schedules/${recordId}/salary-calculation`);
+        const response = await axiosInstance.get(`/interview-schedules/${recordId}/salary-calculation`, {
+          params: { numberOfDependents: contractType === 'FULL_TIME' ? numberOfDependents ?? 0 : 0 }
+        });
         const calculatedNet = response.data.netSalary;
         setNetSalary(calculatedNet);
         setInputNetSalary(calculatedNet);
@@ -163,7 +145,7 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
     };
     
     calculateNetSalary();
-  }, [offer, recordId]);
+  }, [offer, recordId, contractType, numberOfDependents]);
 
   const handleNetChange = async (value) => {
     if (!value) return;
@@ -174,7 +156,8 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
     try {
       // Calculate GROSS from NET using backend
       const response = await axiosInstance.post(`/interview-schedules/${recordId}/calculate-gross-from-net`, {
-        netSalary: value
+        netSalary: value,
+        numberOfDependents: contractType === 'FULL_TIME' ? (numberOfDependents ?? 0) : 0
       });
       const calculatedGross = response.data.grossSalary;
       await onOfferUpdate(recordId, calculatedGross);
@@ -209,32 +192,8 @@ const NetSalaryColumn = ({ offer, recordId, onOfferUpdate }) => {
           style={{ width: '150px' }}
           placeholder="Nhập lương NET"
         />
-        <Button 
-          size="small" 
-          onClick={() => {
-            const currentValue = parseInt(inputNetSalary) || 1000000;
-            handleNetChange(currentValue + 1000000);
-          }}
-        >
-          +1 triệu
-        </Button>
-        <Button 
-          size="small"
-          onClick={() => {
-            const currentValue = parseInt(inputNetSalary) || 1000000;
-            if (currentValue > 1000000) {
-              handleNetChange(currentValue - 1000000);
-            }
-          }}
-        >
-          -1 triệu
-        </Button>
       </div>
-      {netSalary && offer && (
-        <div className="text-xs text-gray-500 vietnamese-text mt-1">
-          (Tính toán chính xác từ GROSS: {netSalary.toLocaleString('vi-VN')} VNĐ)
-        </div>
-      )}
+      {/* Bỏ dòng hiển thị '(Tính toán chính xác từ GROSS: ...) ' theo yêu cầu */}
       {!offer && inputNetSalary && (
         <div className="text-xs text-blue-500 vietnamese-text mt-1">
           (Nhập NET trước - GROSS sẽ được tính tự động)
@@ -267,6 +226,7 @@ const RecruitmentManagement = () => {
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
+  const [dependentsByInterview, setDependentsByInterview] = useState({});
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
@@ -710,8 +670,10 @@ const RecruitmentManagement = () => {
           return;
         }
         
-        // Lấy chi tiết tính lương trước khi gửi email
-        const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
+        // Lấy chi tiết tính lương trước khi gửi email (kèm số người phụ thuộc nếu FULL_TIME)
+        const salaryDetails = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`, {
+          params: { numberOfDependents: dependentsByInterview[interviewId] || 0 }
+        });
         
         await axiosInstance.post(`/interview-schedules/${interviewId}/resend-offer`, {
           offer: offer,
@@ -793,7 +755,9 @@ const RecruitmentManagement = () => {
   const handleShowSalaryDetails = async (interviewId, grossSalary) => {
     setLoadingSalaryDetails(true);
     try {
-      const response = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`);
+      const response = await axiosInstance.get(`/interview-schedules/${interviewId}/salary-calculation`, {
+        params: { numberOfDependents: dependentsByInterview[interviewId] || 0 }
+      });
       setSalaryDetails(response.data);
       setShowSalaryDetailsModal(true);
     } catch (err) {
@@ -801,6 +765,10 @@ const RecruitmentManagement = () => {
     } finally {
       setLoadingSalaryDetails(false);
     }
+  };
+
+  const handleDependentsChange = (interviewId, value) => {
+    setDependentsByInterview(prev => ({ ...prev, [interviewId]: value }));
   };
 
   const openPlans = plans.filter(p => p.status === 'OPEN');
@@ -1206,7 +1174,29 @@ const RecruitmentManagement = () => {
         if (record.contractType === 'PART_TIME') {
           return <span className="vietnamese-text text-gray-500">-</span>;
         }
-        return <GrossSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} onShowSalaryDetails={handleShowSalaryDetails} />;
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <GrossSalaryColumn 
+              offer={text} 
+              recordId={record.id} 
+              onOfferUpdate={handleOfferUpdate} 
+              onShowSalaryDetails={handleShowSalaryDetails} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
       }
     },
     {
@@ -1216,7 +1206,30 @@ const RecruitmentManagement = () => {
         if (record.contractType === 'PART_TIME') {
           return <span className="vietnamese-text text-gray-500">-</span>;
         }
-        return <NetSalaryColumn offer={text} recordId={record.id} onOfferUpdate={handleOfferUpdate} />;
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <NetSalaryColumn 
+              offer={text} 
+              recordId={record.id} 
+              contractType={record.contractType}
+              numberOfDependents={dependentsByInterview[record.id] || 0}
+              onOfferUpdate={handleOfferUpdate} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
       }
     },
     {
