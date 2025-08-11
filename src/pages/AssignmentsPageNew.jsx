@@ -544,7 +544,17 @@ function AssignmentsPageNew() {
     try {
       console.log(`Fetching submissions for assignment ${assignmentId}`);
       const fetchedSubmissions = await AssignmentService.getSubmissionsForAssignment(assignmentId);
-      console.log(`Received ${fetchedSubmissions.length} submissions for assignment ${assignmentId}`);
+      // Lọc bỏ các bản ghi seed rỗng từ BE (không có thời gian nộp, nội dung hoặc tệp)
+      const realSubmissions = Array.isArray(fetchedSubmissions)
+        ? fetchedSubmissions.filter((s) => {
+            const submittedAt = s.submittedAt || s.submissionDate;
+            const hasText = !!(s.submissionText || s.comment);
+            const hasFile = !!(s.fileSubmissionUrl || s.attachmentUrl);
+            const hasScore = s.score !== undefined && s.score !== null;
+            return submittedAt || hasText || hasFile || hasScore;
+          })
+        : [];
+      console.log(`Received ${fetchedSubmissions.length} submissions, filtered real: ${realSubmissions.length} for assignment ${assignmentId}`);
       
       // Initialize grades state from fetched submissions
       const initialGrades = {};
@@ -556,8 +566,8 @@ function AssignmentsPageNew() {
       });
       
       setGrades(initialGrades);
-      setSubmissionsList(fetchedSubmissions);
-      return fetchedSubmissions;
+      setSubmissionsList(realSubmissions);
+      return realSubmissions;
     } catch (error) {
       console.error(`Error fetching submissions for assignment ${assignmentId}:`, error);
       message.error('Không thể tải danh sách bài nộp');
@@ -1247,21 +1257,43 @@ function AssignmentsPageNew() {
             columns={[
               {
                 title: 'Sinh viên',
-                dataIndex: ['student', 'fullName'],
                 key: 'studentName',
                 className: 'vietnamese-text',
+                render: (_, record) => record?.student?.fullName || record?.studentName || 'Không rõ',
               },
               {
                 title: 'Ngày nộp',
-                dataIndex: 'submittedAt',
                 key: 'submittedAt',
-                render: (text) => moment(text).format('DD/MM/YYYY HH:mm'),
+                render: (_, record) => {
+                  const dateVal = record?.submittedAt ?? record?.submissionDate;
+                  if (!dateVal) return '—';
+                  let dt;
+                  if (Array.isArray(dateVal)) {
+                    const [y, mo, d, h = 0, mi = 0, s = 0] = dateVal;
+                    dt = new Date(y, (mo || 1) - 1, d || 1, h, mi, s);
+                  } else if (typeof dateVal === 'string') {
+                    const m = moment(dateVal, ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss', moment.ISO_8601], true);
+                    dt = m.isValid() ? m.toDate() : new Date(dateVal);
+                  } else if (dateVal instanceof Date) {
+                    dt = dateVal;
+                  } else {
+                    dt = new Date(dateVal);
+                  }
+                  if (!dt || Number.isNaN(dt.getTime())) return '—';
+                  return moment(dt).format('DD/MM/YYYY HH:mm');
+                },
               },
               {
                 title: 'Bài nộp',
-                dataIndex: 'fileSubmissionUrl',
                 key: 'file',
-                render: (url) => <a href={url} target="_blank" rel="noopener noreferrer">Tải xuống</a>,
+                render: (_, record) => {
+                  const url = record?.fileSubmissionUrl || record?.attachmentUrl;
+                  return url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer">Tải xuống</a>
+                  ) : (
+                    <span>Không có tệp</span>
+                  );
+                },
               },
               {
                 title: 'Điểm',
