@@ -249,6 +249,7 @@ function App() {
               {/* Public Course Routes - No authentication required */}
               <Route path="/public/courses" element={<PublicRoute><PublicCourseDashboard /></PublicRoute>} />
               <Route path="/public/courses/:id" element={<PublicRoute><PublicCourseDetail /></PublicRoute>} />
+              <Route path="/public/classes/:id" element={<PublicRoute><PublicCourseDetail /></PublicRoute>} />
               <Route path="/courses" element={<PublicRoute><PublicCourseDashboard /></PublicRoute>} />
               <Route path="/debug/courses" element={<PublicRoute><DebugPublicCourses /></PublicRoute>} />
 

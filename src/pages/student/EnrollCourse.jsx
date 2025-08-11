@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { showNotification } from '../../utils/courseManagementUtils';
 import courseService from '../../services/courseService';
 import enrollmentService from '../../services/enrollmentService';
+import { showNotification } from '../../utils/courseManagementUtils';
 
 const EnrollCourse = () => {
   const { courseId } = useParams();
@@ -46,8 +46,8 @@ const EnrollCourse = () => {
           title: courseData.title || courseData.name,
           description: courseData.description,
           instructor: courseData.instructor || courseData.teacherName || 'Đang cập nhật',
-          price: courseData.enrollment_fee || courseData.price || 0,
-          originalPrice: courseData.originalPrice || (courseData.enrollment_fee || courseData.price || 0) * 1.3,
+          price: courseData.enrollment_fee || courseData.enrollmentFee || courseData.price || 0,
+          originalPrice: courseData.originalPrice || (courseData.enrollment_fee || courseData.enrollmentFee || courseData.price || 0) * 1.3,
           duration: courseData.duration || `${courseData.total_weeks || 0} tuần`,
           students: courseData.max_students_per_template || courseData.students || 0,
           rating: courseData.rating || 4.5,

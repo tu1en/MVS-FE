@@ -37,6 +37,13 @@ const classManagementService = {
   },
 
   /**
+   * Lấy danh sách buổi học (class_lessons) của lớp
+   */
+  getClassLessons: (id) => {
+    return apiClient.get(API_CONFIG.ENDPOINTS.CLASSES_LESSONS(id));
+  },
+
+  /**
    * Create new class from template
    * @param {Object} classData - Class creation data
    * @param {number} classData.courseTemplateId - Template ID
@@ -86,6 +93,29 @@ const classManagementService = {
   },
 
   /**
+   * Lấy danh sách phòng trống theo điều kiện
+   */
+  getFreeRooms: ({ startDate, endDate, startTime, endTime, days }) => {
+    const params = new URLSearchParams();
+    params.append('startDate', startDate);
+    params.append('endDate', endDate);
+    params.append('startTime', startTime);
+    params.append('endTime', endTime);
+    if (Array.isArray(days)) {
+      days.forEach(d => params.append('days', d));
+    }
+    const url = `${API_CONFIG.ENDPOINTS.CLASSES_FREE_ROOMS}?${params.toString()}`;
+    return apiClient.get(url);
+  },
+
+  /**
+   * Đổi lịch lớp
+   */
+  rescheduleClass: (id, payload) => {
+    return apiClient.put(API_CONFIG.ENDPOINTS.CLASSES_RESCHEDULE(id), payload);
+  },
+
+  /**
    * Lấy giáo viên khả dụng theo môn và lịch
    * @param {Object} payload { subject, schedule, startDate, endDate }
    * @returns {Promise<Array>} Danh sách giáo viên khả dụng
@@ -118,6 +148,20 @@ const classManagementService = {
    */
   updateClass: (id, classData) => {
     return apiClient.put(API_CONFIG.ENDPOINTS.CLASSES_BY_ID(id), classData);
+  },
+
+  /**
+   * Cập nhật nhanh công khai lớp học
+   */
+  updateClassPublic: (id, isPublic) => {
+    return apiClient.put(`${API_CONFIG.ENDPOINTS.CLASSES_BY_ID(id)}`, { isPublic });
+  },
+
+  /**
+   * Cập nhật nhanh học phí lớp học
+   */
+  updateClassTuition: (id, tuitionFee) => {
+    return apiClient.put(`${API_CONFIG.ENDPOINTS.CLASSES_BY_ID(id)}`, { tuitionFee });
   },
 
   /**

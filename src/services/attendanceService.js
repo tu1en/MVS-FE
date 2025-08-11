@@ -294,10 +294,12 @@ const attendanceService = {
    */
   getDayLogs: async (date) => {
     try {
-      const response = await apiClient.get(`${API_URL}/verification/day-logs`, {
+      // Align with BE endpoint: /api/attendance/all-logs?date=YYYY-MM-DD
+      const response = await apiClient.get(`${API_URL}/all-logs`, {
         params: { date }
       });
-      return response.data;
+      const data = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+      return data;
     } catch (error) {
       console.error('Get day logs error:', error);
       return [];

@@ -8,8 +8,8 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import { Alert, Avatar, Button, Card, Col, Pagination, Row, Spin, Statistic, Tag, Typography } from 'antd';
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../config/axiosInstance';
 import { usePagination } from '../../hooks/usePagination';
 
 const { Title, Text, Paragraph } = Typography;
@@ -33,23 +33,18 @@ const TeacherCourses = () => {
       
       console.log('Loading teacher courses...');
       
-      // Tạo axios instance với auth header
-      const token = localStorage.getItem('token');
-      const axiosConfig = {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      };
-      
-      const response = await axios.get('http://localhost:8088/api/classrooms/current-teacher', axiosConfig);
+      const response = await axiosInstance.get('/classrooms/current-teacher');
       console.log('Teacher courses response:', response.data);
-      
+
+      const coursesArray = Array.isArray(response.data)
+        ? response.data
+        : (response.data && Array.isArray(response.data.data) ? response.data.data : []);
+
       // Fetch assignment counts for each classroom
       const coursesWithAssignments = await Promise.all(
-        (response.data || []).map(async (course) => {
+        coursesArray.map(async (course) => {
           try {
-            const assignmentResponse = await axios.get(`http://localhost:8088/api/assignments/classroom/${course.id}`, axiosConfig);
+            const assignmentResponse = await axiosInstance.get(`/assignments/classroom/${course.id}`);
             return {
               ...course,
               assignments: assignmentResponse.data || [],

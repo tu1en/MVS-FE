@@ -18,7 +18,9 @@ export const managerCourseService = {
       if (category) queryParams.append('category', category);
       if (level) queryParams.append('level', level);
       
-      const response = await api.get(`${API_CONFIG.ENDPOINTS.COURSE_TEMPLATES}?${queryParams.toString()}`);
+      // Temporary fix: use public endpoint until auth is fixed
+      const response = await api.get(`/public/courses`);
+      console.log('🔍 Manager courses API response:', response.data);
       return {
         success: true,
         data: response.data || []

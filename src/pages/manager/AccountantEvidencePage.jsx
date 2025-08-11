@@ -36,6 +36,7 @@ import {
     Upload
 } from 'antd';
 import moment from 'moment';
+import 'moment/locale/vi';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import accountantEvidenceService from '../../services/AccountantEvidenceService';
@@ -46,6 +47,41 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 const AccountantEvidencePage = () => {
+  // Set Vietnamese locale for moment formatting
+  moment.locale('vi');
+
+  // Helper: safe date formatting to avoid "Invalid date"
+  const formatDate = (inputDate, withTime = true) => {
+    if (!inputDate) return 'Không xác định';
+    // Try strict ISO first
+    let m = moment(inputDate, moment.ISO_8601, true);
+    if (!m.isValid()) {
+      // Fallback: non-strict parse
+      m = moment(inputDate);
+    }
+    if (!m.isValid()) {
+      // Try numeric epoch seconds/millis
+      const numeric = Number(inputDate);
+      if (!Number.isNaN(numeric)) {
+        const millis = numeric > 1e12 ? numeric : numeric * 1000;
+        const mNum = moment(millis);
+        if (mNum.isValid()) {
+          return withTime ? mNum.format('DD/MM/YYYY HH:mm') : mNum.format('DD/MM/YYYY');
+        }
+      }
+      return 'Không xác định';
+    }
+    return withTime ? m.format('DD/MM/YYYY HH:mm') : m.format('DD/MM/YYYY');
+  };
+
+  // Mapping evidence type to Vietnamese label
+  const evidenceTypeLabels = {
+    DOCUMENT: 'Tài liệu',
+    IMAGE: 'Hình ảnh',
+    MEDICAL_CERTIFICATE: 'Giấy khám bệnh',
+    OFFICIAL_LETTER: 'Công văn',
+    RECEIPT: 'Hóa đơn/Biên lai'
+  };
   const navigate = useNavigate();
   const { message: messageApi } = AntApp.useApp();
   const [loading, setLoading] = useState(false);
@@ -311,7 +347,7 @@ const AccountantEvidencePage = () => {
     if (dateRange.length === 2) {
       filtered = filtered.filter(item => {
         const createdAt = moment(item.createdAt);
-        return createdAt.isBetween(dateRange[0], dateRange[1], 'day', '[]');
+        return createdAt.isValid() && createdAt.isBetween(dateRange[0], dateRange[1], 'day', '[]');
       });
     }
     
@@ -361,7 +397,7 @@ const AccountantEvidencePage = () => {
           'OFFICIAL_LETTER': 'purple',
           'RECEIPT': 'cyan'
         };
-        return <Tag color={colors[type]}>{type}</Tag>;
+        return <Tag color={colors[type]}>{evidenceTypeLabels[type] || type}</Tag>;
       }
     },
     {
@@ -384,7 +420,7 @@ const AccountantEvidencePage = () => {
       title: 'Ngày tải lên',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => moment(date).format('DD/MM/YYYY HH:mm')
+      render: (date) => formatDate(date, true)
     },
     {
       title: 'Thao tác',
@@ -471,7 +507,7 @@ const AccountantEvidencePage = () => {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => moment(date).format('DD/MM/YYYY')
+      render: (date) => formatDate(date, false)
     },
     {
       title: 'Thao tác',
@@ -652,7 +688,7 @@ const AccountantEvidencePage = () => {
                 pageSize: 10,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total) => `Tổng ${total} items`
+                 showTotal: (total) => `Tổng ${total} mục`
               }}
             />
           </Card>
@@ -903,7 +939,7 @@ const AccountantEvidencePage = () => {
                 <strong>Tên file:</strong> {selectedEvidence.originalFilename}
               </Col>
               <Col span={12}>
-                <strong>Loại:</strong> <Tag>{selectedEvidence.evidenceType}</Tag>
+                <strong>Loại:</strong> <Tag>{evidenceTypeLabels[selectedEvidence.evidenceType] || selectedEvidence.evidenceType}</Tag>
               </Col>
               <Col span={12}>
                 <strong>Kích thước:</strong> {selectedEvidence.formattedFileSize}
@@ -922,10 +958,10 @@ const AccountantEvidencePage = () => {
                 </div>
               </Col>
               <Col span={12}>
-                <strong>Ngày tải lên:</strong> {moment(selectedEvidence.createdAt).format('DD/MM/YYYY HH:mm')}
+                <strong>Ngày tải lên:</strong> {formatDate(selectedEvidence.createdAt, true)}
               </Col>
               <Col span={12}>
-                <strong>IP:</strong> {selectedEvidence.uploadIp || 'N/A'}
+                <strong>IP:</strong> {selectedEvidence.uploadIp || 'Không có'}
               </Col>
             </Row>
             

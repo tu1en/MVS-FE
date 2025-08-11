@@ -1,34 +1,37 @@
 import {
-    CalendarOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    CloseCircleOutlined,
-    ExclamationCircleOutlined,
-    ReloadOutlined,
-    SearchOutlined,
-    TeamOutlined
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Input,
-    message,
-    Row,
-    Select,
-    Space,
-    Statistic,
-    Table,
-    Tag
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  message,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag
 } from 'antd';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const { Option } = Select;
 const { Search } = Input;
+
+dayjs.extend(customParseFormat);
 
 const AllStaffAttendanceLogs = () => {
   const navigate = useNavigate();
@@ -70,21 +73,44 @@ const AllStaffAttendanceLogs = () => {
       };
       
       const response = await api.get('/attendance/all-logs', { params });
-      const data = response.data.data || response.data;
-      
-      setLogs(data);
+      const raw = response.data.data || response.data;
+
+      const mapped = (Array.isArray(raw) ? raw : []).map((item, index) => {
+        const userName = item.userName || item.employeeName || item.fullName || item.name || '';
+        const role = item.role || item.userRole || item.position || 'STAFF';
+        const department = item.department || item.departmentName || item.dept || '';
+        const date = item.date || item.attendanceDate || item.workDate || selectedDate?.toISOString?.() || selectedDate;
+        const checkIn = item.checkIn ?? item.checkInTime ?? item.check_in ?? item.startTime ?? null;
+        const checkOut = item.checkOut ?? item.checkOutTime ?? item.check_out ?? item.endTime ?? null;
+        const status = item.status || item.attendanceStatus || item.state || '';
+        const shift = item.shift || undefined;
+        return {
+          id: item.id ?? index + 1,
+          userName,
+          role,
+          department,
+          date,
+          shift,
+          checkIn,
+          checkOut,
+          status
+        };
+      });
+
+      setLogs(mapped);
       setPagination(prev => ({
         ...prev,
-        total: response.data.totalElements || data.length
+        total: response.data.totalElements || mapped.length
       }));
       
       // Calculate statistics
-      const presentCount = data.filter(log => log.status === 'PRESENT').length;
-      const absentCount = data.filter(log => log.status === 'ABSENT').length;
-      const lateCount = data.filter(log => log.status === 'LATE').length;
+      const upper = (s) => String(s || '').toUpperCase();
+      const presentCount = mapped.filter(log => ['PRESENT','HOÀN THÀNH','COMPLETED'].some(k => upper(log.status).includes(k))).length;
+      const absentCount = mapped.filter(log => ['ABSENT','VẮNG'].some(k => upper(log.status).includes(k))).length;
+      const lateCount = mapped.filter(log => ['LATE','MUỘN'].some(k => upper(log.status).includes(k))).length;
       
       setStats({
-        totalLogs: data.length,
+        totalLogs: mapped.length,
         presentCount,
         absentCount,
         lateCount
@@ -138,6 +164,40 @@ const AllStaffAttendanceLogs = () => {
     return matchesSearch && matchesStatus && matchesDepartment;
   });
 
+  const formatDateSafe = (value) => {
+    if (!value) return '-';
+    // Try a set of common formats first
+    const dateFormats = [
+      'YYYY-MM-DD',
+      'DD/MM/YYYY',
+      'YYYY/MM/DD',
+      'DD-MM-YYYY',
+      'MM/DD/YYYY'
+    ];
+    for (const fmt of dateFormats) {
+      const parsed = dayjs(value, fmt, true);
+      if (parsed.isValid()) return parsed.format('DD/MM/YYYY');
+    }
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format('DD/MM/YYYY') : '-';
+  };
+
+  const formatTimeSafe = (value) => {
+    if (!value) return '-';
+    if (Array.isArray(value)) {
+      const hh = String(value[0] ?? 0).padStart(2, '0');
+      const mm = String(value[1] ?? 0).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    const timeFormats = ['HH:mm', 'HH:mm:ss', 'YYYY-MM-DDTHH:mm:ssZ', 'YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss'];
+    for (const fmt of timeFormats) {
+      const parsed = dayjs(value, fmt, true);
+      if (parsed.isValid()) return parsed.format('HH:mm');
+    }
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format('HH:mm') : '-';
+  };
+
   const columns = [
     {
       title: 'ID',
@@ -176,7 +236,7 @@ const AllStaffAttendanceLogs = () => {
       title: 'Ngày',
       dataIndex: 'date',
       key: 'date',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      render: (date) => formatDateSafe(date),
     },
     {
       title: 'Ca làm',
@@ -192,13 +252,13 @@ const AllStaffAttendanceLogs = () => {
       title: 'Giờ vào',
       dataIndex: 'checkIn',
       key: 'checkIn',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => formatTimeSafe(time),
     },
     {
       title: 'Giờ ra',
       dataIndex: 'checkOut',
       key: 'checkOut',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => formatTimeSafe(time),
     },
     {
       title: 'Trạng thái',

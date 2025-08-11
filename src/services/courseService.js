@@ -95,6 +95,20 @@ const courseService = {
   },
 
   /**
+   * Cập nhật nhanh trạng thái công khai của template
+   */
+  updateTemplatePublic: (id, isPublic) => {
+    return apiClient.put(API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_BY_ID(id), { isPublic });
+  },
+
+  /**
+   * Cập nhật nhanh học phí (enrollmentFee) của template
+   */
+  updateTemplateFee: (id, enrollmentFee) => {
+    return apiClient.put(API_CONFIG.ENDPOINTS.COURSE_TEMPLATES_BY_ID(id), { enrollmentFee });
+  },
+
+  /**
    * Delete course template
    * @param {number} id - Template ID
    * @returns {Promise<void>}
@@ -136,6 +150,7 @@ const courseService = {
    * @returns {Promise<Array>} List of public courses
    */
   getPublicCourses: () => {
+    console.log('🌐 CourseService: Making API call to /public/courses');
     return apiClient.get('/public/courses');
   },
 

@@ -21,13 +21,17 @@ const CourseCatalog = () => {
   const loadCourses = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading public courses...');
       const response = await courseService.getPublicCourses();
+      console.log('📊 API Response:', response);
       const courseData = response.data || [];
+      console.log('📚 Course Data:', courseData);
+      console.log('📈 Courses count:', courseData.length);
       
       setCourses(courseData);
       setFilteredCourses(courseData);
     } catch (error) {
-      console.error('Error loading courses:', error);
+      console.error('❌ Error loading courses:', error);
       // Fallback to empty array instead of mock data
       setCourses([]);
       setFilteredCourses([]);
@@ -239,11 +243,11 @@ const CourseCatalog = () => {
 
                   <div className="mb-4">
                     <p className="text-sm text-gray-500 mb-2">
-                      👨‍🏫 {course.instructor || course.teacherName || 'Đang cập nhật'}
+                      👨‍🏫 {course.createdByName || 'Đang cập nhật'}
                     </p>
                     <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span>⏱️ {course.duration || `${course.total_weeks || 0} tuần`}</span>
-                      <span>👥 {course.max_students_per_template || course.students || 0} học viên</span>
+                      <span>⏱️ {course.totalWeeks || 0} tuần</span>
+                      <span>👥 {course.maxStudentsPerTemplate || 0} học viên</span>
                     </div>
                   </div>
 
@@ -270,19 +274,21 @@ const CourseCatalog = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <span className="text-2xl font-bold text-blue-600">
-                        {course.enrollment_fee === 0 ? 'Miễn phí' : formatPrice(course.enrollment_fee || course.price || 0)}
+                        {course.enrollmentFee === 0
+                          ? 'Miễn phí'
+                          : formatPrice(course.enrollmentFee || 0)}
                       </span>
-                      {course.originalPrice && course.originalPrice > (course.enrollment_fee || course.price) && (
+                      {course.originalPrice && course.originalPrice > course.enrollmentFee && (
                         <span className="text-sm text-gray-500 line-through ml-2">
                           {formatPrice(course.originalPrice)}
                         </span>
                       )}
                     </div>
-                    {course.originalPrice && course.originalPrice > (course.enrollment_fee || course.price) && (
-                      <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                        Giảm {Math.round((1 - (course.enrollment_fee || course.price) / course.originalPrice) * 100)}%
-                      </div>
-                    )}
+                      {course.originalPrice && course.originalPrice > course.enrollmentFee && (
+                        <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                          Giảm {Math.round((1 - course.enrollmentFee / course.originalPrice) * 100)}%
+                        </div>
+                      )}
                   </div>
 
                   {/* Action Button */}

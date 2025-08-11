@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
 
@@ -31,7 +31,7 @@ const CoursePreview = () => {
           instructor: courseData.instructor || courseData.teacherName || 'Đang cập nhật',
           instructorBio: courseData.instructorBio || '5+ năm kinh nghiệm giảng dạy',
           instructorAvatar: courseData.instructorAvatar || '/api/placeholder/100/100',
-          price: courseData.enrollment_fee || courseData.price || 0,
+          price: courseData.enrollment_fee || courseData.enrollmentFee || courseData.price || 0,
           originalPrice: courseData.originalPrice,
           duration: courseData.duration || `${courseData.total_weeks || 0} tuần`,
           students: courseData.max_students_per_template || courseData.students || 0,

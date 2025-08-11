@@ -2,11 +2,11 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useStat
 import classManagementService from '../../services/classManagementService';
 import courseService from '../../services/courseService';
 import {
-  debounce,
-  downloadFile,
-  getStatusBadge,
-  showConfirmDialog,
-  showNotification
+    debounce,
+    downloadFile,
+    getStatusBadge,
+    showConfirmDialog,
+    showNotification
 } from '../../utils/courseManagementUtils';
 import CourseDescription from './CourseDescription';
 
@@ -56,36 +56,43 @@ const CourseTemplateManager = forwardRef(({
     }));
 
     try {
-      const queryParams = {
-        page: params.page || state.pagination.current,
-        size: params.size || state.pagination.pageSize,
-        search: params.search || state.filters.search,
-        subject: params.subject || state.filters.subject,
-        status: params.status || state.filters.status
-      };
+      // Thu thập params hiện tại
+      const currentPage = params.page || state.pagination.current;
+      const pageSize = params.size || state.pagination.pageSize;
+      const search = (params.search ?? state.filters.search ?? '').toString().trim().toLowerCase();
+      const subject = params.subject ?? state.filters.subject ?? '';
+      const status = params.status ?? state.filters.status ?? '';
 
-      // Remove empty parameters
-      Object.keys(queryParams).forEach(key => {
-        if (!queryParams[key] && queryParams[key] !== 0) {
-          delete queryParams[key];
-        }
+      // Backend hiện trả toàn bộ danh sách (không hỗ trợ filter). Lọc & phân trang ở FE.
+      const response = await courseService.getAllTemplates({});
+      const raw = response.data;
+      const list = Array.isArray(raw) ? raw : (raw.data || raw.content || []);
+
+      // Lọc theo search/subject/status ở FE
+      const filtered = list.filter((t) => {
+        const name = (t.name || '').toString().toLowerCase();
+        const subj = (t.subject || '').toString().toLowerCase();
+        const stt = (t.status || '').toString().toLowerCase();
+        const matchSearch = !search || name.includes(search) || subj.includes(search);
+        const matchSubject = !subject || t.subject === subject;
+        const matchStatus = !status || stt === status.toLowerCase();
+        return matchSearch && matchSubject && matchStatus;
       });
 
-      const response = await courseService.getAllTemplates(queryParams);
-      const data = response.data;
+      const total = filtered.length;
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
 
       // Debug logging
-      console.log('CourseTemplateManager - API response:', response);
-      console.log('CourseTemplateManager - Data received:', data);
-      console.log('CourseTemplateManager - Templates array:', Array.isArray(data) ? data : (data.data || data.content || []));
+      console.log('CourseTemplateManager - total templates:', list.length, 'filtered:', total);
 
       setState(prev => ({
         ...prev,
-        templates: Array.isArray(data) ? data : (data.data || data.content || []),
+        templates: pageItems,
         pagination: {
-          current: (data.number || 0) + 1,
-          pageSize: data.size || prev.pagination.pageSize,
-          total: data.totalElements || (data.data ? data.data.length : (Array.isArray(data) ? data.length : 0))
+          current: currentPage,
+          pageSize,
+          total
         },
         loading: { ...prev.loading, templates: false }
       }));
@@ -370,16 +377,14 @@ const CourseTemplateManager = forwardRef(({
                 />
               </div>
 
-              {/* Subject and Created Info */}
+              {/* Subject */}
               <div className="flex justify-between items-center mb-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center space-x-3">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                     📂 {template.subject || 'Chưa phân loại'}
                   </span>
-                  {/* <span className="text-xs text-gray-500">
-                    🗓️ Tạo: {formatDate(template.createdAt)} • {template.createdBy || ''}
-                  </span> */}
                 </div>
+                {/* ĐÃ LOẠI BỎ: công khai/học phí ở Templates. Việc công khai và giá sẽ quản lý tại tab Lớp học. */}
               </div>
 
               {/* Action Buttons */}

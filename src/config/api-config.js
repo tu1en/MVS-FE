@@ -2,7 +2,7 @@
  * Configuration for API endpoints and related settings
  */
 const API_CONFIG = {
-  // Base URL for API requests
+  // Base URL for API requests - using proxy in development
   BASE_URL: "http://localhost:8088/api",
 
   // Endpoints configuration
@@ -89,6 +89,8 @@ const API_CONFIG = {
     CLASSES_SCHEDULE_CONFLICTS: "/classes/check-schedule-conflicts",
     CLASSES_ROOM_AVAILABILITY: "/classes/room-availability",
     CLASSES_AVAILABLE_TEACHERS: "/classes/available-teachers",
+    CLASSES_FREE_ROOMS: "/classes/free-rooms",
+    CLASSES_RESCHEDULE: (id) => `/classes/${id}/reschedule`,
 
     // Rooms endpoints
     ROOMS: "/rooms",
@@ -120,6 +122,8 @@ const API_CONFIG = {
     PUBLIC_COURSES: "/public/courses",
     PUBLIC_COURSE_CATALOG: "/public/courses/catalog",
     PUBLIC_COURSE_DETAIL: (id) => `/public/courses/${id}`,
+    PUBLIC_CLASSES: "/public/courses/by-class",
+    PUBLIC_CLASS_DETAIL: (id) => `/public/courses/by-class/${id}`,
 
     // Student Course endpoints (for authenticated students)
     STUDENT_COURSES_ENROLLED: "/student/courses/enrolled",

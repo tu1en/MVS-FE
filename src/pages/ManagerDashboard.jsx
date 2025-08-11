@@ -133,17 +133,17 @@ export default function ManagerDashboard() {
         </div> */}
         
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">📊 Import Excel Templates</h2>
-          <p className="text-gray-600">Tạo khóa học từ file Excel và quản lý templates</p>
+          <h2 className="text-xl font-semibold mb-4">Quản lý khóa học</h2>
+          <p className="text-gray-600">Tạo khóa học, quản lý khóa học điều chỉnh lịch học</p>
           <button 
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
             onClick={() => navigate('/manager/course-templates')}
           >
-            Quản lý Templates Excel
+            Quản lý khóa học
           </button>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý lịch học</h2>
           <p className="text-gray-600">Quản lý lịch học các lớp trong hệ thống</p>
           <button 
@@ -152,7 +152,7 @@ export default function ManagerDashboard() {
           >
             Quản lý lịch học
           </button>
-        </div>
+        </div> */}
         
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý thông báo</h2>
@@ -250,7 +250,7 @@ export default function ManagerDashboard() {
           <h3 className="text-xl font-semibold mb-2">Chấm công</h3>
           <p className="text-gray-600">Thực hiện chấm công hàng ngày</p>
           <button 
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
             onClick={() => navigate('/manager/attendance')}
           >
             Chấm công

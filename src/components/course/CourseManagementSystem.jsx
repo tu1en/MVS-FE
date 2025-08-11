@@ -1,18 +1,19 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import useWebSocketNotifications from '../../hooks/useWebSocketNotifications';
+import courseService from '../../services/courseService';
 import { showNotification } from '../../utils/courseManagementUtils';
-import CourseManagementDashboard from './CourseManagementDashboard';
+import ClassDetailModal from './ClassDetailModal';
+import ClassList from './ClassList';
+import ClassQuickEditModal from './ClassQuickEditModal';
 import CourseTemplateManager from './CourseTemplateManager';
 import CreateClassModal from './CreateClassModal';
 import ImportExcelModal from './ImportExcelModal';
-import ClassList from './ClassList';
+import RescheduleModal from './RescheduleModal';
 import ScheduleCalendar from './ScheduleCalendar';
-import ClassDetailModal from './ClassDetailModal';
-import courseService from '../../services/courseService';
 
 const CourseManagementSystem = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('classes');
   const [modals, setModals] = useState({
     import: false,
     createClass: false,
@@ -24,6 +25,8 @@ const CourseManagementSystem = () => {
     template: null,
     class: null
   });
+  const [openReschedule, setOpenReschedule] = useState(false);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
   
   const [templateLessons, setTemplateLessons] = useState([]);
 
@@ -233,7 +236,6 @@ const CourseManagementSystem = () => {
 
   // Tab data with counts
   const tabData = [
-    { key: 'dashboard', label: '🏠 Dashboard', count: null },
     { key: 'templates', label: '📚 Templates', count: null },
     { key: 'classes', label: '👥 Lớp học', count: null },
     { key: 'schedule', label: '📅 Lịch học', count: null }
@@ -286,15 +288,6 @@ const CourseManagementSystem = () => {
   // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return (
-          <CourseManagementDashboard
-            onImportTemplate={() => openModal('import')}
-            onManageTemplates={() => setActiveTab('templates')}
-            onViewSchedule={() => setActiveTab('schedule')}
-          />
-        );
-      
       case 'templates':
         return (
           <CourseTemplateManager
@@ -324,6 +317,8 @@ const CourseManagementSystem = () => {
               onRefreshTrigger={classListRefreshTrigger}
               onClassDetail={handleClassDetail}
               onClassEdit={handleClassEdit}
+              onQuickEdit={(c) => { setSelectedItems(prev => ({ ...prev, class: c })); setQuickEditOpen(true); }}
+              onReschedule={(c) => { setSelectedItems(prev => ({ ...prev, class: c })); setOpenReschedule(true); }}
             />
           </div>
         );
@@ -355,7 +350,27 @@ const CourseManagementSystem = () => {
         );
       
       default:
-        return <CourseManagementDashboard />;
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900">Quản lý Lớp học</h2>
+              <button
+                onClick={() => setActiveTab('templates')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
+              >
+                <span className="mr-2">➕</span>
+                Tạo Lớp Mới
+              </button>
+            </div>
+            <ClassList 
+              onRefreshTrigger={classListRefreshTrigger}
+              onClassDetail={handleClassDetail}
+              onClassEdit={handleClassEdit}
+              onQuickEdit={(c) => { setSelectedItems(prev => ({ ...prev, class: c })); setQuickEditOpen(true); }}
+              onReschedule={(c) => { setSelectedItems(prev => ({ ...prev, class: c })); setOpenReschedule(true); }}
+            />
+          </div>
+        );
     }
   };
 
@@ -599,6 +614,25 @@ const CourseManagementSystem = () => {
         classData={selectedItems.class}
         onCancel={() => closeModal('classDetail')}
       />
+
+      {openReschedule && selectedItems.class && (
+        <RescheduleModal
+          open={openReschedule}
+          classItem={selectedItems.class}
+          onClose={() => setOpenReschedule(false)}
+          onSuccess={refreshClassData}
+        />
+      )}
+
+      {quickEditOpen && selectedItems.class && (
+        <ClassQuickEditModal
+          open={quickEditOpen}
+          classItem={selectedItems.class}
+          onClose={() => setQuickEditOpen(false)}
+          onUpdated={refreshClassData}
+          onReschedule={(c) => { setQuickEditOpen(false); setSelectedItems(prev => ({ ...prev, class: c })); setOpenReschedule(true); }}
+        />
+      )}
     </div>
   );
 };

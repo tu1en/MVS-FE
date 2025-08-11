@@ -1,37 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  Table, 
-  DatePicker, 
-  Button, 
-  Space, 
-  Tag, 
-  message, 
-  Row, 
-  Col, 
-  Statistic, 
-  Select, 
-  Input,
-  Spin,
-  Alert
-} from 'antd';
-import { 
-  UserOutlined, 
-  TeamOutlined, 
-  ClockCircleOutlined,
+import {
+  CalendarOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
-  SearchOutlined,
   ReloadOutlined,
-  CalendarOutlined
+  SearchOutlined,
+  UserOutlined
 } from '@ant-design/icons';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  message,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag
+} from 'antd';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const { Option } = Select;
 const { Search } = Input;
+
+dayjs.extend(customParseFormat);
 
 const TeacherAttendanceStatus = () => {
   const navigate = useNavigate();
@@ -56,6 +56,53 @@ const TeacherAttendanceStatus = () => {
     fetchLogs();
   }, [pagination.current, pagination.pageSize, selectedDate, selectedShift]);
 
+  const decodeLatin1ToUtf8 = (str) => {
+    if (!str || typeof str !== 'string') return str;
+    try {
+      // Chuyển các chuỗi bị decode sai ISO-8859-1 về UTF-8 (trường hợp "Ð?ng" → "Đặng")
+      const converted = decodeURIComponent(escape(str));
+      // Nếu sau khi convert độ dài thay đổi hoặc xuất hiện các ký tự tiếng Việt, dùng bản convert
+      if (converted && converted !== str) return converted;
+      return str;
+    } catch {
+      return str;
+    }
+  };
+
+  const formatDateSafe = (value) => {
+    if (!value) return '-';
+    if (Array.isArray(value)) {
+      const [y, m, d] = value;
+      if (y && m && d) {
+        const parsed = dayjs(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`, 'YYYY-MM-DD', true);
+        return parsed.isValid() ? parsed.format('DD/MM/YYYY') : '-';
+      }
+    }
+    const fmts = ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', 'DD-MM-YYYY', 'MM/DD/YYYY'];
+    for (const f of fmts) {
+      const p = dayjs(value, f, true);
+      if (p.isValid()) return p.format('DD/MM/YYYY');
+    }
+    const p = dayjs(value);
+    return p.isValid() ? p.format('DD/MM/YYYY') : '-';
+  };
+
+  const formatTimeSafe = (value) => {
+    if (!value) return '-';
+    if (Array.isArray(value)) {
+      const hh = String(value[0] ?? 0).padStart(2, '0');
+      const mm = String(value[1] ?? 0).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    const fmts = ['HH:mm', 'HH:mm:ss', 'YYYY-MM-DDTHH:mm:ssZ', 'YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss'];
+    for (const f of fmts) {
+      const p = dayjs(value, f, true);
+      if (p.isValid()) return p.format('HH:mm');
+    }
+    const p = dayjs(value);
+    return p.isValid() ? p.format('HH:mm') : '-';
+  };
+
   const fetchLogs = async () => {
     try {
       setLoading(true);
@@ -70,21 +117,34 @@ const TeacherAttendanceStatus = () => {
       }
       
       const response = await api.get('/attendance/teacher-status', { params });
-      const data = response.data.data || response.data;
-      
-      setLogs(data);
+      const raw = response.data.data || response.data;
+
+      const mapped = (Array.isArray(raw) ? raw : []).map((it, idx) => ({
+        id: it.id ?? idx + 1,
+        userId: it.userId,
+        userName: decodeLatin1ToUtf8(it.userName),
+        role: it.role,
+        department: it.department,
+        date: it.date,
+        shift: it.shift,
+        checkIn: it.checkIn ?? it.checkInTime,
+        checkOut: it.checkOut ?? it.checkOutTime,
+        status: it.status
+      }));
+
+      setLogs(mapped);
       setPagination(prev => ({
         ...prev,
-        total: response.data.totalElements || data.length
+        total: response.data.totalElements || mapped.length
       }));
       
       // Calculate statistics
-      const presentCount = data.filter(log => log.status === 'PRESENT').length;
-      const absentCount = data.filter(log => log.status === 'ABSENT').length;
-      const lateCount = data.filter(log => log.status === 'LATE').length;
+      const presentCount = mapped.filter(log => log.status === 'PRESENT').length;
+      const absentCount = mapped.filter(log => log.status === 'ABSENT').length;
+      const lateCount = mapped.filter(log => log.status === 'LATE').length;
       
       setStats({
-        totalTeachers: data.length,
+        totalTeachers: mapped.length,
         presentCount,
         absentCount,
         lateCount
@@ -157,7 +217,7 @@ const TeacherAttendanceStatus = () => {
       title: 'Ngày',
       dataIndex: 'date',
       key: 'date',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      render: (date) => formatDateSafe(date),
     },
     {
       title: 'Ca làm',
@@ -173,13 +233,13 @@ const TeacherAttendanceStatus = () => {
       title: 'Giờ vào',
       dataIndex: 'checkIn',
       key: 'checkIn',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => formatTimeSafe(time),
     },
     {
       title: 'Giờ ra',
       dataIndex: 'checkOut',
       key: 'checkOut',
-      render: (time) => time ? dayjs(time).format('HH:mm') : '-',
+      render: (time) => formatTimeSafe(time),
     },
     {
       title: 'Trạng thái',

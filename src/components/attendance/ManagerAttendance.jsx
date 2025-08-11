@@ -542,7 +542,7 @@ const ManagerAttendance = ({ user }) => {
                 <Col xs={12} md={6}>
                     <Card>
                         <Statistic
-                            title="Số ngày làm việc"
+                            title="Số ngày làm việc trong tuần"
                             value={weeklyStats?.daysWorked || 0}
                             suffix="/ 5 ngày"
                             prefix={<CalendarOutlined />}

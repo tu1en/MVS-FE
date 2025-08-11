@@ -3,10 +3,11 @@ import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
 import { formatVietnameseText } from '../../utils/viTextUtils';
 
-const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
+const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule, onQuickEdit }) => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   // Load classes on mount and when refresh is triggered
   useEffect(() => {
@@ -74,6 +75,75 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
     if (lowerMap[raw]) return lowerMap[raw];
 
     return { text: 'Không xác định', color: 'bg-gray-100 text-gray-800', icon: '❓' };
+  };
+
+  // Chuẩn hóa status về các key cố định để đếm/lọc
+  const normalizeStatusKey = (status) => {
+    const s = (status || '').toString();
+    const u = s.toUpperCase();
+    if (['ACTIVE'].includes(u)) return 'ACTIVE';
+    if (['PLANNING', 'PLANNED'].includes(u)) return 'PLANNING';
+    if (['COMPLETED', 'DONE', 'FINISHED', 'ENDED'].includes(u)) return 'COMPLETED';
+    if (['CANCELLED', 'CANCELED'].includes(u)) return 'CANCELLED';
+    if (['INACTIVE', 'DISABLED'].includes(u)) return 'INACTIVE';
+    return 'UNKNOWN';
+  };
+
+  // Loại bỏ 'INACTIVE' vì lớp học không có trạng thái này ở BE
+  const STATUS_KEYS = ['ACTIVE', 'PLANNING', 'COMPLETED', 'CANCELLED'];
+
+  // Tính bộ đếm theo trạng thái
+  const statusCounts = classes.reduce(
+    (acc, c) => {
+      const key = normalizeStatusKey(c.status);
+      if (STATUS_KEYS.includes(key)) {
+        acc[key] = (acc[key] || 0) + 1;
+      } else {
+        acc.UNKNOWN = (acc.UNKNOWN || 0) + 1;
+      }
+      acc.ALL += 1;
+      return acc;
+    },
+    { ALL: 0 }
+  );
+
+  const filteredClasses = classes.filter((c) => {
+    if (activeFilter === 'all') return true;
+    return normalizeStatusKey(c.status) === activeFilter;
+  });
+
+  // Các lớp đang hoạt động nhưng chưa public (để đồng bộ Online)
+  const activeNotPublic = classes.filter(
+    (c) => normalizeStatusKey(c.status) === 'ACTIVE' && !Boolean(c.isPublic)
+  );
+
+  const bulkSyncOnline = async (limit = 6) => {
+    try {
+      const targets = activeNotPublic.slice(0, limit);
+      if (targets.length === 0) {
+        showNotification('Không có lớp Đang hoạt động cần đồng bộ', 'info');
+        return;
+      }
+      showNotification(`Đang đồng bộ ${targets.length} lớp lên Online...`, 'info');
+
+      const results = await Promise.allSettled(
+        targets.map((c) =>
+          import('../../services/classManagementService').then(({ default: svc }) =>
+            svc.updateClassPublic(c.id, true)
+          )
+        )
+      );
+
+      const success = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.length - success;
+      if (success > 0) showNotification(`Đồng bộ thành công ${success} lớp`, 'success');
+      if (failed > 0) showNotification(`Đồng bộ thất bại ${failed} lớp`, 'warning');
+      await loadClasses();
+      setActiveFilter('ACTIVE');
+    } catch (e) {
+      console.error(e);
+      showNotification('Lỗi khi đồng bộ lớp Online', 'error');
+    }
   };
 
   // Format date for display
@@ -159,20 +229,61 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
     <div className="bg-white border border-gray-200 rounded-lg vietnamese-text crisp-text">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">
-          Danh sách Lớp học ({classes.length})
+          Danh sách Lớp học ({filteredClasses.length}/{classes.length})
         </h3>
-        <button 
-          onClick={loadClasses}
-          className="text-blue-500 hover:text-blue-700 text-sm flex items-center button-vietnamese"
-          disabled={loading}
-        >
-          <span className="mr-1">🔄</span>
-          Tải lại
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => bulkSyncOnline(6)}
+            className="text-white bg-green-600 hover:bg-green-700 text-sm flex items-center px-3 py-1.5 rounded button-vietnamese disabled:opacity-50"
+            disabled={activeNotPublic.length === 0}
+            title="Đồng bộ tối đa 6 lớp đang hoạt động lên Online (isPublic=true)"
+          >
+            <span className="mr-1">🌐</span>
+            Đồng bộ Online ({Math.min(6, activeNotPublic.length)})
+          </button>
+          <button 
+            onClick={loadClasses}
+            className="text-blue-500 hover:text-blue-700 text-sm flex items-center button-vietnamese"
+            disabled={loading}
+          >
+            <span className="mr-1">🔄</span>
+            Tải lại
+          </button>
+        </div>
       </div>
+      {/* Tabs lọc trạng thái */}
+      <div className="px-6 pt-4">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'all', label: 'Tất cả', count: statusCounts.ALL, color: 'bg-gray-100 text-gray-800', icon: '📚' },
+            ...STATUS_KEYS.map((k) => {
+              const info = getStatusDisplay(k);
+              return { key: k, label: info.text, count: statusCounts[k] || 0, color: info.color, icon: info.icon };
+            })
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilter(tab.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
+                activeFilter === tab.key
+                  ? 'border-blue-500 ring-2 ring-blue-100'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+              title={`Lọc: ${tab.label}`}
+            >
+              <span className="mr-0.5">{tab.icon}</span>
+              <span className="truncate max-w-[140px]">{tab.label}</span>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full ${activeFilter === tab.key ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                {tab.count ?? 0}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {classes.map((classItem) => {
+          {filteredClasses.map((classItem) => {
             const statusInfo = getStatusDisplay(classItem.status);
             
             return (
@@ -243,7 +354,18 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
                         }
                       </div>
                     </div>
-                    
+                    {/* Gọn: chỉ còn hành động */}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => onQuickEdit ? onQuickEdit(classItem) : onClassEdit?.(classItem)}
+                        className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs hover:bg-gray-200 flex items-center button-vietnamese"
+                        title="Chỉnh sửa nhanh"
+                      >
+                        <span className="mr-1">⚙️</span>
+                        Sửa
+                      </button>
+                    </div>
+
                     {/* Action buttons */}
                     <div className="flex space-x-2">
                       <button
@@ -255,13 +377,14 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit }) => {
                         Chi tiết
                       </button>
                       
+                      {/* Nút Sửa gọn đã chuyển vào góc trên */}
                       <button
-                        onClick={() => onClassEdit ? onClassEdit(classItem) : console.log('Class edit:', classItem)}
-                        className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 flex items-center button-vietnamese"
-                        title="Chỉnh sửa lớp học"
+                        onClick={() => onReschedule ? onReschedule(classItem) : console.log('Reschedule:', classItem)}
+                        className="bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700 flex items-center button-vietnamese"
+                        title="Đổi lịch lớp học"
                       >
-                        <span className="mr-1">✏️</span>
-                        Sửa
+                        <span className="mr-1">🗓️</span>
+                        Đổi lịch
                       </button>
                     </div>
                   </div>
