@@ -1244,7 +1244,7 @@ const RecruitmentManagement = () => {
     {
       title: 'Thao tác',
       render: (_, record) => (
-        <div className="flex flex-col space-y-2">
+        <div className="grid grid-cols-1 gap-2">
           {record.cvUrl && (
             <Button 
               type="link" 
@@ -1321,11 +1321,11 @@ const RecruitmentManagement = () => {
           <Table columns={positionColumns} dataSource={positions} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Đơn ứng tuyển" key="applications" disabled={!selectedPlan}>
+        <Tabs.TabPane tab="Quản lý đơn ứng tuyển" key="applications" disabled={!selectedPlan}>
           <Table columns={applicationColumns} dataSource={applications} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Lên lịch" key="schedule">
+        <Tabs.TabPane tab="Quản lý lịch" key="schedule">
           <Table 
             columns={scheduleColumns} 
             dataSource={getFilteredApprovedApps().filter(app => shouldShowInSchedule(app.id))} 
@@ -1333,7 +1333,7 @@ const RecruitmentManagement = () => {
           />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Phỏng vấn chờ" key="pending">
+        <Tabs.TabPane tab="Đánh giá" key="pending">
           <Table 
             columns={pendingInterviewColumns} 
             dataSource={pendingInterviews.filter(shouldShowInPending)} 
