@@ -59,9 +59,12 @@ const RecruitmentApplyForm = ({ job, onSuccess }) => {
       <Form.Item
         name="fullName"
         label="Họ và tên"
-        rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+        rules={[
+          { required: true, message: 'Vui lòng nhập họ tên!' },
+          { max: 50, message: 'Họ và tên tối đa 50 ký tự!' }
+        ]}
       >
-        <Input />
+        <Input maxLength={50} />
       </Form.Item>
 
       <Form.Item
@@ -86,9 +89,12 @@ const RecruitmentApplyForm = ({ job, onSuccess }) => {
       <Form.Item
         name="address"
         label="Địa chỉ"
-        rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+        rules={[
+          { required: true, message: 'Vui lòng nhập địa chỉ!' },
+          { max: 100, message: 'Địa chỉ tối đa 100 ký tự!' }
+        ]}
       >
-        <Input.TextArea rows={3} />
+        <Input.TextArea rows={3} maxLength={100} />
       </Form.Item>
 
       <Form.Item
