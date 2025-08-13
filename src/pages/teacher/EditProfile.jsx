@@ -1,4 +1,5 @@
-import { App, Button, Card, Form, Input, Select, Spin, InputNumber } from 'antd';
+import { App, Button, Card, Form, Input, Select, Spin, DatePicker } from 'antd';
+import dayjs from 'dayjs';
 
 import { useCallback, useEffect, useState } from 'react';
 import ProfileDataService from '../../services/profileDataService';
@@ -18,7 +19,7 @@ const EditProfile = () => {
   const defaultValues = {
     username: '',
     fullName: '',
-    birthYear: undefined,
+    birthDate: null,
     gender: '',
     email: '',
     phoneNumber: '',
@@ -33,11 +34,11 @@ const EditProfile = () => {
       if (result.success) {
         const serverData = result.data || {};
         const profileData = { ...defaultValues, ...serverData };
-        // Map birthDate (YYYY-MM-DD) to birthYear
+        // Map birthDate (YYYY-MM-DD) to dayjs for DatePicker
         if (serverData.birthDate) {
           try {
-            const year = new Date(serverData.birthDate).getFullYear();
-            if (!isNaN(year)) profileData.birthYear = year;
+            const d = dayjs(serverData.birthDate);
+            if (d.isValid()) profileData.birthDate = d;
           } catch (_) {}
         }
         
@@ -109,7 +110,10 @@ const EditProfile = () => {
         email: values.email,
         phoneNumber: values.phoneNumber,
         gender: values.gender,
-        birthYear: values.birthYear
+        // Send ISO date (YYYY-MM-DD) if user selected a date
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        // Backward compatibility if backend still expects birthYear
+        birthYear: values.birthDate ? values.birthDate.year() : null
       };
       const result = await ProfileDataService.updateProfileWithFallback(payload);
       
@@ -161,11 +165,27 @@ const EditProfile = () => {
             </Form.Item>
 
             <Form.Item
-              name="birthYear"
-              label="Năm sinh"
-              rules={[{ required: true, message: 'Vui lòng nhập năm sinh' }]}
+              name="birthDate"
+              label="Ngày sinh"
+              rules={[
+                { required: true, message: 'Vui lòng chọn ngày sinh' },
+                () => ({
+                  validator(_, value) {
+                    if (!value) return Promise.resolve();
+                    if (value.isAfter(dayjs().endOf('day'))) {
+                      return Promise.reject(new Error('Không được chọn ngày trong tương lai'));
+                    }
+                    return Promise.resolve();
+                  }
+                })
+              ]}
             >
-              <InputNumber min={1900} max={new Date().getFullYear()} style={{ width: '100%' }} />
+              <DatePicker
+                style={{ width: '100%' }}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày sinh"
+                disabledDate={(d) => d && d.isAfter(dayjs().endOf('day'))}
+              />
             </Form.Item>
 
             <Form.Item
