@@ -84,6 +84,7 @@ export default function LoginScreen() {
        toast.success('Đăng nhập thành công!');
 
       console.log('Navigating based on role:', userData.role);
+      // userData.role is normalized by authService to a plain role name
       switch (userData.role) {
         case ROLE.ADMIN:
           navigate('/admin');
@@ -101,8 +102,12 @@ export default function LoginScreen() {
           console.log(`Navigating to ACCOUNTANT dashboard...`);
           navigate('/accountant');
           break;
+        case ROLE.TEACHING_ASSISTANT:
+          console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
+          navigate('/teaching-assistant');
+          break;
         default:
-          console.warn('Unknown role:', userData.role);
+          console.warn('Unknown role after login:', userData.role);
           navigate('/');
       }
     } catch (err) {
@@ -181,6 +186,10 @@ export default function LoginScreen() {
         case ROLE.ACCOUNTANT:
           console.log(`Navigating to ACCOUNTANT dashboard...`);
           navigate('/accountant');
+          break;
+        case ROLE.TEACHING_ASSISTANT:
+          console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
+          navigate('/teaching-assistant');
           break;
         default:
           navigate('/');

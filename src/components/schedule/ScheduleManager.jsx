@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useScheduleValidation from '../../hooks/useScheduleValidation';
 import classManagementService from '../../services/classManagementService';
 import roomService from '../../services/roomService';
@@ -35,6 +35,9 @@ const ScheduleManager = ({
     clearValidation,
     showValidationResults
   } = useScheduleValidation();
+  // Tránh nhấp nháy do prop callback thay đổi tham chiếu giữa các render
+  const onScheduleValidateRef = useRef(onScheduleValidate);
+  useEffect(() => { onScheduleValidateRef.current = onScheduleValidate; }, [onScheduleValidate]);
 
   // Initialize schedule from existing data
   useEffect(() => {
@@ -88,20 +91,14 @@ const ScheduleManager = ({
 
   // Update schedule item
   const updateScheduleItem = (itemId, updates) => {
-    setState(prev => ({
-      ...prev,
-      scheduleItems: prev.scheduleItems.map(item =>
-        item.id === itemId ? { ...item, ...updates } : item
-      )
-    }));
-
-    // Notify parent component
-    if (onScheduleChange) {
-      const updatedItems = state.scheduleItems.map(item =>
+    let nextItems = [];
+    setState(prev => {
+      nextItems = prev.scheduleItems.map(item =>
         item.id === itemId ? { ...item, ...updates } : item
       );
-      onScheduleChange(updatedItems);
-    }
+      return { ...prev, scheduleItems: nextItems };
+    });
+    if (onScheduleChange) onScheduleChange(nextItems);
   };
 
   // Delete schedule item
@@ -114,9 +111,25 @@ const ScheduleManager = ({
   };
 
   // Handle room selection for schedule item
-  const handleRoomSelect = (room) => {
+  const handleRoomSelect = async (room) => {
     if (state.selectedItem) {
       updateScheduleItem(state.selectedItem.id, { room });
+      // Silent validate selected slot if date/time present
+      const current = state.selectedItem;
+      const hasTiming = current?.date && current?.startTime && current?.endTime;
+      if (hasTiming) {
+        try {
+          await validateScheduleSlot({
+            roomId: room.id,
+            date: current.date,
+            startTime: current.startTime,
+            endTime: current.endTime,
+            classId: classData?.id
+          }, { silent: true });
+        } catch (_) {
+          // ignore
+        }
+      }
     }
     setState(prev => ({ ...prev, selectedRoom: room, showRoomSelector: false }));
   };
@@ -173,8 +186,8 @@ const ScheduleManager = ({
     const result = await validateMultipleSlots(scheduleSlots);
     showValidationResults(result);
 
-    if (onScheduleValidate) {
-      onScheduleValidate(result);
+    if (onScheduleValidateRef.current) {
+      onScheduleValidateRef.current(result);
     }
 
     return result.isValid;
@@ -223,6 +236,12 @@ const ScheduleManager = ({
             >
               🏫 Tự gán phòng
             </button>
+            {validationState.isValidating && (
+              <div className="flex items-center text-blue-600 text-sm ml-2 animate-pulse">
+                <span className="animate-spin inline-block mr-2">⟳</span>
+                Đang kiểm tra xung đột...
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -309,7 +328,7 @@ const ScheduleManager = ({
                         className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 text-sm"
                         title="Kiểm tra xung đột"
                       >
-                        🔍
+                        {validationState.isValidating ? '⏳' : '🔍'}
                       </button>
                       <button
                         onClick={() => getAlternatives(item)}
@@ -453,6 +472,33 @@ const ScheduleManager = ({
       )}
     </div>
   );
+
+  // Auto validate schedule when items change (debounced)
+  useEffect(() => {
+    if (!onScheduleValidateRef.current) return;
+    const slots = state.scheduleItems
+      .filter(it => it.room && it.date && it.startTime && it.endTime)
+      .map(it => ({
+        roomId: it.room.id,
+        date: it.date,
+        startTime: it.startTime,
+        endTime: it.endTime,
+        classId: classData?.id
+      }));
+    if (slots.length === 0) {
+      onScheduleValidateRef.current({ isValid: true, conflicts: [], warnings: [] });
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await validateMultipleSlots(slots);
+        if (onScheduleValidateRef.current) onScheduleValidateRef.current(res);
+      } catch (_) {
+        // ignore
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [state.scheduleItems, classData?.id, validateMultipleSlots]);
 
   return (
     <div className="schedule-manager">

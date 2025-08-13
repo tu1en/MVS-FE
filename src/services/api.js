@@ -158,8 +158,12 @@ const api = {
    */
   GetClassroomsByTeacher: async (teacherId) => {
     try {
-      const response = await apiClient.get(`/classrooms/current-teacher`);
-      return response.data;
+      // Prefer explicit teacher endpoint; backend returns a plain array of ClassroomDto
+      const response = await apiClient.get(`/classrooms/teacher/${teacherId}`);
+      const payload = response.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.data)) return payload.data; // fallback shape
+      return [];
     } catch (error) {
       console.error('Error fetching classrooms by teacher:', error);
       throw error;

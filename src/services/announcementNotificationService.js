@@ -12,15 +12,17 @@ export const announcementNotificationService = {
       console.log('AnnouncementNotificationService: Token preview:', token ? token.substring(0, 20) + '...' : 'null');
       
       // Handle both string and number role values
-      const roleStr = String(role).toUpperCase();
+      // Normalize role: support numeric, plain text, or ROLE_ prefixed strings
+      const roleStr = String(role).toUpperCase().replace('ROLE_', '');
       const isStudent = roleStr === '1' || roleStr === 'STUDENT';
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
       const isManager = roleStr === '3' || roleStr === 'MANAGER';
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
       
       let endpoint;
-      if (isTeacher) {
+      if (isTeacher || isTeachingAssistant) {
         endpoint = '/announcements/teacher/unread-count';
       } else if (isAccountant) {
         endpoint = '/announcements/accountant/unread-count';
@@ -72,15 +74,16 @@ export const announcementNotificationService = {
     try {
       const role = localStorage.getItem('role');
       // Handle both string and number role values
-      const roleStr = String(role).toUpperCase();
+      const roleStr = String(role).toUpperCase().replace('ROLE_', '');
       const isStudent = roleStr === '1' || roleStr === 'STUDENT';
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
       const isManager = roleStr === '3' || roleStr === 'MANAGER';
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
       
       let endpoint;
-      if (isTeacher) {
+      if (isTeacher || isTeachingAssistant) {
         endpoint = `/announcements/teacher/recent-unread?limit=${limit}`;
       } else if (isAccountant) {
         endpoint = `/announcements/accountant/recent-unread?limit=${limit}`;
@@ -106,15 +109,16 @@ export const announcementNotificationService = {
     try {
       const role = localStorage.getItem('role');
       // Handle both string and number role values
-      const roleStr = String(role).toUpperCase();
+      const roleStr = String(role).toUpperCase().replace('ROLE_', '');
       const isStudent = roleStr === '1' || roleStr === 'STUDENT';
       const isTeacher = roleStr === '2' || roleStr === 'TEACHER';
       const isManager = roleStr === '3' || roleStr === 'MANAGER';
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
+      const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
       
       let endpoint;
-      if (isTeacher) {
+      if (isTeacher || isTeachingAssistant) {
         endpoint = '/announcements/teacher/mark-all-read';
       } else if (isAccountant) {
         endpoint = '/announcements/accountant/mark-all-read';

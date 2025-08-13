@@ -357,7 +357,7 @@ const PublicCourseDashboard = () => {
                       to={`${API_CONFIG.ENDPOINTS.PUBLIC_CLASS_DETAIL ? '/public/classes/' + course.id : '/public/courses/' + course.id}`}
                       className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 text-center"
                     >
-                      View Details & Enroll
+                      Xem chi tiết và đăng ký
                     </Link>
                   </div>
                 </div>

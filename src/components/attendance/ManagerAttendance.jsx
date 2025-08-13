@@ -22,7 +22,9 @@ import {
     Row,
     Space,
     Spin,
-    Statistic, Timeline,
+    Statistic,
+    Tag,
+    Timeline,
     Typography
 } from 'antd';
 import moment from 'moment';
@@ -242,6 +244,35 @@ const ManagerAttendance = ({ user }) => {
         if (todayStatus?.hasCheckedOut) return 'completed';
         return 'working';
     };
+    const getAttendanceTypeColor = (type) => {
+        if (!type) return 'default';
+        switch (type) {
+            case 'OVERTIME': return 'gold';
+            case 'WEEKEND': return 'purple';
+            case 'HOLIDAY': return 'magenta';
+            case 'NORMAL': return 'blue';
+            default: return 'default';
+        }
+    };
+
+    const renderNotesTags = () => {
+        const notes = todayStatus?.notes;
+        if (!notes || typeof notes !== 'string') return null;
+        const parts = notes.split(';').map(s => s.trim()).filter(Boolean);
+        if (parts.length === 0) return null;
+        return (
+            <Space wrap>
+                {parts.map((p, idx) => {
+                    let color = 'blue';
+                    if (p.toLowerCase().includes('late')) color = 'orange';
+                    if (p.toLowerCase().includes('early')) color = 'volcano';
+                    if (p.toUpperCase().includes('OT=')) color = 'gold';
+                    return <Tag key={idx} color={color}>{p}</Tag>;
+                })}
+            </Space>
+        );
+    };
+
 
     const getStatusColor = () => {
         const status = getAttendanceStatus();
@@ -359,6 +390,18 @@ const ManagerAttendance = ({ user }) => {
                                     {getWorkingHours()}
                                 </Text>
                             </div>
+                            {typeof todayStatus?.overtimeMinutes === 'number' && todayStatus.overtimeMinutes > 0 && (
+                                <>
+                                    <Divider type="vertical" style={{ height: 40 }} />
+                                    <div>
+                                        <Text type="secondary">Tăng ca:</Text>
+                                        <br />
+                                        <Tag color="gold" style={{ fontSize: 14 }}>
+                                            +{todayStatus.overtimeMinutes} phút
+                                        </Tag>
+                                    </div>
+                                </>
+                            )}
                             {normalizeTime(todayStatus?.checkInTime) && (
                                 <>
                                     <Divider type="vertical" style={{ height: 40 }} />
@@ -368,6 +411,23 @@ const ManagerAttendance = ({ user }) => {
                                         <Text strong style={{ fontSize: 16 }}>
                                             {normalizeTime(todayStatus.checkInTime)}
                                         </Text>
+                                    </div>
+                                </>
+                            )}
+                            {(todayStatus?.attendanceType || todayStatus?.notes) && (
+                                <>
+                                    <Divider type="vertical" style={{ height: 40 }} />
+                                    <div>
+                                        <Text type="secondary">Chi tiết:</Text>
+                                        <br />
+                                        <Space direction="vertical" size={0}>
+                                            {todayStatus?.attendanceType && (
+                                                <Tag color={getAttendanceTypeColor(todayStatus.attendanceType)}>
+                                                    {todayStatus.attendanceType}
+                                                </Tag>
+                                            )}
+                                            {renderNotesTags()}
+                                        </Space>
                                     </div>
                                 </>
                             )}

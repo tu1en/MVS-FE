@@ -384,10 +384,10 @@ const CourseManagementSystem = () => {
               <div className="text-3xl mr-4">🎓</div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Advanced Course Management System
+                  
                 </h1>
                 <p className="text-gray-500 text-sm">
-                  Real-time WebSocket integration với full data notifications
+                  {/* Real-time WebSocket integration với full data notifications */}
                 </p>
               </div>
             </div>

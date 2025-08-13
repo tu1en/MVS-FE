@@ -52,6 +52,7 @@ import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
+import TeacherParentMessages from "./pages/teacher/ParentMessages.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
 
 import VideoConference from './pages/teacher/VideoConference.jsx';
@@ -69,6 +70,14 @@ import ManagerReports from "./pages/manager/ManagerReports.js";
 import ManageSchedule from "./pages/manager/ManageSchedule.jsx";
 import RecruitmentManagement from './pages/manager/RecruitmentManagement';
 import RequestList from "./pages/RequestList.jsx";
+
+// Parent Pages
+import ParentDashboard from "./pages/parent/ParentDashboard.jsx";
+import ParentAttendance from "./pages/parent/Attendance.jsx";
+import ParentLeaveNotice from "./pages/parent/LeaveNotice.jsx";
+import ParentMessages from "./pages/parent/Messages.jsx";
+import ParentSchedule from "./pages/parent/Schedule.jsx";
+import ParentBilling from "./pages/parent/Billing.jsx";
 
 // Student Pages
 import AccountList from "./pages/AccountList.jsx";
@@ -102,14 +111,21 @@ import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 // import TestUpload from "./pages/TestUpload.jsx";
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
+// Teaching Assistant & SMS Management Pages
+import TeachingAssistantDashboard from './pages/TeachingAssistantDashboard.jsx';
+import TeachingAssistantDashboardPage from './pages/TeachingAssistantDashboardPage.jsx';
+import SystemManagement from './pages/SystemManagement.jsx';
+
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
 // Removed legacy placeholder: AccountantPayrollGeneration
 import ContractManagement from './pages/accountant/ContractManagement';
+import PayrollIssues from './pages/accountant/PayrollIssues.jsx';
 import PayrollManagement from './pages/accountant/PayrollManagement';
 import ShiftAttendanceReport from './pages/accountant/ShiftAttendanceReport.jsx';
+import MyPayroll from './pages/employee/MyPayroll.jsx';
 import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 
 // Public Course Pages
@@ -173,6 +189,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (userRoleName === "MANAGER") return <Navigate to="/manager" replace />;
     if (userRoleName === "ADMIN") return <Navigate to="/admin" replace />;
     if (userRoleName === "ACCOUNTANT") return <Navigate to="/accountant" replace />;
+    if (userRoleName === "TEACHING_ASSISTANT") return <Navigate to="/teaching-assistant" replace />;
+    if (userRoleName === "PARENT") return <Navigate to="/parent" replace />;
     return <Navigate to="/login" replace />;
   }
 
@@ -224,6 +242,8 @@ const RootRedirect = () => {
         case "MANAGER": return <Navigate to="/manager" replace />;
         case "ADMIN": return <Navigate to="/admin" replace />;
         case "ACCOUNTANT": return <Navigate to="/accountant" replace />;
+        case "TEACHING_ASSISTANT": return <Navigate to="/teaching-assistant" replace />;
+        case "PARENT": return <Navigate to="/parent" replace />;
         default: return <Navigate to="/login" replace />;
     }
 };
@@ -273,6 +293,7 @@ function App() {
               <Route path="/teacher/attendance/take/:classroomId" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={["TEACHER"]}><AttendancePageNew /></ProtectedRoute>} />
               <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherMessagesPage /></ProtectedRoute>} />
+              <Route path="/teacher/parent-messages" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherParentMessages /></ProtectedRoute>} />
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
@@ -282,6 +303,12 @@ function App() {
               <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
+              {/* Self-service payroll route with role-specific prefixes */}
+              <Route path="/teacher/my/payroll" element={<ProtectedRoute allowedRoles={["TEACHER"]}><MyPayroll /></ProtectedRoute>} />
+              <Route path="/manager/my/payroll" element={<ProtectedRoute allowedRoles={["MANAGER"]}><MyPayroll /></ProtectedRoute>} />
+              <Route path="/accountant/my/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><MyPayroll /></ProtectedRoute>} />
+              <Route path="/admin/my/payroll" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MyPayroll /></ProtectedRoute>} />
+              <Route path="/student/my/payroll" element={<ProtectedRoute allowedRoles={["STUDENT"]}><MyPayroll /></ProtectedRoute>} />
               <Route path="/student/courses" element={<ProtectedRoute allowedRoles={["STUDENT"]}><EnrolledCourses /></ProtectedRoute>} />
               <Route path="/student/my-courses" element={<ProtectedRoute allowedRoles={["STUDENT"]}><EnrolledCourses /></ProtectedRoute>} />
               <Route path="/student/courses/:courseId" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentCourseDetail /></ProtectedRoute>} />
@@ -302,12 +329,27 @@ function App() {
               <Route path="/student/account" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentEditProfile /></ProtectedRoute>} />
               <Route path="/courses/:courseId/exams/:examId/do" element={<ProtectedRoute allowedRoles={["STUDENT"]}><DoExamPage /></ProtectedRoute>} />
 
+              {/* Teaching Assistant Routes */}
+              <Route path="/teaching-assistant" element={<ProtectedRoute allowedRoles={["TEACHING_ASSISTANT"]}><TeachingAssistantDashboardPage /></ProtectedRoute>} />
+              <Route path="/teaching-assistant/teacher-evaluations" element={<ProtectedRoute allowedRoles={["TEACHING_ASSISTANT", "MANAGER", "ADMIN"]}><TeachingAssistantDashboard userRole="TEACHING_ASSISTANT" /></ProtectedRoute>} />
+              
+              {/* Parent Routes */}
+              <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
+              <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
+              <Route path="/parent/leave-notice" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentLeaveNotice /></ProtectedRoute>} />
+              <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentAttendance /></ProtectedRoute>} />
+              <Route path="/parent/children/:childId/attendance" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentAttendance /></ProtectedRoute>} />
+              <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentMessages /></ProtectedRoute>} />
+              <Route path="/parent/schedule" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentSchedule /></ProtectedRoute>} />
+              <Route path="/parent/billing" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentBilling /></ProtectedRoute>} />
+              
               {/* Admin and Manager stubs */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccountList /></ProtectedRoute>} />
               <Route path="/admin/system-logs" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemActivityLogsPage /></ProtectedRoute>} />
               <Route path="/admin/system-charts" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemChartsPage /></ProtectedRoute>} />
               <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemSettingsPage /></ProtectedRoute>} />
+              <Route path="/admin/system-management" element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}><SystemManagement /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
               {/* Manager Routes */}
@@ -330,6 +372,9 @@ function App() {
               <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
               <Route path="/manager/enrollment-requests" element={<ProtectedRoute allowedRoles={["MANAGER"]}><EnrollmentRequestsManager /></ProtectedRoute>} />
               <Route path="/manager/attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><AttendanceModule /></ProtectedRoute>} />
+              <Route path="/manager/teacher-evaluations" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><TeachingAssistantDashboard userRole="MANAGER" /></ProtectedRoute>} />
+              <Route path="/manager/sms-management" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><TeachingAssistantDashboard userRole="MANAGER" /></ProtectedRoute>} />
+              <Route path="/manager/system-management" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><SystemManagement /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
@@ -339,6 +384,7 @@ function App() {
 
               <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
+              <Route path="/accountant/payroll-issues" element={<ProtectedRoute allowedRoles={["ACCOUNTANT","MANAGER","ADMIN"]}><PayrollIssues /></ProtectedRoute>} />
               <Route path="/accountant/attendance" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AttendanceModule /></ProtectedRoute>} />
               
               {/* Accountant Attendance Explanation Routes (single source of truth) */}

@@ -1,26 +1,27 @@
 import {
-    CalculatorOutlined,
-    CalendarOutlined,
-    DollarOutlined,
-    EyeOutlined,
-    FileExcelOutlined,
-    TeamOutlined
+  CalculatorOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  EyeOutlined,
+  FileExcelOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    message,
-    Modal,
-    Progress,
-    Row,
-    Select,
-    Space,
-    Statistic,
-    Table,
-    Tag,
-    Tooltip
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  message,
+  Modal,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip
 } from 'antd';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -44,6 +45,8 @@ const PayrollManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [salaryDetailsModalVisible, setSalaryDetailsModalVisible] = useState(false);
   const [selectedPayrollId, setSelectedPayrollId] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL'); // ALL | TEACHER | STAFF
 
   // Helper functions
   const getDepartmentFromStaff = (staffId) => {
@@ -79,6 +82,9 @@ const PayrollManagement = () => {
         const net = Number(record.netSalary ?? 0);
         const actualWorkingDays = Number(record.actualWorkingDays ?? 0);
         const actualWorkingHours = Number(record.actualWorkingHours ?? (actualWorkingDays * 8));
+        const weekendWorkingHours = Number(record.weekendWorkingHours ?? 0);
+        const weekdayWorkingHours = Number(record.weekdayWorkingHours ?? Math.max(actualWorkingHours - weekendWorkingHours, 0));
+        const weekendPay = Number(record.weekendPay ?? 0);
         const standardMonthlyHours = Number(record.standardMonthlyHours ?? 0);
         const calculationMethod = record.calculationMethod || (record.contractType === 'TEACHER' ? 'HOURLY' : 'MONTHLY');
         const hourlySalary = Number(record.hourlySalary ?? 0);
@@ -96,10 +102,15 @@ const PayrollManagement = () => {
         baseSalary,
         teachingHours: calculationMethod === 'HOURLY' ? actualWorkingHours : 0,
         totalWorkingHours: actualWorkingHours,
+        weekendWorkingHours,
+        weekdayWorkingHours,
         hourlyRate: calculationMethod === 'HOURLY' ? hourlySalary : 0,
+        personalIncomeTax: pit,
+        employeeInsurance: si,
         deductions: pit + si,
         grossPay: gross,
         totalSalary: net,
+        weekendPay,
         calculationMethod,
         standardMonthlyHours,
         totalWorkingDays: Number(record.totalWorkingDays ?? (standardMonthlyHours ? standardMonthlyHours / 8 : 0)),
@@ -183,6 +194,31 @@ const PayrollManagement = () => {
     } catch (error) {
       console.error('Error exporting CSV:', error);
       message.error('Lỗi khi xuất file: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendConfirmation = async (record) => {
+    try {
+      const period = (selectedPeriod || moment()).format('YYYY-MM');
+      await PayrollService.sendPayrollConfirmation(record.userId, period);
+      message.success(`Đã gửi xác nhận lương tới ${record.fullName}`);
+    } catch (error) {
+      console.error('Error sending confirmation:', error);
+      message.error('Gửi email xác nhận thất bại');
+    }
+  };
+
+  const handleSendConfirmationAll = async () => {
+    try {
+      setLoading(true);
+      const period = (selectedPeriod || moment()).format('YYYY-MM');
+      const res = await PayrollService.sendPayrollConfirmationAll(period);
+      message.success(`Đã gửi xác nhận cho ${res.emailsSent || 0}/${res.totalEmployees || 0} nhân viên`);
+    } catch (error) {
+      console.error('Error sending confirmation all:', error);
+      message.error('Gửi email xác nhận hàng loạt thất bại');
     } finally {
       setLoading(false);
     }
@@ -324,6 +360,45 @@ const PayrollManagement = () => {
       ),
     },
     {
+      title: 'Gross (tạm tính)',
+      dataIndex: 'grossPay',
+      key: 'grossPay',
+      width: 150,
+      render: (value) => (
+        <span>{Number(value || 0).toLocaleString()} VNĐ</span>
+      ),
+    },
+    {
+      title: 'Thuế TNCN',
+      dataIndex: 'personalIncomeTax',
+      key: 'personalIncomeTax',
+      width: 130,
+      render: (value) => (
+        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
+      ),
+    },
+    {
+      title: 'BH NLĐ',
+      dataIndex: 'employeeInsurance',
+      key: 'employeeInsurance',
+      width: 120,
+      render: (value) => (
+        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
+      ),
+    },
+    {
+      title: 'Khấu trừ',
+      dataIndex: 'deductions',
+      key: 'deductions',
+      width: 130,
+      render: (value) => (
+        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
+      ),
+    },
+    {
+      // Net pay already shown by existing 'Tổng lương' column below
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
@@ -393,6 +468,14 @@ const PayrollManagement = () => {
               </Button>
             </Tooltip>
           )}
+          <Tooltip title="Gửi xác nhận cho nhân viên">
+            <Button
+              size="small"
+              onClick={() => handleSendConfirmation(record)}
+            >
+              Gửi xác nhận
+            </Button>
+          </Tooltip>
         </Space>
       ),
     },
@@ -452,9 +535,9 @@ const PayrollManagement = () => {
         </Row>
 
         {/* Controls */}
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col>
-            <Space>
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 12]}>
+          <Col flex="auto">
+            <Space wrap>
               <span>Kỳ lương:</span>
               <MonthPicker
                 allowClear={false}
@@ -463,6 +546,22 @@ const PayrollManagement = () => {
                 format="MM/YYYY"
                 placeholder="Chọn tháng"
               />
+              <Input.Search
+                allowClear
+                placeholder="Tìm theo mã NV, tên hoặc email"
+                style={{ width: 320 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Select
+                value={roleFilter}
+                style={{ width: 180 }}
+                onChange={(val) => setRoleFilter(val)}
+              >
+                <Option value="ALL">Tất cả (GV + NV)</Option>
+                <Option value="TEACHER">Giảng viên</Option>
+                <Option value="STAFF">Nhân viên</Option>
+              </Select>
             </Space>
           </Col>
           <Col>
@@ -481,6 +580,7 @@ const PayrollManagement = () => {
               >
                 Xuất CSV
               </Button>
+              <Button onClick={handleSendConfirmationAll}>Gửi xác nhận tất cả</Button>
             </Space>
           </Col>
         </Row>
@@ -500,7 +600,19 @@ const PayrollManagement = () => {
         {/* Table */}
         <Table
           columns={columns}
-          dataSource={payrollData}
+          dataSource={payrollData.filter((row) => {
+            // Role filter
+            if (roleFilter !== 'ALL' && (row.contractType || '').toUpperCase() !== roleFilter) return false;
+            // Search filter
+            const q = (searchText || '').trim().toLowerCase();
+            if (!q) return true;
+            const idStr = String(row.userId || '');
+            return (
+              idStr.includes(q) ||
+              (row.fullName || '').toLowerCase().includes(q) ||
+              (row.email || '').toLowerCase().includes(q)
+            );
+          })}
           loading={loading}
           rowKey="id"
           pagination={{

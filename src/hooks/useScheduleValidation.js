@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import roomService from '../services/roomService';
 import { showNotification } from '../utils/courseManagementUtils';
 
@@ -10,7 +10,8 @@ const useScheduleValidation = () => {
   });
 
   // Validate single schedule slot
-  const validateScheduleSlot = useCallback(async (scheduleData) => {
+  const validateScheduleSlot = useCallback(async (scheduleData, options = {}) => {
+    const { silent = false } = options;
     const { roomId, date, startTime, endTime, classId } = scheduleData;
     
     if (!roomId || !date || !startTime || !endTime) {
@@ -21,7 +22,9 @@ const useScheduleValidation = () => {
     }
 
     try {
-      setValidationState(prev => ({ ...prev, isValidating: true }));
+      if (!silent) {
+        setValidationState(prev => ({ ...prev, isValidating: true }));
+      }
 
       const response = await roomService.checkRoomAvailability({
         roomId,
@@ -33,12 +36,14 @@ const useScheduleValidation = () => {
 
       const result = response.data;
       
-      setValidationState(prev => ({ 
-        ...prev, 
-        isValidating: false,
-        conflicts: result.conflicts || [],
-        warnings: result.warnings || []
-      }));
+      if (!silent) {
+        setValidationState(prev => ({ 
+          ...prev, 
+          isValidating: false,
+          conflicts: result.conflicts || [],
+          warnings: result.warnings || []
+        }));
+      }
 
       return {
         isValid: result.isAvailable,
@@ -49,7 +54,9 @@ const useScheduleValidation = () => {
 
     } catch (error) {
       console.error('Schedule validation error:', error);
-      setValidationState(prev => ({ ...prev, isValidating: false }));
+      if (!silent) {
+        setValidationState(prev => ({ ...prev, isValidating: false }));
+      }
       
       return {
         isValid: false,
@@ -71,7 +78,7 @@ const useScheduleValidation = () => {
       setValidationState(prev => ({ ...prev, isValidating: true }));
 
       const validationResults = await Promise.all(
-        scheduleSlots.map(slot => validateScheduleSlot(slot))
+        scheduleSlots.map(slot => validateScheduleSlot(slot, { silent: true }))
       );
 
       const allConflicts = validationResults.flatMap(result => result.conflicts || []);

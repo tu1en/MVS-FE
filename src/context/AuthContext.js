@@ -105,8 +105,10 @@ export const AuthProvider = ({ children }) => {
 
             if (parsedUser.token && parsedUser.role && parsedUser.id) {
               // Ensure role is properly formatted
-              if (!parsedUser.role.startsWith('ROLE_')) {
+              if (parsedUser.role && parsedUser.role.trim() && !parsedUser.role.startsWith('ROLE_')) {
                 parsedUser.role = `ROLE_${parsedUser.role}`;
+              } else if (!parsedUser.role || !parsedUser.role.trim() || parsedUser.role === 'ROLE_') {
+                parsedUser.role = null;
               }
               console.log('AuthContext: Setting user from stored data:', parsedUser.role);
               setUser(parsedUser);
@@ -134,7 +136,8 @@ export const AuthProvider = ({ children }) => {
 
           if (token && role && userId) {
             // Ensure role is properly formatted
-            const formattedRole = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
+            const formattedRole = (role && role.startsWith('ROLE_')) ? role : 
+                                  (role && role.trim()) ? `ROLE_${role}` : null;
 
             // If we have the essential user data, construct a user object
             const constructedUser = {
@@ -173,9 +176,17 @@ export const AuthProvider = ({ children }) => {
     console.log('AuthContext: Login called with userData:', userData);
 
     // Ensure role is properly formatted
+    const formattedRole = (() => {
+      if (!userData.role) return null;
+      const upper = String(userData.role).toUpperCase();
+      // accept numeric or string, and ensure ROLE_ prefix in context/localStorage
+      const normalized = upper.replace('ROLE_', '');
+      return `ROLE_${normalized}`;
+    })();
+
     const formattedUserData = {
       ...userData,
-      role: userData.role.startsWith('ROLE_') ? userData.role : `ROLE_${userData.role}`
+      role: formattedRole
     };
 
     console.log('AuthContext: Formatted user data:', formattedUserData);

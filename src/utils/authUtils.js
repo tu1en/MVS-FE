@@ -34,11 +34,13 @@ export const getNormalizedRole = (role) => {
   
   // Map numeric roles to string roles and vice versa
   const roleMap = {
-    '0': 'ADMIN',
+    '0': 'ADMIN',            // legacy fallback
     '1': 'STUDENT',
     '2': 'TEACHER',
     '3': 'MANAGER',
-    '5': 'ACCOUNTANT'
+    '4': 'ADMIN',
+    '5': 'ACCOUNTANT',
+    '6': 'TEACHING_ASSISTANT'
   };
 
   // If it's a numeric role, return the string version
@@ -48,7 +50,7 @@ export const getNormalizedRole = (role) => {
   
   // If it's a string role, make sure it's uppercase
   const upperRole = role.toUpperCase();
-  if (['ADMIN', 'STUDENT', 'TEACHER', 'MANAGER', 'ACCOUNTANT'].includes(upperRole)) {
+  if (['ADMIN', 'STUDENT', 'TEACHER', 'MANAGER', 'ACCOUNTANT', 'TEACHING_ASSISTANT'].includes(upperRole)) {
     return upperRole;
   }
   

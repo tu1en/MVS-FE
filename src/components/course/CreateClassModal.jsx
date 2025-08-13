@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import {
-  debounce,
-  formatSchedule,
-  getCurrentUserId,
-  showConfirmDialog,
-  showNotification,
-  validateClassForm
+    debounce,
+    formatSchedule,
+    getCurrentUserId,
+    showConfirmDialog,
+    showNotification,
+    validateClassForm
 } from '../../utils/courseManagementUtils';
 import ScheduleManager from '../schedule/ScheduleManager';
 
@@ -115,15 +115,20 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
   // Auto-conflict check when relevant fields change
   useEffect(() => {
-    if (formData.roomId && formData.schedule.days.length > 0 && formData.startDate && formData.endDate) {
+    const hasSchedule = formData.schedule?.days?.length > 0 && formData.startDate && formData.endDate;
+    const hasResource = Boolean(formData.teacherId) || Boolean(formData.roomId);
+
+    if (hasSchedule && hasResource) {
       debouncedConflictCheck({
-        roomId: formData.roomId,
-        teacherId: formData.teacherId,
+        // Only send identifiers that are available to avoid nulls
+        ...(formData.roomId ? { roomId: formData.roomId } : {}),
+        ...(formData.teacherId ? { teacherId: formData.teacherId } : {}),
         schedule: JSON.stringify(formData.schedule),
         startDate: formData.startDate,
         endDate: formData.endDate
       });
-    } else {
+    } else if (!hasSchedule) {
+      // Reset conflicts if schedule becomes incomplete
       setState(prev => ({ ...prev, conflicts: [] }));
     }
   }, [formData.roomId, formData.teacherId, formData.schedule, formData.startDate, formData.endDate]);
@@ -316,9 +321,10 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     
     try {
       const response = await classManagementService.checkScheduleConflicts(scheduleData);
+      const conflicts = response?.data?.data ?? response?.data ?? [];
       setState(prev => ({
         ...prev,
-        conflicts: response.data || [],
+        conflicts: Array.isArray(conflicts) ? conflicts : [],
         loading: { ...prev.loading, conflicts: false }
       }));
     } catch (error) {
@@ -506,6 +512,21 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
             </nav>
           </div>
 
+          {/* Global loading banner */}
+          {(state.loading.conflicts || state.loading.teachers || state.loading.rooms || state.loading.submit) && (
+            <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded animate-pulse text-sm text-blue-800 flex items-center">
+              <span className="animate-spin inline-block mr-2">⟳</span>
+              <span>
+                {[
+                  state.loading.conflicts ? 'Đang kiểm tra xung đột lịch' : null,
+                  state.loading.teachers ? 'Đang lọc giáo viên phù hợp' : null,
+                  state.loading.rooms ? 'Đang tải danh sách phòng' : null,
+                  state.loading.submit ? 'Đang tạo lớp học...' : null,
+                ].filter(Boolean).join(' • ')}
+              </span>
+            </div>
+          )}
+
           {/* Schedule Conflicts Alert */}
           {state.conflicts.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -536,6 +557,11 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                 <h4 className="font-medium text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">📝</span>
                   Thông tin cơ bản
+                  {state.loading.submit && (
+                    <span className="ml-2 text-sm text-blue-600">
+                      <span className="animate-spin inline-block">⟳</span> Đang xử lý...
+                    </span>
+                  )}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -591,6 +617,11 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                 <h4 className="font-medium text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">🏷️</span>
                   Khối học
+                  {(state.loading.teachers) && (
+                    <span className="ml-2 text-sm text-blue-600">
+                      <span className="animate-spin inline-block">⟳</span> Đang lọc giáo viên...
+                    </span>
+                  )}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -873,11 +904,27 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
           {state.activeStep === 3 && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium text-gray-900">🔍 Xem trước & Hoàn tất</h3>
+              {state.loading.conflicts && (
+                <div className="p-3 rounded bg-blue-50 border border-blue-200 text-blue-800 text-sm">
+                  <span className="animate-spin inline-block mr-2">⟳</span>
+                  Đang kiểm tra xung đột lịch...
+                </div>
+              )}
+              {!state.loading.conflicts && state.conflicts.length > 0 && (
+                <div className="p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm">
+                  ⚠️ Phát hiện {state.conflicts.length} xung đột lịch. Vui lòng đổi giáo viên, lịch hoặc phòng.
+                </div>
+              )}
               {/* Chọn giáo viên ở bước review để đảm bảo sau khi đã cố định lịch */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">👨‍🏫</span>
                   Chọn giáo viên
+                  {state.loading.teachers && (
+                    <span className="ml-2 text-sm text-blue-600">
+                      <span className="animate-spin inline-block">⟳</span> Đang lọc...
+                    </span>
+                  )}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -974,12 +1021,19 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                         </span>
                         <span>Lịch học đã thiết lập</span>
                       </div>
-                      <div className="flex items-center">
-                        <span className={`mr-2 ${state.scheduleValidation?.isValid !== false ? 'text-green-600' : 'text-red-600'}`}>
-                          {state.scheduleValidation?.isValid !== false ? '✓' : '✗'}
-                        </span>
-                        <span>Không có xung đột lịch</span>
-                      </div>
+                      {(() => {
+                        const hasConflicts = (state.conflicts?.length || 0) > 0 || state.scheduleValidation?.isValid === false;
+                        return (
+                          <div className="flex items-center">
+                            <span className={`mr-2 ${!hasConflicts ? 'text-green-600' : 'text-red-600'}`}>
+                              {!hasConflicts ? '✓' : '✗'}
+                            </span>
+                            <span>
+                              {state.loading.conflicts ? 'Đang kiểm tra xung đột...' : (!hasConflicts ? 'Không có xung đột lịch' : 'Đang có xung đột lịch')}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

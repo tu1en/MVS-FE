@@ -1,24 +1,24 @@
 import {
-    CalculatorOutlined,
-    ClockCircleOutlined,
-    DollarOutlined,
-    IdcardOutlined,
-    UserOutlined
+  CalculatorOutlined,
+  ClockCircleOutlined,
+  IdcardOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import {
-    Alert,
-    Card,
-    Col,
-    Descriptions,
-    Divider,
-    Modal,
-    Row,
-    Space,
-    Spin,
-    Statistic,
-    Tag,
-    Typography,
-    message
+  Alert,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Divider,
+  Modal,
+  Row,
+  Space,
+  Spin,
+  Statistic,
+  Tag,
+  Typography,
+  message
 } from 'antd';
 import React, { useEffect, useState } from 'react';
 
@@ -27,6 +27,10 @@ const { Title, Text, Paragraph } = Typography;
 const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeRecord }) => {
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState(null);
+  const [formulaOpen, setFormulaOpen] = useState(false);
+  const [incomeOpen, setIncomeOpen] = useState(false);
+  const [deductionsOpen, setDeductionsOpen] = useState(false);
+  const [taxOpen, setTaxOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -41,13 +45,37 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
       console.log('🔄 Modal: employeeRecord received:', employeeRecord);
       
       // Tạo dữ liệu hiển thị từ record thực tế; Việt hóa hoàn toàn
-      if (employeeRecord && employeeRecord.topCVDetails) {
+      if (employeeRecord && (employeeRecord.topCVResult || employeeRecord.calculationMethod === 'HOURLY')) {
         const isTeacher = employeeRecord.contractType === 'TEACHER' || employeeRecord.calculationMethod === 'HOURLY';
         const totalWorkingDays = employeeRecord.totalWorkingDays || (employeeRecord.standardMonthlyHours ? employeeRecord.standardMonthlyHours / 8 : 22);
         const actualWorkingDays = employeeRecord.actualWorkingDays || Math.round((employeeRecord.totalWorkingHours || 0) / 8);
-        const regularHours = employeeRecord.totalWorkingHours || (actualWorkingDays * 8);
+        const weekendHours = employeeRecord.weekendWorkingHours || 0;
+        const weekdayHours = employeeRecord.weekdayWorkingHours || Math.max((employeeRecord.totalWorkingHours || 0) - weekendHours, 0);
+        const regularHours = weekdayHours;
         const hourlyRate = isTeacher ? (employeeRecord.hourlyRate || 0) : Math.round((employeeRecord.baseSalary || 0) / 176);
 
+        const topCV = employeeRecord.topCVResult || {};
+        const insurance = topCV.insuranceDetails || {};
+        const socialInsurance = Math.round(insurance.socialInsuranceEmployee || 0);
+        const healthInsurance = Math.round(insurance.healthInsuranceEmployee || 0);
+        const unemploymentInsurance = Math.round(insurance.unemploymentInsuranceEmployee || 0);
+        const personalIncomeTax = Math.round(topCV.personalIncomeTax || 0);
+        const totalEmployeeContrib = Math.round(insurance.totalEmployeeContribution || 0);
+        const weekendPay = employeeRecord.weekendPay || 0;
+        const weekdayPay = isTeacher ? Math.round(hourlyRate * regularHours) : (employeeRecord.grossPay || 0);
+        const grossSalary = isTeacher ? (weekdayPay + Math.round(weekendPay)) : (employeeRecord.grossPay || 0);
+        const netSalary = isTeacher ? grossSalary : (employeeRecord.totalSalary || 0);
+
+        const progressiveBrackets = topCV.taxBrackets || [];
+        // Thuế: tóm tắt (fallback nếu BE không gửi đủ)
+        const personalDeduction = 11_000_000;
+        const dependentsFromTopCV = Math.round(topCV.dependentDeductions || 0);
+        const dependentsFromCount = (topCV.numberOfDependents || 0) * 4_400_000;
+        const dependentDeductions = dependentsFromTopCV || dependentsFromCount || 0;
+        // reuse totalEmployeeContrib declared above
+        const fallbackIncomeBeforeTax = (grossSalary || 0) - (totalEmployeeContrib || 0);
+        const incomeBeforeTax = Math.round((topCV.incomeBeforeTax ?? fallbackIncomeBeforeTax) || 0);
+        const taxableIncome = Math.max(incomeBeforeTax - personalDeduction - dependentDeductions, 0);
         const mockDetails = {
           employeeId: employeeRecord.userId,
           employeeName: employeeRecord.fullName,
@@ -70,37 +98,56 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           workingHoursSummary: {
             totalWorkingDays,
             actualWorkingDays,
-            regularHours,
-            overtimeHours: 0
+            regularHours: weekdayHours,
+            overtimeHours: 0,
+            weekendHours
           },
           salaryCalculationSteps: {
             step1_BaseSalary: employeeRecord.baseSalary,
-            step2_RegularPay: employeeRecord.grossPay,
+            step2_RegularPay: weekdayPay,
             step3_OvertimePay: 0,
             step4_HolidayPay: 0,
-            step5_WeekendPay: 0,
-            grossSalary: employeeRecord.grossPay,
+            step5_WeekendPay: isTeacher ? Math.round(weekendPay) : 0,
+            grossSalary,
             deductions: {
-              socialInsurance: isTeacher ? 0 : Math.round(employeeRecord.topCVDetails.socialInsurance || (employeeRecord.deductions * 0.3)),
-              healthInsurance: isTeacher ? 0 : Math.round((employeeRecord.baseSalary || 0) * 0.015),
-              unemploymentInsurance: isTeacher ? 0 : Math.round((employeeRecord.baseSalary || 0) * 0.01),
-              personalIncomeTax: isTeacher ? 0 : Math.round(employeeRecord.topCVDetails.personalIncomeTax || (employeeRecord.deductions * 0.7)),
+              socialInsurance: isTeacher ? 0 : socialInsurance,
+              healthInsurance: isTeacher ? 0 : healthInsurance,
+              unemploymentInsurance: isTeacher ? 0 : unemploymentInsurance,
+              personalIncomeTax: isTeacher ? 0 : personalIncomeTax,
               latePenalty: 0,
               absentPenalty: 0,
-              totalDeductions: employeeRecord.deductions
+              totalDeductions: isTeacher ? 0 : (totalEmployeeContrib + personalIncomeTax)
             },
-            netSalary: employeeRecord.totalSalary
+            netSalary
           },
           calculationFormulas: [
             `Lương cơ bản (hợp đồng): ${formatCurrency(employeeRecord.baseSalary)}`,
-            isTeacher ? `Lương theo giờ = Đơn giá giờ × (Ngày công × 8h)` : `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
-            `Lương thô = ${formatCurrency(employeeRecord.grossPay)}`,
-            isTeacher ? `BHXH (8%) = 0 VNĐ` : `BHXH (8%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.08)}`,
-            isTeacher ? `BHYT (1.5%) = 0 VNĐ` : `BHYT (1.5%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.015)}`,
-            isTeacher ? `BHTN (1%) = 0 VNĐ` : `BHTN (1%) = ${formatCurrency((employeeRecord.baseSalary || 0) * 0.01)}`,
-            isTeacher ? `Thuế TNCN (lũy tiến) = 0 VNĐ` : `Thuế TNCN (lũy tiến) = ${formatCurrency(employeeRecord.topCVDetails?.personalIncomeTax || 0)}`,
-            `Lương thực nhận = ${formatCurrency(employeeRecord.totalSalary)}`
-          ]
+            isTeacher ? `Lương ngày thường = Đơn giá giờ × Giờ ngày thường = ${formatCurrency(hourlyRate)} × ${weekdayHours}h = ${formatCurrency(weekdayPay)}` : `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
+            isTeacher ? `Lương cuối tuần (2x) = Đơn giá giờ × 2 × Giờ cuối tuần = ${formatCurrency(hourlyRate)} × 2 × ${weekendHours}h = ${formatCurrency(weekendPay)}` : `Lương thô = ${formatCurrency(employeeRecord.grossPay)}`,
+            isTeacher ? `Tổng GROSS = Ngày thường + Cuối tuần = ${formatCurrency(grossSalary)}` : `BHXH (8%) = ${formatCurrency(socialInsurance)}`,
+            isTeacher ? `BHXH/BHYT/BHTN = 0 (HĐ theo giờ)` : `BHYT (1.5%) = ${formatCurrency(healthInsurance)}`,
+            isTeacher ? `Thuế TNCN = 0 (HĐ theo giờ)` : `BHTN (1%) = ${formatCurrency(unemploymentInsurance)}`,
+            isTeacher ? `Lương thực nhận = ${formatCurrency(netSalary)}` : `Thuế TNCN (lũy tiến) = ${formatCurrency(personalIncomeTax)}`,
+            isTeacher ? '' : `Lương thực nhận = ${formatCurrency(netSalary)}`
+          ],
+          weekendFormula: isTeacher
+            ? `Cách tính lương cuối tuần: Đơn giá giờ × 2 × Giờ cuối tuần = ${formatCurrency(hourlyRate)} × 2 × ${weekendHours}h = ${formatCurrency(weekendPay)}`
+            : `Hợp đồng theo tháng: nếu là giáo viên theo giờ mới áp dụng hệ số 2x cuối tuần`,
+          taxProgressive: progressiveBrackets.map((b, idx) => ({
+            idx: idx + 1,
+            from: b.fromAmount,
+            to: b.toAmount,
+            rate: b.taxRate,
+            taxable: b.taxableAmount,
+            tax: b.taxAmount,
+          })),
+          taxDetails: {
+            incomeBeforeTax,
+            personalDeduction,
+            dependentDeductions,
+            taxableIncome,
+            personalIncomeTax,
+          }
         };
         setDetails(mockDetails);
       } else {
@@ -216,46 +263,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           </Card>
 
           {/* Salary Structure from Contract */}
-          <Card title={<><DollarOutlined /> Cấu trúc lương TopCV</>} style={{ marginBottom: 16 }}>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Statistic
-                  title="Lương cơ bản"
-                  value={details.contractDetails?.baseSalary}
-                  formatter={(value) => formatCurrency(value)}
-                  prefix={<DollarOutlined />}
-                />
-                <Text type="secondary">Theo hợp đồng lao động</Text>
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Lương theo giờ"
-                  value={details.contractDetails?.hourlyRate}
-                  formatter={(value) => formatCurrency(value)}
-                  prefix={<ClockCircleOutlined />}
-                />
-                <Text type="secondary">Tính từ lương cơ bản</Text>
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Lương tăng ca"
-                  value={details.contractDetails?.overtimeRate}
-                  formatter={(value) => formatCurrency(value)}
-                  prefix={<ClockCircleOutlined />}
-                />
-                <Text type="secondary">1.5x lương giờ</Text>
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Lương ngày lễ"
-                  value={details.contractDetails?.holidayRate}
-                  formatter={(value) => formatCurrency(value)}
-                  prefix={<ClockCircleOutlined />}
-                />
-                <Text type="secondary">3x lương giờ</Text>
-              </Col>
-            </Row>
-          </Card>
+ 
 
           {/* Working Hours from Attendance System */}
           <Card title={<><ClockCircleOutlined /> Giờ làm việc thực tế (Từ hệ thống chấm công)</>} style={{ marginBottom: 16 }}>
@@ -298,7 +306,10 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           {/* Calculation Results */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={12}>
-              <Card title="💰 Tổng thu nhập" size="small">
+              <Card
+                size="small"
+                title={<Row justify="space-between" align="middle"><Text strong>💰 Tổng thu nhập</Text><Button type="link" size="small" onClick={() => setIncomeOpen(true)}>Xem chi tiết</Button></Row>}
+              >
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Row justify="space-between">
                     <Text>Lương cơ bản (hợp đồng):</Text>
@@ -337,7 +348,10 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
               </Card>
             </Col>
             <Col span={12}>
-              <Card title="📉 Các khoản khấu trừ theo luật" size="small">
+              <Card
+                size="small"
+                title={<Row justify="space-between" align="middle"><Text strong>📉 Các khoản khấu trừ theo luật</Text><Button type="link" size="small" onClick={() => setDeductionsOpen(true)}>Xem chi tiết</Button></Row>}
+              >
                 <Space direction="vertical" style={{ width: '100%' }}>
                   {details.salaryCalculationSteps?.deductions?.socialInsurance > 0 && (
                     <Row justify="space-between">
@@ -387,20 +401,47 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             </Col>
           </Row>
 
-          {/* Final Result */}
-          <Alert
-            message={
-              <Row justify="space-between" align="middle">
-                <Text strong style={{ fontSize: '18px' }}>LƯƠNG THỰC NHẬN (Từ hợp đồng + chấm công):</Text>
-                <Text strong style={{ fontSize: '24px', color: '#52c41a' }}>
-                  {formatCurrency(details.salaryCalculationSteps?.netSalary)}
-                </Text>
-              </Row>
-            }
-            type="success"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
+          {/* Weekend pay explanation and tax progressive breakdown - redesigned */}
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Card
+                size="small"
+                title={<Row justify="space-between" align="middle"><Text strong>Thuế TNCN (lũy tiến)</Text><Button type="link" size="small" onClick={() => setTaxOpen(true)}>Xem chi tiết</Button></Row>}
+                style={{ height: '100%' }}
+              >
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Row justify="space-between"><Text>Thu nhập trước thuế:</Text><Text strong>{formatCurrency(details.taxDetails?.incomeBeforeTax)}</Text></Row>
+                  <Row justify="space-between"><Text>Giảm trừ bản thân:</Text><Text strong>{formatCurrency(details.taxDetails?.personalDeduction)}</Text></Row>
+                  <Row justify="space-between"><Text>Giảm trừ người phụ thuộc:</Text><Text strong>{formatCurrency(details.taxDetails?.dependentDeductions)}</Text></Row>
+                  <Row justify="space-between"><Text>Thu nhập chịu thuế:</Text><Text strong>{formatCurrency(details.taxDetails?.taxableIncome)}</Text></Row>
+                  <Divider style={{ margin: '8px 0' }} />
+                  {details.taxProgressive?.length > 0 ? (
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      {details.taxProgressive.map((b) => (
+                        <Row key={b.idx} justify="space-between" style={{ fontSize: 13 }}>
+                          <Text>Bậc {b.idx} ({Math.round((b.rate || 0) * 100)}%): {formatCurrency(b.taxable)}</Text>
+                          <Text strong>= {formatCurrency(b.tax)}</Text>
+                        </Row>
+                      ))}
+                    </Space>
+                  ) : (
+                    <Text type="secondary">Không có dữ liệu thuế chi tiết</Text>
+                  )}
+                </Space>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Final Result - redesigned */}
+          <Card style={{ borderColor: '#b7eb8f', background: '#f6ffed', marginBottom: 16 }}>
+            <div style={{ textAlign: 'center' }}>
+              <Text style={{ color: '#389e0d', fontWeight: 600 }}>Lương thực nhận</Text>
+              <div style={{ fontWeight: 800, fontSize: 36, color: '#237804', marginTop: 4 }}>
+                {formatCurrency(details.salaryCalculationSteps?.netSalary)}
+              </div>
+              <Text type="secondary">Đây là số tiền nhận sau các khoản khấu trừ theo luật</Text>
+            </div>
+          </Card>
 
           {/* Calculation Formulas from TopCV */}
           <Card title={<><CalculatorOutlined /> Công thức tính lương TopCV</>}>
@@ -426,6 +467,11 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
               showIcon
               style={{ marginTop: 16 }}
             />
+            <div style={{ marginTop: 12 }}>
+              <Button type="primary" onClick={() => setFormulaOpen(true)}>
+                Xem chi tiết cách tính lương
+              </Button>
+            </div>
           </Card>
         </div>
       ) : (
@@ -436,6 +482,94 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
           showIcon
         />
       )}
+      {/* Popup: Cách tính lương & OT (theo thiết kế tham khảo) */}
+      <Modal
+        title="Cách tính lương & OT"
+        open={formulaOpen}
+        onCancel={() => setFormulaOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setFormulaOpen(false)}>Đóng</Button>
+        ]}
+      >
+        <div style={{ color: '#6b7280', marginBottom: 12 }}>
+          Tiền lương một ngày công được tính bằng cách lấy lương cơ bản chia cho số ngày công chuẩn của tháng.
+        </div>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Ngày làm việc bình thường</div>
+            <div style={{ color: '#6b7280' }}>Hưởng <span style={{ fontWeight: 700, color: '#2563eb' }}>100%</span> lương.</div>
+          </div>
+          <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Làm thêm giờ (OT) vào ngày thường</div>
+            <div style={{ color: '#6b7280' }}>Hưởng ít nhất <span style={{ fontWeight: 700, color: '#2563eb' }}>150%</span> lương giờ bình thường.</div>
+          </div>
+          <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Làm việc vào ngày nghỉ cuối tuần</div>
+            <div style={{ color: '#6b7280' }}>Hưởng ít nhất <span style={{ fontWeight: 700, color: '#2563eb' }}>200%</span> lương.</div>
+          </div>
+          <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Làm việc vào ngày Lễ, Tết</div>
+            <div style={{ color: '#6b7280' }}>Hưởng ít nhất <span style={{ fontWeight: 700, color: '#2563eb' }}>300%</span> lương (chưa bao gồm lương ngày nghỉ lễ).</div>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Popup: Tổng thu nhập */}
+      <Modal title="Chi tiết tổng thu nhập" open={incomeOpen} onCancel={() => setIncomeOpen(false)} footer={[<Button key="close" onClick={() => setIncomeOpen(false)}>Đóng</Button>]}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Row justify="space-between"><Text>Lương cơ bản (HĐ):</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step1_BaseSalary)}</Text></Row>
+          <Row justify="space-between"><Text>Lương giờ làm thực tế:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step2_RegularPay)}</Text></Row>
+          {details?.salaryCalculationSteps?.step3_OvertimePay > 0 && (
+            <Row justify="space-between"><Text>Lương tăng ca:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step3_OvertimePay)}</Text></Row>
+          )}
+          {details?.salaryCalculationSteps?.step4_HolidayPay > 0 && (
+            <Row justify="space-between"><Text>Lương ngày lễ:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step4_HolidayPay)}</Text></Row>
+          )}
+          {details?.salaryCalculationSteps?.step5_WeekendPay > 0 && (
+            <Row justify="space-between"><Text>Lương cuối tuần (2x):</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step5_WeekendPay)}</Text></Row>
+          )}
+          <Divider />
+          <Row justify="space-between"><Text strong>Tổng lương gộp:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.grossSalary)}</Text></Row>
+        </Space>
+      </Modal>
+
+      {/* Popup: Các khoản khấu trừ */}
+      <Modal title="Chi tiết các khoản khấu trừ" open={deductionsOpen} onCancel={() => setDeductionsOpen(false)} footer={[<Button key="close" onClick={() => setDeductionsOpen(false)}>Đóng</Button>]}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Row justify="space-between"><Text>BHXH (8%):</Text><Text strong style={{ color: '#f5222d' }}>{formatCurrency(details?.salaryCalculationSteps?.deductions?.socialInsurance)}</Text></Row>
+          <Row justify="space-between"><Text>BHYT (1.5%):</Text><Text strong style={{ color: '#f5222d' }}>{formatCurrency(details?.salaryCalculationSteps?.deductions?.healthInsurance)}</Text></Row>
+          <Row justify="space-between"><Text>BHTN (1%):</Text><Text strong style={{ color: '#f5222d' }}>{formatCurrency(details?.salaryCalculationSteps?.deductions?.unemploymentInsurance)}</Text></Row>
+          <Row justify="space-between"><Text>Thuế TNCN (lũy tiến):</Text><Text strong style={{ color: '#f5222d' }}>{formatCurrency(details?.salaryCalculationSteps?.deductions?.personalIncomeTax)}</Text></Row>
+          <Divider />
+          <Row justify="space-between"><Text strong>Tổng khấu trừ:</Text><Text strong style={{ color: '#f5222d' }}>{formatCurrency(details?.salaryCalculationSteps?.deductions?.totalDeductions)}</Text></Row>
+        </Space>
+      </Modal>
+
+      {/* Popup: Thuế TNCN (lũy tiến) */}
+      <Modal title="Chi tiết Thuế TNCN (lũy tiến)" open={taxOpen} onCancel={() => setTaxOpen(false)} footer={[<Button key="close" onClick={() => setTaxOpen(false)}>Đóng</Button>]}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Row justify="space-between"><Text>Thu nhập trước thuế:</Text><Text strong>{formatCurrency(details?.taxDetails?.incomeBeforeTax)}</Text></Row>
+          <Row justify="space-between"><Text>Giảm trừ bản thân:</Text><Text strong>{formatCurrency(details?.taxDetails?.personalDeduction)}</Text></Row>
+          <Row justify="space-between"><Text>Giảm trừ người phụ thuộc:</Text><Text strong>{formatCurrency(details?.taxDetails?.dependentDeductions)}</Text></Row>
+          <Row justify="space-between"><Text>Thu nhập chịu thuế:</Text><Text strong>{formatCurrency(details?.taxDetails?.taxableIncome)}</Text></Row>
+          <Divider />
+          {details?.taxProgressive?.length > 0 ? (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {details.taxProgressive.map((b) => (
+                <Row key={b.idx} justify="space-between" style={{ fontSize: 13 }}>
+                  <Text>Bậc {b.idx} ({Math.round((b.rate || 0) * 100)}%): {formatCurrency(b.taxable)}</Text>
+                  <Text strong>= {formatCurrency(b.tax)}</Text>
+                </Row>
+              ))}
+            </Space>
+          ) : (
+            <Text type="secondary">Không có dữ liệu thuế chi tiết</Text>
+          )}
+        </Space>
+      </Modal>
     </Modal>
   );
 };

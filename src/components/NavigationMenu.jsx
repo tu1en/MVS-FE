@@ -5,7 +5,9 @@ import {
     LogoutOutlined,
     MessageOutlined,
     UserOutlined,
-    VideoCameraOutlined
+    VideoCameraOutlined,
+    BarChartOutlined,
+    SettingOutlined
 } from '@ant-design/icons';
 import { Avatar, Badge, Dropdown, Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
@@ -111,6 +113,81 @@ export default function NavigationMenu() {
     }
   ];
 
+  const teachingAssistantMenuItems = [
+    {
+      key: 'dashboard',
+      icon: <UserOutlined />,
+      label: 'Dashboard',
+      onClick: () => navigate('/teaching-assistant')
+    },
+    {
+      key: 'teacher-evaluations',
+      icon: <BarChartOutlined />,
+      label: 'Đánh Giá Giảng Viên',
+      onClick: () => navigate('/teaching-assistant/teacher-evaluations')
+    },
+    {
+      key: 'messaging',
+      icon: <MessageOutlined />,
+      label: 'Tin nhắn',
+      onClick: () => navigate('/messaging')
+    }
+  ];
+
+  const managerMenuItems = [
+    {
+      key: 'dashboard',
+      icon: <UserOutlined />,
+      label: 'Dashboard',
+      onClick: () => navigate('/manager')
+    },
+    {
+      key: 'teacher-evaluations',
+      icon: <BarChartOutlined />,
+      label: 'Quản Lý Đánh Giá',
+      onClick: () => navigate('/manager/teacher-evaluations')
+    },
+    {
+      key: 'sms-management',
+      icon: <MessageOutlined />,
+      label: 'Quản Lý SMS',
+      onClick: () => navigate('/manager/sms-management')
+    },
+    {
+      key: 'system-management',
+      icon: <SettingOutlined />,
+      label: 'Quản Lý Hệ Thống',
+      onClick: () => navigate('/manager/system-management')
+    }
+  ];
+
+  const adminMenuItems = [
+    {
+      key: 'dashboard',
+      icon: <UserOutlined />,
+      label: 'Dashboard',
+      onClick: () => navigate('/admin')
+    },
+    {
+      key: 'system-management',
+      icon: <SettingOutlined />,
+      label: 'Quản Lý Hệ Thống',
+      onClick: () => navigate('/admin/system-management')
+    },
+    {
+      key: 'teacher-evaluations',
+      icon: <BarChartOutlined />,
+      label: 'Quản Lý Đánh Giá',
+      onClick: () => navigate('/manager/teacher-evaluations')
+    },
+    {
+      key: 'sms-management',
+      icon: <MessageOutlined />,
+      label: 'Quản Lý SMS',
+      onClick: () => navigate('/manager/sms-management')
+    }
+  ];
+
   const userMenuItems = [
     {
       key: 'logout',
@@ -126,6 +203,12 @@ export default function NavigationMenu() {
         return studentMenuItems;
       case ROLE.TEACHER:
         return teacherMenuItems;
+      case ROLE.TEACHING_ASSISTANT:
+        return teachingAssistantMenuItems;
+      case ROLE.MANAGER:
+        return managerMenuItems;
+      case ROLE.ADMIN:
+        return adminMenuItems;
       default:
         return [];
     }

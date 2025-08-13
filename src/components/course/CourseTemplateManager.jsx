@@ -2,11 +2,11 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useStat
 import classManagementService from '../../services/classManagementService';
 import courseService from '../../services/courseService';
 import {
-    debounce,
-    downloadFile,
-    getStatusBadge,
-    showConfirmDialog,
-    showNotification
+  debounce,
+  downloadFile,
+  getStatusBadge,
+  showConfirmDialog,
+  showNotification
 } from '../../utils/courseManagementUtils';
 import CourseDescription from './CourseDescription';
 
@@ -469,7 +469,7 @@ const CourseTemplateManager = forwardRef(({
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Quản lý Templates Khóa học
+            Quản lý Khóa học
           </h1>
           <p className="text-gray-600 mt-1">
             Quản lý templates, tạo lớp học và theo dõi thống kê

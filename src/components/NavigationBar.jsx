@@ -343,6 +343,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Lương",
+      items: [
+        { name: 'Lương của tôi', path: '/teacher/my/payroll', icon: '💵' }
+      ]
+    },
+    {
       category: "Cá nhân",
       items: [
         {
@@ -454,6 +460,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Lương",
+      items: [
+        { name: 'Lương của tôi', path: '/manager/my/payroll', icon: '💵' }
+      ]
+    },
+    {
       category: "Cá nhân",
       items: [
         {
@@ -530,6 +542,13 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Lương",
+      items: [
+        { name: 'Lương của tôi', path: '/accountant/my/payroll', icon: '💵' },
+        { name: 'Quản lý bảng lương', path: '/accountant/payroll', icon: '📑' }
+      ]
+    },
+    {
       category: "Thông Báo",
       items: [
         { name: 'Thông Báo', path: '/accountant/announcements', icon: '📢' }
@@ -540,6 +559,14 @@ function NavigationBar() {
       items: [
         { name: 'Giải trình vi phạm', path: '/accountant/attendance-explanations', icon: '📝' },
         // { name: 'Xem trạng thái giải trình', path: '/accountant/explanation-status', icon: '📊' }
+      ]
+    },
+    {
+      category: "Lương",
+      items: [
+        { name: 'Lương của tôi', path: '/accountant/my/payroll', icon: '💵' },
+        { name: 'Quản lý bảng lương', path: '/accountant/payroll', icon: '📑' },
+        { name: 'Tra soát lương', path: '/accountant/payroll-issues', icon: '🛠️' }
       ]
     },
     {

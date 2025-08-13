@@ -117,6 +117,39 @@ class PayrollService {
   }
 
   /**
+   * Send payroll confirmation email to a specific user for a period
+   * @param {number} userId
+   * @param {string} period YYYY-MM
+   */
+  static async sendPayrollConfirmation(userId, period) {
+    try {
+      const response = await axiosInstance.post(`/payroll/send-confirmation/user/${userId}`, null, {
+        params: { period }
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error sending payroll confirmation to user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send payroll confirmation emails to all employees for period
+   * @param {string} period YYYY-MM
+   */
+  static async sendPayrollConfirmationAll(period) {
+    try {
+      const response = await axiosInstance.post('/payroll/send-confirmation/all', null, {
+        params: { period }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending payroll confirmations to all:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get payroll history for a user
    * @param {number} userId - User ID
    * @param {string} fromPeriod - From period (YYYY-MM)
@@ -147,6 +180,56 @@ class PayrollService {
       console.error('Error getting TopCV example:', error);
       throw error;
     }
+  }
+
+  // Employee self-service: view my payroll
+  static async getMyPayroll(userId, period) {
+    const response = await axiosInstance.get('/my/payroll', {
+      params: { userId, period }
+    });
+    return response.data;
+  }
+
+  // Employee self-service: confirm viewed
+  static async confirmMyPayroll(userId, period) {
+    const response = await axiosInstance.post('/my/payroll/confirm', null, {
+      params: { userId, period }
+    });
+    return response.data;
+  }
+
+  // Create payroll issue ticket with optional file
+  static async createPayrollIssue({ userId, period, subject, description, file }) {
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('period', period);
+    formData.append('subject', subject);
+    formData.append('description', description);
+    if (file) {
+      formData.append('attachment', file);
+    }
+    const res = await axiosInstance.post('/my/payroll/issues', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+  }
+
+  // List my issues
+  static async listMyPayrollIssues(userId) {
+    const res = await axiosInstance.get('/my/payroll/issues/my', { params: { userId } });
+    return res.data;
+  }
+
+  // Accountant: list all issues
+  static async listAllPayrollIssues() {
+    const res = await axiosInstance.get('/my/payroll/issues/all');
+    return res.data;
+  }
+
+  // Accountant: update issue status
+  static async updatePayrollIssueStatus(id, status) {
+    const res = await axiosInstance.patch('/my/payroll/issues/status', null, { params: { id, status } });
+    return res.data;
   }
 
   /**
