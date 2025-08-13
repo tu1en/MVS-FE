@@ -361,7 +361,7 @@ function App() {
               <Route path="/manager/messages" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/communications" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
-              <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              <Route path="/manager/account" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
               <Route path="/manager/explanation-reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ExplanationReports /></ProtectedRoute>} />
               <Route path="/manager/teacher-attendance-status" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeacherAttendanceStatus /></ProtectedRoute>} />
               <Route path="/manager/daily-shift-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><DailyShiftAttendance /></ProtectedRoute>} />
