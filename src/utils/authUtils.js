@@ -40,7 +40,8 @@ export const getNormalizedRole = (role) => {
     '3': 'MANAGER',
     '4': 'ADMIN',
     '5': 'ACCOUNTANT',
-    '6': 'TEACHING_ASSISTANT'
+    '6': 'TEACHING_ASSISTANT',
+    '7': 'PARENT'
   };
 
   // If it's a numeric role, return the string version

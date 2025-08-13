@@ -1,4 +1,5 @@
-import { App, Button, Card, Form, Input, Select, Spin } from 'antd';
+import { App, Button, Card, Form, Input, Select, Spin, InputNumber } from 'antd';
+
 import { useCallback, useEffect, useState } from 'react';
 import ProfileDataService from '../../services/profileDataService';
 import { validateEmail, validatePhoneNumber } from '../../utils/validation';
@@ -15,21 +16,30 @@ const EditProfile = () => {
 
   // Initialize form with default values to prevent React warnings
   const defaultValues = {
+    username: '',
     fullName: '',
+    birthYear: undefined,
+    gender: '',
     email: '',
     phoneNumber: '',
-    teacherId: localStorage.getItem('userId') || '',
-    gender: '',
-    address: '',
-    school: 'Trường Đại học ABC',
-    department: 'Khoa Công nghệ thông tin',
-    specialization: '',
-    experience: ''  };  const fetchProfile = useCallback(async () => {
+    department: ''
+  };
+
+  const fetchProfile = useCallback(async () => {
+
     try {
       setInitialLoading(true);      const result = await ProfileDataService.fetchProfileWithFallback('teacher');
       
       if (result.success) {
-        const profileData = { ...defaultValues, ...result.data };
+        const serverData = result.data || {};
+        const profileData = { ...defaultValues, ...serverData };
+        // Map birthDate (YYYY-MM-DD) to birthYear
+        if (serverData.birthDate) {
+          try {
+            const year = new Date(serverData.birthDate).getFullYear();
+            if (!isNaN(year)) profileData.birthYear = year;
+          } catch (_) {}
+        }
         
         // Set form ready first, then set field values after form is rendered
         setFormReady(true);
@@ -52,7 +62,8 @@ const EditProfile = () => {
         }
       } else {
         // If profile fetch fails, still set default values and allow form usage
-        const fallbackData = { ...defaultValues, ...result.data };
+        const localData = result.data || {};
+        const fallbackData = { ...defaultValues, ...localData };
         
         // Set form ready first, then set field values after form is rendered
         setFormReady(true);
@@ -88,10 +99,19 @@ const EditProfile = () => {
 
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);  const onFinish = async (values) => {
+  }, [fetchProfile]);
+
+  const onFinish = async (values) => {
     setLoading(true);
     try {
-      const result = await ProfileDataService.updateProfileWithFallback(values);
+      // Only send editable fields to backend
+      const payload = {
+        email: values.email,
+        phoneNumber: values.phoneNumber,
+        gender: values.gender,
+        birthYear: values.birthYear
+      };
+      const result = await ProfileDataService.updateProfileWithFallback(payload);
       
       if (result.success) {
         message.success({
@@ -113,7 +133,9 @@ const EditProfile = () => {
     } finally {
       setLoading(false);
     }
-  };return (
+  };
+
+  return (
     <div className="container mx-auto px-4 py-8">
       <Card title="Chỉnh Sửa Thông Tin Giáo Viên" className="max-w-2xl mx-auto" loading={initialLoading}>
         {formReady ? (
@@ -124,101 +146,91 @@ const EditProfile = () => {
             className="max-w-xl mx-auto"
             initialValues={defaultValues}
           >
-          <Form.Item
-            name="fullName"
-            label="Họ và Tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item
+              name="username"
+              label="Tên tài khoản"
+            >
+              <Input disabled />
+            </Form.Item>
 
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[{ required: true, validator: validateEmail }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item
+              name="fullName"
+              label="Họ và Tên"
+            >
+              <Input disabled />
+            </Form.Item>
 
-          <Form.Item
-            name="phoneNumber"
-            label="Số Điện Thoại"
-            rules={[{ required: true, validator: validatePhoneNumber }]}
-            validateStatus={invalidPrefix ? 'error' : ''}
-            help={invalidPrefix ? 'Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09' : null}
-          >
-            <Input
-              maxLength={11}
-              value={form.getFieldValue('phoneNumber')}
-              onChange={(e) => {
-                let onlyNumbers = e.target.value.replace(/[^0-9]/g, '');
+            <Form.Item
+              name="birthYear"
+              label="Năm sinh"
+              rules={[{ required: true, message: 'Vui lòng nhập năm sinh' }]}
+            >
+              <InputNumber min={1900} max={new Date().getFullYear()} style={{ width: '100%' }} />
+            </Form.Item>
 
-                if (onlyNumbers.length > 11) {
-                  onlyNumbers = onlyNumbers.slice(0, 11);
-                }
+            <Form.Item
+              name="gender"
+              label="Giới Tính"
+              rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
+            >
+              <Select placeholder="Chọn giới tính">
+                <Option value="MALE">Nam</Option>
+                <Option value="FEMALE">Nữ</Option>
+                <Option value="OTHER">Khác</Option>
+              </Select>
+            </Form.Item>
 
-                form.setFieldsValue({ phoneNumber: onlyNumbers });
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ required: true, validator: validateEmail }]}
+            >
+              <Input />
+            </Form.Item>
 
-                if (onlyNumbers.length >= 2 && !/^0(3|5|7|8|9)/.test(onlyNumbers)) {
-                  setInvalidPrefix(true);
-                } else {
-                  setInvalidPrefix(false);
-                }
-              }}
-              inputMode="numeric"
-              placeholder="Nhập số điện thoại"
-            />
-          </Form.Item>
+            <Form.Item
+              name="phoneNumber"
+              label="Số Điện Thoại"
+              rules={[{ required: true, validator: validatePhoneNumber }]}
+              validateStatus={invalidPrefix ? 'error' : ''}
+              help={invalidPrefix ? 'Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09' : null}
+            >
+              <Input
+                maxLength={11}
+                value={form.getFieldValue('phoneNumber')}
+                onChange={(e) => {
+                  let onlyNumbers = e.target.value.replace(/[^0-9]/g, '');
 
-          <Form.Item
-            name="teacherId"
-            label="Mã Giáo Viên"
-            rules={[{ required: true }]}
-          >
-            <Input disabled />
-          </Form.Item>
+                  if (onlyNumbers.length > 11) {
+                    onlyNumbers = onlyNumbers.slice(0, 11);
+                  }
 
-          <Form.Item
-            name="department"
-            label="Khoa/Bộ Môn"
-            rules={[{ required: true, message: 'Vui lòng nhập khoa/bộ môn' }]}
-          >
-            <Input />
-          </Form.Item>
+                  form.setFieldsValue({ phoneNumber: onlyNumbers });
 
-          <Form.Item
-            name="specialization"
-            label="Chuyên Ngành"
-            rules={[{ required: true, message: 'Vui lòng nhập chuyên ngành' }]}
-          >
-            <Input />
-          </Form.Item>
+                  if (onlyNumbers.length >= 2 && !/^0(3|5|7|8|9)/.test(onlyNumbers)) {
+                    setInvalidPrefix(true);
+                  } else {
+                    setInvalidPrefix(false);
+                  }
+                }}
+                inputMode="numeric"
+                placeholder="Nhập số điện thoại"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="degree"
-            label="Học Vị"
-            rules={[{ required: true, message: 'Vui lòng chọn học vị' }]}
-          >
-            <Select>
-              <Option value="Thạc sĩ">Thạc sĩ</Option>
-              <Option value="Tiến sĩ">Tiến sĩ</Option>
-              <Option value="Phó Giáo sư">Phó Giáo sư</Option>
-              <Option value="Giáo sư">Giáo sư</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="department"
+              label="Khoa/Bộ Môn"
+            >
+              <Input disabled />
+            </Form.Item>
 
-          <Form.Item
-            name="subject"
-            label="Môn Giảng Dạy"
-            rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy' }]}
-          >
-            <Input />
-          </Form.Item>          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              Cập Nhật Thông Tin
-            </Button>
-          </Form.Item>
-        </Form>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading} block>
+                Cập Nhật Thông Tin
+              </Button>
+            </Form.Item>
+          </Form>
         ) : (
           <div className="text-center p-4">
             <Spin size="large" />

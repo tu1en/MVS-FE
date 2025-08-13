@@ -1,6 +1,6 @@
 import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Table, Tabs, Tag } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
 
@@ -205,6 +205,23 @@ const NetSalaryColumn = ({ offer, recordId, contractType, numberOfDependents, on
 const { RangePicker } = DatePicker;
 
 const RecruitmentManagement = () => {
+  // Helper: parse cả ISO string lẫn mảng [yyyy, M, d, H, m, s]
+  const parseApiDateTime = (value) => {
+    try {
+      if (Array.isArray(value) && value.length >= 3) {
+        const [y, m, d, hh = 0, mm = 0, ss = 0] = value;
+        return dayjs(new Date(y, (m || 1) - 1, d, hh, mm, ss));
+      }
+      return dayjs(value);
+    } catch {
+      return dayjs.invalid();
+    }
+  };
+
+  const toTimestamp = (value) => {
+    const d = parseApiDateTime(value);
+    return d.isValid() ? d.valueOf() : 0;
+  };
   const [plans, setPlans] = useState([]);
   const [positions, setPositions] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -229,6 +246,11 @@ const RecruitmentManagement = () => {
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [loadingSalaryDetails, setLoadingSalaryDetails] = useState(false);
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [evaluationForm] = Form.useForm();
+  const [evaluatingInterview, setEvaluatingInterview] = useState(null);
+  const [evaluationDraft, setEvaluationDraft] = useState('');
+  const evaluationSaveTimerRef = useRef(null);
 
   useEffect(() => {
     fetchPlans();
@@ -290,9 +312,9 @@ const RecruitmentManagement = () => {
     try {
       const res = await axiosInstance.get('/recruitment-applications');
       // Lọc theo job positions thuộc recruitment plan
-      const filtered = res.data.filter(app => 
-        positions.some(pos => pos.id === app.jobPositionId)
-      );
+      const filtered = res.data
+        .filter(app => positions.some(pos => pos.id === app.jobPositionId))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setApplications(filtered);
     } catch (err) {
       message.error('Không thể tải danh sách đơn ứng tuyển!');
@@ -619,13 +641,53 @@ const RecruitmentManagement = () => {
     }
   };
 
-  const handleEvaluationUpdate = async (id, evaluation) => {
+  const handleEvaluationUpdate = async (id, evaluation, silent = false) => {
     try {
       await axiosInstance.put(`/interview-schedules/${id}/evaluation`, { evaluation });
-      message.success('Cập nhật đánh giá thành công!');
+      if (!silent) {
+        message.success('Cập nhật đánh giá thành công!');
+      }
+      // Đồng bộ lại dữ liệu local để hiển thị ngay
+      setPendingInterviews(prev => prev.map(i => i.id === id ? { ...i, evaluation } : i));
+      setInterviews(prev => prev.map(i => i.id === id ? { ...i, evaluation } : i));
+      setOffers(prev => prev.map(i => i.id === id ? { ...i, evaluation } : i));
     } catch (err) {
-      message.error('Không thể cập nhật đánh giá!');
+      const detail = err?.response?.data?.message || 'Không thể cập nhật đánh giá!';
+      message.error(detail);
     }
+  };
+
+  const openEvaluationModal = (record) => {
+    setEvaluatingInterview(record);
+    const current = record?.evaluation || '';
+    setEvaluationDraft(current);
+    evaluationForm.setFieldsValue({ evaluation: current });
+    setShowEvaluationModal(true);
+  };
+
+  const closeEvaluationModal = () => {
+    setShowEvaluationModal(false);
+    setEvaluatingInterview(null);
+    setEvaluationDraft('');
+    evaluationForm.resetFields();
+    if (evaluationSaveTimerRef.current) {
+      clearTimeout(evaluationSaveTimerRef.current);
+      evaluationSaveTimerRef.current = null;
+    }
+  };
+
+  const handleEvaluationChange = (e) => {
+    const value = (e?.target?.value ?? '').slice(0, 200);
+    setEvaluationDraft(value);
+    evaluationForm.setFieldsValue({ evaluation: value });
+
+    if (!evaluatingInterview?.id) return;
+    if (evaluationSaveTimerRef.current) {
+      clearTimeout(evaluationSaveTimerRef.current);
+    }
+    evaluationSaveTimerRef.current = setTimeout(() => {
+      handleEvaluationUpdate(evaluatingInterview.id, value, true);
+    }, 600);
   };
 
   const handleDeleteInterview = async (id) => {
@@ -807,6 +869,16 @@ const RecruitmentManagement = () => {
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Ngày ứng tuyển', 
+      dataIndex: 'createdAt',
+      sorter: (a, b) => toTimestamp(a.createdAt) - toTimestamp(b.createdAt),
+      defaultSortOrder: 'descend',
+      render: (value) => {
+        const d = parseApiDateTime(value);
+        return d.isValid() ? <span className="vietnamese-text">{d.format('DD/MM/YYYY HH:mm')}</span> : <span className="vietnamese-text">-</span>;
+      }
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -1071,13 +1143,10 @@ const RecruitmentManagement = () => {
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
-        <Input.TextArea
-          defaultValue={text || ''}
-          placeholder="Nhập đánh giá..."
-          className="vietnamese-text"
-          onBlur={(e) => handleEvaluationUpdate(record.id, e.target.value)}
-          style={{ minHeight: '60px' }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Button size="small" onClick={() => openEvaluationModal(record)} className="vietnamese-text">Viết đánh giá</Button>
+          {text ? <span className="vietnamese-text" style={{ color: '#888' }}>(Đã có đánh giá)</span> : <span className="vietnamese-text" style={{ color: '#aaa' }}>(Chưa có)</span>}
+        </div>
       )
     },
     {
@@ -1157,13 +1226,10 @@ const RecruitmentManagement = () => {
       title: 'Đánh giá',
       dataIndex: 'evaluation',
       render: (text, record) => (
-        <Input.TextArea
-          defaultValue={text || ''}
-          placeholder="Nhập đánh giá..."
-          className="vietnamese-text"
-          onBlur={(e) => handleEvaluationUpdate(record.id, e.target.value)}
-          style={{ minHeight: '60px' }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Button size="small" onClick={() => openEvaluationModal(record)} className="vietnamese-text">Viết đánh giá</Button>
+          {text ? <span className="vietnamese-text" style={{ color: '#888' }}>(Đã có đánh giá)</span> : <span className="vietnamese-text" style={{ color: '#aaa' }}>(Chưa có)</span>}
+        </div>
       )
     },
     {
@@ -1244,7 +1310,7 @@ const RecruitmentManagement = () => {
     {
       title: 'Thao tác',
       render: (_, record) => (
-        <div className="flex flex-col space-y-2">
+        <div className="grid grid-cols-1 gap-2">
           {record.cvUrl && (
             <Button 
               type="link" 
@@ -1321,11 +1387,11 @@ const RecruitmentManagement = () => {
           <Table columns={positionColumns} dataSource={positions} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Đơn ứng tuyển" key="applications" disabled={!selectedPlan}>
+        <Tabs.TabPane tab="Quản lý đơn ứng tuyển" key="applications" disabled={!selectedPlan}>
           <Table columns={applicationColumns} dataSource={applications} rowKey="id" />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Lên lịch" key="schedule">
+        <Tabs.TabPane tab="Quản lý lịch" key="schedule">
           <Table 
             columns={scheduleColumns} 
             dataSource={getFilteredApprovedApps().filter(app => shouldShowInSchedule(app.id))} 
@@ -1333,7 +1399,7 @@ const RecruitmentManagement = () => {
           />
         </Tabs.TabPane>
         
-        <Tabs.TabPane tab="Phỏng vấn chờ" key="pending">
+        <Tabs.TabPane tab="Đánh giá" key="pending">
           <Table 
             columns={pendingInterviewColumns} 
             dataSource={pendingInterviews.filter(shouldShowInPending)} 
@@ -1351,6 +1417,49 @@ const RecruitmentManagement = () => {
       </Tabs>
 
       {/* Modal tạo/sửa vị trí */}
+      {/* Modal viết đánh giá */}
+      <Modal
+        title={`Viết đánh giá`}
+        open={showEvaluationModal}
+        onCancel={closeEvaluationModal}
+        footer={null}
+        className="form-vietnamese"
+      >
+        <Form layout="vertical" form={evaluationForm} className="form-vietnamese">
+          <Form.Item
+            name="evaluation"
+            label="Đánh giá"
+            rules={[{ max: 200, message: 'Đánh giá tối đa 200 ký tự!' }]}
+          >
+            <Input.TextArea
+              value={evaluationDraft}
+              onChange={handleEvaluationChange}
+              maxLength={200}
+              rows={6}
+              placeholder="Nhập đánh giá (tối đa 200 ký tự)..."
+              className="vietnamese-text"
+            />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex justify-end space-x-2">
+              <Button onClick={closeEvaluationModal} className="vietnamese-text">Đóng</Button>
+              <Button
+                type="primary"
+                className="vietnamese-text"
+                onClick={async () => {
+                  if (!evaluatingInterview?.id) return;
+                  await handleEvaluationUpdate(evaluatingInterview.id, evaluationDraft);
+                  closeEvaluationModal();
+                }}
+              >
+                Lưu
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal tạo/sửa vị trí */}
       <Modal
         title={editingPosition ? 'Sửa vị trí' : 'Thêm vị trí'}
         open={showPositionModal}
@@ -1359,11 +1468,11 @@ const RecruitmentManagement = () => {
         className="form-vietnamese"
       >
         <Form layout="vertical" onFinish={handlePositionSubmit} className="form-vietnamese">
-          <Form.Item name="title" label="Tên vị trí" rules={[{ required: true }]}>
-            <Input className="vietnamese-text" />
+          <Form.Item name="title" label="Tên vị trí" rules={[{ required: true, message: 'Vui lòng nhập tên vị trí' }, { max: 50, message: 'Vị trí tối đa 50 ký tự!' }]}>
+            <Input className="vietnamese-text" maxLength={50} />
           </Form.Item>
-          <Form.Item name="description" label="Mô tả" rules={[{ required: true }]}>
-            <Input.TextArea className="vietnamese-text" />
+          <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả' }, { max: 200, message: 'Mô tả tối đa 200 ký tự!' }]}>
+            <Input.TextArea className="vietnamese-text" maxLength={200} />
           </Form.Item>
           <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
             <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
@@ -1371,13 +1480,22 @@ const RecruitmentManagement = () => {
               <Select.Option value="PART_TIME">Hợp đồng có kỳ hạn</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true }]}>
-            <Input className="vietnamese-text" />
+          <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
+            <Input 
+              className="vietnamese-text" 
+              maxLength={50}
+              onChange={(e) => {
+                const onlyDigits = e.target.value.replace(/[^0-9]/g, '').slice(0, 50);
+                form?.setFieldsValue ? form.setFieldsValue({ salaryRange: onlyDigits }) : (e.target.value = onlyDigits);
+              }}
+              addonAfter={editingPosition?.contractType === 'PART_TIME' ? 'VNĐ/giờ' : 'triệu'}
+              placeholder={editingPosition?.contractType === 'PART_TIME' ? 'Ví dụ: 500000' : 'Ví dụ: 15'}
+            />
           </Form.Item>
-          <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
+          <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>    
             <InputNumber 
               min={1} 
-              max={999}
+              max={50}
               step={1}
               precision={0}
               style={{ width: '100%' }} 

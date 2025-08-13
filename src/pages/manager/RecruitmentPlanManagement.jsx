@@ -48,7 +48,8 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       message.success('Xóa kế hoạch thành công!');
       fetchPlans();
     } catch (err) {
-      message.error('Không thể xóa kế hoạch!');
+      const detail = err.response?.data || 'Kế hoạch đã bắt đầu, không thể xoá.';
+      message.error(typeof detail === 'string' ? detail : 'Không thể xóa kế hoạch!');
     }
   };
 
@@ -214,11 +215,15 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
         className="form-vietnamese"
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} className="form-vietnamese">
-          <Form.Item name="title" label="Tên kế hoạch" rules={[{ required: true, message: 'Nhập tên kế hoạch' }]}>
-            <Input className="vietnamese-text" />
+          <Form.Item name="title" label="Tên kế hoạch" rules={[{ required: true, message: 'Nhập tên kế hoạch' }, { max: 50, message: 'Tên kế hoạch tối đa 50 ký tự!' }]}>
+            <Input className="vietnamese-text" maxLength={50} />
           </Form.Item>
           <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true, message: 'Chọn ngày bắt đầu' }]}>
-            <DatePicker style={{ width: '100%' }} className="vietnamese-text" />
+            <DatePicker 
+              style={{ width: '100%' }} 
+              className="vietnamese-text"
+              disabled={!!editingPlan && dayjs(editingPlan.startDate).isBefore(dayjs(), 'day')}
+            />
           </Form.Item>
           <Form.Item name="endDate" label="Ngày kết thúc" rules={[{ required: true, message: 'Chọn ngày kết thúc' }]}>
             <DatePicker style={{ width: '100%' }} className="vietnamese-text" />

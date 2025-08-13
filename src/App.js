@@ -1,10 +1,10 @@
 import { App as AntApp } from "antd";
 import { useEffect } from "react";
 import {
-    Navigate,
-    Route,
-    BrowserRouter as Router,
-    Routes,
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
 } from "react-router-dom";
 import "./App.css";
 // import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
@@ -31,6 +31,7 @@ import ExplanationReports from './pages/manager/ExplanationReports.jsx';
 import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory.jsx';
 import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
+import ParentDashboard from './pages/ParentDashboard.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import SystemActivityLogsPage from './pages/SystemActivityLogsPage.jsx';
 import SystemChartsPage from './pages/SystemChartsPage.jsx';
@@ -42,6 +43,7 @@ import CourseDetail from "./pages/teacher/CourseDetail.jsx";
 import EditCoursePage from "./pages/teacher/EditCoursePage";
 import TeacherEditProfile from "./pages/teacher/EditProfile.jsx";
 import GradeHomework from "./pages/teacher/GradeHomework.jsx";
+import TeacherParentMessages from "./pages/teacher/ParentMessages.jsx";
 import RealtimeAttendancePage from './pages/teacher/RealtimeAttendancePage.jsx'; // Import the new page
 import TeacherSchedule from "./pages/teacher/Schedule.jsx";
 import TakeAttendancePage from './pages/teacher/TakeAttendancePage'; // OUR NEW PAGE
@@ -52,7 +54,6 @@ import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
-import TeacherParentMessages from "./pages/teacher/ParentMessages.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
 
 import VideoConference from './pages/teacher/VideoConference.jsx';
@@ -72,12 +73,11 @@ import RecruitmentManagement from './pages/manager/RecruitmentManagement';
 import RequestList from "./pages/RequestList.jsx";
 
 // Parent Pages
-import ParentDashboard from "./pages/parent/ParentDashboard.jsx";
 import ParentAttendance from "./pages/parent/Attendance.jsx";
+import ParentBilling from "./pages/parent/Billing.jsx";
 import ParentLeaveNotice from "./pages/parent/LeaveNotice.jsx";
 import ParentMessages from "./pages/parent/Messages.jsx";
 import ParentSchedule from "./pages/parent/Schedule.jsx";
-import ParentBilling from "./pages/parent/Billing.jsx";
 
 // Student Pages
 import AccountList from "./pages/AccountList.jsx";
@@ -112,9 +112,9 @@ import StudentAccomplishments from './pages/StudentAccomplishments.jsx';
 import { ensureRoleConsistency } from "./utils/authUtils.js";
 
 // Teaching Assistant & SMS Management Pages
+import SystemManagement from './pages/SystemManagement.jsx';
 import TeachingAssistantDashboard from './pages/TeachingAssistantDashboard.jsx';
 import TeachingAssistantDashboardPage from './pages/TeachingAssistantDashboardPage.jsx';
-import SystemManagement from './pages/SystemManagement.jsx';
 
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
 import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
@@ -378,6 +378,9 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
+              {/* Parent Routes */}
+              <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
+
               <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
