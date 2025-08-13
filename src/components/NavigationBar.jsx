@@ -89,10 +89,16 @@ function NavigationBar() {
           '1': ROLE.STUDENT,
           '2': ROLE.TEACHER,
           '3': ROLE.MANAGER,
-          '4': ROLE.GUEST
+            '4': ROLE.GUEST,
+            'ACCOUNTANT': ROLE.ACCOUNTANT,
+            'ADMIN': ROLE.ADMIN,
+            'STUDENT': ROLE.STUDENT,
+            'TEACHER': ROLE.TEACHER,
+            'MANAGER': ROLE.MANAGER,
+            'PARENT': ROLE.PARENT
         };
         
-        const mappedRole = roleMapping[storedRole] || ROLE.GUEST;
+          const mappedRole = roleMapping[storedRole] || (Object.values(ROLE).includes(storedRole) ? storedRole : ROLE.GUEST);
         setUserRole(mappedRole);
         if (process.env.NODE_ENV === 'development') {
           console.log('Using role from localStorage:', storedRole, '→', mappedRole);
@@ -552,6 +558,22 @@ function NavigationBar() {
     }
   ];
 
+  // Define navigation items for PARENT
+  const parentNavItems = [
+    {
+      category: "Chính",
+      items: [
+        { name: 'Trang Chủ/Dashboard', path: '/parent', icon: '🏠' }
+      ]
+    },
+    {
+      category: "Tin tức",
+      items: [
+        { name: 'Tin Tức', path: '/blog', icon: '📰' }
+      ]
+    }
+  ];
+
   const getNavItems = () => {
     switch(userRole) {
       case ROLE.STUDENT:
@@ -564,6 +586,8 @@ function NavigationBar() {
         return managerNavItems;
       case ROLE.ACCOUNTANT:
         return accountantNavItems;
+      case ROLE.PARENT:
+        return parentNavItems;
       default:
         return guestNavItems;
     }

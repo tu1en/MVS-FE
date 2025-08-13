@@ -38,7 +38,8 @@ export const getNormalizedRole = (role) => {
     '1': 'STUDENT',
     '2': 'TEACHER',
     '3': 'MANAGER',
-    '5': 'ACCOUNTANT'
+    '5': 'ACCOUNTANT',
+    '6': 'PARENT'
   };
 
   // If it's a numeric role, return the string version
@@ -48,7 +49,7 @@ export const getNormalizedRole = (role) => {
   
   // If it's a string role, make sure it's uppercase
   const upperRole = role.toUpperCase();
-  if (['ADMIN', 'STUDENT', 'TEACHER', 'MANAGER', 'ACCOUNTANT'].includes(upperRole)) {
+  if (['ADMIN', 'STUDENT', 'TEACHER', 'MANAGER', 'ACCOUNTANT', 'PARENT'].includes(upperRole)) {
     return upperRole;
   }
   

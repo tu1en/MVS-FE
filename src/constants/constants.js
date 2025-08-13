@@ -4,5 +4,6 @@ export const ROLE = {
   MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
   ACCOUNTANT: 'ACCOUNTANT',
+  PARENT: 'PARENT',
   GUEST: 'GUEST'
 }

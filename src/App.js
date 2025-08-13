@@ -36,6 +36,7 @@ import SystemActivityLogsPage from './pages/SystemActivityLogsPage.jsx';
 import SystemChartsPage from './pages/SystemChartsPage.jsx';
 import SystemSettingsPage from './pages/SystemSettingsPage.jsx';
 import TeacherDashboard from './pages/TeacherDashboard.jsx';
+import ParentDashboard from './pages/ParentDashboard.jsx';
 
 // Teacher Pages
 import CourseDetail from "./pages/teacher/CourseDetail.jsx";
@@ -173,6 +174,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (userRoleName === "MANAGER") return <Navigate to="/manager" replace />;
     if (userRoleName === "ADMIN") return <Navigate to="/admin" replace />;
     if (userRoleName === "ACCOUNTANT") return <Navigate to="/accountant" replace />;
+    if (userRoleName === "PARENT") return <Navigate to="/parent" replace />;
     return <Navigate to="/login" replace />;
   }
 
@@ -224,6 +226,7 @@ const RootRedirect = () => {
         case "MANAGER": return <Navigate to="/manager" replace />;
         case "ADMIN": return <Navigate to="/admin" replace />;
         case "ACCOUNTANT": return <Navigate to="/accountant" replace />;
+        case "PARENT": return <Navigate to="/parent" replace />;
         default: return <Navigate to="/login" replace />;
     }
 };
@@ -333,6 +336,9 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
+              {/* Parent Routes */}
+              <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
+
               <Route path="/accountant/announcements" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
