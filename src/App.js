@@ -136,8 +136,11 @@ const RoleBasedRedirect = ({ targetPath }) => {
 
     const userRoleName = user.role?.replace('ROLE_', '').toLowerCase();
 
+    // Override targetPath per role if needed (e.g., manager uses 'account' instead of 'edit-profile')
+    const overrides = { manager: { 'edit-profile': 'account' } };
+    const mappedPath = overrides[userRoleName]?.[targetPath] ?? targetPath;
     // Construct the role-specific path
-    const finalPath = `/${userRoleName}/${targetPath}`;
+    const finalPath = `/${userRoleName}/${mappedPath}`;
 
     return <Navigate to={finalPath} replace />;
 };
@@ -322,7 +325,9 @@ function App() {
               <Route path="/manager/messages" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/communications" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
-              <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              <Route path="/manager/account" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              {/* Backward-compatible redirect: old manager profile path */}
+              <Route path="/manager/edit-profile" element={<Navigate to="/manager/account" replace />} />
               <Route path="/manager/explanation-reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ExplanationReports /></ProtectedRoute>} />
               <Route path="/manager/teacher-attendance-status" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeacherAttendanceStatus /></ProtectedRoute>} />
               <Route path="/manager/daily-shift-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><DailyShiftAttendance /></ProtectedRoute>} />
@@ -333,6 +338,7 @@ function App() {
               <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
               <Route path="/manager/enrollment-requests" element={<ProtectedRoute allowedRoles={["MANAGER"]}><EnrollmentRequestsManager /></ProtectedRoute>} />
               <Route path="/manager/attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><AttendanceModule /></ProtectedRoute>} />
+              <Route path="/manager/contracts" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ContractManagement /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
@@ -343,7 +349,6 @@ function App() {
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
 
-              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
               <Route path="/accountant/attendance" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AttendanceModule /></ProtectedRoute>} />
               

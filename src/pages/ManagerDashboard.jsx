@@ -142,6 +142,17 @@ export default function ManagerDashboard() {
             Quản lý khóa học
           </button>
         </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Quản lý Hợp đồng</h2>
+          <p className="text-gray-600">Tạo và quản lý hợp đồng lao động</p>
+          <button 
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/contracts')}
+          >
+            Quản lý hợp đồng
+          </button>
+        </div>
         
         {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý lịch học</h2>
@@ -203,7 +214,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và chỉnh sửa thông tin cá nhân của bạn</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/profile')}
+            onClick={() => navigate('/manager/account')}
           >
             Thông tin cá nhân
           </button>

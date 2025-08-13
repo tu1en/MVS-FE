@@ -7,6 +7,7 @@ import { ROLE } from '../constants/constants';
 import api from '../services/api'; // Added import for api
 import { syncFromLocalStorage } from '../store/slices/authSlice';
 import { isUserLoggedIn, performLogout } from '../utils/authUtils';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * NavigationBar component that provides sidebar navigation based on user role
@@ -15,6 +16,7 @@ import { isUserLoggedIn, performLogout } from '../utils/authUtils';
 function NavigationBar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { logout: ctxLogout } = useAuth();
   
   // Get auth state from Redux store instead of directly from localStorage
   const { isLogin, role: reduxRole } = useSelector((state) => state.auth);
@@ -177,6 +179,8 @@ function NavigationBar() {
   } md:translate-x-0`;
 
   const handleLogout = () => {
+    // Clear AuthContext immediately to avoid flicker
+    ctxLogout();
     // Sử dụng function logout chung
     performLogout(dispatch, navigate, signOut, auth);
   };
