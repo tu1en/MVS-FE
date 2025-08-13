@@ -333,6 +333,7 @@ function App() {
               <Route path="/manager/recruitment" element={<ProtectedRoute allowedRoles={["MANAGER"]}><RecruitmentManagement /></ProtectedRoute>} />
               <Route path="/manager/enrollment-requests" element={<ProtectedRoute allowedRoles={["MANAGER"]}><EnrollmentRequestsManager /></ProtectedRoute>} />
               <Route path="/manager/attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><AttendanceModule /></ProtectedRoute>} />
+              <Route path="/manager/contracts" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ContractManagement /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
@@ -343,7 +344,6 @@ function App() {
               <Route path="/accountant/leave-requests" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantLeaveRequest /></ProtectedRoute>} />
               <Route path="/accountant/explanation-request" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantExplanationRequest /></ProtectedRoute>} />
 
-              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               <Route path="/accountant/payroll" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><PayrollManagement /></ProtectedRoute>} />
               <Route path="/accountant/attendance" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AttendanceModule /></ProtectedRoute>} />
               
