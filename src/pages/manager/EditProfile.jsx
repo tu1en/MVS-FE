@@ -15,7 +15,9 @@ const EditProfile = () => {
   const fetchProfile = async () => {
     try {
       const data = await managerService.getProfile();
-      form.setFieldsValue({ ...data });
+      // Normalize in case backend returns username instead of managerId
+      const normalized = { ...data, managerId: data?.managerId || data?.username };
+      form.setFieldsValue(normalized);
     } catch (error) {
       console.error('Error fetching profile:', error);
       message.error('Không thể tải thông tin cá nhân');
@@ -44,6 +46,13 @@ const EditProfile = () => {
           onFinish={onFinish}
           className="max-w-xl mx-auto"
         >
+          <Form.Item
+            name="managerId"
+            label="Tên tài khoản"
+          >
+            <Input disabled />
+          </Form.Item>
+
           <Form.Item
             name="fullName"
             label="Họ và Tên"
@@ -86,19 +95,11 @@ const EditProfile = () => {
           </Form.Item>
 
           <Form.Item
-            name="managerId"
-            label="Mã Quản Lý"
-            rules={[{ required: true }]}
-          >
-            <Input disabled />
-          </Form.Item>
-
-          <Form.Item
             name="department"
             label="Phòng/Ban"
             rules={[{ required: true, message: 'Vui lòng nhập phòng/ban' }]}
           >
-            <Input />
+            <Input disabled />
           </Form.Item>
 
           <Form.Item

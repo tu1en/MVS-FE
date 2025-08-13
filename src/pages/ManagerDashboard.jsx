@@ -203,7 +203,7 @@ export default function ManagerDashboard() {
           <p className="text-gray-600">Xem và chỉnh sửa thông tin cá nhân của bạn</p>
           <button 
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            onClick={() => navigate('/manager/profile')}
+            onClick={() => navigate('/manager/account')}
           >
             Thông tin cá nhân
           </button>
