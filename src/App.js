@@ -136,8 +136,11 @@ const RoleBasedRedirect = ({ targetPath }) => {
 
     const userRoleName = user.role?.replace('ROLE_', '').toLowerCase();
 
+    // Override targetPath per role if needed (e.g., manager uses 'account' instead of 'edit-profile')
+    const overrides = { manager: { 'edit-profile': 'account' } };
+    const mappedPath = overrides[userRoleName]?.[targetPath] ?? targetPath;
     // Construct the role-specific path
-    const finalPath = `/${userRoleName}/${targetPath}`;
+    const finalPath = `/${userRoleName}/${mappedPath}`;
 
     return <Navigate to={finalPath} replace />;
 };
@@ -323,6 +326,8 @@ function App() {
               <Route path="/manager/communications" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerMessages /></ProtectedRoute>} />
               <Route path="/manager/reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerReports /></ProtectedRoute>} />
               <Route path="/manager/account" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerEditProfile /></ProtectedRoute>} />
+              {/* Backward-compatible redirect: old manager profile path */}
+              <Route path="/manager/edit-profile" element={<Navigate to="/manager/account" replace />} />
               <Route path="/manager/explanation-reports" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ExplanationReports /></ProtectedRoute>} />
               <Route path="/manager/teacher-attendance-status" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeacherAttendanceStatus /></ProtectedRoute>} />
               <Route path="/manager/daily-shift-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><DailyShiftAttendance /></ProtectedRoute>} />
