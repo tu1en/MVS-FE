@@ -15,8 +15,8 @@ import RegisterModal from './RegisterModal';
 function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { logout: ctxLogout } = useAuth();
-  const { isLogin, user } = useSelector((state) => state.auth);
+  const { logout: ctxLogout, user: authUser } = useAuth();
+  const { isLogin } = useSelector((state) => state.auth);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const settingsMenuRef = useRef(null);
@@ -96,7 +96,7 @@ function Header() {
         </div>
         
         {/* Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-xl mx-4">
+        {/* <div className="hidden md:flex flex-1 max-w-xl mx-4">
           <div className="relative w-full">
             <input 
               type="text" 
@@ -105,7 +105,7 @@ function Header() {
             />
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
           </div>
-        </div>
+        </div> */}
         
         {/* User Actions */}
         <div className="flex items-center space-x-4">
@@ -120,13 +120,13 @@ function Header() {
                   className="flex items-center space-x-2 hover:bg-gray-100 rounded-full p-1 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white overflow-hidden">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    {authUser?.avatar ? (
+                      <img src={authUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <span>{user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}</span>
+                      <span>{authUser?.username?.charAt(0) || authUser?.name?.charAt(0) || authUser?.email?.charAt(0) || 'U'}</span>
                     )}
                   </div>
-                  <span className="hidden md:inline font-medium">{user?.name || 'Người dùng'}</span>
+                  <span className="hidden md:inline font-medium">{authUser?.username || authUser?.name || authUser?.email || 'Người dùng'}</span>
                   <svg className={`w-4 h-4 transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>

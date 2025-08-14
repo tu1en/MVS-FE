@@ -29,7 +29,7 @@ import {
 import axiosInstance from '../../config/axiosInstance';
 import moment from 'moment';
 import './ContractManagement.css';
-import WorkingScheduleFields from '../../components/WorkingScheduleFields';
+
 import ContractPDFGenerator from '../../utils/ContractPDFGenerator';
 
 const { TabPane } = Tabs;
@@ -62,10 +62,13 @@ const ContractManagement = () => {
     // Try strict known formats first
     const formats = ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601];
     const m = moment(value, formats, true);
-    if (m.isValid()) return m;
+    if (m.isValid()) {
+      return m.isAfter(moment(), 'day') ? null : m;
+    }
     // Fallback loose parse
     const m2 = moment(value);
-    return m2.isValid() ? m2 : null;
+    if (!m2.isValid() || m2.isAfter(moment(), 'day')) return null;
+    return m2;
   };
 
   // Fetch data khi component mount
@@ -151,18 +154,6 @@ const ContractManagement = () => {
       hasNet,
       hasGrossOrNet
     });
-    if (!values.startDate) {
-      message.error('Vui lòng chọn ngày bắt đầu!');
-      return;
-    }
-    if (values.endDate && values.endDate.isBefore(values.startDate, 'day')) {
-      message.error('Ngày kết thúc không được trước ngày bắt đầu!');
-      return;
-    }
-    if (values.endDate && values.endDate.isBefore(moment(), 'day')) {
-      message.error('Ngày kết thúc không được là ngày trong quá khứ!');
-      return;
-    }
     
     try {
       // Generate userId if not provided (for manual contract creation)
@@ -210,8 +201,6 @@ const ContractManagement = () => {
         contractType: values.contractType || 'STAFF',
         salary: finalSalary, // Main salary field for compatibility
         workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : moment().add(2, 'years').format('YYYY-MM-DD'),
         status: values.status || 'ACTIVE',
         contractTerms: values.contractTerms || 'Điều khoản hợp đồng chuẩn',
         comments: values.comments || 'Hợp đồng được tạo từ ứng viên đã duyệt',
@@ -245,15 +234,9 @@ const ContractManagement = () => {
 
   // Xử lý cập nhật hợp đồng
   const handleUpdateContract = async (values) => {
-    if (values.endDate && values.endDate.isBefore(values.startDate, 'day')) {
-      message.error('Ngày kết thúc không được trước ngày bắt đầu!');
-      return;
-    }
     try {
       const contractData = {
         ...values,
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
         birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
         citizenId: values.cccd || values.citizenId || '',
         // Format working schedule fields for backend
@@ -264,9 +247,9 @@ const ContractManagement = () => {
 
       await axiosInstance.put(`/contracts/${editingContract.id}`, contractData);
       message.success('Cập nhật hợp đồng thành công!');
-      setModalVisible(false);
+      setEditModalVisible(false);
       setEditingContract(null);
-      form.resetFields();
+      editForm.resetFields();
       fetchContracts();
     } catch (error) {
       console.error('Error updating contract:', error);
@@ -318,8 +301,6 @@ const ContractManagement = () => {
       qualification: record.qualification,
       subject: record.subject,
       educationLevel: record.educationLevel,
-      startDate: parseToMoment(record.startDate),
-      endDate: parseToMoment(record.endDate),
       status: record.status,
       contractTerms: record.contractTerms,
       evaluation: record.evaluation,
@@ -469,17 +450,6 @@ const ContractManagement = () => {
     return Promise.resolve();
   };
 
-  // Hàm validate ngày bắt đầu: không được ở quá khứ
-  const validateStartDate = (_, value) => {
-    if (!value) {
-      return Promise.reject(new Error('Vui lòng chọn ngày bắt đầu'));
-    }
-    if (value.isBefore(moment(), 'day')) {
-      return Promise.reject(new Error('Ngày bắt đầu không được ở quá khứ!'));
-    }
-    return Promise.resolve();
-  };
-
   // Xem hợp đồng dước dạng PDF
   const handleViewContractPDF = (contract) => {
     try {
@@ -527,12 +497,6 @@ const ContractManagement = () => {
       dataIndex: 'salary',
       key: 'salary',
       render: (salary) => salary ? `${salary.toLocaleString()} VNĐ` : 'Chưa xác định'
-    },
-    {
-      title: 'Ngày bắt đầu',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      render: (date) => date ? moment(date).format('DD/MM/YYYY') : 'N/A'
     },
     {
       title: 'Trạng thái',
@@ -786,7 +750,6 @@ const ContractManagement = () => {
               style={{ width: '100%' }} 
               format="DD/MM/YYYY" 
               placeholder="Chọn ngày sinh" 
-              disabledDate={(current) => current && moment(current?.toDate ? current.toDate() : current).isAfter(moment().endOf('day'))} 
             />
           </Form.Item>
 
@@ -926,26 +889,6 @@ const ContractManagement = () => {
           {/* Salary fields - only show in edit mode and read-only, based on contract type */}
           {editingContract && (
             <>
-              {/* For Teacher Contracts: Show only Hourly Salary */}
-              {(editingContract.contractType === 'TEACHER' || 
-                editingContract.position?.toLowerCase().includes('giáo viên')) && 
-                editingContract.hourlySalary && (
-                <Form.Item name="hourlySalary" label="Lương theo giờ">
-                  <InputNumber
-                    style={{ 
-                      width: '100%',
-                      backgroundColor: '#f5f5f5',
-                      color: '#666',
-                      cursor: 'not-allowed'
-                    }}
-                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                    readOnly
-                    disabled
-                  />
-                </Form.Item>
-              )}
-              
               {/* For Staff Contracts: Show Gross and Net Salary */}
               {(editingContract.contractType === 'STAFF' || 
                 !editingContract.position?.toLowerCase().includes('giáo viên')) && (
@@ -986,58 +929,6 @@ const ContractManagement = () => {
               )}
             </>
           )}
-
-          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[
-            { required: true, message: 'Vui lòng chọn ngày bắt đầu!' },
-            () => ({
-              validator(_, value) {
-                if (!value) return Promise.resolve();
-                if (moment(value).isBefore(moment().startOf('day'), 'day')) {
-                  return Promise.reject(new Error('Ngày bắt đầu không được là ngày trong quá khứ!'));
-                }
-                return Promise.resolve();
-              }
-            })
-          ]}>
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              disabledDate={(current) => current && moment(current?.toDate ? current.toDate() : current).isBefore(moment().startOf('day'), 'day')} 
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="endDate" 
-            label="Ngày kết thúc"
-            dependencies={['startDate']}
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const start = getFieldValue('startDate');
-                  if (!value || !start) return Promise.resolve();
-                  if (moment(value?.toDate ? value.toDate() : value).isSameOrBefore(moment(start?.toDate ? start.toDate() : start), 'day')) {
-                    return Promise.reject(new Error('Ngày kết thúc phải sau Ngày bắt đầu!'));
-                  }
-                  return Promise.resolve();
-                }
-              })
-            ]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              disabled={!editForm?.getFieldValue || !editForm.getFieldValue('startDate')}
-              disabledDate={(current) => {
-                const start = editForm?.getFieldValue ? editForm.getFieldValue('startDate') : null;
-                if (!start) return true; // require selecting start date first
-                const startM = moment(start?.toDate ? start.toDate() : start).startOf('day');
-                const curM = moment.isMoment(current) ? current.clone().startOf('day') : moment(current?.toDate ? current.toDate() : current).startOf('day');
-                if (!startM.isValid() || !curM.isValid()) return true;
-                return !curM.isAfter(startM);
-              }}
-            />
-          </Form.Item>
-          {/* removed contractTerms per request */}
 
           <Form.Item>
             <Space>
@@ -1098,7 +989,11 @@ const ContractManagement = () => {
               { validator: validateBirthDate }
             ]}
           > 
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày sinh" disabledDate={(current) => current && current > moment().endOf('day')} />
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày sinh" 
+            />
           </Form.Item>
 
           <Form.Item name="email" label="Email">
@@ -1300,60 +1195,6 @@ const ContractManagement = () => {
               </>
             );
           })()}
-
-          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[
-            { required: true, message: 'Vui lòng chọn ngày bắt đầu!' },
-            () => ({
-              validator(_, value) {
-                if (!value) return Promise.resolve();
-                if (moment(value?.toDate ? value.toDate() : value).isBefore(moment().startOf('day'), 'day')) {
-                  return Promise.reject(new Error('Ngày bắt đầu không được là ngày trong quá khứ!'));
-                }
-                return Promise.resolve();
-              }
-            })
-          ]}>
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              disabledDate={(current) => {
-                if (!current) return false;
-                const curM = moment(current?.toDate ? current.toDate() : current).startOf('day');
-                return curM.isBefore(moment().startOf('day'));
-              }} 
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="endDate" 
-            label="Ngày kết thúc"
-            dependencies={['startDate']}
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const start = getFieldValue('startDate');
-                  if (!value || !start) return Promise.resolve();
-                  if (moment(value?.toDate ? value.toDate() : value).isSameOrBefore(moment(start?.toDate ? start.toDate() : start), 'day')) {
-                    return Promise.reject(new Error('Ngày kết thúc phải sau Ngày bắt đầu!'));
-                  }
-                  return Promise.resolve();
-                }
-              })
-            ]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="DD/MM/YYYY" 
-              disabledDate={(current) => {
-                const start = candidateForm?.getFieldValue ? candidateForm.getFieldValue('startDate') : null;
-                if (!start) return true; // require selecting start date first
-                const startM = moment(start?.toDate ? start.toDate() : start).startOf('day');
-                const curM = moment.isMoment(current) ? current.clone().startOf('day') : moment(current?.toDate ? current.toDate() : current).startOf('day');
-                if (!startM.isValid() || !curM.isValid()) return true;
-                return !curM.isAfter(startM);
-              }}
-            />
-          </Form.Item>
 
           <Form.Item>
             <Space>

@@ -672,11 +672,11 @@ function CommunicationPage() {
     const currentUserId = parseInt(userId) || (userRole === '1' ? 101 : userRole === '2' ? 201 : 301);
     const recipientId = conversation.participants.find(id => id !== currentUserId);
     const recipient = users.find(user => user.id === recipientId);
-    return recipient ? recipient.fullName || recipient.name || 'Người dùng' : 'Người dùng';
+    return recipient ? recipient.username || recipient.fullName || recipient.name || 'Người dùng' : 'Người dùng';
   };
 
   const getUserById = (userId) => {
-    return users.find(user => user.id === userId) || { fullName: 'Người dùng', name: 'Người dùng', avatar: null };
+    return users.find(user => user.id === userId) || { username: 'Người dùng', fullName: 'Người dùng', name: 'Người dùng', avatar: null };
   };
 
   const filteredConversations = conversations.filter(conv => {
@@ -813,7 +813,7 @@ function CommunicationPage() {
               }}>
                 <div style={{ marginBottom: '4px' }}>
                   <Text strong style={{ color: isCurrentUser ? 'white' : 'rgba(0, 0, 0, 0.85)' }}>
-                    {isCurrentUser ? 'Bạn' : sender.fullName || sender.name || 'Người dùng'}
+                    {isCurrentUser ? 'Bạn' : sender.username || sender.fullName || sender.name || 'Người dùng'}
                   </Text>
                 </div>
                 <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
@@ -903,7 +903,7 @@ function CommunicationPage() {
           >
             {recipientOptions.map(user => (
               <Option key={user.id} value={user.id}>
-                {user.fullName || user.name || 'Người dùng'} ({user.role === '1' ? 'Học sinh' : user.role === '2' ? 'Giảng viên' : 'Quản lý'})
+                {user.username || user.fullName || user.name || 'Người dùng'} ({user.role === '1' ? 'Học sinh' : user.role === '2' ? 'Giảng viên' : 'Quản lý'})
               </Option>
             ))}
           </Select>

@@ -19,7 +19,7 @@ const login = async (username, password) => {
     role: normalizedRole,
     id: data.userId,
     email: data.email || username,
-    username: username,
+    username: data.username || username,
   };
   } catch (error) {
     if (error.response && error.response.data) {
@@ -54,8 +54,8 @@ const googleLogin = async (idToken, user) => {
         token: data.token,
         role: normalizedRole,
         id: data.userId,
-        email: user.email,
-        username: user.email
+        email: data.email || user.email,
+        username: data.username || user.email
     };
   } catch (error) {
     if (error.response && error.response.data) {
@@ -85,4 +85,4 @@ const authService = {
   changePassword
 };
 
-export default authService; 
+export default authService;

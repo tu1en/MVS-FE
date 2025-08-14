@@ -48,9 +48,10 @@ const BlogPages = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   
-  const { user, isLogin } = useSelector((state) => state.auth);
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
-  const isAuthenticated = !!user;
+  const { user, isLogin, role: roleFromState } = useSelector((state) => state.auth);
+  const computedRole = (roleFromState || user?.role || localStorage.getItem('role') || '').toString().toUpperCase();
+  const isAdmin = computedRole === 'ADMIN' || computedRole === 'ROLE_ADMIN';
+  const isAuthenticated = isLogin === true || !!localStorage.getItem('token');
 
   useEffect(() => {
     fetchPublishedBlogs();
@@ -62,8 +63,8 @@ const BlogPages = () => {
       const data = await blogService.getAllBlogs();
       setBlogs(data);
     } catch (error) {
-      console.error("Error fetching all blogs:", error);
-      message.error("Failed to fetch blogs");
+      console.error("Lỗi tải danh sách tin tức:", error);
+      message.error("Không thể tải danh sách tin tức");
     } finally {
       setLoading(false);
     }
@@ -75,8 +76,8 @@ const BlogPages = () => {
       const data = await blogService.getPublishedBlogs();
       setBlogs(data);
     } catch (error) {
-      console.error("Error fetching published blogs:", error);
-      message.error("Failed to fetch published blogs");
+      console.error("Lỗi tải tin tức:", error);
+      message.error("Không thể tải tin tức");
     } finally {
       setLoading(false);
     }
@@ -95,8 +96,8 @@ const BlogPages = () => {
       const data = await blogService.searchBlogs(searchKeyword);
       setBlogs(data);
     } catch (error) {
-      console.error("Error searching blogs:", error);
-      message.error("Failed to search blogs");
+      console.error("Lỗi tìm kiếm tin tức:", error);
+      message.error("Không thể tìm kiếm tin tức");
     } finally {
       setLoading(false);
     }
@@ -108,8 +109,8 @@ const BlogPages = () => {
   };
 
   const handleCreateBlog = () => {
-    if (!isAuthenticated) {
-      message.warning("Please log in to create a blog");
+    if (!isAuthenticated || !isAdmin) {
+      message.warning("Chỉ quản trị viên mới được tạo tin tức");
       return;
     }
     form.resetFields();
@@ -133,11 +134,11 @@ const BlogPages = () => {
   const handleDeleteBlog = async (blogId) => {
     try {
       await blogService.deleteBlog(blogId);
-      message.success("Blog deleted successfully");
+      message.success("Xoá tin tức thành công");
       fetchPublishedBlogs();
     } catch (error) {
-      console.error("Error deleting blog:", error);
-      message.error("Failed to delete blog");
+      console.error("Lỗi xoá tin tức:", error);
+      message.error("Xoá tin tức thất bại");
     }
   };
 
@@ -145,39 +146,39 @@ const BlogPages = () => {
     try {
       if (isPublished) {
         await blogService.unpublishBlog(blogId);
-        message.success("Blog unpublished successfully");
+        message.success("Gỡ đăng tin tức thành công");
       } else {
         await blogService.publishBlog(blogId);
-        message.success("Blog published successfully");
+        message.success("Đăng tin tức thành công");
       }
       fetchPublishedBlogs();
     } catch (error) {
-      console.error("Error changing blog publish status:", error);
-      message.error("Failed to change blog publish status");
+      console.error("Lỗi thay đổi trạng thái đăng:", error);
+      message.error("Không thể thay đổi trạng thái đăng");
     }
   };
 
   const submitCreateBlog = async (values) => {
     try {
       await blogService.createBlog(values);
-      message.success("Blog created successfully");
+      message.success("Tạo tin tức thành công");
       setCreateModalVisible(false);
       fetchPublishedBlogs();
     } catch (error) {
-      console.error("Error creating blog:", error);
-      message.error("Failed to create blog");
+      console.error("Lỗi tạo tin tức:", error);
+      message.error("Tạo tin tức thất bại");
     }
   };
 
   const submitEditBlog = async (values) => {
     try {
       await blogService.updateBlog(selectedBlog.id, values);
-      message.success("Blog updated successfully");
+      message.success("Cập nhật tin tức thành công");
       setEditModalVisible(false);
       fetchPublishedBlogs();
     } catch (error) {
-      console.error("Error updating blog:", error);
-      message.error("Failed to update blog");
+      console.error("Lỗi cập nhật tin tức:", error);
+      message.error("Cập nhật tin tức thất bại");
     }
   };
 
@@ -201,6 +202,7 @@ const BlogPages = () => {
       <Col xs={24} sm={12} md={8} lg={8} key={blog.id} style={{ marginBottom: 16 }}>
         <Card
           hoverable
+          onClick={() => handleViewBlog(blog)}
           cover={
             blog.thumbnailUrl ? (
               <img 
@@ -210,33 +212,33 @@ const BlogPages = () => {
               />
             ) : (
               <div style={{ height: 200, background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                <Text type="secondary">No thumbnail</Text>
+                <Text type="secondary">Không có ảnh bìa</Text>
               </div>
             )
           }
           actions={[
-            <Tooltip title="View">
+             <Tooltip title="Xem">
               <EyeOutlined key="view" onClick={() => handleViewBlog(blog)} />
             </Tooltip>,
                          isAdmin && (
-               <Tooltip title="Edit">
+               <Tooltip title="Sửa">
                  <EditOutlined key="edit" onClick={() => handleEditBlog(blog)} />
                </Tooltip>
              ),
              isAdmin && (
-               <Tooltip title="Delete">
+               <Tooltip title="Xoá">
                  <DeleteOutlined key="delete" onClick={() => handleDeleteBlog(blog.id)} />
                </Tooltip>
              ),
           ].filter(Boolean)}
                      extra={
              isAdmin && (
-               <Button 
+              <Button 
                  type={blog.isPublished ? "default" : "primary"} 
                  size="small"
                  onClick={() => handlePublishBlog(blog.id, blog.isPublished)}
                >
-                 {blog.isPublished ? "Unpublish" : "Publish"}
+                {blog.isPublished ? "Gỡ đăng" : "Đăng"}
                </Button>
              )
            }
@@ -248,13 +250,13 @@ const BlogPages = () => {
                 <Paragraph ellipsis={{ rows: 2 }}>
                   {blog.description}
                 </Paragraph>
-                {renderTags(blog.tags)}
+                {isAdmin && renderTags(blog.tags)}
                                  <div style={{ marginTop: 8 }}>
                    <Space>
                      {blog.isPublished && blog.publishedDate && (
-                       <Tooltip title="Published Date">
+                        <Tooltip title="Ngày đăng">
                          <Text type="secondary">
-                           <CalendarOutlined /> {new Date(blog.publishedDate).toLocaleDateString()}
+                            <CalendarOutlined /> {new Date(blog.publishedDate).toLocaleDateString('vi-VN')}
                          </Text>
                        </Tooltip>
                      )}
@@ -274,17 +276,24 @@ const BlogPages = () => {
     <div className="flex min-h-screen bg-gray-50">
       {isLogin && <NavigationBar />}
       <div className="flex-1 p-6">
-        <Title level={2} className="mb-6">Tin Tức</Title>
-        {/* Only show Create Blog for admin */}
-        {isAdmin && (
-          <Button type="primary" icon={<PlusOutlined />} className="mb-4" onClick={() => setCreateModalVisible(true)}>
-            Tạo Blog Mới
-          </Button>
-        )}
-        {/* Blog Management for admin */}
+        <Title level={2} className="mb-6">Tin tức</Title>
         {isAdmin && (
           <div className="mb-8">
-            <Title level={4}>Quản Lý Blog</Title>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <Space>
+                <Input
+                  placeholder="Tìm tin tức..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onPressEnter={handleSearch}
+                  suffix={<SearchOutlined onClick={handleSearch} style={{ cursor: "pointer" }} />}
+                  style={{ width: 250 }}
+                />
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateBlog}>
+                  Tạo Tin Tức
+                </Button>
+              </Space>
+            </div>
             <Table
               dataSource={blogs}
               rowKey="id"
@@ -312,24 +321,20 @@ const BlogPages = () => {
         )}
         {/* Blog list for all users */}
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-            <Space>
-              <Input
-                placeholder="Tìm tin tức..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                onPressEnter={handleSearch}
-                suffix={<SearchOutlined onClick={handleSearch} style={{ cursor: "pointer" }} />}
-                style={{ width: 250 }}
-              />
-              {/* Only show Create Blog for admin */}
-              {isAdmin && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateBlog}>
-                  Create Blog
-                </Button>
-              )}
-            </Space>
-          </div>
+          {!isAdmin && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <Space>
+                <Input
+                  placeholder="Tìm tin tức..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onPressEnter={handleSearch}
+                  suffix={<SearchOutlined onClick={handleSearch} style={{ cursor: "pointer" }} />}
+                  style={{ width: 250 }}
+                />
+              </Space>
+            </div>
+          )}
           
 
 
@@ -341,8 +346,8 @@ const BlogPages = () => {
             <Row gutter={[16, 16]}>
               {blogs.length > 0 ? renderBlogCards() : (
                 <Col span={24}>
-                  <div style={{ textAlign: "center", padding: "50px 0" }}>
-                    <Text type="secondary">No blogs found</Text>
+                   <div style={{ textAlign: "center", padding: "50px 0" }}>
+                     <Text type="secondary">Không có tin tức</Text>
                   </div>
                 </Col>
               )}
@@ -353,7 +358,7 @@ const BlogPages = () => {
 
       {/* View Blog Modal - Anyone can view details */}
       <Modal
-        title={selectedBlog?.title}
+         title={selectedBlog?.title}
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
         footer={null}
@@ -361,10 +366,10 @@ const BlogPages = () => {
       >
         {selectedBlog && (
           <div>
-            {selectedBlog.imageUrl && (
+            {(selectedBlog.imageUrl || selectedBlog.thumbnailUrl) && (
               <div style={{ marginBottom: 16 }}>
                 <Image
-                  src={selectedBlog.imageUrl}
+                  src={selectedBlog.imageUrl || selectedBlog.thumbnailUrl}
                   alt={selectedBlog.title}
                   style={{ maxWidth: "100%", maxHeight: 400 }}
                 />
@@ -374,6 +379,10 @@ const BlogPages = () => {
             <Paragraph style={{ whiteSpace: "pre-line" }}>
               {selectedBlog.description}
             </Paragraph>
+
+            {selectedBlog.content && (
+              <div style={{ marginTop: 8 }} dangerouslySetInnerHTML={{ __html: selectedBlog.content }} />
+            )}
             
             {selectedBlog.videoUrl && (
               <div style={{ marginTop: 16 }}>
@@ -390,20 +399,23 @@ const BlogPages = () => {
               </div>
             )}
             
-            <Divider />
-            
-            {renderTags(selectedBlog.tags)}
+            {isAdmin && selectedBlog.tags && (
+              <>
+                <Divider />
+                {renderTags(selectedBlog.tags)}
+              </>
+            )}
             
                          <div style={{ marginTop: 16 }}>
                <Space>
                  {selectedBlog.isPublished && selectedBlog.publishedDate && (
-                   <Text type="secondary">
-                     <CalendarOutlined /> Published: {new Date(selectedBlog.publishedDate).toLocaleString()}
+                    <Text type="secondary">
+                      <CalendarOutlined /> Ngày đăng: {new Date(selectedBlog.publishedDate).toLocaleString('vi-VN')}
                    </Text>
                  )}
                  <Text type="secondary">
-                   Status: <Tag color={selectedBlog.isPublished ? "green" : "orange"}>
-                     {selectedBlog.isPublished ? "Published" : "Draft"}
+                    Trạng thái: <Tag color={selectedBlog.isPublished ? "green" : "orange"}>
+                      {selectedBlog.isPublished ? "Đã đăng" : "Bản nháp"}
                    </Tag>
                  </Text>
                </Space>
@@ -421,7 +433,7 @@ const BlogPages = () => {
                       handleEditBlog(selectedBlog);
                     }}
                   >
-                    Edit
+                     Sửa
                   </Button>
                   <Button 
                     danger 
@@ -431,7 +443,7 @@ const BlogPages = () => {
                       handleDeleteBlog(selectedBlog.id);
                     }}
                   >
-                    Delete
+                     Xoá
                   </Button>
                 </Space>
               </div>
@@ -442,7 +454,7 @@ const BlogPages = () => {
 
       {/* Create Blog Modal - Only for authenticated users */}
       <Modal
-        title="Create New Blog"
+         title="Tạo tin tức mới"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         footer={null}
@@ -454,45 +466,45 @@ const BlogPages = () => {
         >
           <Form.Item
             name="title"
-            label="Title"
-            rules={[{ required: true, message: "Please enter a title" }]}
+             label="Tiêu đề"
+             rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
           >
             <Input />
           </Form.Item>
           
           <Form.Item
             name="description"
-            label="Description"
+             label="Mô tả"
           >
             <TextArea rows={6} />
           </Form.Item>
           
           <Form.Item
             name="imageUrl"
-            label="Image URL"
+             label="Ảnh URL"
           >
             <Input placeholder="https://example.com/image.jpg" />
           </Form.Item>
           
           <Form.Item
             name="videoUrl"
-            label="Video URL"
+             label="Video URL"
           >
             <Input placeholder="https://example.com/video" />
           </Form.Item>
           
           <Form.Item
             name="thumbnailUrl"
-            label="Thumbnail URL"
+             label="Ảnh bìa URL"
           >
             <Input placeholder="https://example.com/thumbnail.jpg" />
           </Form.Item>
           
           <Form.Item
             name="tags"
-            label="Tags"
-          >
-            <Input placeholder="Enter tags separated by commas" />
+             label="Thẻ (tags)"
+           >
+             <Input placeholder="Nhập các thẻ, cách nhau bằng dấu phẩy" />
           </Form.Item>
           
           <Form.Item
@@ -500,8 +512,8 @@ const BlogPages = () => {
             initialValue={false}
             valuePropName="checked"
           >
-            <Button type="primary" htmlType="submit">
-              Create Blog
+             <Button type="primary" htmlType="submit">
+               Tạo tin tức
             </Button>
           </Form.Item>
         </Form>
@@ -509,7 +521,7 @@ const BlogPages = () => {
 
       {/* Edit Blog Modal - Only for managers or author */}
       <Modal
-        title="Edit Blog"
+         title="Chỉnh sửa tin tức"
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         footer={null}
@@ -521,50 +533,50 @@ const BlogPages = () => {
         >
           <Form.Item
             name="title"
-            label="Title"
-            rules={[{ required: true, message: "Please enter a title" }]}
+             label="Tiêu đề"
+             rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
           >
             <Input />
           </Form.Item>
           
           <Form.Item
             name="description"
-            label="Description"
+             label="Mô tả"
           >
             <TextArea rows={6} />
           </Form.Item>
           
           <Form.Item
             name="imageUrl"
-            label="Image URL"
+             label="Ảnh URL"
           >
             <Input placeholder="https://example.com/image.jpg" />
           </Form.Item>
           
           <Form.Item
             name="videoUrl"
-            label="Video URL"
+             label="Video URL"
           >
             <Input placeholder="https://example.com/video" />
           </Form.Item>
           
           <Form.Item
             name="thumbnailUrl"
-            label="Thumbnail URL"
+             label="Ảnh bìa URL"
           >
             <Input placeholder="https://example.com/thumbnail.jpg" />
           </Form.Item>
           
           <Form.Item
             name="tags"
-            label="Tags"
-          >
-            <Input placeholder="Enter tags separated by commas" />
+             label="Thẻ (tags)"
+           >
+             <Input placeholder="Nhập các thẻ, cách nhau bằng dấu phẩy" />
           </Form.Item>
           
           <Form.Item>
             <Button type="primary" htmlType="submit">
-              Update Blog
+              Cập nhật tin tức
             </Button>
           </Form.Item>
         </Form>
