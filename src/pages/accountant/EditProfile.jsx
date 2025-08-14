@@ -1,7 +1,7 @@
 import { Button, Card, Form, Input, message, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { managerService } from '../../services/managerService';
+import accountantService from '../../services/accountantService';
 import { validateEmail, validatePhoneNumber } from '../../utils/validation';
 
 const EditProfile = () => {
@@ -15,9 +15,9 @@ const EditProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const data = await managerService.getProfile();
-      // Normalize in case backend returns username instead of managerId
-      const normalized = { ...data, managerId: data?.managerId || data?.username };
+      const data = await accountantService.getProfile();
+      // Normalize in case backend returns username instead of accountantId
+      const normalized = { ...data, accountantId: data?.accountantId || data?.username };
       // Map birthDate (YYYY-MM-DD) to dayjs for DatePicker
       if (normalized.birthDate) {
         try {
@@ -44,7 +44,7 @@ const EditProfile = () => {
         birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
         birthYear: values.birthDate ? values.birthDate.year() : null
       };
-      await managerService.updateProfile(payload);
+      await accountantService.updateProfile(payload);
       message.success('Cập nhật thông tin thành công');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -56,7 +56,7 @@ const EditProfile = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Card title="Chỉnh Sửa Thông Tin Quản Lý" className="max-w-2xl mx-auto">
+      <Card title="Chỉnh Sửa Thông Tin Kế Toán" className="max-w-2xl mx-auto">
         <Form
           form={form}
           layout="vertical"
@@ -64,7 +64,7 @@ const EditProfile = () => {
           className="max-w-xl mx-auto"
         >
           <Form.Item
-            name="managerId"
+            name="accountantId"
             label="Tên tài khoản"
           >
             <Input disabled />

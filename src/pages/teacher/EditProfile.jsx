@@ -55,11 +55,6 @@ const EditProfile = () => {
             content: 'Đang sử dụng dữ liệu đã lưu (không có kết nối mạng)',
             duration: 4
           });
-        } else {
-          message.success({
-            content: 'Đã tải thông tin từ server thành công',
-            duration: 2
-          });
         }
       } else {
         // If profile fetch fails, still set default values and allow form usage
