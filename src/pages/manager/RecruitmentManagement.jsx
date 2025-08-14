@@ -241,6 +241,7 @@ const RecruitmentManagement = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [editingInterview, setEditingInterview] = useState(null);
   const [offerForm] = Form.useForm();
+  const [positionForm] = Form.useForm();
   const [offers, setOffers] = useState([]);
   const [dependentsByInterview, setDependentsByInterview] = useState({});
   const [showSalaryDetailsModal, setShowSalaryDetailsModal] = useState(false);
@@ -251,6 +252,9 @@ const RecruitmentManagement = () => {
   const [evaluatingInterview, setEvaluatingInterview] = useState(null);
   const [evaluationDraft, setEvaluationDraft] = useState('');
   const evaluationSaveTimerRef = useRef(null);
+
+  // Theo dõi thay đổi contractType trong form vị trí để cập nhật đơn vị tiền tệ linh hoạt
+  const watchedContractType = Form.useWatch('contractType', positionForm);
 
   useEffect(() => {
     fetchPlans();
@@ -431,11 +435,21 @@ const RecruitmentManagement = () => {
 
   const openAddPosition = () => {
     setEditingPosition(null);
+    positionForm.resetFields();
+    positionForm.setFieldsValue({ contractType: 'FULL_TIME', title: '', description: '', salaryRange: '', quantity: 1 });
     setShowPositionModal(true);
   };
 
   const openEditPosition = (record) => {
     setEditingPosition(record);
+    // Đổ dữ liệu vào form khi sửa
+    positionForm.setFieldsValue({
+      title: record.title,
+      description: record.description,
+      contractType: record.contractType || 'FULL_TIME',
+      salaryRange: (record.salaryRange ?? '').toString(),
+      quantity: record.quantity || 1
+    });
     setShowPositionModal(true);
   };
 
@@ -843,7 +857,19 @@ const RecruitmentManagement = () => {
     },
     { title: 'Vị trí', dataIndex: 'title', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Mô tả', dataIndex: 'description', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Mức lương', dataIndex: 'salaryRange', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Mức lương', 
+      dataIndex: 'salaryRange', 
+      render: (text, record) => {
+        const ct = record?.contractType || 'FULL_TIME';
+        if (!text) return <span className="vietnamese-text">-</span>;
+        if (ct === 'PART_TIME') {
+          const vnd = Number(text || 0);
+          return <span className="vietnamese-text">{vnd.toLocaleString('vi-VN')} VNĐ/giờ</span>;
+        }
+        return <span className="vietnamese-text">{`${text} triệu`}</span>;
+      }
+    },
     { title: 'Số lượng', dataIndex: 'quantity', render: (text) => <span className="vietnamese-text">{text}</span> },
     {
       title: 'Thao tác',
@@ -1467,7 +1493,7 @@ const RecruitmentManagement = () => {
         footer={null}
         className="form-vietnamese"
       >
-        <Form layout="vertical" onFinish={handlePositionSubmit} className="form-vietnamese">
+        <Form layout="vertical" form={positionForm} onFinish={handlePositionSubmit} className="form-vietnamese">
           <Form.Item name="title" label="Tên vị trí" rules={[{ required: true, message: 'Vui lòng nhập tên vị trí' }, { max: 50, message: 'Vị trí tối đa 50 ký tự!' }]}>
             <Input className="vietnamese-text" maxLength={50} />
           </Form.Item>
@@ -1476,8 +1502,8 @@ const RecruitmentManagement = () => {
           </Form.Item>
           <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
             <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
-              <Select.Option value="FULL_TIME">Hợp đồng full-time</Select.Option>
-              <Select.Option value="PART_TIME">Hợp đồng có kỳ hạn</Select.Option>
+              <Select.Option value="FULL_TIME">Hợp đồng chính thức (Cho các nhân viên khác)</Select.Option>
+              <Select.Option value="PART_TIME">Hợp đồng mùa vụ (Cho giáo viên)</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
@@ -1486,10 +1512,10 @@ const RecruitmentManagement = () => {
               maxLength={50}
               onChange={(e) => {
                 const onlyDigits = e.target.value.replace(/[^0-9]/g, '').slice(0, 50);
-                form?.setFieldsValue ? form.setFieldsValue({ salaryRange: onlyDigits }) : (e.target.value = onlyDigits);
+                positionForm.setFieldsValue({ salaryRange: onlyDigits });
               }}
-              addonAfter={editingPosition?.contractType === 'PART_TIME' ? 'VNĐ/giờ' : 'triệu'}
-              placeholder={editingPosition?.contractType === 'PART_TIME' ? 'Ví dụ: 500000' : 'Ví dụ: 15'}
+              addonAfter={watchedContractType === 'PART_TIME' ? 'VNĐ/giờ' : 'triệu'}
+              placeholder={watchedContractType === 'PART_TIME' ? 'Ví dụ: 500000' : 'Ví dụ: 15'}
             />
           </Form.Item>
           <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>    

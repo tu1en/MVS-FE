@@ -136,19 +136,16 @@ export const performLogout = async (dispatch, navigate, signOut = null, auth = n
     
     // 4. Navigate to login page
     if (navigate) {
-      navigate('/');
+      navigate('/login', { replace: true });
     }
-    
-    // 5. Reload page to ensure clean state
-    window.location.reload();
+    // Do not force reload; rely on state updates for smooth UX
     
   } catch (error) {
     console.error('Lỗi khi đăng xuất:', error);
     // Even if there's an error, still clear data and redirect
     if (navigate) {
-      navigate('/');
+      navigate('/login', { replace: true });
     }
-    window.location.reload();
   }
 };
 

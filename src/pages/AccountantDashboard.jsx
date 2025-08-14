@@ -1,12 +1,11 @@
 import {
     CalendarOutlined,
-    ContainerOutlined,
     DollarOutlined,
     FileTextOutlined,
     FolderOpenOutlined,
-    StopOutlined,
     UserOutlined
 } from '@ant-design/icons';
+
 import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -38,12 +37,6 @@ const AccountantDashboard = () => {
     approvedAbsences: 0,
     annualLeaveBalance: 0
   });
-  const [contractStats, setContractStats] = useState({
-    totalContracts: 0,
-    activeContracts: 0,
-    terminatedContracts: 0,
-    contractsExpiringSoon: 0
-  });
 
   useEffect(() => {
     const role = localStorage.getItem('role');
@@ -63,13 +56,6 @@ const AccountantDashboard = () => {
           });
           setLeaveStats(statsResponse.data.leaveStats || {});
         }
-
-        try {
-          const contractStatsResponse = await api.get('/contracts/stats');
-          setContractStats(contractStatsResponse.data || {});
-        } catch (error) {
-          console.error('Error fetching contract stats:', error);
-        }
       } catch (error) {
         message.error('Không thể tải dữ liệu dashboard');
       } finally {
@@ -87,42 +73,6 @@ const AccountantDashboard = () => {
   return (
     <div style={{ padding: 24 }}>
       <Title level={2}>Bảng Điều Khiển Kế Toán</Title>
-
-      {/* Quản lý hợp đồng */}
-      <Title level={3}>Quản lý Hợp đồng</Title>
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Tổng số hợp đồng" value={contractStats.totalContracts ?? 0} prefix={<FileTextOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Đang hoạt động" value={contractStats.activeContracts ?? 0} prefix={<UserOutlined />} valueStyle={{ color: '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Đã chấm dứt" value={contractStats.terminatedContracts ?? 0} prefix={<StopOutlined />} valueStyle={{ color: '#ff4d4f' }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card loading={loading}>
-            <Statistic title="Sắp hết hạn (30 ngày)" value={contractStats.contractsExpiringSoon ?? 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#faad14' }} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Card hoverable title="Quản lý Hợp đồng" bordered={false} style={{ textAlign: 'center' }} onClick={() => handleCardClick('/accountant/contracts')}>
-            <ContainerOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <div>Tạo và quản lý hợp đồng lao động</div>
-          </Card>
-        </Col>
-      </Row>
-
-      <Divider />
 
       {/* Quản lý nghỉ phép */}
       <Title level={3}>Quản lý Nghỉ phép</Title>

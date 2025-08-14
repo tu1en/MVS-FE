@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { syncFromLocalStorage } from '../store/slices/authSlice';
 import { performLogout } from '../utils/authUtils';
+import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
 import RegisterModal from './RegisterModal';
 
@@ -14,6 +15,7 @@ import RegisterModal from './RegisterModal';
 function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { logout: ctxLogout } = useAuth();
   const { isLogin, user } = useSelector((state) => state.auth);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -43,6 +45,8 @@ function Header() {
 
   const handleLogout = () => {
     // Sử dụng function logout chung
+    // Clear AuthContext immediately to avoid flicker
+    ctxLogout();
     performLogout(dispatch, navigate);
     setShowSettingsMenu(false);
   };
