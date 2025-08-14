@@ -200,8 +200,8 @@ class ContractPDFGenerator {
     const address = this.getValue(contract.address);
     const qualification = this.getValue(contract.qualification);
     const position = this.getValue(contract.position);
-    const startDate = contract.startDate ? moment(contract.startDate).format('DD/MM/YYYY') : 'N/A';
-    const endDate = contract.endDate ? moment(contract.endDate).format('DD/MM/YYYY') : 'N/A';
+    const startDate = this.formatDate(contract.startDate);
+    const endDate = this.formatDate(contract.endDate);
     const netSalary = contract.netSalary ? contract.netSalary.toLocaleString('vi-VN') : 
                      (contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A');
     // Get contract ID - prioritize contractId field from backend
@@ -369,9 +369,18 @@ class ContractPDFGenerator {
     yPosition += 10;
     doc.text(`- Lớp học: ${terms.classLevel}`, 40, yPosition);
     yPosition += 10;
-    doc.text(`- Thời gian giảng dạy: Từ ${terms.startDate} đến ${terms.endDate}`, 40, yPosition);
-    yPosition += 10;
-    
+    const hasStart = terms.startDate && terms.startDate !== 'N/A';
+    const hasEnd = terms.endDate && terms.endDate !== 'N/A';
+    if (hasStart && hasEnd) {
+      doc.text(`- Thời gian giảng dạy: Từ ${terms.startDate} đến ${terms.endDate}`, 40, yPosition);
+      yPosition += 10;
+    } else if (hasStart) {
+      doc.text(`- Thời gian giảng dạy: Từ ngày ${terms.startDate}`, 40, yPosition);
+      yPosition += 10;
+    } else if (hasEnd) {
+      doc.text(`- Thời gian giảng dạy: Đến ngày ${terms.endDate}`, 40, yPosition);
+      yPosition += 10;
+    }
     // Add working schedule information if available
     if (terms.workSchedule && terms.workSchedule !== 'N/A') {
       doc.text(`- Thời gian làm việc: ${terms.workSchedule}`, 40, yPosition);
@@ -421,8 +430,18 @@ class ContractPDFGenerator {
     doc.setFontSize(12);
     doc.text('- Loại hợp đồng lao động: Có kỳ hạn.', 30, yPosition);
     yPosition += 10;
-    doc.text(`- Thời hạn hợp đồng: Từ ${clauseData.startDate} đến ${clauseData.endDate}`, 30, yPosition);
-    yPosition += 10;
+    const hasStart = clauseData.startDate && clauseData.startDate !== 'N/A';
+    const hasEnd = clauseData.endDate && clauseData.endDate !== 'N/A';
+    if (hasStart && hasEnd) {
+      doc.text(`- Thời hạn hợp đồng: Từ ${clauseData.startDate} đến ${clauseData.endDate}`, 30, yPosition);
+      yPosition += 10;
+    } else if (hasStart) {
+      doc.text(`- Thời hạn hợp đồng: Từ ngày ${clauseData.startDate}`, 30, yPosition);
+      yPosition += 10;
+    } else if (hasEnd) {
+      doc.text(`- Thời hạn hợp đồng: Đến ngày ${clauseData.endDate}`, 30, yPosition);
+      yPosition += 10;
+    }
     doc.text('- Thời gian làm việc của bên B: 8 giờ/ngày.', 30, yPosition);
     yPosition += 10;
     // Wrap equipment text
@@ -813,8 +832,18 @@ class ContractPDFGenerator {
     doc.text('- Loại hợp đồng lao động (3): Xác định thời hạn', 30, yPosition);
     yPosition += 10;
     
-    doc.text(`Từ ngày ${terms.startDate} đến ${terms.endDate}`, 30, yPosition);
-    yPosition += 10;
+    const hasStart = terms.startDate && terms.startDate !== 'N/A';
+    const hasEnd = terms.endDate && terms.endDate !== 'N/A';
+    if (hasStart && hasEnd) {
+      doc.text(`Từ ngày ${terms.startDate} đến ${terms.endDate}`, 30, yPosition);
+      yPosition += 10;
+    } else if (hasStart) {
+      doc.text(`Từ ngày ${terms.startDate}`, 30, yPosition);
+      yPosition += 10;
+    } else if (hasEnd) {
+      doc.text(`Đến ngày ${terms.endDate}`, 30, yPosition);
+      yPosition += 10;
+    }
     
     const workplaceText = doc.splitTextToSize('- Địa điểm làm việc (4): Trung tâm bồi dưỡng kiến thức Minh Việt', 160);
     doc.text(workplaceText, 30, yPosition);
@@ -997,7 +1026,11 @@ class ContractPDFGenerator {
     doc.text(termination2Text, 30, yPosition);
     yPosition += termination2Text.length * 7;
     
-    const effectiveText = doc.splitTextToSize(`- Hợp đồng lao động được làm thành 02 bản có giá trị ngang nhau, mỗi bên giữ một bản và có hiệu lực từ ngày ${startDate}. Khi hai bên ký kết phụ lục hợp đồng lao động thì nội dung của phụ lục hợp đồng lao động cũng có giá trị như các nội dung của bản hợp đồng lao động này.`, 160);
+    const hasStart = startDate && startDate !== 'N/A';
+    const effectiveSentence = hasStart
+      ? `- Hợp đồng lao động được làm thành 02 bản có giá trị ngang nhau, mỗi bên giữ một bản và có hiệu lực từ ngày ${startDate}. Khi hai bên ký kết phụ lục hợp đồng lao động thì nội dung của phụ lục hợp đồng lao động cũng có giá trị như các nội dung của bản hợp đồng lao động này.`
+      : '- Hợp đồng lao động được làm thành 02 bản có giá trị ngang nhau, mỗi bên giữ một bản và có hiệu lực kể từ ngày ký. Khi hai bên ký kết phụ lục hợp đồng lao động thì nội dung của phụ lục hợp đồng lao động cũng có giá trị như các nội dung của bản hợp đồng lao động này.';
+    const effectiveText = doc.splitTextToSize(effectiveSentence, 160);
     doc.text(effectiveText, 30, yPosition);
     yPosition += effectiveText.length * 7;
     
