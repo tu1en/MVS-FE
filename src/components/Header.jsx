@@ -96,7 +96,7 @@ function Header() {
         </div>
         
         {/* Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-xl mx-4">
+        {/* <div className="hidden md:flex flex-1 max-w-xl mx-4">
           <div className="relative w-full">
             <input 
               type="text" 
@@ -105,7 +105,7 @@ function Header() {
             />
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
           </div>
-        </div>
+        </div> */}
         
         {/* User Actions */}
         <div className="flex items-center space-x-4">
