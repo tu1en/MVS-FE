@@ -424,7 +424,7 @@ function MessagingPage() {
   // Helper function để lấy tên giáo viên từ id
   const getTeacherName = (teacherId) => {
     const teacher = teachers.find(t => t.id === teacherId);
-    return teacher ? teacher.fullName || teacher.username : `Giáo viên #${teacherId}`;
+    return teacher ? (teacher.username || teacher.fullName || `Giáo viên #${teacherId}`) : `Giáo viên #${teacherId}`;
   };
 
   const renderMessages = () => (
@@ -576,7 +576,7 @@ function MessagingPage() {
         >
           {teachers.map(teacher => (
             <Option key={teacher.id} value={teacher.id}>
-              {teacher.fullName || teacher.username}
+              {teacher.username || teacher.fullName}
             </Option>
           ))}
         </Select>
