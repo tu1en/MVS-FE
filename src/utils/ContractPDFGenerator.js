@@ -121,8 +121,9 @@ class ContractPDFGenerator {
     const qualification = this.getValue(contract.qualification);
     const subject = this.getValue(contract.subject || contract.position);
     const classLevel = this.getValue(contract.classLevel || contract.educationLevel || contract.level);
-    const startDate = this.formatDate(contract.startDate);
-    const endDate = this.formatDate(contract.endDate);
+    // Contract dates removed from model - use default values
+    const startDate = 'N/A'; // this.formatDate(contract.startDate);
+    const endDate = 'N/A'; // this.formatDate(contract.endDate);
     const salary = contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A';
     const contractType = 'Giáo viên';
     const department = this.getValue(contract.department);
@@ -200,8 +201,9 @@ class ContractPDFGenerator {
     const address = this.getValue(contract.address);
     const qualification = this.getValue(contract.qualification);
     const position = this.getValue(contract.position);
-    const startDate = this.formatDate(contract.startDate);
-    const endDate = this.formatDate(contract.endDate);
+    // Contract dates removed from model - use default values
+    const startDate = 'N/A'; // this.formatDate(contract.startDate);
+    const endDate = 'N/A'; // this.formatDate(contract.endDate);
     const netSalary = contract.netSalary ? contract.netSalary.toLocaleString('vi-VN') : 
                      (contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A');
     // Get contract ID - prioritize contractId field from backend
