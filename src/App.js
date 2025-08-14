@@ -118,6 +118,7 @@ import TeachingAssistantDashboard from './pages/TeachingAssistantDashboard.jsx';
 import TeachingAssistantDashboardPage from './pages/TeachingAssistantDashboardPage.jsx';
 
 import AccountantAnnouncementsPage from './pages/accountant/AccountantAnnouncementsPage';
+import AccountantEditProfile from './pages/accountant/EditProfile.jsx';
 import AccountantExplanationRequest from './pages/accountant/AccountantExplanationRequest';
 import AccountantLeaveRequest from './pages/accountant/AccountantLeaveRequest';
 
@@ -153,7 +154,7 @@ const RoleBasedRedirect = ({ targetPath }) => {
     const userRoleName = user.role?.replace('ROLE_', '').toLowerCase();
 
     // Override targetPath per role if needed (e.g., manager uses 'account' instead of 'edit-profile')
-    const overrides = { manager: { 'edit-profile': 'account' } };
+    const overrides = { manager: { 'edit-profile': 'account' }, accountant: { 'edit-profile': 'account' } };
     const mappedPath = overrides[userRoleName]?.[targetPath] ?? targetPath;
     // Construct the role-specific path
     const finalPath = `/${userRoleName}/${mappedPath}`;
@@ -386,6 +387,8 @@ function App() {
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
+              <Route path="/accountant/account" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
+              <Route path="/accountant/edit-profile" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
 

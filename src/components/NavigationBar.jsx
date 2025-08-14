@@ -567,8 +567,7 @@ function NavigationBar() {
     {
       category: "Điểm danh",
       items: [
-        { name: 'Giải trình vi phạm', path: '/accountant/attendance-explanations', icon: '📝' },
-        // { name: 'Xem trạng thái giải trình', path: '/accountant/explanation-status', icon: '📊' }
+        { name: 'Giải trình vi phạm', path: '/accountant/attendance-explanations', icon: '📝' }
       ]
     },
     {
@@ -583,8 +582,13 @@ function NavigationBar() {
       category: "Nghỉ phép",
       items: [
         { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' },
-        { name: 'Yêu Cầu Giải Trình', path: '/accountant/explanation-request', icon: '📝' },
-
+        { name: 'Yêu Cầu Giải Trình', path: '/accountant/explanation-request', icon: '📝' }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        { name: 'Tài Khoản', path: '/accountant/account', icon: '👤' }
       ]
     }
   ];

@@ -151,6 +151,35 @@ const accountantService = {
       console.error('Error fetching financial reports:', error);
       throw error;
     }
+  },
+
+  /**
+   * Get accountant profile
+   * @returns {Promise<Object>} Accountant profile data
+   */
+  getProfile: async () => {
+    try {
+      const response = await apiClient.get('/accountant/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching accountant profile:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update accountant profile
+   * @param {Object} profileData - Profile data
+   * @returns {Promise<Object>} Updated profile
+   */
+  updateProfile: async (profileData) => {
+    try {
+      const response = await apiClient.put('/accountant/profile', profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating accountant profile:', error);
+      throw error;
+    }
   }
 };
 
