@@ -295,40 +295,29 @@ const ParentSchedule = () => {
 
     try {
       // Create iCal content
-      let icalContent = 'BEGIN:VCALENDAR
-';
-      icalContent += 'VERSION:2.0
-';
-      icalContent += 'PRODID:-//MVS School//MVS Calendar//EN
-';
-      icalContent += 'CALSCALE:GREGORIAN
-';
-      icalContent += 'METHOD:PUBLISH
-';
+      let icalContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MVS School//MVS Calendar//EN
+`;
+      icalContent += `CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
       
       // Add schedule events
       scheduleData.forEach((event, index) => {
         const startDateTime = moment(`${event.date} ${event.startTime}`, 'YYYY-MM-DD HH:mm');
         const endDateTime = moment(`${event.date} ${event.endTime}`, 'YYYY-MM-DD HH:mm');
         
-        icalContent += 'BEGIN:VEVENT
-';
-        icalContent += `UID:schedule-${event.id || index}@mvs-school.edu.vn
+        icalContent += `BEGIN:VEVENT
 `;
-        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z
-`;
-        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z
-`;
-        icalContent += `SUMMARY:${event.title || event.subject}
-`;
-        icalContent += `DESCRIPTION:Môn học: ${event.subject}\nGiáo viên: ${event.teacher || 'N/A'}\nPhòng: ${event.classroom || 'N/A'}
-`;
-        icalContent += `LOCATION:${event.classroom || ''}
-`;
-        icalContent += `CATEGORIES:EDUCATION,CLASS
-`;
-        icalContent += 'END:VEVENT
-';
+        icalContent += `UID:schedule-${event.id || index}@mvs-school.edu.vn\n`;
+        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
+        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
+        icalContent += `SUMMARY:${event.title || event.subject}\n`;
+        icalContent += `DESCRIPTION:Môn học: ${event.subject}\\nGiáo viên: ${event.teacher || 'N/A'}\\nPhòng: ${event.classroom || 'N/A'}\n`;
+        icalContent += `LOCATION:${event.classroom || ''}\n`;
+        icalContent += `CATEGORIES:EDUCATION,CLASS\n`;
+        icalContent += `END:VEVENT\n`;
       });
       
       // Add exam events
@@ -336,35 +325,26 @@ const ParentSchedule = () => {
         const startDateTime = moment(`${exam.examDate} ${exam.examTime}`, 'YYYY-MM-DD HH:mm');
         const endDateTime = startDateTime.clone().add(exam.duration || 90, 'minutes');
         
-        icalContent += 'BEGIN:VEVENT
-';
-        icalContent += `UID:exam-${exam.id || index}@mvs-school.edu.vn
+        icalContent += `BEGIN:VEVENT
 `;
-        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z
-`;
-        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z
-`;
-        icalContent += `SUMMARY:Kiểm tra ${exam.examName || exam.subject}
-`;
-        icalContent += `DESCRIPTION:Bài kiểm tra: ${exam.examName}\nMôn: ${exam.subject}\nPhòng: ${exam.classroom || 'N/A'}\nLưu ý: ${exam.description || 'Chuẩn bị tốt cho bài kiểm tra'}
-`;
-        icalContent += `LOCATION:${exam.classroom || ''}
-`;
-        icalContent += `CATEGORIES:EDUCATION,EXAM
-`;
-        icalContent += 'END:VEVENT
-';
+        icalContent += `UID:exam-${exam.id || index}@mvs-school.edu.vn\n`;
+        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
+        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
+        icalContent += `SUMMARY:Kiểm tra ${exam.examName || exam.subject}\n`;
+        icalContent += `DESCRIPTION:Bài kiểm tra: ${exam.examName}\\nMôn: ${exam.subject}\\nPhòng: ${exam.classroom || 'N/A'}\\nLưu ý: ${exam.description || 'Chuẩn bị tốt cho bài kiểm tra'}\n`;
+        icalContent += `LOCATION:${exam.classroom || ''}\n`;
+        icalContent += `CATEGORIES:EDUCATION,EXAM\n`;
+        icalContent += `END:VEVENT\n`;
       });
       
-      icalContent += 'END:VCALENDAR
-';
+      icalContent += `END:VCALENDAR\n`;
       
       // Download the file
       const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `lich_hoc_${selectedChild?.studentName}_${moment().format('YYYY_MM')}.ics`);
+      link.setAttribute('download', `lich_hoc_${selectedChild?.student?.fullName}_${moment().format('YYYY_MM')}.ics`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -504,7 +484,7 @@ const ParentSchedule = () => {
               >
                 {children.map(child => (
                   <Option key={child.studentId} value={child.studentId}>
-                    {child.studentName}
+                    {child.student?.fullName}
                   </Option>
                 ))}
               </Select>
@@ -543,7 +523,7 @@ const ParentSchedule = () => {
           {/* Calendar */}
           <Col xs={24} lg={16}>
             <Card 
-              title={`Lịch học của ${selectedChild.studentName}`}
+              title={`Lịch học của ${selectedChild.student?.fullName}`}
               loading={loading}
             >
               <Calendar

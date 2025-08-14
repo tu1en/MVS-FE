@@ -78,6 +78,7 @@ import ParentBilling from "./pages/parent/Billing.jsx";
 import ParentLeaveNotice from "./pages/parent/LeaveNotice.jsx";
 import ParentMessages from "./pages/parent/Messages.jsx";
 import ParentSchedule from "./pages/parent/Schedule.jsx";
+import ParentChildren from "./pages/parent/Children.jsx";
 
 // Student Pages
 import AccountList from "./pages/AccountList.jsx";
@@ -342,6 +343,7 @@ function App() {
               <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentMessages /></ProtectedRoute>} />
               <Route path="/parent/schedule" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentSchedule /></ProtectedRoute>} />
               <Route path="/parent/billing" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentBilling /></ProtectedRoute>} />
+              <Route path="/parent/children" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentChildren /></ProtectedRoute>} />
               
               {/* Admin and Manager stubs */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedRoute>} />

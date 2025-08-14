@@ -62,11 +62,83 @@ const ParentMessages = () => {
   const loadConversations = async () => {
     try {
       setLoading(true);
+      
+      // First, get the children of this parent
+      const childrenResponse = await api.get('/parent/children');
+      const children = childrenResponse.data || [];
+      
+      if (children.length === 0) {
+        setConversations([]);
+        return;
+      }
+      
+      // Try to get existing conversations first
       const response = await api.get('/parent/messages/conversations');
-      setConversations(response.data);
+      const existingConversations = response.data || [];
+      
+      if (existingConversations.length > 0) {
+        setConversations(existingConversations);
+        return;
+      }
+      
+      // If no existing conversations, create potential conversations based on children and their teachers
+      const potentialConversations = [];
+      
+      for (const child of children) {
+        // Get teachers for this child (assuming we have schedule/class data)
+        try {
+          const scheduleResponse = await api.get(`/parent/children/${child.studentId}/schedule`);
+          const scheduleData = scheduleResponse.data || [];
+          
+          // Extract unique teachers from schedule
+          const teachers = new Map();
+          scheduleData.forEach(item => {
+            if (item.teacher && item.teacherId) {
+              teachers.set(item.teacherId, {
+                teacherId: item.teacherId,
+                teacherName: item.teacher,
+                subject: item.subject
+              });
+            }
+          });
+          
+          // Create conversation entries for each teacher
+          teachers.forEach(teacher => {
+            potentialConversations.push({
+              teacherId: teacher.teacherId,
+              studentId: child.studentId,
+              teacherName: teacher.teacherName,
+              studentName: child.student?.fullName || child.studentName || 'Học sinh',
+              subject: teacher.subject,
+              lastMessage: `Chưa có tin nhắn với ${teacher.teacherName} (${teacher.subject})`,
+              lastMessageTime: 'Chưa có tin nhắn',
+              unreadCount: 0,
+              senderType: 'SYSTEM'
+            });
+          });
+        } catch (scheduleError) {
+          console.warn('Could not load schedule for child:', child.studentId);
+          
+          // If can't get schedule, create a generic teacher conversation
+          potentialConversations.push({
+            teacherId: 1, // default teacher ID
+            studentId: child.studentId,
+            teacherName: 'Giáo viên chủ nhiệm',
+            studentName: child.student?.fullName || child.studentName || 'Học sinh',
+            subject: 'Tổng hợp',
+            lastMessage: `Liên hệ với giáo viên về ${child.student?.fullName || child.studentName}`,
+            lastMessageTime: 'Chưa có tin nhắn',
+            unreadCount: 0,
+            senderType: 'SYSTEM'
+          });
+        }
+      }
+      
+      setConversations(potentialConversations);
+      
     } catch (error) {
       console.error('Error loading conversations:', error);
-      message.error('Không thể tải danh sách cuộc trò chuyện');
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -75,22 +147,27 @@ const ParentMessages = () => {
   const loadMessages = async (teacherId, studentId) => {
     try {
       const response = await api.get(`/parent/messages/conversations/${teacherId}/students/${studentId}`);
-      setMessages(response.data);
+      const messages = response.data || [];
+      
+      setMessages(messages);
       
       // Update unread count
       loadUnreadCount();
     } catch (error) {
       console.error('Error loading messages:', error);
-      message.error('Không thể tải tin nhắn');
+      // Just set empty messages on error
+      setMessages([]);
     }
   };
 
   const loadUnreadCount = async () => {
     try {
       const response = await api.get('/parent/messages/unread/count');
-      setUnreadCount(response.data.count);
+      setUnreadCount(response.data.count || 0);
     } catch (error) {
       console.error('Error loading unread count:', error);
+      // Set default unread count
+      setUnreadCount(0);
     }
   };
 

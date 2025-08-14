@@ -912,6 +912,79 @@ class ApiService {
   }
 }
 
+// Parent API service for parent-specific endpoints
+export const parentAPI = {
+  /**
+   * Get child schedule/class sessions
+   * @param {number} childId - The ID of the child
+   * @param {string} startDate - Start date in YYYY-MM-DD format
+   * @param {string} endDate - End date in YYYY-MM-DD format
+   * @returns {Promise} Class sessions data
+   */
+  getChildSchedule: async (childId, startDate, endDate) => {
+    try {
+      const response = await apiClient.get(`/parent/children/${childId}/schedule`, {
+        params: { startDate, endDate }
+      });
+      return response;
+    } catch (error) {
+      console.error('Error fetching child schedule:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get parent's children
+   * @returns {Promise} Children data
+   */
+  getChildren: async () => {
+    try {
+      const response = await apiClient.get('/parent/children');
+      return response;
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create leave notice for child
+   * @param {number} childId - The ID of the child
+   * @param {Object} noticeData - The leave notice data
+   * @returns {Promise} Created notice data
+   */
+  createLeaveNotice: async (childId, noticeData) => {
+    try {
+      const response = await apiClient.post(`/parent/children/${childId}/leave-notices`, noticeData);
+      return response;
+    } catch (error) {
+      console.error('Error creating leave notice:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get leave notices for child
+   * @param {number} childId - The ID of the child
+   * @param {string} from - Start date (optional)
+   * @param {string} to - End date (optional)
+   * @returns {Promise} Leave notices data
+   */
+  getLeaveNotices: async (childId, from = null, to = null) => {
+    try {
+      const params = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      
+      const response = await apiClient.get(`/parent/children/${childId}/leave-notices`, { params });
+      return response;
+    } catch (error) {
+      console.error('Error fetching leave notices:', error);
+      throw error;
+    }
+  }
+};
+
 // Export both the direct API methods and the ApiService class
 export { ApiService };
 export default api;

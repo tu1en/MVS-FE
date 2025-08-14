@@ -106,6 +106,10 @@ export default function LoginScreen() {
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
           navigate('/teaching-assistant');
           break;
+        case ROLE.PARENT:
+          console.log(`Navigating to PARENT dashboard...`);
+          navigate('/parent');
+          break;
         default:
           console.warn('Unknown role after login:', userData.role);
           navigate('/');
@@ -190,6 +194,10 @@ export default function LoginScreen() {
         case ROLE.TEACHING_ASSISTANT:
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
           navigate('/teaching-assistant');
+          break;
+        case ROLE.PARENT:
+          console.log(`Navigating to PARENT dashboard...`);
+          navigate('/parent');
           break;
         default:
           navigate('/');

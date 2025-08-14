@@ -18,7 +18,9 @@ import {
   message,
   Tag,
   Divider,
-  Empty
+  Empty,
+  Table,
+  Space
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -32,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ChildSwitcher from '../../components/parent/ChildSwitcher';
+import { parentAPI } from '../../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -51,6 +54,12 @@ const LeaveNotice = () => {
   const [leaveNotices, setLeaveNotices] = useState([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState(null);
+  
+  // Class sessions state
+  const [classSessions, setClassSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [dateRange, setDateRange] = useState([dayjs(), dayjs().add(7, 'days')]);
+  const { RangePicker } = DatePicker;
 
   // Mock data
   useEffect(() => {
@@ -103,6 +112,34 @@ const LeaveNotice = () => {
       setSelectedChildId(mockChildren[0].id);
     }
   }, []);
+
+  // Fetch class sessions for selected child
+  const fetchClassSessions = async (childId, startDate, endDate) => {
+    if (!childId || !startDate || !endDate) return;
+    
+    try {
+      setSessionsLoading(true);
+      const response = await parentAPI.getChildSchedule(childId, startDate, endDate);
+      setClassSessions(response.data || []);
+    } catch (error) {
+      console.error('Error fetching class sessions:', error);
+      message.error('Không thể tải lịch học');
+      setClassSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // Load class sessions when child or date range changes
+  useEffect(() => {
+    if (selectedChildId && dateRange?.[0] && dateRange?.[1]) {
+      fetchClassSessions(
+        selectedChildId,
+        dateRange[0].format('YYYY-MM-DD'),
+        dateRange[1].format('YYYY-MM-DD')
+      );
+    }
+  }, [selectedChildId, dateRange]);
 
   const reasonOptions = [
     { value: 'SICK', label: 'Ốm đau', color: 'red' },
@@ -203,6 +240,56 @@ const LeaveNotice = () => {
     !selectedChildId || notice.studentId === selectedChildId
   );
 
+  // Class sessions table columns
+  const sessionsColumns = [
+    {
+      title: 'Ngày',
+      dataIndex: 'date',
+      key: 'date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      sorter: (a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf(),
+    },
+    {
+      title: 'Thời gian',
+      key: 'time',
+      render: (_, record) => (
+        <Space>
+          <Tag color="blue">{record.startTime}</Tag>
+          <span>-</span>
+          <Tag color="blue">{record.endTime}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: 'Môn học',
+      dataIndex: 'subject',
+      key: 'subject',
+      render: (subject) => <Tag color="green">{subject || 'Chưa xác định'}</Tag>,
+    },
+    {
+      title: 'Phòng học',
+      dataIndex: 'classroom',
+      key: 'classroom',
+      render: (classroom) => <Text>{classroom || 'Chưa xác định'}</Text>,
+    },
+    {
+      title: 'Giáo viên',
+      dataIndex: 'teacher',
+      key: 'teacher',
+      render: (teacher) => <Text>{teacher || 'Chưa xác định'}</Text>,
+    },
+    {
+      title: 'Loại',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type) => (
+        <Tag color={type === 'class' ? 'blue' : 'orange'}>
+          {type === 'class' ? 'Lớp học' : 'Bài tập'}
+        </Tag>
+      ),
+    },
+  ];
+
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>
@@ -219,6 +306,46 @@ const LeaveNotice = () => {
         selectedChildId={selectedChildId}
         onChildChange={setSelectedChildId}
       />
+
+      {/* Class Sessions Section */}
+      <Card 
+        title={
+          <Space>
+            <CalendarOutlined />
+            <span>Lịch học hiện tại</span>
+          </Space>
+        }
+        style={{ marginTop: '24px' }}
+        extra={
+          <Space>
+            <Text>Chọn khoảng thời gian:</Text>
+            <RangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              format="DD/MM/YYYY"
+              placeholder={['Từ ngày', 'Đến ngày']}
+              allowClear={false}
+            />
+          </Space>
+        }
+      >
+        <Table
+          columns={sessionsColumns}
+          dataSource={classSessions}
+          loading={sessionsLoading}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `Tổng ${total} buổi học`,
+          }}
+          locale={{
+            emptyText: selectedChildId ? 'Không có buổi học nào trong khoảng thời gian này' : 'Vui lòng chọn con em để xem lịch học'
+          }}
+          scroll={{ x: 800 }}
+        />
+      </Card>
 
       <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
         {/* Create Notice Form */}

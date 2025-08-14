@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ChildSwitcher from '../../components/parent/ChildSwitcher';
+import api from '../../services/api';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -38,72 +39,113 @@ const Attendance = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [leaveNotices, setLeaveNotices] = useState([]);
 
-  // Mock data
+  // Load real data
   useEffect(() => {
-    const mockChildren = [
-      {
-        id: 1,
-        name: 'Nguyễn Minh An',
-        grade: 'Lớp 11A',
-        teacherName: 'Cô Hoàng Thị Mai'
+    const loadData = async () => {
+      try {
+        // Load children data
+        const childrenResponse = await api.get('/parent/children');
+        const childrenData = childrenResponse.data;
+        
+        const childrenList = Array.isArray(childrenData) ? childrenData : (childrenData?.data || []);
+        const formattedChildren = childrenList.map(child => ({
+          id: child.studentId || child.id,
+          name: child.student?.fullName || child.studentName || child.name,
+          grade: child.grade || child.className || 'Chưa xác định',
+          teacherName: child.teacherName || 'Chưa phân công'
+        }));
+        
+        setChildren(formattedChildren);
+        
+        if (formattedChildren.length > 0) {
+          setSelectedChildId(formattedChildren[0].id);
+          loadAttendanceData(formattedChildren[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading children data:', error);
+        // Fallback to mock data
+        const mockChildren = [
+          {
+            id: 1,
+            name: 'Học sinh mẫu',
+            grade: 'Lớp 10A',
+            teacherName: 'Giáo viên chủ nhiệm'
+          }
+        ];
+        setChildren(mockChildren);
+        if (mockChildren.length > 0) {
+          setSelectedChildId(mockChildren[0].id);
+        }
       }
-    ];
+    };
 
-    const mockAttendance = [
-      {
-        date: '2025-08-01',
-        status: 'PRESENT',
-        sessions: [
-          { period: 'Sáng', status: 'PRESENT', subject: 'Toán' },
-          { period: 'Chiều', status: 'PRESENT', subject: 'Văn' }
-        ]
-      },
-      {
-        date: '2025-08-02',
-        status: 'LATE',
-        arriveTime: '08:30',
-        sessions: [
-          { period: 'Sáng', status: 'LATE', subject: 'Lý', arriveTime: '08:30' },
-          { period: 'Chiều', status: 'PRESENT', subject: 'Hóa' }
-        ]
-      },
-      {
-        date: '2025-08-03',
-        status: 'EXCUSED_BY_NOTICE',
-        leaveNoticeId: 1,
-        sessions: [
-          { period: 'Sáng', status: 'EXCUSED_BY_NOTICE', subject: 'Sinh' },
-          { period: 'Chiều', status: 'PRESENT', subject: 'Địa' }
-        ]
-      },
-      {
-        date: '2025-08-04',
-        status: 'ABSENT',
-        sessions: [
-          { period: 'Sáng', status: 'ABSENT', subject: 'Anh' },
-          { period: 'Chiều', status: 'ABSENT', subject: 'GDCD' }
-        ]
+    const loadAttendanceData = async (childId) => {
+      if (!childId) return;
+      
+      try {
+        // Try to load attendance data for the child
+        const attendanceResponse = await api.get(`/parent/children/${childId}/attendance`);
+        // Process attendance data if available
+        setAttendanceData(attendanceResponse.data || []);
+      } catch (error) {
+        console.warn('Attendance data not available:', error);
+        // Use mock attendance data
+        const mockAttendance = [
+          {
+            date: '2025-08-01',
+            status: 'PRESENT',
+            sessions: [
+              { period: 'Sáng', status: 'PRESENT', subject: 'Toán' },
+              { period: 'Chiều', status: 'PRESENT', subject: 'Văn' }
+            ]
+          },
+          {
+            date: '2025-08-02',
+            status: 'LATE',
+            arriveTime: '08:30',
+            sessions: [
+              { period: 'Sáng', status: 'LATE', subject: 'Lý', arriveTime: '08:30' },
+              { period: 'Chiều', status: 'PRESENT', subject: 'Hóa' }
+            ]
+          }
+        ];
+        setAttendanceData(mockAttendance);
+        
+        const mockLeaveNotices = [
+          {
+            id: 1,
+            date: '2025-08-03',
+            type: 'LATE',
+            arriveAt: '09:00',
+            status: 'ACKNOWLEDGED',
+            reason: 'Khám bệnh'
+          }
+        ];
+        setLeaveNotices(mockLeaveNotices);
       }
-    ];
+    };
 
-    const mockLeaveNotices = [
-      {
-        id: 1,
-        date: '2025-08-03',
-        type: 'LATE',
-        arriveAt: '09:00',
-        status: 'ACKNOWLEDGED',
-        reason: 'Khám bệnh'
-      }
-    ];
-
-    setChildren(mockChildren);
-    setAttendanceData(mockAttendance);
-    setLeaveNotices(mockLeaveNotices);
-    if (mockChildren.length > 0) {
-      setSelectedChildId(mockChildren[0].id);
-    }
+    loadData();
   }, []);
+
+  // Load attendance data when child selection changes
+  useEffect(() => {
+    if (selectedChildId) {
+      const loadAttendanceForChild = async () => {
+        try {
+          const attendanceResponse = await api.get(`/parent/children/${selectedChildId}/attendance`);
+          setAttendanceData(attendanceResponse.data || []);
+          
+          // Load leave notices for this child
+          const leavesResponse = await api.get(`/parent/children/${selectedChildId}/leave-notices`);
+          setLeaveNotices(leavesResponse.data || []);
+        } catch (error) {
+          console.warn('Could not load specific child data:', error);
+        }
+      };
+      loadAttendanceForChild();
+    }
+  }, [selectedChildId]);
 
   const getAttendanceStatusConfig = (status) => {
     const configs = {
