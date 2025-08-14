@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { showNotification } from '../../utils/courseManagementUtils';
+import WysiwygEditor from '../common/WysiwygEditor';
 
 const CreateAssignmentModal = ({ visible, classData, onCancel, onSuccess }) => {
   const [assignmentData, setAssignmentData] = useState({
     title: '',
     description: '',
     instructions: '',
+    richTextContent: '',
     dueDate: '',
     dueTime: '23:59',
     maxScore: 100,
@@ -209,14 +211,29 @@ const CreateAssignmentModal = ({ visible, classData, onCancel, onSuccess }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hướng dẫn chi tiết
+                  Hướng dẫn chi tiết (Rich Text Editor)
+                </label>
+                <WysiwygEditor
+                  value={assignmentData.richTextContent}
+                  onChange={(content) => handleFieldChange('richTextContent', content)}
+                  placeholder="Nhập hướng dẫn chi tiết với formatting, hình ảnh, file đính kèm..."
+                  height="250px"
+                  allowFileUpload={true}
+                  allowImageUpload={true}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hướng dẫn plain text (tùy chọn)
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={assignmentData.instructions}
                   onChange={(e) => handleFieldChange('instructions', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Hướng dẫn chi tiết cách làm bài, yêu cầu kỹ thuật..."
+                  placeholder="Hướng dẫn chi tiết dạng text thuần (backup)..."
                 />
               </div>
             </div>

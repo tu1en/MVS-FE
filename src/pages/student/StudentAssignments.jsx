@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import SubmissionService from '../../services/submissionService';
 import FileUploadService from '../../services/fileUploadService';
+import WysiwygEditor from '../../components/common/WysiwygEditor';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -51,6 +52,7 @@ const StudentAssignments = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [richTextContent, setRichTextContent] = useState('');
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -129,6 +131,7 @@ const StudentAssignments = () => {
     setSubmitModalVisible(true);
     form.resetFields();
     setFileList([]);
+    setRichTextContent('');
   };
 
   const showSubmissionDetail = (assignment) => {
@@ -141,59 +144,74 @@ const StudentAssignments = () => {
   };
 
   const handleSubmit = async (values) => {
-    if (fileList.length === 0) {
-      message.error('Vui lòng chọn file để nộp bài');
+    if (fileList.length === 0 && !richTextContent.trim()) {
+      message.error('Vui lòng chọn file hoặc nhập nội dung bài làm');
       return;
     }
 
     try {
       setSubmitting(true);
       
-      // Upload file first to get the actual URL
-      const file = fileList[0];
-      
-      return new Promise((resolve, reject) => {
-        FileUploadService.uploadFile({
-          file,
-          onSuccess: async (uploadedFileData) => {
-            try {
-              console.log('File uploaded successfully:', uploadedFileData);
-              
-              const submissionData = {
-                assignmentId: selectedAssignment.id,
-                comment: values.comment || '',
-                attachments: [{
+      // Prepare submission data
+      const submissionData = {
+        assignmentId: selectedAssignment.id,
+        comment: values.comment || '',
+        richTextContent: richTextContent || '',
+        attachments: []
+      };
+
+      // Upload file if exists
+      if (fileList.length > 0) {
+        const file = fileList[0];
+        
+        return new Promise((resolve, reject) => {
+          FileUploadService.uploadFile({
+            file,
+            onSuccess: async (uploadedFileData) => {
+              try {
+                console.log('File uploaded successfully:', uploadedFileData);
+                
+                submissionData.attachments.push({
                   fileName: uploadedFileData.name,
                   fileUrl: uploadedFileData.url,
                   fileType: uploadedFileData.type,
                   size: uploadedFileData.size
-                }]
-              };
+                });
 
-              console.log('Submitting assignment data:', submissionData);
-              const submissionResult = await SubmissionService.submitAssignment(submissionData);
-              console.log('Submission result:', submissionResult);
-              message.success('Nộp bài thành công!');
-              
-              setSubmitModalVisible(false);
-              fetchAssignments(); // Refresh the list to update submission status
-              resolve();
-            } catch (submitError) {
-              console.error('Error submitting assignment:', submitError);
-              message.error('Có lỗi xảy ra khi lưu thông tin bài nộp');
-              reject(submitError);
+                console.log('Submitting assignment data:', submissionData);
+                const submissionResult = await SubmissionService.submitAssignment(submissionData);
+                console.log('Submission result:', submissionResult);
+                message.success('Nộp bài thành công!');
+                
+                setSubmitModalVisible(false);
+                fetchAssignments(); // Refresh the list to update submission status
+                resolve();
+              } catch (submitError) {
+                console.error('Error submitting assignment:', submitError);
+                message.error('Có lỗi xảy ra khi lưu thông tin bài nộp');
+                reject(submitError);
+              }
+            },
+            onError: (error) => {
+              console.error('Error uploading file:', error);
+              message.error('Có lỗi xảy ra khi tải file lên');
+              reject(error);
+            },
+            onProgress: (progress) => {
+              console.log('Upload progress:', progress.percent);
             }
-          },
-          onError: (error) => {
-            console.error('Error uploading file:', error);
-            message.error('Có lỗi xảy ra khi tải file lên');
-            reject(error);
-          },
-          onProgress: (progress) => {
-            console.log('Upload progress:', progress.percent);
-          }
-        }, `assignments/${selectedAssignment.id}`);
-      });
+          }, `assignments/${selectedAssignment.id}`);
+        });
+      } else {
+        // No file to upload, just submit the rich text content
+        console.log('Submitting assignment data (no file):', submissionData);
+        const submissionResult = await SubmissionService.submitAssignment(submissionData);
+        console.log('Submission result:', submissionResult);
+        message.success('Nộp bài thành công!');
+        
+        setSubmitModalVisible(false);
+        fetchAssignments(); // Refresh the list to update submission status
+      }
       
     } catch (error) {
       console.error('Error in submission process:', error);
@@ -269,6 +287,7 @@ const StudentAssignments = () => {
         const hasActualSubmission = submission && (
           submission.fileSubmissionUrl || 
           submission.content || 
+          submission.richTextContent ||
           (submission.attachments && submission.attachments.length > 0)
         );
         
@@ -298,6 +317,7 @@ const StudentAssignments = () => {
         const hasActualSubmission = submission && (
           submission.fileSubmissionUrl || 
           submission.content || 
+          submission.richTextContent ||
           (submission.attachments && submission.attachments.length > 0)
         );
         const canSubmit = now.isBefore(dueDate) && !hasActualSubmission;
@@ -482,9 +502,22 @@ const StudentAssignments = () => {
             
             <Form form={form} onFinish={handleSubmit} layout="vertical">
               <Form.Item
+                label="Nội dung bài làm (Rich Text Editor)"
+              >
+                <WysiwygEditor
+                  value={richTextContent}
+                  onChange={setRichTextContent}
+                  placeholder="Nhập nội dung bài làm với formatting, hình ảnh, file đính kèm..."
+                  height="300px"
+                  allowFileUpload={true}
+                  allowImageUpload={true}
+                  className="w-full"
+                />
+              </Form.Item>
+
+              <Form.Item
                 name="file"
-                label="File nộp bài"
-                rules={[{ required: true, message: 'Vui lòng chọn file để nộp' }]}
+                label="File nộp bài (tùy chọn)"
               >
                 <Dragger {...uploadProps}>
                   <p className="ant-upload-drag-icon">
@@ -518,7 +551,7 @@ const StudentAssignments = () => {
                     type="primary" 
                     htmlType="submit" 
                     loading={submitting}
-                    disabled={fileList.length === 0}
+                    disabled={fileList.length === 0 && !richTextContent.trim()}
                   >
                     Nộp bài
                   </Button>
@@ -618,12 +651,16 @@ const StudentAssignments = () => {
             )}
 
             {/* Show submission content if any */}
-            {selectedSubmission.content && (
+            {(selectedSubmission.content || selectedSubmission.richTextContent) && (
               <>
                 <Divider>Nội dung bài nộp</Divider>
-                <Paragraph>
-                  {selectedSubmission.content}
-                </Paragraph>
+                {selectedSubmission.richTextContent ? (
+                  <div dangerouslySetInnerHTML={{ __html: selectedSubmission.richTextContent }} />
+                ) : (
+                  <Paragraph>
+                    {selectedSubmission.content}
+                  </Paragraph>
+                )}
               </>
             )}
           </div>

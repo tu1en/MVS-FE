@@ -9,6 +9,8 @@ import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 import { useAuth } from '../context/AuthContext';
 import AssignmentService from '../services/assignmentService';
 import ClassroomService from '../services/classroomService';
+import WysiwygEditor from '../components/common/WysiwygEditor';
+import FileUploadService from '../services/fileUploadService';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -59,6 +61,8 @@ function AssignmentsPageNew() {
   const [classrooms, setClassrooms] = useState([]);
   const [currentStudent, setCurrentStudent] = useState(null);
   const [grades, setGrades] = useState({});
+  const [richTextContent, setRichTextContent] = useState('');
+  const [assignmentFileList, setAssignmentFileList] = useState([]);
 
   // Load grades from localStorage when component mounts or selected assignment changes
   useEffect(() => {
@@ -414,9 +418,51 @@ function AssignmentsPageNew() {
 
     try {
       setCreating(true);
+      
+      // Upload attachment files first if any
+      const attachments = [];
+      if (assignmentFileList.length > 0) {
+        console.log('Uploading attachment files...');
+        
+        const uploadPromises = assignmentFileList.map(file => {
+          return new Promise((resolve, reject) => {
+            FileUploadService.uploadFile({
+              file,
+              onSuccess: (uploadedFileData) => {
+                resolve({
+                  fileName: uploadedFileData.name || file.name,
+                  fileUrl: uploadedFileData.url,
+                  fileType: uploadedFileData.type || file.type,
+                  size: uploadedFileData.size || file.size
+                });
+              },
+              onError: (error) => {
+                console.error('Error uploading file:', error);
+                reject(error);
+              },
+              onProgress: (progress) => {
+                console.log(`Upload progress for ${file.name}:`, progress.percent);
+              }
+            }, 'assignments/attachments');
+          });
+        });
+
+        try {
+          const uploadedAttachments = await Promise.all(uploadPromises);
+          attachments.push(...uploadedAttachments);
+          console.log('All files uploaded successfully:', attachments);
+        } catch (uploadError) {
+          console.error('Failed to upload some files:', uploadError);
+          message.error('Không thể tải lên tất cả file đính kèm');
+          return;
+        }
+      }
+
       const assignmentData = {
         title: values.title,
         description: values.description,
+        richTextContent: richTextContent || '',
+        attachments: attachments,
         // Gửi LocalDateTime (không timezone) để backend @Future không bị lệch múi giờ
         dueDate: dueMoment.format('YYYY-MM-DDTHH:mm:ss'),
         points: values.points || values.maxScore || 10, // Backend expects 'points', not 'maxScore'
@@ -433,6 +479,8 @@ function AssignmentsPageNew() {
       setIsCreateModalVisible(false);
       setEditingAssignment(null);
       assignmentForm.resetFields();
+      setRichTextContent('');
+      setAssignmentFileList([]);
       
       // Refresh assignments list
       await fetchData();
@@ -629,6 +677,9 @@ function AssignmentsPageNew() {
     
     // Set the form values after reset
     assignmentForm.setFieldsValue(initialValues);
+    
+    // Set rich text content
+    setRichTextContent(assignment.richTextContent || '');
     
     // Open the creation modal in edit mode
     setIsCreateModalVisible(true);
@@ -854,6 +905,8 @@ function AssignmentsPageNew() {
               className="button-vietnamese" 
               onClick={() => {
                 assignmentForm.resetFields();
+                setRichTextContent('');
+                setAssignmentFileList([]);
                 setIsCreateModalVisible(true);
               }}
             >
@@ -1023,8 +1076,38 @@ function AssignmentsPageNew() {
         expandable={{
           expandedRowRender: (record) => (
             <div style={{ padding: '16px', backgroundColor: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
-              <Title level={5}>Mô tả chi tiết:</Title>
+              <Title level={5}>Mô tả bài tập:</Title>
               <MarkdownRenderer content={record.description} />
+              {record.richTextContent && (
+                <>
+                  <Title level={5} style={{ marginTop: '16px' }}>Nội dung chi tiết:</Title>
+                  <div dangerouslySetInnerHTML={{ __html: record.richTextContent }} />
+                </>
+              )}
+              {record.attachments && record.attachments.length > 0 && (
+                <>
+                  <Title level={5} style={{ marginTop: '16px' }}>File đính kèm:</Title>
+                  <div>
+                    {record.attachments.map((attachment, index) => (
+                      <div key={index} style={{ marginBottom: '8px' }}>
+                        <Button 
+                          type="link" 
+                          icon={<FileOutlined />}
+                          onClick={() => window.open(attachment.fileUrl, '_blank')}
+                          style={{ padding: 0 }}
+                        >
+                          {attachment.fileName}
+                        </Button>
+                        {attachment.size && (
+                          <Text type="secondary" style={{ marginLeft: '8px' }}>
+                            ({Math.round(attachment.size / 1024)} KB)
+                          </Text>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           ),
           rowExpandable: (record) => record.description,
@@ -1365,10 +1448,49 @@ function AssignmentsPageNew() {
           
           <Form.Item
             name="description"
-            label="Mô tả bài tập"
+            label="Mô tả bài tập (ngắn gọn)"
             rules={[{ required: true, message: 'Vui lòng nhập mô tả bài tập!' }]}
           >
-            <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết bài tập..." />
+            <Input.TextArea rows={3} placeholder="Nhập mô tả tóm tắt bài tập..." />
+          </Form.Item>
+
+          <Form.Item
+            label="Nội dung chi tiết bài tập (Rich Text Editor)"
+          >
+            <WysiwygEditor
+              value={richTextContent}
+              onChange={setRichTextContent}
+              placeholder="Nhập nội dung chi tiết bài tập với formatting, hình ảnh, file đính kèm..."
+              height="300px"
+              allowFileUpload={true}
+              allowImageUpload={true}
+              className="w-full"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="attachments"
+            label="File đính kèm (tùy chọn)"
+          >
+            <Dragger
+              fileList={assignmentFileList}
+              beforeUpload={(file) => {
+                setAssignmentFileList([...assignmentFileList, file]);
+                return false; // Prevent auto upload
+              }}
+              onRemove={(file) => {
+                setAssignmentFileList(assignmentFileList.filter(f => f.uid !== file.uid));
+              }}
+              multiple
+            >
+              <p className="ant-upload-drag-icon">
+                <UploadOutlined />
+              </p>
+              <p className="ant-upload-text">Kéo thả file vào đây hoặc click để chọn</p>
+              <p className="ant-upload-hint">
+                Hỗ trợ tài liệu tham khảo: PDF, DOC, DOCX, images, etc.
+              </p>
+            </Dragger>
           </Form.Item>
           
           <Form.Item

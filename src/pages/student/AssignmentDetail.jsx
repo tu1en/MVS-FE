@@ -18,6 +18,7 @@ import AssignmentService from '../../services/assignmentService';
 import FileUploadService from '../../services/fileUploadService';
 import SubmissionService from '../../services/submissionService';
 import UTF8EncodingFixer from '../../utils/utf8EncodingFixer';
+import WysiwygEditor from '../../components/common/WysiwygEditor';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -33,6 +34,7 @@ const AssignmentDetail = () => {
     const [fileList, setFileList] = useState([]);
     const [form] = Form.useForm();
     const [isDeadlinePassed, setIsDeadlinePassed] = useState(false);
+    const [richTextContent, setRichTextContent] = useState('');
 
     const fetchAssignmentData = async () => {
         setIsLoading(true);
@@ -162,6 +164,7 @@ const AssignmentDetail = () => {
             const submissionData = {
                 assignmentId: parseInt(assignmentId, 10),
                 comment: values.comment || '',
+                richTextContent: richTextContent || '',
                 attachments: attachments,
             };
 
@@ -407,7 +410,21 @@ const AssignmentDetail = () => {
                             name="comment"
                             label={<Text strong>Bình luận (tùy chọn)</Text>}
                         >
-                            <Input.TextArea rows={4} placeholder="Thêm bình luận cho giáo viên..." />
+                            <Input.TextArea rows={3} placeholder="Bình luận ngắn gọn..." />
+                        </Form.Item>
+
+                        <Form.Item
+                            label={<Text strong>Nội dung bài làm (Rich Text Editor)</Text>}
+                        >
+                            <WysiwygEditor
+                                value={richTextContent}
+                                onChange={setRichTextContent}
+                                placeholder="Nhập nội dung bài làm với formatting, hình ảnh, file đính kèm..."
+                                height="300px"
+                                allowFileUpload={true}
+                                allowImageUpload={true}
+                                className="w-full"
+                            />
                         </Form.Item>
 
                         <Form.Item>

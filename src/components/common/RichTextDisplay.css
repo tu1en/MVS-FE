@@ -1,0 +1,244 @@
+/* Rich Text Display Styles */
+.rich-text-display {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.rich-text-display h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 24px 0 16px 0;
+  line-height: 1.2;
+  color: #1890ff;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+.rich-text-display h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 20px 0 12px 0;
+  line-height: 1.2;
+  color: #1890ff;
+}
+
+.rich-text-display h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 16px 0 8px 0;
+  line-height: 1.2;
+  color: #1890ff;
+}
+
+.rich-text-display p {
+  margin: 12px 0;
+  text-align: justify;
+}
+
+.rich-text-display ul,
+.rich-text-display ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.rich-text-display li {
+  margin: 6px 0;
+}
+
+.rich-text-display ul li {
+  list-style-type: disc;
+}
+
+.rich-text-display ol li {
+  list-style-type: decimal;
+}
+
+.rich-text-display blockquote {
+  border-left: 4px solid #1890ff;
+  padding-left: 16px;
+  margin: 20px 0;
+  color: #666;
+  font-style: italic;
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.rich-text-display code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #e91e63;
+}
+
+.rich-text-display pre {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 20px 0;
+  border: 1px solid #e0e0e0;
+}
+
+.rich-text-display pre code {
+  background: none;
+  padding: 0;
+  color: #333;
+}
+
+.rich-text-display img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 16px 0;
+  display: block;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rich-text-display a {
+  color: #1890ff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.rich-text-display a:hover {
+  color: #40a9ff;
+  border-bottom-color: #40a9ff;
+}
+
+.rich-text-display .file-attachment {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f0f2f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #666;
+  margin: 4px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.rich-text-display .file-attachment:hover {
+  background: #e6f7ff;
+  border-color: #1890ff;
+  color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.rich-text-display .file-icon {
+  margin-right: 6px;
+  font-size: 16px;
+}
+
+/* Tables */
+.rich-text-display table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 20px 0;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rich-text-display table, 
+.rich-text-display th, 
+.rich-text-display td {
+  border: 1px solid #e0e0e0;
+}
+
+.rich-text-display th,
+.rich-text-display td {
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.rich-text-display th {
+  background-color: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
+.rich-text-display tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.rich-text-display tbody tr:hover {
+  background-color: #e6f7ff;
+}
+
+/* Strong and emphasis */
+.rich-text-display strong {
+  font-weight: 600;
+  color: #262626;
+}
+
+.rich-text-display em {
+  font-style: italic;
+  color: #595959;
+}
+
+.rich-text-display u {
+  text-decoration: underline;
+  color: #1890ff;
+}
+
+/* Special content boxes */
+.rich-text-display .info-box {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.rich-text-display .warning-box {
+  background: #fff7e6;
+  border: 1px solid #ffd666;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.rich-text-display .error-box {
+  background: #fff2f0;
+  border: 1px solid #ffb3b3;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rich-text-display {
+    font-size: 14px;
+  }
+  
+  .rich-text-display h1 {
+    font-size: 1.6em;
+  }
+  
+  .rich-text-display h2 {
+    font-size: 1.3em;
+  }
+  
+  .rich-text-display h3 {
+    font-size: 1.1em;
+  }
+  
+  .rich-text-display table {
+    font-size: 12px;
+  }
+  
+  .rich-text-display th,
+  .rich-text-display td {
+    padding: 8px;
+  }
+}
