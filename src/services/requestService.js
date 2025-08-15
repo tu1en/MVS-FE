@@ -19,6 +19,10 @@ const requestService = {
     },
     getAllRequests: () => {
         return api.get('/manager/requests');
+    },
+    checkChildEmailExists: (email) => {
+        // Kiểm tra email con em có tồn tại trong hệ thống không
+        return api.get(`/auth/check-child-email?email=${encodeURIComponent(email)}`);
     }
 };
 

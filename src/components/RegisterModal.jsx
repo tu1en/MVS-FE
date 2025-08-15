@@ -1,11 +1,25 @@
 import { Modal, Tabs } from 'antd';
 import React, { useState } from 'react';
 import StudentRequestForm from './StudentRequestForm';
+import ParentRequestForm from './ParentRequestForm';
 
 const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
+  const items = [
+    {
+      key: 'student',
+      label: 'Tài khoản học sinh',
+      children: <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />,
+    },
+    {
+      key: 'parent',
+      label: 'Tài khoản phụ huynh',
+      children: <ParentRequestForm onClose={onClose} initialEmail={initialEmail} />,
+    },
+  ];
+
   return (
     <Modal
-      title="Đăng ký tham gia học tập"
+      title="Đăng ký tài khoản"
       open={open}
       onCancel={onClose}
       width={700}
@@ -23,11 +37,8 @@ const RegisterModal = ({ open, onClose, initialEmail = '' }) => {
         <p className="mb-4 text-gray-600">
           Hãy hoàn thành form dưới đây để tham gia Minh Việt Education
         </p>
-        <p className="mb-4 text-red-500 text-sm">
-          Chỉ dành cho học sinh chưa có tài khoản trong hệ thống.
-        </p>
         
-        <StudentRequestForm onClose={onClose} initialEmail={initialEmail} />
+        <Tabs defaultActiveKey="student" items={items} />
       </div>
     </Modal>
   );
