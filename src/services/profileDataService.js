@@ -4,6 +4,7 @@
  */
 
 import api from './api';
+import API_CONFIG from '../config/api-config.js';
 
 class ProfileDataService {
   /**
@@ -12,20 +13,19 @@ class ProfileDataService {
    */
   static async testConnectivity() {
     try {
-      // Try the greeting endpoint first to test basic connectivity
-      const response = await api.get('/v1/greetings/hello');
-      return {
-        success: true,
-        message: 'Backend connection successful',
-        data: response.data
-      };
+      console.log('Testing connectivity to:', API_CONFIG.ENDPOINTS.GREETING);
+      const response = await api.get(API_CONFIG.ENDPOINTS.GREETING, { timeout: 5000 });
+      console.log('Connectivity test successful:', response.data);
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('Backend connectivity test failed:', error);
-      return {
-        success: false,
-        message: 'Backend server not accessible',
-        error: error
-      };
+      console.error('Backend connectivity test failed:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+      return { success: false, error: error.message };
     }
   }
 
@@ -35,25 +35,13 @@ class ProfileDataService {
    * @returns {Object} Profile data
    */
   static async fetchProfileWithFallback(userType = 'student') {
-    // First test basic connectivity
-    const connectivityTest = await this.testConnectivity();
-    
-    if (!connectivityTest.success) {
-      console.warn('Backend not accessible, using fallback data immediately');
-      const fallbackData = this.getFromLocalStorage(userType);
-      return {
-        success: false,
-        data: fallbackData,
-        source: 'localStorage',
-        error: new Error('Backend server not accessible')
-      };
-    }
-
-    // Try the new, single authoritative endpoint
+    // Try the new, single authoritative endpoint directly
     try {
         console.log("Fetching profile from /api/users/me");
         const response = await api.get('/users/me'); 
         const profileData = response.data;
+        
+        console.log("Profile fetch successful:", profileData);
         
         // Save to localStorage for future fallback
         this.saveToLocalStorage(profileData);
@@ -64,7 +52,14 @@ class ProfileDataService {
           source: 'server'
         };
       } catch (error) {
-        console.error("Failed to fetch profile from server, using localStorage fallback", error);
+        console.error("Failed to fetch profile from server:", {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url
+        });
+        
         const fallbackData = this.getFromLocalStorage(userType);
         
         return {
@@ -84,8 +79,10 @@ class ProfileDataService {
   static async updateProfileWithFallback(profileData) {
     // Use the single authoritative endpoint for updating the profile
     try {
-      console.log("Trying to update via endpoint: /users/me");
-      await api.put('/users/me', profileData);
+      console.log("Trying to update via endpoint: /users/me with data:", profileData);
+      const response = await api.put('/users/me', profileData);
+      
+      console.log("Profile update successful:", response.data);
       
       // Save to localStorage on successful update
       this.saveToLocalStorage(profileData);
@@ -96,7 +93,14 @@ class ProfileDataService {
         source: 'server'
       };
     } catch (error) {
-      console.error('Update endpoint /users/me failed, saving to localStorage', error);
+      console.error('Update endpoint /users/me failed:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        requestData: profileData
+      });
       
       // Save locally as a fallback
       this.saveToLocalStorage(profileData);
