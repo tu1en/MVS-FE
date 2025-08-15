@@ -14,13 +14,14 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
     }
   }, [form, initialEmail]);
 
+  // Simplified phone number validation
   const validatePhoneNumber = (_, value) => {
     if (!value) {
-      return Promise.resolve();
+      return Promise.reject(new Error('Vui lòng nhập số điện thoại học sinh'));
     }
-    const phoneRegex = /^[0-9]{10,11}$/;
+    const phoneRegex = /^0[0-9]{9,10}$/;
     if (!phoneRegex.test(value)) {
-      return Promise.reject(new Error('Số điện thoại phải có 10-11 chữ số'));
+      return Promise.reject(new Error('Số điện thoại học sinh phải bắt đầu bằng số 0 và có 10-11 chữ số'));
     }
     return Promise.resolve();
   };
@@ -29,9 +30,9 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
     if (!value) {
       return Promise.reject(new Error('Vui lòng nhập số điện thoại phụ huynh'));
     }
-    const phoneRegex = /^[0-9]{10,11}$/;
+    const phoneRegex = /^0[0-9]{9,10}$/;
     if (!phoneRegex.test(value)) {
-      return Promise.reject(new Error('Số điện thoại phụ huynh phải có 10-11 chữ số'));
+      return Promise.reject(new Error('Số điện thoại phụ huynh phải bắt đầu bằng số 0 và có 10-11 chữ số'));
     }
     return Promise.resolve();
   };
@@ -80,7 +81,8 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
           label="Email học sinh"
           rules={[
             { required: true, message: 'Vui lòng nhập email học sinh' },
-            { type: 'email', message: 'Email không hợp lệ' }
+            { type: 'email', message: 'Email không hợp lệ' },
+            { max: 50, message: 'Email học sinh không được quá 50 ký tự' }
           ]}
         >
           <Input placeholder="Nhập email học sinh" />
@@ -91,7 +93,8 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
           label="Họ và tên học sinh"
           rules={[
             { required: true, message: 'Vui lòng nhập họ và tên học sinh' },
-            { min: 2, message: 'Họ và tên phải có ít nhất 2 ký tự' }
+            { min: 2, message: 'Họ và tên phải có ít nhất 2 ký tự' },
+            { max: 50, message: 'Họ và tên học sinh không được quá 50 ký tự' }
           ]}
         >
           <Input placeholder="Nhập họ và tên học sinh" />
@@ -101,11 +104,11 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
           name="phoneNumber"
           label="Số điện thoại học sinh"
           rules={[
-            { required: false, message: 'Vui lòng nhập số điện thoại học sinh' },
+            { required: true, message: 'Vui lòng nhập số điện thoại học sinh' },
             { validator: validatePhoneNumber }
           ]}
         >
-          <Input placeholder="Nhập số điện thoại học sinh (không bắt buộc)" />
+          <Input placeholder="Nhập số điện thoại học sinh" />
         </Form.Item>
       </div>
 
@@ -118,7 +121,8 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
           label="Email phụ huynh"
           rules={[
             { required: true, message: 'Vui lòng nhập email phụ huynh' },
-            { type: 'email', message: 'Email phụ huynh không hợp lệ' }
+            { type: 'email', message: 'Email phụ huynh không hợp lệ' },
+            { max: 50, message: 'Email phụ huynh không được quá 50 ký tự' }
           ]}
         >
           <Input placeholder="Nhập email phụ huynh" />
@@ -129,7 +133,8 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
           label="Họ và tên phụ huynh"
           rules={[
             { required: true, message: 'Vui lòng nhập họ và tên phụ huynh' },
-            { min: 2, message: 'Họ và tên phụ huynh phải có ít nhất 2 ký tự' }
+            { min: 2, message: 'Họ và tên phụ huynh phải có ít nhất 2 ký tự' },
+            { max: 50, message: 'Họ và tên phụ huynh không được quá 50 ký tự' }
           ]}
         >
           <Input placeholder="Nhập họ và tên phụ huynh" />
@@ -151,10 +156,15 @@ const StudentRequestForm = ({ onClose, initialEmail = '' }) => {
       <Form.Item
         name="additionalInfo"
         label="Thông tin thêm"
+        rules={[
+          { max: 200, message: 'Thông tin thêm không được quá 200 ký tự' }
+        ]}
       >
-        <TextArea 
-          rows={3} 
-          placeholder="Nhập thông tin bổ sung (nếu có)" 
+        <TextArea
+          rows={3}
+          placeholder="Nhập thông tin bổ sung (nếu có)"
+          showCount
+          maxLength={200}
         />
       </Form.Item>
 
