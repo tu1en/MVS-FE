@@ -1019,6 +1019,11 @@ function OnlineClassesPage() {
       return renderTeacherView(); // Managers can see teacher view
     }
     
+    // Parent view for role '7' or 'PARENT'
+    if (userRole === '7' || userRole === 'PARENT') {
+      return renderStudentView(); // Parents can see student view to monitor their children
+    }
+    
     // If role is not recognized, show error
     console.error('OnlineClassesPage: Unrecognized role:', userRole);
     return (

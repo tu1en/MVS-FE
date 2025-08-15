@@ -149,7 +149,13 @@ const RequestList = () => {
       { key: 's3', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
     ] : [];
     
-    const allItems = [...commonItems, ...studentItems];
+    // Hiển thị chi tiết cho phụ huynh
+    const parentItems = formDetails.requestedRole === 'PARENT' ? [
+      { key: 'p1', label: 'Thông tin con em', children: formDetails.childrenEmails ? formDetails.childrenEmails.join(', ') : 'N/A' },
+      { key: 'p2', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
+    ] : [];
+    
+    const allItems = [...commonItems, ...studentItems, ...parentItems];
     
     return <Descriptions bordered column={2} items={allItems} />;
   };
@@ -164,7 +170,18 @@ const RequestList = () => {
       title: 'Vai trò',
       dataIndex: 'requestedRole',
       key: 'requestedRole',
-      render: (role) => (role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'),
+      render: (role) => {
+        switch (role) {
+          case 'TEACHER':
+            return 'Giáo viên';
+          case 'STUDENT':
+            return 'Học sinh';
+          case 'PARENT':
+            return 'Phụ huynh';
+          default:
+            return role;
+        }
+      },
     },
     {
       title: 'Họ và Tên',

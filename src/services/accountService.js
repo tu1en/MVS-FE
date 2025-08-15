@@ -9,7 +9,10 @@ const ROLE_ID_MAP = {
   1: ROLE.STUDENT,
   2: ROLE.TEACHER,
   3: ROLE.MANAGER,
-  4: ROLE.ADMIN
+  4: ROLE.ADMIN,
+  5: ROLE.ACCOUNTANT,
+  6: ROLE.TEACHING_ASSISTANT,
+  7: ROLE.PARENT
 };
 
 export const accountService = {

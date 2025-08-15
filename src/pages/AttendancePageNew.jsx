@@ -987,6 +987,11 @@ function AttendancePageNew() {
       return renderTeacherDashboard(); // Managers can see teacher view
     }
     
+    // Parent view for role '7' or 'PARENT'
+    if (userRole === '7' || userRole === 'PARENT') {
+      return renderStudentDashboard(); // Parents can see student view to monitor their children
+    }
+    
     // If role is not recognized, show error
     console.error('AttendancePageNew: Unrecognized role:', userRole);
     return (

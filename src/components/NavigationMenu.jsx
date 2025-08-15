@@ -188,6 +188,27 @@ export default function NavigationMenu() {
     }
   ];
 
+  const parentMenuItems = [
+    {
+      key: 'dashboard',
+      icon: <UserOutlined />,
+      label: 'Dashboard',
+      onClick: () => navigate('/parent')
+    },
+    {
+      key: 'children',
+      icon: <UserOutlined />,
+      label: 'Con của tôi',
+      onClick: () => navigate('/parent/children')
+    },
+    {
+      key: 'messaging',
+      icon: <MessageOutlined />,
+      label: 'Tin nhắn',
+      onClick: () => navigate('/messaging')
+    }
+  ];
+
   const userMenuItems = [
     {
       key: 'logout',
@@ -209,6 +230,8 @@ export default function NavigationMenu() {
         return managerMenuItems;
       case ROLE.ADMIN:
         return adminMenuItems;
+      case ROLE.PARENT:
+        return parentMenuItems; // Add parent menu items
       default:
         return [];
     }
