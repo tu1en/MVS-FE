@@ -121,6 +121,17 @@ export default function ManagerDashboard() {
           </button>
         </div>
         
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Quản lý hóa đơn</h2>
+          <p className="text-gray-600">Tạo hóa đơn học phí và cập nhật trạng thái thanh toán</p>
+          <button 
+            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            onClick={() => navigate('/manager/invoices')}
+          >
+            Quản lý hóa đơn
+          </button>
+        </div>
+        
         {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý khóa học</h2>
           <p className="text-gray-600">Quản lý thông tin khóa học và lớp học</p>

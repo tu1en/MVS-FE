@@ -26,7 +26,8 @@ import {
   EnvironmentOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
-  DownloadOutlined
+  LeftOutlined,
+  RightOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -36,7 +37,9 @@ import 'moment/locale/vi';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
+// Configure moment.js
 moment.locale('vi');
+moment.suppressDeprecationWarnings = true;
 
 /**
  * Parent Schedule Page - View children's timetable and exam schedule
@@ -49,8 +52,7 @@ const ParentSchedule = () => {
   const [selectedChild, setSelectedChild] = useState(null);
   const [scheduleData, setScheduleData] = useState([]);
   const [examData, setExamData] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(moment());
-  const [calendarMode, setCalendarMode] = useState('month');
+  const [selectedDate, setSelectedDate] = useState(moment().startOf('day'));
   const [eventDetailVisible, setEventDetailVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -97,7 +99,6 @@ const ParentSchedule = () => {
           endDate: endOfMonth.format('YYYY-MM-DD')
         }
       });
-      
       setScheduleData(response.data || []);
     } catch (error) {
       console.error('Error loading schedule:', error);
@@ -195,14 +196,9 @@ const ParentSchedule = () => {
     );
   };
 
-  const monthCellRender = (value) => {
-    // For month view - could show monthly summary
-    return null;
-  };
 
   const onPanelChange = (value, mode) => {
     setSelectedDate(value);
-    setCalendarMode(mode);
   };
 
   const onSelect = (value) => {
@@ -216,11 +212,14 @@ const ParentSchedule = () => {
 
   const renderTodaySchedule = () => {
     const todayEvents = getEventsForDate(moment());
+    const selectedDateEvents = getEventsForDate(selectedDate);
+    const isToday = selectedDate.isSame(moment(), 'day');
+    const displayEvents = isToday ? todayEvents : selectedDateEvents;
     
-    if (todayEvents.length === 0) {
+    if (displayEvents.length === 0) {
       return (
         <Empty 
-          description="Không có lịch học hôm nay"
+          description={isToday ? "Không có lịch học hôm nay" : `Không có lịch học ngày ${selectedDate.format('DD/MM/YYYY')}`}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       );
@@ -228,7 +227,7 @@ const ParentSchedule = () => {
 
     return (
       <List
-        dataSource={todayEvents}
+        dataSource={displayEvents}
         renderItem={(event) => (
           <List.Item
             style={{ cursor: 'pointer' }}
@@ -287,75 +286,6 @@ const ParentSchedule = () => {
     );
   };
 
-  const exportToICalendar = () => {
-    if (!scheduleData.length && !examData.length) {
-      message.warning('Không có sự kiện nào để xuất');
-      return;
-    }
-
-    try {
-      // Create iCal content
-      let icalContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MVS School//MVS Calendar//EN
-`;
-      icalContent += `CALSCALE:GREGORIAN
-METHOD:PUBLISH
-`;
-      
-      // Add schedule events
-      scheduleData.forEach((event, index) => {
-        const startDateTime = moment(`${event.date} ${event.startTime}`, 'YYYY-MM-DD HH:mm');
-        const endDateTime = moment(`${event.date} ${event.endTime}`, 'YYYY-MM-DD HH:mm');
-        
-        icalContent += `BEGIN:VEVENT
-`;
-        icalContent += `UID:schedule-${event.id || index}@mvs-school.edu.vn\n`;
-        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
-        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
-        icalContent += `SUMMARY:${event.title || event.subject}\n`;
-        icalContent += `DESCRIPTION:Môn học: ${event.subject}\\nGiáo viên: ${event.teacher || 'N/A'}\\nPhòng: ${event.classroom || 'N/A'}\n`;
-        icalContent += `LOCATION:${event.classroom || ''}\n`;
-        icalContent += `CATEGORIES:EDUCATION,CLASS\n`;
-        icalContent += `END:VEVENT\n`;
-      });
-      
-      // Add exam events
-      examData.forEach((exam, index) => {
-        const startDateTime = moment(`${exam.examDate} ${exam.examTime}`, 'YYYY-MM-DD HH:mm');
-        const endDateTime = startDateTime.clone().add(exam.duration || 90, 'minutes');
-        
-        icalContent += `BEGIN:VEVENT
-`;
-        icalContent += `UID:exam-${exam.id || index}@mvs-school.edu.vn\n`;
-        icalContent += `DTSTART:${startDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
-        icalContent += `DTEND:${endDateTime.utc().format('YYYYMMDDTHHmmss')}Z\n`;
-        icalContent += `SUMMARY:Kiểm tra ${exam.examName || exam.subject}\n`;
-        icalContent += `DESCRIPTION:Bài kiểm tra: ${exam.examName}\\nMôn: ${exam.subject}\\nPhòng: ${exam.classroom || 'N/A'}\\nLưu ý: ${exam.description || 'Chuẩn bị tốt cho bài kiểm tra'}\n`;
-        icalContent += `LOCATION:${exam.classroom || ''}\n`;
-        icalContent += `CATEGORIES:EDUCATION,EXAM\n`;
-        icalContent += `END:VEVENT\n`;
-      });
-      
-      icalContent += `END:VCALENDAR\n`;
-      
-      // Download the file
-      const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `lich_hoc_${selectedChild?.student?.fullName}_${moment().format('YYYY_MM')}.ics`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      message.success('Xuất lịch thành công! Bạn có thể import vào Google Calendar, Outlook, hoặc ứng dụng lịch khác.');
-    } catch (error) {
-      console.error('Error exporting calendar:', error);
-      message.error('Không thể xuất lịch');
-    }
-  };
 
   const renderEventDetail = () => {
     if (!selectedEvent) return null;
@@ -498,14 +428,6 @@ METHOD:PUBLISH
               >
                 Làm mới
               </Button>
-              <Button
-                type="primary"
-                icon={<DownloadOutlined />}
-                onClick={exportToICalendar}
-                disabled={!selectedChild || (!scheduleData.length && !examData.length)}
-              >
-                Xuất lịch (.ics)
-              </Button>
             </Space>
           </Space>
         </Col>
@@ -523,29 +445,75 @@ METHOD:PUBLISH
           {/* Calendar */}
           <Col xs={24} lg={16}>
             <Card 
-              title={`Lịch học của ${selectedChild.student?.fullName}`}
+              title={
+                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <span>{`Lịch học của ${selectedChild.student?.fullName}`}</span>
+                  <Space>
+                    <Button 
+                      size="small"
+                      icon={<LeftOutlined />}
+                      onClick={() => {
+                        const prevMonth = selectedDate.clone().subtract(1, 'month');
+                        setSelectedDate(prevMonth);
+                      }}
+                    >
+                      Tháng trước
+                    </Button>
+                    <Button 
+                      size="small"
+                      type="primary"
+                      onClick={() => {
+                        const today = moment().startOf('day');
+                        setSelectedDate(today);
+                      }}
+                    >
+                      Hôm nay
+                    </Button>
+                    <Button 
+                      size="small"
+                      icon={<RightOutlined />}
+                      onClick={() => {
+                        const nextMonth = selectedDate.clone().add(1, 'month');
+                        setSelectedDate(nextMonth);
+                      }}
+                    >
+                      Tháng sau
+                    </Button>
+                  </Space>
+                </Space>
+              }
               loading={loading}
             >
+              <div style={{ marginBottom: '12px', textAlign: 'center' }}>
+                <Text strong style={{ fontSize: '16px' }}>
+                  {selectedDate.format('MMMM YYYY')}
+                </Text>
+              </div>
               <Calendar
                 dateCellRender={dateCellRender}
-                monthCellRender={monthCellRender}
                 onPanelChange={onPanelChange}
                 onSelect={onSelect}
                 value={selectedDate}
+                mode="month"
                 style={{ minHeight: '400px' }}
               />
             </Card>
           </Col>
 
-          {/* Today's Schedule */}
+          {/* Selected Date Schedule */}
           <Col xs={24} lg={8}>
             <Card 
               title={
                 <Space>
                   <ClockCircleOutlined />
-                  <span>Lịch hôm nay</span>
+                  <span>
+                    {selectedDate.isSame(moment(), 'day') 
+                      ? 'Lịch hôm nay' 
+                      : `Lịch ngày ${selectedDate.format('DD/MM')}`
+                    }
+                  </span>
                   <Badge 
-                    count={getEventsForDate(moment()).length} 
+                    count={getEventsForDate(selectedDate).length} 
                     style={{ backgroundColor: '#52c41a' }}
                   />
                 </Space>

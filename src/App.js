@@ -132,6 +132,7 @@ import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 
 // Public Course Pages
 import EnrollmentRequestsManager from './pages/manager/EnrollmentRequestsManager.jsx';
+import InvoiceManagement from './pages/manager/InvoiceManagement.jsx';
 import DebugPublicCourses from './pages/public/DebugPublicCourses.jsx';
 import PublicCourseDashboard from './pages/public/PublicCourseDashboard.jsx';
 import PublicCourseDetail from './pages/public/PublicCourseDetail.jsx';
@@ -384,6 +385,7 @@ function App() {
               <Route path="/manager/teacher-evaluations" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><TeachingAssistantDashboard userRole="MANAGER" /></ProtectedRoute>} />
               <Route path="/manager/sms-management" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><TeachingAssistantDashboard userRole="MANAGER" /></ProtectedRoute>} />
               <Route path="/manager/system-management" element={<ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}><SystemManagement /></ProtectedRoute>} />
+              <Route path="/manager/invoices" element={<ProtectedRoute allowedRoles={["MANAGER", "ACCOUNTANT"]}><InvoiceManagement /></ProtectedRoute>} />
 
               {/* Accountant Routes */}
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />

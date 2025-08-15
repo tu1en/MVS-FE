@@ -43,8 +43,8 @@ const { RangePicker } = DatePicker;
 moment.locale('vi');
 
 /**
- * Parent Billing Page - View invoices, payments, and debt information
- * Based on PARENT_ROLE_SPEC.md Phase 2 requirements
+ * Parent Billing Page - View paid amount and invoices only
+ * Simplified version showing only paid amount and invoice list
  */
 const ParentBilling = () => {
   const { user } = useAuth();
@@ -108,81 +108,10 @@ const ParentBilling = () => {
       setPayments(response.data.payments || []);
     } catch (error) {
       console.error('Error loading billing data:', error);
-      if (error.response?.status === 403) {
-        // Provide mock data for demonstration when access is forbidden
-        const mockBillingData = {
-          summary: {
-            totalDebt: 0,
-            totalPaid: 2500000,
-            unpaidInvoices: 0,
-            overdueAmount: 0
-          },
-          invoices: [
-            {
-              id: 'mock-1',
-              invoiceNumber: 'HĐ-2025-001',
-              issueDate: '2025-01-15',
-              dueDate: '2025-02-15',
-              totalAmount: 1500000,
-              paidAmount: 1500000,
-              status: 'PAID',
-              items: [
-                {
-                  description: 'Học phí tháng 1/2025',
-                  quantity: 1,
-                  unitPrice: 1500000,
-                  amount: 1500000
-                }
-              ]
-            },
-            {
-              id: 'mock-2', 
-              invoiceNumber: 'HĐ-2025-002',
-              issueDate: '2025-02-15',
-              dueDate: '2025-03-15',
-              totalAmount: 1000000,
-              paidAmount: 1000000,
-              status: 'PAID',
-              items: [
-                {
-                  description: 'Phí hoạt động ngoại khóa',
-                  quantity: 1,
-                  unitPrice: 1000000,
-                  amount: 1000000
-                }
-              ]
-            }
-          ],
-          payments: [
-            {
-              id: 'pay-1',
-              paymentDate: '2025-01-20T10:30:00',
-              invoiceNumber: 'HĐ-2025-001',
-              amount: 1500000,
-              paymentMethod: 'BANK_TRANSFER',
-              note: 'Chuyển khoản học phí tháng 1'
-            },
-            {
-              id: 'pay-2',
-              paymentDate: '2025-02-20T14:15:00', 
-              invoiceNumber: 'HĐ-2025-002',
-              amount: 1000000,
-              paymentMethod: 'CASH',
-              note: 'Thanh toán tiền mặt'
-            }
-          ]
-        };
-        
-        setBillingData(mockBillingData);
-        setInvoices(mockBillingData.invoices);
-        setPayments(mockBillingData.payments);
-        message.info('Đang hiển thị dữ liệu tài chính mẫu. Liên hệ phòng kế toán để biết thông tin chính xác.');
-      } else {
-        message.error('Không thể tải thông tin tài chính');
-        setBillingData(null);
-        setInvoices([]);
-        setPayments([]);
-      }
+      message.error('Không thể tải thông tin tài chính');
+      setBillingData(null);
+      setInvoices([]);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -410,18 +339,7 @@ const ParentBilling = () => {
     
     return (
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng công nợ"
-              value={summary.totalDebt || 0}
-              formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: summary.totalDebt > 0 ? '#cf1322' : '#3f8600' }}
-              prefix={<MoneyCollectOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Đã thanh toán"
@@ -429,27 +347,6 @@ const ParentBilling = () => {
               formatter={(value) => formatCurrency(value)}
               valueStyle={{ color: '#3f8600' }}
               prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Hóa đơn chưa thanh toán"
-              value={summary.unpaidInvoices || 0}
-              valueStyle={{ color: summary.unpaidInvoices > 0 ? '#cf1322' : '#666' }}
-              prefix={<ExclamationCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Quá hạn"
-              value={summary.overdueAmount || 0}
-              formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: summary.overdueAmount > 0 ? '#cf1322' : '#666' }}
-              prefix={<ClockCircleOutlined />}
             />
           </Card>
         </Col>
@@ -574,7 +471,7 @@ const ParentBilling = () => {
                 <MoneyCollectOutlined /> Tài chính học phí
               </Title>
               <Text type="secondary">
-                Xem hóa đơn, lịch sử thanh toán và công nợ của con em
+                Xem số tiền đã đóng và hóa đơn của con em
               </Text>
             </div>
             <Space>
@@ -630,17 +527,6 @@ const ParentBilling = () => {
           {/* Summary Cards */}
           {renderSummaryCards()}
 
-          {/* Outstanding Invoices Alert */}
-          {billingData.summary?.totalDebt > 0 && (
-            <Alert
-              message="Thông báo công nợ"
-              description={`Hiện tại con em còn nợ ${formatCurrency(billingData.summary.totalDebt)}. Vui lòng thanh toán sớm để tránh ảnh hưởng đến việc học.`}
-              type="warning"
-              showIcon
-              closable
-            />
-          )}
-
           {/* Invoices Table */}
           <Card 
             title={
@@ -663,32 +549,6 @@ const ParentBilling = () => {
               }}
               locale={{
                 emptyText: <Empty description="Chưa có hóa đơn nào" />
-              }}
-            />
-          </Card>
-
-          {/* Payment History */}
-          <Card 
-            title={
-              <Space>
-                <CheckCircleOutlined />
-                <span>Lịch sử thanh toán</span>
-              </Space>
-            }
-            loading={loading}
-          >
-            <Table
-              dataSource={payments}
-              columns={paymentColumns}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `Tổng ${total} giao dịch`
-              }}
-              locale={{
-                emptyText: <Empty description="Chưa có giao dịch nào" />
               }}
             />
           </Card>
