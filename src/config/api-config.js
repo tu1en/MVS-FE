@@ -8,7 +8,7 @@ const API_CONFIG = {
   // Endpoints configuration
   ENDPOINTS: {
     // Greeting endpoint
-    GREETING: "/greetings/hello",
+    GREETING: "/v1/greetings/hello",
 
     // User endpoints
     USERS: "/v1/users",

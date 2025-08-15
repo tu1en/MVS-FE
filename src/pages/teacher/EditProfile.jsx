@@ -26,10 +26,11 @@ const EditProfile = () => {
     department: ''
   };
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async (isInitial = false) => {
 
     try {
-      setInitialLoading(true);      const result = await ProfileDataService.fetchProfileWithFallback('teacher');
+      if (isInitial) setInitialLoading(true);
+      const result = await ProfileDataService.fetchProfileWithFallback('teacher');
       
       if (result.success) {
         const serverData = result.data || {};
@@ -69,10 +70,13 @@ const EditProfile = () => {
           form.setFieldsValue(fallbackData);
         }, 0);
         
-        message.warning({
-          content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
-          duration: 4
-        });
+        // Only show offline message if we actually have localStorage data
+        if (result.source === 'localStorage' && result.data && Object.keys(result.data).length > 0) {
+          message.warning({
+            content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
+            duration: 4
+          });
+        }
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -89,12 +93,12 @@ const EditProfile = () => {
         duration: 4
       });
     } finally {
-      setInitialLoading(false);
+      if (isInitial) setInitialLoading(false);
     }
   }, [form, message]);
 
   useEffect(() => {
-    fetchProfile();
+    fetchProfile(true);
   }, [fetchProfile]);
 
   const onFinish = async (values) => {
@@ -117,6 +121,8 @@ const EditProfile = () => {
           content: result.message || 'Cập nhật thông tin thành công',
           duration: 3
         });
+        // Refetch profile data to update form with latest server data
+        await fetchProfile();
       } else {
         message.warning({
           content: result.message || 'Không thể cập nhật trên server, đã lưu cục bộ',
