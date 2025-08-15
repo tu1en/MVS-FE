@@ -55,6 +55,20 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
 
   const handleStatusChange = async (id, status) => {
     try {
+      // Lấy thông tin kế hoạch hiện tại
+      const plan = plans.find(p => p.id === id);
+      if (!plan) {
+        message.error('Không tìm thấy kế hoạch!');
+        return;
+      }
+      
+      // Kiểm tra nếu muốn mở kế hoạch đã kết thúc
+      const now = dayjs();
+      if (status === 'OPEN' && plan.endDate && dayjs(plan.endDate).isBefore(now, 'day')) {
+        message.error('Đã quá ngày tuyển dụng, hãy cập nhật lại!');
+        return;
+      }
+      
       await axiosInstance.put(`/recruitment-plans/${id}/status`, { status });
       message.success('Cập nhật trạng thái thành công!');
       fetchPlans();
@@ -75,14 +89,15 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       const startDate = values.startDate;
       const endDate = values.endDate;
       
-      // Kiểm tra ngày bắt đầu không được trong quá khứ
-      if (startDate && startDate.isBefore(now, 'day')) {
+      // Chỉ kiểm tra ngày bắt đầu không được trong quá khứ khi tạo mới kế hoạch
+      // hoặc khi startDate không bị khóa (không phải kế hoạch đã bắt đầu)
+      if (!editingPlan && startDate && startDate.isBefore(now, 'day')) {
         message.error('Ngày bắt đầu không được trong quá khứ!');
         return;
       }
       
-      // Kiểm tra ngày kết thúc không được trong quá khứ
-      if (endDate && endDate.isBefore(now, 'day')) {
+      // Chỉ kiểm tra ngày kết thúc không được trong quá khứ khi tạo mới kế hoạch
+      if (!editingPlan && endDate && endDate.isBefore(now, 'day')) {
         message.error('Ngày kết thúc không được trong quá khứ!');
         return;
       }
@@ -110,7 +125,13 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
       setShowModal(false);
       fetchPlans();
     } catch (err) {
-      message.error('Có lỗi xảy ra!');
+      // Xử lý lỗi validation từ backend
+      if (err.response && err.response.status === 400) {
+        const errorMessage = err.response.data || 'Trùng ngày với kế hoạch khác !';
+        message.error(errorMessage);
+      } else {
+        message.error('Trùng ngày với kế hoạch khác !');
+      }
     }
   };
 
