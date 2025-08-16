@@ -78,7 +78,16 @@ const changePassword = async (oldPassword, newPassword) => {
         oldPassword,
         newPassword
     });
-    return response.data;
+    
+    // Đảm bảo luôn trả về string
+    if (typeof response.data === 'string') {
+        return response.data;
+    } else if (response.data && typeof response.data === 'object') {
+        // Nếu server trả về object, lấy message hoặc chuyển đổi thành string
+        return response.data.message || JSON.stringify(response.data);
+    } else {
+        return 'Đổi mật khẩu thành công';
+    }
 };
 
 

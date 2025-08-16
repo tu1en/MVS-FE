@@ -104,6 +104,7 @@ import AttendancePageNew from "./pages/AttendancePageNew.jsx";
 import BlogDetailPage from "./pages/BlogDetailPage.jsx";
 import BlogPages from "./pages/BlogPages.jsx";
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'; // Import forgot password page
 import HomePage from "./pages/HomePage/index.jsx"; // Import a new page
 import LecturesPageNew from "./pages/LecturesPageNew.jsx";
 import MessagingPage from "./pages/MessagingPage.jsx";
@@ -269,6 +270,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<PublicRoute><LoginScreen /></PublicRoute>} />
               <Route path="/select-role" element={<PublicRoute><SelectRoleLogin /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
               <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
               <Route path="/" element={<PublicRoute><RootRedirect /></PublicRoute>} />
 
