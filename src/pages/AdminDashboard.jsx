@@ -38,6 +38,10 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-semibold mb-4">Cấu hình cài đặt hệ thống</h2>
           <p className="text-gray-600">Thay đổi cấu hình hệ thống (email, bảo mật...)</p>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/admin/notifications')}>
+          <h2 className="text-xl font-semibold mb-4">Quản lý thông báo</h2>
+          <p className="text-gray-600">Tạo và quản lý thông báo hệ thống, lên lịch gửi thông báo</p>
+        </div>
       </div>
     </div>
   );

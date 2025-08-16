@@ -128,7 +128,34 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
     return lesson.selected && 
            lesson.newDate && 
            lesson.newSlot && 
-           isValidDate(lesson.newDate);
+           isValidDate(lesson.newDate) &&
+           !hasInternalConflict(lesson);
+  };
+
+  const hasInternalConflict = (currentLesson) => {
+    if (!currentLesson.newDate || !currentLesson.newSlot) return false;
+    
+    const [startTime, endTime] = currentLesson.newSlot.split('-');
+    
+    // Kiểm tra xem có buổi nào khác đã chọn cùng ngày và thời gian không
+    for (const otherLesson of lessons) {
+      if (otherLesson.id === currentLesson.id || !otherLesson.selected || !otherLesson.newDate || !otherLesson.newSlot) {
+        continue;
+      }
+      
+      if (otherLesson.newDate === currentLesson.newDate) {
+        const [otherStartTime, otherEndTime] = otherLesson.newSlot.split('-');
+        
+        // Kiểm tra overlap: (start1 < end2) && (start2 < end1)
+        const hasOverlap = startTime < otherEndTime && otherStartTime < endTime;
+        
+        if (hasOverlap) {
+          return true; // Có conflict
+        }
+      }
+    }
+    
+    return false; // Không có conflict
   };
 
   const toggleLessonSelection = (id, checked) => {
@@ -156,6 +183,39 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
       if (rowsToCheck.length === 0) {
         showNotification('Hãy chọn buổi và nhập ngày/slot mới hợp lệ cho từng buổi', 'warning');
         return;
+      }
+
+      // Kiểm tra conflict nội bộ trong lớp trước
+      const dateTimeMap = new Map();
+      for (const lesson of rowsToCheck) {
+        const date = lesson.newDate;
+        const [startTime, endTime] = lesson.newSlot.split('-');
+        
+        if (dateTimeMap.has(date)) {
+          for (const existingTimeRange of dateTimeMap.get(date)) {
+            const existingStart = existingTimeRange.startTime;
+            const existingEnd = existingTimeRange.endTime;
+            
+            // Kiểm tra overlap: (start1 < end2) && (start2 < end1)
+            const hasOverlap = startTime < existingEnd && existingStart < endTime;
+            
+            if (hasOverlap) {
+              showNotification(`Phát hiện xung đột nội bộ: Buổi học #${lesson.id} trùng lịch với buổi khác trong cùng ngày ${date}`, 'warning');
+              // Đánh dấu cả hai buổi là conflict
+              setLessons(prev => prev.map(l => 
+                (l.id === lesson.id || l.id === existingTimeRange.lessonId) ? 
+                { ...l, status: 'conflict' } : l
+              ));
+              return;
+            }
+          }
+        }
+        
+        // Thêm vào map để kiểm tra
+        if (!dateTimeMap.has(date)) {
+          dateTimeMap.set(date, []);
+        }
+        dateTimeMap.get(date).push({ startTime, endTime, lessonId: lesson.id });
       }
 
       const results = await Promise.all(rowsToCheck.map(async (l) => {
@@ -211,6 +271,35 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
         return;
       }
 
+      // Kiểm tra conflict nội bộ trong frontend trước khi submit
+      const dateTimeMap = new Map();
+      for (const update of updates) {
+        const date = update.newDate;
+        const startTime = update.newStartTime;
+        const endTime = update.newEndTime;
+        
+        if (dateTimeMap.has(date)) {
+          for (const existingTimeRange of dateTimeMap.get(date)) {
+            const existingStart = existingTimeRange.startTime;
+            const existingEnd = existingTimeRange.endTime;
+            
+            // Kiểm tra overlap: (start1 < end2) && (start2 < end1)
+            const hasOverlap = startTime < existingEnd && existingStart < endTime;
+            
+            if (hasOverlap) {
+              showNotification(`Không thể đổi lịch: Buổi học #${update.lessonId} trùng lịch với buổi khác trong cùng ngày ${date} (thời gian: ${startTime}-${endTime} chồng lấn với ${existingStart}-${existingEnd})`, 'error');
+              return;
+            }
+          }
+        }
+        
+        // Thêm vào map để kiểm tra
+        if (!dateTimeMap.has(date)) {
+          dateTimeMap.set(date, []);
+        }
+        dateTimeMap.get(date).push({ startTime, endTime });
+      }
+
       await classManagementService.rescheduleClass(classItem.id, {
         lessonUpdates: updates,
         autoAssignRoom: autoRoom,
@@ -221,7 +310,17 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
       onSuccess && onSuccess();
       onClose();
     } catch (e) {
-      showNotification('Lỗi đổi lịch', 'error');
+      console.error('Error rescheduling:', e);
+      
+      // Hiển thị thông báo lỗi chi tiết hơn
+      let errorMessage = 'Lỗi đổi lịch';
+      if (e.response?.data?.message) {
+        errorMessage = e.response.data.message;
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      
+      showNotification(errorMessage, 'error');
     }
   };
 
@@ -232,7 +331,7 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
 
   const selectedCount = lessons.filter(l => l.selected).length;
   const readyCount = lessons.filter(l => isLessonReady(l)).length;
-  const conflictCount = lessons.filter(l => l.status === 'conflict').length;
+  const conflictCount = lessons.filter(l => l.status === 'conflict' || hasInternalConflict(l)).length;
   const pastDateCount = lessons.filter(l => l.selected && l.newDate && !isValidDate(l.newDate)).length;
 
   return (
@@ -418,6 +517,7 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
                         <div 
                           className={`w-2 h-2 rounded-full ${
                             lesson.newDate && !isValidDate(lesson.newDate) ? 'bg-orange-500' :
+                            hasInternalConflict(lesson) ? 'bg-red-500' :
                             lesson.status === 'ok' ? 'bg-green-500' :
                             lesson.status === 'conflict' ? 'bg-red-500' :
                             lesson.selected && lesson.newDate && lesson.newSlot ? 'bg-yellow-500' :
@@ -425,6 +525,7 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
                           }`}
                           title={
                             lesson.newDate && !isValidDate(lesson.newDate) ? 'Ngày không hợp lệ (quá khứ)' :
+                            hasInternalConflict(lesson) ? 'Trùng lịch nội bộ trong lớp' :
                             lesson.status === 'ok' ? 'Không xung đột' :
                             lesson.status === 'conflict' ? 'Có xung đột' :
                             lesson.selected && lesson.newDate && lesson.newSlot ? 'Chưa kiểm tra' :
@@ -445,6 +546,13 @@ export default function RescheduleModal({ open, onClose, classItem, onSuccess })
                   {lesson.selected && lesson.newSlot && !lesson.newDate && (
                     <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
                       ⚠️ Vui lòng chọn ngày học mới
+                    </div>
+                  )}
+
+                  {/* Conflict nội bộ */}
+                  {lesson.selected && lesson.newDate && lesson.newSlot && hasInternalConflict(lesson) && (
+                    <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                      ⚠️ Trùng lịch với buổi khác trong cùng ngày
                     </div>
                   )}
 

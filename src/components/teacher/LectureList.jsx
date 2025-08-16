@@ -3,16 +3,91 @@ import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import scheduleService from '../../services/scheduleService';
 
 const LectureList = ({ courseId, courseName, isStudentView = false }) => {
   const navigate = useNavigate();
   const [lectures, setLectures] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [lecturesByDate, setLecturesByDate] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastLoadedCourseId, setLastLoadedCourseId] = useState(null);
 
   // Get message API from App context
   const { message } = App.useApp();
+
+  // Function to load classroom schedules
+  const loadSchedules = useCallback(async () => {
+    try {
+      console.log(`📅 LectureList: Loading schedules for courseId: ${courseId}`);
+      const scheduleData = await scheduleService.getClassroomSchedule(courseId);
+      console.log(`📅 LectureList: Loaded ${scheduleData.length} schedules`);
+      setSchedules(scheduleData);
+      return scheduleData;
+    } catch (error) {
+      console.error('❌ LectureList: Error loading schedules:', error);
+      return [];
+    }
+  }, [courseId]);
+
+  // Function to organize lectures by schedule dates
+  const organizeLecturesByDate = useCallback((lecturesData, scheduleData) => {
+    const organized = {};
+    
+    // Create date groups from schedule
+    scheduleData.forEach(schedule => {
+      const scheduleDate = schedule.date || schedule.classDate;
+      if (scheduleDate) {
+        const dateKey = new Date(scheduleDate).toISOString().split('T')[0];
+        if (!organized[dateKey]) {
+          organized[dateKey] = {
+            date: scheduleDate,
+            schedule: schedule,
+            lectures: []
+          };
+        }
+      }
+    });
+
+    // Organize lectures into date groups
+    lecturesData.forEach(lecture => {
+      let assigned = false;
+      
+      // Try to match lecture to schedule by date
+      if (lecture.startTime || lecture.lectureDate) {
+        const lectureDate = new Date(lecture.startTime || lecture.lectureDate);
+        const lectureDateKey = lectureDate.toISOString().split('T')[0];
+        
+        if (organized[lectureDateKey]) {
+          organized[lectureDateKey].lectures.push(lecture);
+          assigned = true;
+        }
+      }
+      
+      // If no matching date found, add to "Chưa lên lịch" group
+      if (!assigned) {
+        const unscheduledKey = 'unscheduled';
+        if (!organized[unscheduledKey]) {
+          organized[unscheduledKey] = {
+            date: null,
+            schedule: null,
+            lectures: []
+          };
+        }
+        organized[unscheduledKey].lectures.push(lecture);
+      }
+    });
+
+    // Sort dates
+    const sortedEntries = Object.entries(organized).sort(([dateA], [dateB]) => {
+      if (dateA === 'unscheduled') return 1;
+      if (dateB === 'unscheduled') return -1;
+      return new Date(dateA) - new Date(dateB);
+    });
+
+    return Object.fromEntries(sortedEntries);
+  }, []);
 
   // Memoize loadLectures to prevent unnecessary re-renders
   const loadLectures = useCallback(async () => {
@@ -67,6 +142,12 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
 
       console.log(`📋 LectureList: Final lectures ready (${lecturesWithMaterials.length} items)`);
       setLectures(lecturesWithMaterials);
+
+      // Load schedules and organize lectures by date
+      const scheduleData = await loadSchedules();
+      const organizedLectures = organizeLecturesByDate(lecturesWithMaterials, scheduleData);
+      console.log(`📋 LectureList: Organized lectures by date:`, organizedLectures);
+      setLecturesByDate(organizedLectures);
     } catch (error) {
       console.error('❌ LectureList: Error loading lectures:', error);
       console.error('   Status:', error.response?.status);
@@ -75,7 +156,7 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
     } finally {
       setLoading(false);
     }
-  }, [courseId, lastLoadedCourseId, message]);
+  }, [courseId, lastLoadedCourseId, message, loadSchedules, organizeLecturesByDate]);
 
   // Optimized useEffect with proper dependencies and loading state check
   useEffect(() => {
@@ -177,7 +258,9 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
         <h2 className="text-xl font-bold">
           {isStudentView ? 'Danh sách bài giảng' : `Bài giảng - ${courseName}`}
         </h2>
-        <span className="text-sm text-gray-500">{lectures.length} bài giảng</span>
+        <span className="text-sm text-gray-500">
+          {lectures.length} bài giảng ({Object.keys(lecturesByDate).length} ngày học)
+        </span>
       </div>
 
       {lectures.length === 0 ? (
@@ -185,8 +268,37 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
           <p className="text-gray-500 mb-4">Chưa có bài giảng nào cho khóa học này.</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {lectures.map((lecture) => (
+        <div className="space-y-8">
+          {Object.entries(lecturesByDate).map(([dateKey, dateGroup]) => (
+            <div key={dateKey} className="border-l-4 border-blue-500 pl-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-blue-700">
+                  {dateKey === 'unscheduled' 
+                    ? 'Chưa lên lịch' 
+                    : `${new Date(dateGroup.date).toLocaleDateString('vi-VN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}`
+                  }
+                </h3>
+                {dateGroup.schedule && (
+                  <p className="text-sm text-gray-600">
+                    {dateGroup.schedule.startTime && dateGroup.schedule.endTime && (
+                      <span>
+                        ⏰ {new Date(dateGroup.schedule.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - 
+                        {new Date(dateGroup.schedule.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}
+                      </span>
+                    )}
+                    {dateGroup.schedule.room && (
+                      <span className="ml-4">📍 Phòng: {dateGroup.schedule.room}</span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-4">
+                {dateGroup.lectures.map((lecture) => (
             <div key={lecture.id} className="bg-white rounded-lg shadow-md p-6 border">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -263,6 +375,9 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
                   </button>
                 </div>
               )}
+            </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
