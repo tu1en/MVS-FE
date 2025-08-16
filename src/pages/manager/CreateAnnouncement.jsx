@@ -52,10 +52,11 @@ const CreateAnnouncement = () => {
           rules={[{ required: true, message: 'Vui lòng chọn đối tượng nhận thông báo!' }]}
         >
           <Select placeholder="Chọn đối tượng nhận thông báo">
-            <Select.Option value="all">Tất cả</Select.Option>
-            <Select.Option value="students">Sinh viên</Select.Option>
-            <Select.Option value="teachers">Giáo viên</Select.Option>
-            <Select.Option value="accountants">Kế toán viên</Select.Option>
+            <Select.Option value="ALL">Tất cả</Select.Option>
+            <Select.Option value="STUDENTS">Học sinh</Select.Option>
+            <Select.Option value="TEACHERS">Giáo viên</Select.Option>
+            <Select.Option value="ACCOUNTANTS">Kế toán viên</Select.Option>
+            <Select.Option value="PARENTS">Phụ huynh</Select.Option>
           </Select>
         </Form.Item>
 

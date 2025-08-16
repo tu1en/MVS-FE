@@ -606,6 +606,13 @@ function NavigationBar() {
       items: [
         { name: 'Tin Tức', path: '/blog', icon: '📰' }
       ]
+    },
+    {
+      category: "Giao tiếp",
+      items: [
+        { name: 'Thông Báo', path: '/parent/announcements', icon: '📢' },
+        { name: 'Tin Nhắn', path: '/parent/messages', icon: '💬' }
+      ]
     }
   ];
 
