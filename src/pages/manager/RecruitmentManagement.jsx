@@ -383,21 +383,41 @@ const RecruitmentManagement = () => {
     
     // Loại bỏ những ứng viên đã được duyệt phỏng vấn khỏi danh sách "Lên lịch"
     // Lịch phỏng vấn với trạng thái COMPLETED không hiển thị trong "Lên lịch" vì đã hoàn thành
-    return approvedApps.filter(app => !approvedInterviewEmails.includes(app.email));
+    // Loại bỏ những ứng viên đã bị từ chối
+    return approvedApps.filter(app => {
+      const isApprovedInterview = approvedInterviewEmails.includes(app.email);
+      const isRejected = app.status === 'REJECTED';
+      return !isApprovedInterview && !isRejected;
+    });
   };
 
-                  // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Lên lịch" hay không
+  // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Lên lịch" hay không
   const shouldShowInSchedule = (applicationId) => {
     const interview = pendingInterviews.find(i => i.applicationId === applicationId);
     // Hiển thị nếu không có lịch phỏng vấn hoặc lịch phỏng vấn chưa được duyệt
     // Lịch phỏng vấn với trạng thái COMPLETED không hiển thị trong "Lên lịch" vì đã hoàn thành
-    return !interview || (interview.status !== 'ACCEPTED' && interview.status !== 'APPROVED' && interview.status !== 'COMPLETED');
+    // Không hiển thị những ứng viên đã bị từ chối
+    
+    // Kiểm tra xem ứng viên có bị từ chối trong đơn ứng tuyển không
+    const application = applications.find(app => app.id === applicationId);
+    if (application && application.status === 'REJECTED') {
+      return false;
+    }
+    
+    return !interview || (interview.status !== 'ACCEPTED' && interview.status !== 'APPROVED' && interview.status !== 'COMPLETED' && interview.status !== 'REJECTED');
   };
 
   // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Phỏng vấn chờ" hay không
   const shouldShowInPending = (interview) => {
-    // Chỉ hiển thị những ứng viên chưa được duyệt
-    return interview.status !== 'APPROVED';
+    // Chỉ hiển thị những ứng viên chưa được duyệt và chưa bị từ chối
+    
+    // Kiểm tra xem ứng viên có bị từ chối trong đơn ứng tuyển không
+    const application = applications.find(app => app.id === interview.applicationId);
+    if (application && application.status === 'REJECTED') {
+      return false;
+    }
+    
+    return interview.status !== 'APPROVED' && interview.status !== 'REJECTED';
   };
 
   // Hàm mới: Kiểm tra xem ứng viên có nên hiển thị trong "Quản Lý Offer" hay không
@@ -405,10 +425,30 @@ const RecruitmentManagement = () => {
     // Chỉ hiển thị những ứng viên đã hoàn thành phỏng vấn (COMPLETED)
     // Không hiển thị APPROVED vì đó là trạng thái đã được duyệt cuối cùng
     // Không hiển thị ACCEPTED vì đó là trạng thái tạm thời
+    // Không hiển thị REJECTED vì đã bị từ chối
+    
+    // Kiểm tra xem ứng viên có bị từ chối trong đơn ứng tuyển không
+    const application = applications.find(app => app.id === interview.applicationId);
+    if (application && application.status === 'REJECTED') {
+      return false;
+    }
+    
+    // Kiểm tra xem lịch phỏng vấn có bị từ chối không
+    if (interview.status === 'REJECTED') {
+      return false;
+    }
+    
     return interview.status === 'COMPLETED';
   };
 
   const handlePlanSelect = (plan) => {
+    // Kiểm tra xem kế hoạch đã kết thúc chưa
+    const now = dayjs();
+    if (plan.endDate && dayjs(plan.endDate).isBefore(now, 'day')) {
+      message.error('Ngày tuyển dụng của kế hoạch đã kết thúc!');
+      return;
+    }
+    
     setSelectedPlan(plan);
     setActiveTab('positions');
   };
@@ -436,7 +476,7 @@ const RecruitmentManagement = () => {
   const openAddPosition = () => {
     setEditingPosition(null);
     positionForm.resetFields();
-    positionForm.setFieldsValue({ contractType: 'FULL_TIME', title: '', description: '', salaryRange: '', quantity: 1 });
+    positionForm.setFieldsValue({ contractType: 'PART_TIME', title: '', description: '', salaryRange: '', quantity: 1 });
     setShowPositionModal(true);
   };
 
@@ -446,7 +486,7 @@ const RecruitmentManagement = () => {
     positionForm.setFieldsValue({
       title: record.title,
       description: record.description,
-      contractType: record.contractType || 'FULL_TIME',
+      contractType: record.contractType || 'PART_TIME',
       salaryRange: (record.salaryRange ?? '').toString(),
       quantity: record.quantity || 1
     });
@@ -497,10 +537,31 @@ const RecruitmentManagement = () => {
         await axiosInstance.post(`/recruitment-applications/${id}/approve`);
       } else if (status === 'REJECTED') {
         await axiosInstance.post(`/recruitment-applications/${id}/reject`);
+        
+        // Cập nhật trạng thái lịch phỏng vấn thành REJECTED nếu có
+        // Tìm tất cả các lịch phỏng vấn của ứng viên này, không chỉ trong pendingInterviews
+        // mà cả trong interviews (để bắt cả trường hợp lịch đã COMPLETED)
+        const allInterviews = [...interviews, ...pendingInterviews, ...offers];
+        const interview = allInterviews.find(i => i.applicationId === id);
+        
+        if (interview) {
+          console.log('Updating interview status to REJECTED:', interview.id);
+          await axiosInstance.put(`/interview-schedules/${interview.id}/result`, { 
+            status: 'REJECTED', 
+            result: 'Ứng viên bị từ chối' 
+          });
+        }
       }
       message.success('Cập nhật trạng thái thành công!');
-      fetchApplications();
-      fetchApprovedApps();
+      
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchApplications(),
+        fetchApprovedApps(),
+        fetchInterviews(),
+        fetchPendingInterviews(),
+        fetchOffers()
+      ]);
     } catch (err) {
       message.error('Không thể cập nhật trạng thái!');
     }
@@ -611,6 +672,16 @@ const RecruitmentManagement = () => {
                   const handleInterviewStatusChange = async (id, status, result) => {
                   try {
                     await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+                    
+                    // Nếu từ chối, cập nhật trạng thái đơn ứng tuyển thành REJECTED
+                    if (status === 'REJECTED') {
+                      // Tìm application ID từ interview
+                      const interview = pendingInterviews.find(i => i.id === id);
+                      if (interview && interview.applicationId) {
+                        await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
+                      }
+                    }
+                    
                     message.success('Cập nhật trạng thái thành công!');
 
                     // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
@@ -618,7 +689,8 @@ const RecruitmentManagement = () => {
                       fetchPendingInterviews(),
                       fetchInterviews(),
                       fetchApprovedApps(),
-                      fetchOffers()
+                      fetchOffers(),
+                      fetchApplications()
                     ]);
                   } catch (error) {
                     message.error('Cập nhật trạng thái thất bại!');
@@ -1258,71 +1330,7 @@ const RecruitmentManagement = () => {
         </div>
       )
     },
-    {
-      title: 'Lương GROSS',
-      dataIndex: 'offer',
-      render: (text, record) => {
-        if (record.contractType === 'PART_TIME') {
-          return <span className="vietnamese-text text-gray-500">-</span>;
-        }
-        return (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <GrossSalaryColumn 
-              offer={text} 
-              recordId={record.id} 
-              onOfferUpdate={handleOfferUpdate} 
-              onShowSalaryDetails={handleShowSalaryDetails} 
-            />
-            {record.contractType === 'FULL_TIME' && (
-              <Select
-                size="small"
-                value={dependentsByInterview[record.id] || 0}
-                onChange={(v) => handleDependentsChange(record.id, v)}
-                style={{ width: 140 }}
-                className="vietnamese-text"
-              >
-                {Array.from({ length: 11 }).map((_, i) => (
-                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
-                ))}
-              </Select>
-            )}
-          </div>
-        );
-      }
-    },
-    {
-      title: 'Lương NET',
-      dataIndex: 'offer',
-      render: (text, record) => {
-        if (record.contractType === 'PART_TIME') {
-          return <span className="vietnamese-text text-gray-500">-</span>;
-        }
-        return (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <NetSalaryColumn 
-              offer={text} 
-              recordId={record.id} 
-              contractType={record.contractType}
-              numberOfDependents={dependentsByInterview[record.id] || 0}
-              onOfferUpdate={handleOfferUpdate} 
-            />
-            {record.contractType === 'FULL_TIME' && (
-              <Select
-                size="small"
-                value={dependentsByInterview[record.id] || 0}
-                onChange={(v) => handleDependentsChange(record.id, v)}
-                style={{ width: 140 }}
-                className="vietnamese-text"
-              >
-                {Array.from({ length: 11 }).map((_, i) => (
-                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
-                ))}
-              </Select>
-            )}
-          </div>
-        );
-      }
-    },
+    
     {
       title: 'Lương theo giờ',
       dataIndex: 'hourlyRate',
@@ -1500,11 +1508,8 @@ const RecruitmentManagement = () => {
           <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả' }, { max: 200, message: 'Mô tả tối đa 200 ký tự!' }]}>
             <Input.TextArea className="vietnamese-text" maxLength={200} />
           </Form.Item>
-          <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
-            <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
-              <Select.Option value="FULL_TIME">Hợp đồng chính thức (Cho các nhân viên khác)</Select.Option>
-              <Select.Option value="PART_TIME">Hợp đồng mùa vụ (Cho giáo viên)</Select.Option>
-            </Select>
+          <Form.Item name="contractType" hidden>
+            <Input value="PART_TIME" />
           </Form.Item>
           <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
             <Input 

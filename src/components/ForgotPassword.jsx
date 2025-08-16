@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 const baseUrl = process.env.REACT_APP_BASE_URL;
 
 export default function ForgotPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(5);
 
   const validateEmail = (email) => {
     if (!email.endsWith('@gmail.com')) {
@@ -37,15 +40,28 @@ export default function ForgotPassword() {
       });
 
       if (response.ok) {
-        setSuccess('Đường dẫn khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra email của bạn để tiếp tục quá trình khôi phục mật khẩu.');
+        const data = await response.text();
+        setSuccess('Mật khẩu mới đã được gửi đến email của bạn. Bạn sẽ được chuyển về trang đăng nhập sau 5 giây.');
         setError('');
         setEmail('');
+        
+        // Bắt đầu đếm ngược để chuyển hướng
+        let timer = 5;
+        const countdownInterval = setInterval(() => {
+          timer--;
+          setCountdown(timer);
+          if (timer <= 0) {
+            clearInterval(countdownInterval);
+            navigate('/login');
+          }
+        }, 1000);
       } else {
-        setError('Email address not found');
+        const errorData = await response.text();
+        setError(errorData || 'Email không tồn tại trong hệ thống');
         setSuccess('');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
       setSuccess('');
     }
   };
@@ -54,8 +70,11 @@ export default function ForgotPassword() {
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-          Quên mật khẩu ?
+          Quên mật khẩu?
         </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Nhập email của bạn để nhận mật khẩu mới
+        </p>
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
@@ -87,12 +106,19 @@ export default function ForgotPassword() {
               type="submit"
               className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
-              Đặt lại mật khẩu
+              Gửi mật khẩu mới
             </button>
           </div>
         </form>
 
-        {success && <p className="mt-4 text-sm text-green-500">{success}</p>}
+        {success && (
+          <div className="mt-4">
+            <p className="text-sm text-green-500">{success}</p>
+            <p className="text-sm text-blue-600 mt-2">
+              Chuyển về trang đăng nhập sau: <span className="font-bold">{countdown}</span> giây
+            </p>
+          </div>
+        )}
         {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
       </div>
     </div>

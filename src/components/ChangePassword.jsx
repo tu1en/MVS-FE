@@ -81,10 +81,24 @@ const ChangePassword = () => {
       // Start countdown for redirect
       setCountdown(3);
 
-    } catch (error) {
-      console.error('Error:', error);
-      setMessage(error.response?.data || 'Đã xảy ra lỗi khi đổi mật khẩu');
-    }
+          } catch (error) {
+        console.error('Error:', error);
+        
+        // Xử lý error object từ server
+        let errorMessage = 'Đã xảy ra lỗi khi đổi mật khẩu';
+        
+        if (error.response?.data) {
+          const errorData = error.response.data;
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else if (errorData && typeof errorData === 'object') {
+            // Nếu server trả về error object, lấy message từ đó
+            errorMessage = errorData.message || 'Đã xảy ra lỗi khi đổi mật khẩu';
+          }
+        }
+        
+        setMessage(errorMessage);
+      }
   };
 
   return (
@@ -157,7 +171,7 @@ const ChangePassword = () => {
       
       {message && (
         <div className={`mt-4 p-3 rounded-md text-sm ${isSuccess ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message}
+          {typeof message === 'string' ? message : JSON.stringify(message)}
           {countdown !== null && (
             <div className="mt-2 font-medium">
               Tự động chuyển hướng sau {countdown} giây...

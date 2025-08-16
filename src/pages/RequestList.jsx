@@ -87,10 +87,29 @@ const RequestList = () => {
 
   const showDetailModal = (record) => {
     const formResponses = safeJsonParse(record.formResponses);
+    
+    // Tạo object chứa thông tin đầy đủ
     const fullDetails = {
-        ...record,
-        ...formResponses
+      ...record,
+      // Thông tin cơ bản từ record
+      id: record.id,
+      email: record.email,
+      fullName: record.fullName,
+      phoneNumber: record.phoneNumber,
+      requestedRole: record.requestedRole,
+      status: record.status,
+      resultStatus: record.resultStatus,
+      createdAt: record.createdAt,
+      processedAt: record.processedAt,
+      // Thông tin phụ huynh từ formResponses
+      parentEmail: formResponses?.parentEmail,
+      parentFullName: formResponses?.parentFullName,
+      parentPhoneNumber: formResponses?.parentPhoneNumber,
+      additionalInfo: formResponses?.additionalInfo,
+      // Giữ nguyên formResponses để có thể parse lại nếu cần
+      formResponses: record.formResponses
     };
+    
     setSelectedRequest(fullDetails);
     setDetailModalVisible(true);
   };
@@ -127,30 +146,40 @@ const RequestList = () => {
     return <Tag>{status}</Tag>;
   };
 
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'TEACHER':
+        return 'Giáo viên';
+      case 'STUDENT':
+        return 'Học sinh';
+      case 'PARENT':
+        return 'Phụ huynh';
+      default:
+        return role;
+    }
+  };
+
   const renderDetailContent = () => {
     if (!selectedRequest) return null;
     
-    // selectedRequest is now the full detailed object
     const formDetails = selectedRequest;
-
+    
     const commonItems = [
-      { key: '1', label: 'ID Yêu cầu', children: formDetails.id},
-      { key: '2', label: 'Họ và Tên', children: formDetails.fullName },
-      { key: '3', label: 'Email', children: formDetails.email },
-      { key: '4', label: 'Số điện thoại', children: formDetails.phoneNumber || 'N/A' },
-      { key: '5', label: 'Ngày yêu cầu', children: new Date(formDetails.createdAt).toLocaleString() },
-      { key: '6', label: 'Trạng thái', children: getStatusBadge(formDetails.status, formDetails.resultStatus) },
+      { key: '1', label: 'Email', children: formDetails.email || 'N/A' },
+      { key: '2', label: 'Họ và tên', children: formDetails.fullName || 'N/A' },
+      { key: '3', label: 'Số điện thoại', children: formDetails.phoneNumber || 'N/A' },
+      { key: '4', label: 'Vai trò yêu cầu', children: getRoleLabel(formDetails.requestedRole) },
     ];
     
-    // Chỉ hiển thị chi tiết cho học sinh, bỏ logic giáo viên
+    // Hiển thị chi tiết cho học sinh (với thông tin phụ huynh)
     const studentItems = formDetails.requestedRole === 'STUDENT' ? [
-      { key: 's1', label: 'Lớp/Khối', children: formDetails.grade || 'N/A' },
-      { key: 's2', label: 'Liên hệ phụ huynh', children: formDetails.parentContact || 'N/A' },
-      { key: 's3', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
+      { key: 's1', label: 'Email phụ huynh', children: formDetails.parentEmail || 'N/A' },
+      { key: 's2', label: 'Họ và tên phụ huynh', children: formDetails.parentFullName || 'N/A' },
+      { key: 's3', label: 'Số điện thoại phụ huynh', children: formDetails.parentPhoneNumber || 'N/A' },
+      { key: 's4', label: 'Thông tin thêm', children: formDetails.additionalInfo || 'N/A', span: 2 },
     ] : [];
     
     const allItems = [...commonItems, ...studentItems];
-    
     return <Descriptions bordered column={2} items={allItems} />;
   };
 
@@ -164,7 +193,18 @@ const RequestList = () => {
       title: 'Vai trò',
       dataIndex: 'requestedRole',
       key: 'requestedRole',
-      render: (role) => (role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'),
+      render: (role) => {
+        switch (role) {
+          case 'TEACHER':
+            return 'Giáo viên';
+          case 'STUDENT':
+            return 'Học sinh';
+          case 'PARENT':
+            return 'Phụ huynh';
+          default:
+            return role;
+        }
+      },
     },
     {
       title: 'Họ và Tên',

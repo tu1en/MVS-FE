@@ -135,6 +135,7 @@ const AccountList = () => {
         { value: 'TEACHER', label: 'Giáo viên' },
         { value: 'MANAGER', label: 'Quản lý' },
         { value: 'ACCOUNTANT', label: 'Kế toán viên' },
+        { value: 'PARENT', label: 'Phụ huynh' },
     ];
 
     // Hàm lấy label role
@@ -150,6 +151,8 @@ const AccountList = () => {
             case 'ROLE_ACCOUNTANT': return 'Kế toán viên';
             case 'ADMIN':
             case 'ROLE_ADMIN': return 'Quản trị viên';
+            case 'PARENT':
+            case 'ROLE_PARENT': return 'Phụ huynh';
             default: return role;
         }
     };
@@ -181,7 +184,29 @@ const AccountList = () => {
             dataIndex: 'roles',
             key: 'roles',
             render: (roles, record, index) => {
-                const role = Array.isArray(roles) && roles.length > 0 ? roles[0] : '';
+                // Try to get role from roles array first, then fallback to roleId
+                let role = '';
+                if (Array.isArray(roles) && roles.length > 0) {
+                    role = roles[0];
+                } else if (record.roleId) {
+                    // Map roleId to role name if roles array is empty
+                    const roleIdMap = {
+                        1: 'STUDENT',
+                        2: 'TEACHER',
+                        3: 'MANAGER',
+                        4: 'ADMIN',
+                        5: 'ACCOUNTANT',
+                        6: 'TEACHING_ASSISTANT',
+                        7: 'PARENT'
+                    };
+                    role = roleIdMap[record.roleId] || 'USER';
+                }
+                
+                // Debug logging
+                if (record.roleId === 7 || record.roleId === '7') {
+                    console.log('Debug PARENT role:', { record, roles, roleId: record.roleId, mappedRole: role });
+                }
+                
                 // Nếu là admin (dòng đầu tiên), chỉ hiển thị label, không cho đổi
                 if (index === 0 && role === 'ADMIN') {
                     return <span style={{ fontWeight: 'bold' }}>{getRoleLabel(role)}</span>;

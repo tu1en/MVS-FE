@@ -978,7 +978,13 @@ function LecturesPageNew() {
       console.log('LecturesPageNew: Rendering manager view (teacher interface)');
       return renderTeacherView(); // Managers can see teacher view
     }
-
+    
+    // Parent view for role '7' or 'PARENT'
+    if (userRole === '7' || userRole === 'PARENT') {
+      console.log('LecturesPageNew: Rendering parent view (student interface)');
+      return renderStudentView(); // Parents can see student view to monitor their children
+    }
+    
     // If role is not recognized, show error
     console.log('LecturesPageNew: Unrecognized role:', userRole);
     return (

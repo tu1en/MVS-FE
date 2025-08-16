@@ -44,11 +44,14 @@ const googleLogin = async (idToken, user) => {
     });
 
     const data = response.data;
-    if (!data.token || !data.role) {
+    console.log('AuthService: Google login response:', data);
+    
+    if (!data.token || !data.roleId) {
         throw new Error('Đăng nhập thất bại: Thiếu thông tin từ server');
     }
 
-    const normalizedRole = getNormalizedRole(data.role);
+    // Use roleId instead of role string for consistency
+    const normalizedRole = getNormalizedRole(data.roleId);
 
     return {
         token: data.token,
@@ -75,7 +78,16 @@ const changePassword = async (oldPassword, newPassword) => {
         oldPassword,
         newPassword
     });
-    return response.data;
+    
+    // Đảm bảo luôn trả về string
+    if (typeof response.data === 'string') {
+        return response.data;
+    } else if (response.data && typeof response.data === 'object') {
+        // Nếu server trả về object, lấy message hoặc chuyển đổi thành string
+        return response.data.message || JSON.stringify(response.data);
+    } else {
+        return 'Đổi mật khẩu thành công';
+    }
 };
 
 

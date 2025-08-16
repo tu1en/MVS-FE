@@ -1,7 +1,8 @@
-import { App, Button, Card, Form, Input, Select, Spin } from 'antd';
+import { App, Button, Card, Form, Input, Select, Spin, DatePicker } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import ProfileDataService from '../../services/profileDataService';
-import { validateEmail, validatePhoneNumber } from '../../utils/validation';
+import { validateEmail } from '../../utils/validation';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
@@ -10,29 +11,37 @@ const EditProfile = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [invalidPrefix, setInvalidPrefix] = useState(false);
   const [formReady, setFormReady] = useState(false);
 
   // Initialize form with default values to prevent React warnings
   const defaultValues = {
+    username: '',
     fullName: '',
     email: '',
-    phoneNumber: '',
-    studentId: localStorage.getItem('userId') || '',
     gender: '',
-    address: '',
-    school: 'Trường Đại học ABC',
-    class: 'Lớp 12A1'
-  };  const fetchProfile = useCallback(async () => {
+    birthDate: null,
+    parentName: '',
+    school: ''
+  };
+
+  const fetchProfile = useCallback(async () => {
     try {
       setInitialLoading(true);
       const result = await ProfileDataService.fetchProfileWithFallback('student');
       
       if (result.success) {
+        // Map English gender values from backend to Vietnamese for display
+        const genderDisplayMapping = {
+          'MALE': 'Nam',
+          'FEMALE': 'Nữ',
+          'OTHER': 'Khác'
+        };
+        
         const profileData = { 
           ...defaultValues, 
           ...result.data,
-          class: result.data.className || result.data.class // map className to class for form
+          birthDate: result.data.birthDate ? dayjs(result.data.birthDate) : null,
+          gender: result.data.gender ? genderDisplayMapping[result.data.gender] || result.data.gender : null
         };
         
         // Set form ready first, then set field values after form is rendered
@@ -54,7 +63,7 @@ const EditProfile = () => {
         const fallbackData = { 
           ...defaultValues, 
           ...result.data,
-          class: result.data?.className || result.data?.class || defaultValues.class
+          birthDate: result.data?.birthDate ? dayjs(result.data.birthDate) : null
         };
         
         // Set form ready first, then set field values after form is rendered
@@ -65,10 +74,13 @@ const EditProfile = () => {
           form.setFieldsValue(fallbackData);
         }, 0);
         
-        message.warning({
-          content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
-          duration: 4
-        });
+        // Only show offline message if we actually have localStorage data
+        if (result.source === 'localStorage' && result.data && Object.keys(result.data).length > 0) {
+          message.warning({
+            content: 'Không thể tải từ server, đang sử dụng dữ liệu cục bộ',
+            duration: 4
+          });
+        }
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -94,13 +106,21 @@ const EditProfile = () => {
   }, [fetchProfile]);
 
   const onFinish = async (values) => {
-    setLoading(true);
     try {
+      setLoading(true);
+      
+      // Map Vietnamese gender values to English for backend
+      const genderMapping = {
+        'Nam': 'MALE',
+        'Nữ': 'FEMALE', 
+        'Khác': 'OTHER'
+      };
+      
       const profileData = {
         ...values,
-        className: values.class // map class back to className for API
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        gender: values.gender ? genderMapping[values.gender] || values.gender : null
       };
-      delete profileData.class;
 
       const result = await ProfileDataService.updateProfileWithFallback(profileData);
       
@@ -115,7 +135,8 @@ const EditProfile = () => {
       setLoading(false);
     }
   };
-    return (
+
+  return (
     <div className="container mx-auto px-4 py-8">
       <Card title="Chỉnh Sửa Thông Tin Cá Nhân" className="max-w-2xl mx-auto" loading={initialLoading}>
         {formReady ? (
@@ -127,6 +148,13 @@ const EditProfile = () => {
             initialValues={defaultValues}
           >
           <Form.Item
+            name="username"
+            label="Tên đăng nhập"
+          >
+            <Input disabled />
+          </Form.Item>
+
+          <Form.Item
             name="fullName"
             label="Họ và Tên"
             rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
@@ -135,27 +163,26 @@ const EditProfile = () => {
           </Form.Item>
 
           <Form.Item
-            name="phoneNumber"
-            label="Số điện thoại"
-            rules={[{ required: true, validator: validatePhoneNumber }]}
-            validateStatus={invalidPrefix ? 'error' : ''}
-            help={invalidPrefix ? 'Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09' : null}
-          >
-            <Input
-              maxLength={11}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              onChange={(e) => {
-                let value = e.target.value.replace(/[^0-9]/g, '');
-                if (value.length > 11) value = value.slice(0, 11);
-                form.setFieldsValue({ phoneNumber: value });
-
-                if (value.length >= 2 && !/^0(3|5|7|8|9)/.test(value)) {
-                  setInvalidPrefix(true);
-                } else {
-                  setInvalidPrefix(false);
+            name="birthDate"
+            label="Ngày sinh"
+            rules={[
+              { required: true, message: 'Vui lòng chọn ngày sinh' },
+              () => ({
+                validator(_, value) {
+                  if (!value) return Promise.resolve();
+                  if (value.isAfter(dayjs().endOf('day'))) {
+                    return Promise.reject(new Error('Không được chọn ngày trong tương lai'));
+                  }
+                  return Promise.resolve();
                 }
-              }}
+              })
+            ]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày sinh"
+              disabledDate={(d) => d && d.isAfter(dayjs().endOf('day'))}
             />
           </Form.Item>
 
@@ -172,14 +199,6 @@ const EditProfile = () => {
           </Form.Item>
 
           <Form.Item
-            name="studentId"
-            label="Mã Số Sinh Viên"
-            rules={[{ required: true }]}
-          >
-            <Input disabled />
-          </Form.Item>
-
-          <Form.Item
             name="email"
             label="Email"
             rules={[{ required: true, validator: validateEmail }]}
@@ -187,8 +206,11 @@ const EditProfile = () => {
             <Input disabled />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa Chỉ">
-            <Input.TextArea />
+          <Form.Item
+            name="parentName"
+            label="Người giám hộ"
+          >
+            <Input disabled />
           </Form.Item>
 
           <Form.Item
@@ -199,13 +221,7 @@ const EditProfile = () => {
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="class"
-            label="Lớp"
-            rules={[{ required: true, message: 'Vui lòng nhập tên lớp' }]}
-          >
-            <Input />
-          </Form.Item>          <Form.Item>
+          <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
               Cập Nhật Thông Tin
             </Button>
