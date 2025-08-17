@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 function NavigationBar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { logout: ctxLogout } = useAuth();
+  const { user, logout: ctxLogout } = useAuth();
   
   // Get auth state from Redux store instead of directly from localStorage
   const { isLogin, role: reduxRole } = useSelector((state) => state.auth);
@@ -32,6 +32,15 @@ function NavigationBar() {
 
   // Get role from Redux and localStorage, and convert to role constant
   useEffect(() => {
+    // 0) If AuthContext says user is logged in, use that as the source of truth
+    if (user && user.role) {
+      const normalized = user.role.replace('ROLE_', '').toUpperCase();
+      // Map to ROLE constant if exists, else fallback to GUEST
+      const mapped = ROLE[normalized] ? ROLE[normalized] : ROLE.GUEST;
+      setUserRole(mapped);
+      return; // Skip Redux/localStorage fallbacks
+    }
+
     // First sync Redux state with localStorage
     dispatch(syncFromLocalStorage());
     
@@ -113,7 +122,7 @@ function NavigationBar() {
         }
       }
     }
-  }, [dispatch, reduxRole, isLogin]);
+  }, [dispatch, reduxRole, isLogin, user]);
 
   // Thêm hàm kiểm tra hợp đồng chính thức cho teacher
   useEffect(() => {
@@ -647,7 +656,8 @@ function NavigationBar() {
 
   const navItems = getNavItems();
   
-  if (!isLogin && userRole === ROLE.GUEST) {
+  const isLoggedIn = !!user || isLogin;
+  if (!isLoggedIn && userRole === ROLE.GUEST) {
     return null; // Don't render sidebar if not logged in
   }
 

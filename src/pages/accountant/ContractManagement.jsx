@@ -11,16 +11,14 @@ import {
   Input, 
   Select, 
   DatePicker, 
-  InputNumber,
   Tag,
   Popconfirm,
-  Tooltip
+  Tooltip,
+  InputNumber
 } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
-  EyeOutlined,
   UserOutlined,
   FilePdfOutlined,
   CheckOutlined
@@ -52,6 +50,8 @@ const ContractManagement = () => {
   // Bộ lọc trạng thái hợp đồng
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [completedContracts, setCompletedContracts] = useState(new Set());
+
+  
 
   // Helper: parse various date shapes to moment safely
   const parseToMoment = (value) => {
@@ -171,6 +171,8 @@ const ContractManagement = () => {
       message.error('Không thể tải danh sách ứng viên đã được duyệt!');
     }
   };
+
+  
 
   // Xử lý tạo hợp đồng mới
   const handleCreateContract = async (values) => {
