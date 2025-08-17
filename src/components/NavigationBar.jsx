@@ -413,9 +413,19 @@ function NavigationBar() {
           icon: '🏖️'
         },
         { 
+          name: 'Quản Lý Hợp đồng', 
+          path: '/manager/contracts',
+          icon: '📄'
+        },
+        { 
+          name: 'Quản Lý Thông báo', 
+          path: '/manager/announcements',
+          icon: '📢'
+        },
+        { 
           name: 'Quản Lý Giao Tiếp', 
           path: '/manager/communications', 
-          icon: '📢'
+          icon: '💬'
         },
         { 
           name: 'Quản Lý Tuyển Dụng',

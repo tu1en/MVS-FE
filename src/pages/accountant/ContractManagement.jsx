@@ -448,6 +448,18 @@ const ContractManagement = () => {
     message.success('Đã đánh dấu hợp đồng là hoàn thành (chỉ hiển thị trên UI).');
   };
 
+  // Gia hạn hợp đồng (ký lại)
+  const handleRenewContract = async (contractId) => {
+    try {
+      await axiosInstance.put(`/contracts/${contractId}/renew`);
+      message.success('Gia hạn hợp đồng thành công! Hợp đồng đã được ký lại với thời hạn mới.');
+      fetchContracts(); // Refresh data
+    } catch (error) {
+      console.error('Error renewing contract:', error);
+      message.error('Không thể gia hạn hợp đồng!');
+    }
+  };
+
   // Cấu hình cột cho bảng hợp đồng
   const contractColumns = [
     {
@@ -535,14 +547,13 @@ const ContractManagement = () => {
               icon={<EditOutlined />} 
               size="small" 
               onClick={() => handleEditContract(record)}
-              disabled={record.status === 'EXPIRED' || completedContracts.has(record.id)}
+              disabled={completedContracts.has(record.id)}
               style={{
-                backgroundColor: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#d9d9d9' : undefined,
-                borderColor: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#d9d9d9' : undefined,
-                color: (record.status === 'EXPIRED' || completedContracts.has(record.id)) ? '#999' : undefined
+                backgroundColor: completedContracts.has(record.id) ? '#d9d9d9' : undefined,
+                borderColor: completedContracts.has(record.id) ? '#d9d9d9' : undefined,
+                color: completedContracts.has(record.id) ? '#999' : undefined
               }}
               title={
-                record.status === 'EXPIRED' ? 'Không thể chỉnh sửa hợp đồng đã hết hạn' :
                 completedContracts.has(record.id) ? 'Không thể chỉnh sửa hợp đồng đã hoàn thành' :
                 'Chỉnh sửa hợp đồng'
               }
@@ -560,6 +571,22 @@ const ContractManagement = () => {
                   icon={<CheckOutlined />} 
                   size="small" 
                   style={{ color: '#52c41a' }}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
+          {record.status === 'EXPIRED' && !completedContracts.has(record.id) && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn gia hạn và ký lại hợp đồng này?"
+              onConfirm={() => handleRenewContract(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Tooltip title="Đánh dấu hoàn thành (Ký lại)">
+                <Button 
+                  icon={<CheckOutlined />} 
+                  size="small" 
+                  style={{ color: '#ff4d4f', backgroundColor: '#fff2f0', borderColor: '#ff4d4f' }}
                 />
               </Tooltip>
             </Popconfirm>

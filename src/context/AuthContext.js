@@ -1,5 +1,6 @@
 import { Spin } from 'antd';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import ProfileDataService from '../services/profileDataService';
 
 const AuthContext = createContext();
 
@@ -164,6 +165,36 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         clearLocalStorage();
       }
+
+      // After basic validation, hydrate user details (fullName, avatar, etc.) from server
+      const hydrateFromServer = async () => {
+        try {
+          const result = await ProfileDataService.fetchProfileWithFallback();
+          const data = result?.data || null;
+          if (!data) return;
+          setUser((prev) => {
+            if (!prev) return prev;
+            const merged = {
+              ...prev,
+              fullName: data.fullName || data.name || prev.fullName,
+              email: data.email || prev.email,
+              username: data.username || prev.username,
+              avatar: data.avatar || prev.avatar,
+            };
+            try {
+              localStorage.setItem('user', JSON.stringify(merged));
+            } catch (e) {
+              // ignore storage errors
+            }
+            return merged;
+          });
+        } catch (e) {
+          console.log('AuthContext: hydrateFromServer failed (non-blocking)');
+        }
+      };
+
+      // Fire and forget hydration; do not block UI loading
+      hydrateFromServer();
 
       console.log('AuthContext: User validation completed');
       setLoading(false);
