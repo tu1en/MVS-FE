@@ -13,7 +13,6 @@ import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
 import Layout from "./components/Layout.jsx";
-import PreventBackNavigation from "./components/PreventBackNavigation.jsx";
 import BlankPage from "./pages/BlankPage.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
@@ -268,7 +267,6 @@ function App() {
     <AuthProvider>
       <AntApp>
         <Router>
-          <PreventBackNavigation />
           <Layout>
             <Routes>
               <Route path="/login" element={<PublicRoute><LoginScreen /></PublicRoute>} />
@@ -399,6 +397,7 @@ function App() {
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/account" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
               <Route path="/accountant/edit-profile" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
+              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
 

@@ -8,6 +8,7 @@ import { auth, googleProvider } from '../config/firebase'; // Đảm bảo file 
 import { ROLE } from '../constants/constants';
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 import authService from '../services/authService'; // Import the new authService
+import ProfileDataService from '../services/profileDataService';
 import { loginSuccess } from '../store/slices/authSlice';
 import { isUserLoggedIn } from '../utils/authUtils';
 
@@ -69,19 +70,34 @@ export default function LoginScreen() {
     try {
       const userData = await authService.login(email, matKhau);
       
-      // Store in AuthContext (this will also store in localStorage)
+      // 1) Store basic auth payload first
       login(userData);
-      
-      // Force a sync with localStorage to ensure state is up-to-date
       syncLoginState();
 
-             // Also dispatch to Redux for components using Redux
-       dispatch(loginSuccess(userData));
-       
-       // Reset popup closed flag khi đăng nhập thành công
-       setGooglePopupClosed(false);
-       
-       toast.success('Đăng nhập thành công!');
+      // 2) Hydrate profile to get fullName/email/username/avatar immediately after login
+      try {
+        const result = await ProfileDataService.fetchProfileWithFallback();
+        const data = result?.data || {};
+        const mergedUser = {
+          ...userData,
+          fullName: data.fullName || data.name || userData.fullName,
+          email: data.email || userData.email,
+          username: data.username || userData.username,
+          avatar: data.avatar || userData.avatar,
+        };
+        // Update context and Redux with hydrated info
+        login(mergedUser);
+        dispatch(loginSuccess(mergedUser));
+      } catch (hydrateErr) {
+        console.log('Post-login profile hydration failed (non-blocking):', hydrateErr);
+        // Fallback to dispatch basic payload
+        dispatch(loginSuccess(userData));
+      }
+      
+      // Reset popup closed flag khi đăng nhập thành công
+      setGooglePopupClosed(false);
+      
+      toast.success('Đăng nhập thành công!');
 
       console.log('Navigating based on role:', userData.role);
       // userData.role is normalized by authService to a plain role name
@@ -162,14 +178,27 @@ export default function LoginScreen() {
         return;
       }
 
-      // Store in AuthContext (this will also store in localStorage)
+      // 1) Store basic auth payload first
       login(userData);
-      
-      // Force a sync with localStorage to ensure state is up-to-date
       syncLoginState();
-      
-      // Also dispatch to Redux for components using Redux
-      dispatch(loginSuccess(userData));
+
+      // 2) Hydrate profile to get fullName/email/username/avatar immediately after login
+      try {
+        const result = await ProfileDataService.fetchProfileWithFallback();
+        const data = result?.data || {};
+        const mergedUser = {
+          ...userData,
+          fullName: data.fullName || data.name || userData.fullName,
+          email: data.email || userData.email,
+          username: data.username || userData.username,
+          avatar: data.avatar || userData.avatar,
+        };
+        login(mergedUser);
+        dispatch(loginSuccess(mergedUser));
+      } catch (hydrateErr) {
+        console.log('Post-google-login profile hydration failed (non-blocking):', hydrateErr);
+        dispatch(loginSuccess(userData));
+      }
       
       console.log('Token and role stored in localStorage');
       

@@ -121,9 +121,9 @@ class ContractPDFGenerator {
     const qualification = this.getValue(contract.qualification);
     const subject = this.getValue(contract.subject || contract.position);
     const classLevel = this.getValue(contract.classLevel || contract.educationLevel || contract.level);
-    // Contract dates removed from model - use default values
-    const startDate = 'N/A'; // this.formatDate(contract.startDate);
-    const endDate = 'N/A'; // this.formatDate(contract.endDate);
+    // Contract dates from the new startDate/endDate fields
+    const startDate = this.formatDate(contract.startDate);
+    const endDate = this.formatDate(contract.endDate);
     const salary = contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A';
     const contractType = 'Giáo viên';
     const department = this.getValue(contract.department);
@@ -201,9 +201,9 @@ class ContractPDFGenerator {
     const address = this.getValue(contract.address);
     const qualification = this.getValue(contract.qualification);
     const position = this.getValue(contract.position);
-    // Contract dates removed from model - use default values
-    const startDate = 'N/A'; // this.formatDate(contract.startDate);
-    const endDate = 'N/A'; // this.formatDate(contract.endDate);
+    // Contract dates from the new startDate/endDate fields
+    const startDate = this.formatDate(contract.startDate);
+    const endDate = this.formatDate(contract.endDate);
     const netSalary = contract.netSalary ? contract.netSalary.toLocaleString('vi-VN') : 
                      (contract.salary ? contract.salary.toLocaleString('vi-VN') : 'N/A');
     // Get contract ID - prioritize contractId field from backend
@@ -430,20 +430,25 @@ class ContractPDFGenerator {
     doc.text('Điều 2: Thời hạn hợp đồng và chế độ làm việc', 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text('- Loại hợp đồng lao động: Có kỳ hạn.', 30, yPosition);
+    doc.text('- Loại hợp đồng lao động: Có kỳ hạn (3 tháng).', 30, yPosition);
     yPosition += 10;
+    
     const hasStart = clauseData.startDate && clauseData.startDate !== 'N/A';
     const hasEnd = clauseData.endDate && clauseData.endDate !== 'N/A';
     if (hasStart && hasEnd) {
-      doc.text(`- Thời hạn hợp đồng: Từ ${clauseData.startDate} đến ${clauseData.endDate}`, 30, yPosition);
+      doc.text(`  (Ngày bắt đầu: ${clauseData.startDate}, Ngày kết thúc: ${clauseData.endDate})`, 30, yPosition);
       yPosition += 10;
     } else if (hasStart) {
-      doc.text(`- Thời hạn hợp đồng: Từ ngày ${clauseData.startDate}`, 30, yPosition);
+      doc.text(`  (Ngày bắt đầu: ${clauseData.startDate}, Ngày kết thúc: 90 ngày sau)`, 30, yPosition);
       yPosition += 10;
     } else if (hasEnd) {
-      doc.text(`- Thời hạn hợp đồng: Đến ngày ${clauseData.endDate}`, 30, yPosition);
+      doc.text(`  (Ngày kết thúc: ${clauseData.endDate})`, 30, yPosition);
+      yPosition += 10;
+    } else {
+      doc.text('  (Ngày bắt đầu: theo thỏa thuận, Ngày kết thúc: 90 ngày sau)', 30, yPosition);
       yPosition += 10;
     }
+    
     // Wrap equipment text
     const equipmentText = doc.splitTextToSize('- Bên B được cấp phát những dụng cụ làm việc gồm: Các tài liệu phục vụ cho giảng dạy, dụng cụ giảng dạy, thiết bị dạy học.', 160);
     doc.text(equipmentText, 30, yPosition);

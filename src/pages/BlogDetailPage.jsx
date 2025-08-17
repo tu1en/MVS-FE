@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Typography, Card, Spin, message, Button, Tag, Divider } from 'antd';
+
 import { 
   CalendarOutlined, 
   ArrowLeftOutlined,
   TagOutlined
 } from '@ant-design/icons';
 import { getBlogById } from '../services/blogService';
+import NavigationBar from '../components/NavigationBar';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -16,6 +20,9 @@ const BlogDetailPage = () => {
   const location = useLocation();
   const [blog, setBlog] = useState(location.state?.blog || null);
   const [loading, setLoading] = useState(!location.state?.blog);
+  const { user: ctxUser } = useAuth();
+  const { isLogin } = useSelector((state) => state.auth);
+  const showNav = !!ctxUser || !!isLogin;
 
   useEffect(() => {
     if (!blog) {
@@ -84,123 +91,126 @@ const BlogDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto px-4 sm:px-6 max-w-4xl">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Button 
-            icon={<ArrowLeftOutlined />} 
-            onClick={() => navigate('/')}
-            className="mb-4"
-          >
-            Về trang chủ
-          </Button>
-        </div>
+    <div className="flex min-h-screen bg-gray-50">
+      {showNav && <NavigationBar />}
+      <div className="flex-1 py-8">
+        <div className="mx-auto px-4 sm:px-6 max-w-4xl">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Button 
+              icon={<ArrowLeftOutlined />} 
+              onClick={() => navigate('/')}
+              className="mb-4"
+            >
+              Về trang chủ
+            </Button>
+          </div>
 
-        {/* Blog Content */}
-        <Card className="shadow-lg rounded-xl overflow-hidden">
-          {/* Header Image */}
-          {blog.thumbnailUrl && (
-            <div className="w-full h-64 md:h-96 overflow-hidden mb-6">
-              <img
-                src={blog.thumbnailUrl}
-                alt={blog.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'block';
-                }}
-              />
-              <div 
-                className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-6xl font-bold"
-                style={{ display: 'none' }}
-              >
-                {blog.title.charAt(0).toUpperCase()}
-              </div>
-            </div>
-          )}
-
-          {/* Blog Header */}
-          <div className="px-6 pb-6">
-            <Title level={1} className="text-3xl md:text-4xl font-bold mb-4">
-              {blog.title}
-            </Title>
-
-            {/* Meta Information */}
-            <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-6">
-
-              <div className="flex items-center">
-                <CalendarOutlined className="mr-2" />
-                <Text>{formatDate(blog.publishedDate)}</Text>
-              </div>
-
-            </div>
-
-            {/* Tags */}
-            {blog.tags && (
-              <div className="mb-6">
-                {renderTags(blog.tags)}
-              </div>
-            )}
-
-            <Divider />
-
-            {/* Blog Content */}
-            <div className="prose prose-lg max-w-none">
-              {blog.description && (
-                <div 
-                  className="text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: blog.description }}
+          {/* Blog Content */}
+          <Card className="shadow-lg rounded-xl overflow-hidden">
+            {/* Header Image */}
+            {blog.thumbnailUrl && (
+              <div className="w-full h-64 md:h-96 overflow-hidden mb-6">
+                <img
+                  src={blog.thumbnailUrl}
+                  alt={blog.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
                 />
-              )}
-            </div>
-
-            {/* Video if available */}
-            {blog.videoUrl && (
-              <div className="mt-8">
-                <Title level={3} className="mb-4">Video liên quan</Title>
-                <div className="aspect-w-16 aspect-h-9">
-                  <iframe
-                    src={blog.videoUrl}
-                    title={blog.title}
-                    className="w-full h-96 rounded-lg"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                <div 
+                  className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-6xl font-bold"
+                  style={{ display: 'none' }}
+                >
+                  {blog.title.charAt(0).toUpperCase()}
                 </div>
               </div>
             )}
 
-            {/* Footer */}
-            <Divider />
-            <div className="text-center text-gray-500">
-              <Text>Bài viết được cập nhật lần cuối: {formatDate(blog.lastEditedDate)}</Text>
+            {/* Blog Header */}
+            <div className="px-6 pb-6">
+              <Title level={1} className="text-3xl md:text-4xl font-bold mb-4">
+                {blog.title}
+              </Title>
 
+              {/* Meta Information */}
+              <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-6">
+
+                <div className="flex items-center">
+                  <CalendarOutlined className="mr-2" />
+                  <Text>{formatDate(blog.publishedDate)}</Text>
+                </div>
+
+              </div>
+
+              {/* Tags */}
+              {blog.tags && (
+                <div className="mb-6">
+                  {renderTags(blog.tags)}
+                </div>
+              )}
+
+              <Divider />
+
+              {/* Blog Content */}
+              <div className="prose prose-lg max-w-none">
+                {blog.description && (
+                  <div 
+                    className="text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: blog.description }}
+                  />
+                )}
+              </div>
+
+              {/* Video if available */}
+              {blog.videoUrl && (
+                <div className="mt-8">
+                  <Title level={3} className="mb-4">Video liên quan</Title>
+                  <div className="aspect-w-16 aspect-h-9">
+                    <iframe
+                      src={blog.videoUrl}
+                      title={blog.title}
+                      className="w-full h-96 rounded-lg"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Footer */}
+              <Divider />
+              <div className="text-center text-gray-500">
+                <Text>Bài viết được cập nhật lần cuối: {formatDate(blog.lastEditedDate)}</Text>
+
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* Related Actions */}
-        <div className="mt-8 text-center">
-          <Button 
-            type="primary" 
-            size="large"
-            onClick={() => navigate('/blog')}
-            className="mr-4"
-          >
-            Xem tất cả tin tức
-          </Button>
-          <Button 
-            size="large"
-            onClick={() => navigate('/')}
-          >
-            Về trang chủ
-          </Button>
+          {/* Related Actions */}
+          <div className="mt-8 text-center">
+            <Button 
+              type="primary" 
+              size="large"
+              onClick={() => navigate('/blog')}
+              className="mr-4"
+            >
+              Xem tất cả tin tức
+            </Button>
+            <Button 
+              size="large"
+              onClick={() => navigate('/')}
+            >
+              Về trang chủ
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default BlogDetailPage; 
+export default BlogDetailPage;

@@ -31,6 +31,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import * as blogService from "../services/blogService";
 import NavigationBar from '../components/NavigationBar';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -48,10 +49,11 @@ const BlogPages = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   
+  const { user: ctxUser } = useAuth();
   const { user, isLogin, role: roleFromState } = useSelector((state) => state.auth);
-  const computedRole = (roleFromState || user?.role || localStorage.getItem('role') || '').toString().toUpperCase();
+  const computedRole = (roleFromState || user?.role || ctxUser?.role || localStorage.getItem('role') || '').toString().toUpperCase();
   const isAdmin = computedRole === 'ADMIN' || computedRole === 'ROLE_ADMIN';
-  const isAuthenticated = isLogin === true || !!localStorage.getItem('token');
+  const isAuthenticated = !!ctxUser || isLogin === true || !!localStorage.getItem('token');
 
   useEffect(() => {
     fetchPublishedBlogs();
@@ -82,8 +84,6 @@ const BlogPages = () => {
       setLoading(false);
     }
   };
-
-
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
@@ -274,7 +274,7 @@ const BlogPages = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {isLogin && <NavigationBar />}
+      {(ctxUser || isLogin) && <NavigationBar />}
       <div className="flex-1 p-6">
         <Title level={2} className="mb-6">Tin tức</Title>
         {isAdmin && (
