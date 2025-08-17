@@ -3,11 +3,13 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { managerService } from '../../services/managerService';
 import { validateEmail, validatePhoneNumber } from '../../utils/validation';
+import { useAuth } from '../../context/AuthContext';
 
 const EditProfile = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [invalidPrefix, setInvalidPrefix] = useState(false);
+  const { user, login } = useAuth();
 
   useEffect(() => {
     fetchProfile();
@@ -26,6 +28,16 @@ const EditProfile = () => {
         } catch (_) {}
       }
       form.setFieldsValue(normalized);
+
+      // Sync to AuthContext so Header shows full name instead of username
+      if (typeof login === 'function') {
+        login({
+          ...(user || {}),
+          fullName: normalized.fullName || normalized.name || user?.fullName,
+          email: normalized.email || user?.email,
+          username: normalized.managerId || normalized.username || user?.username
+        });
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       message.error('Không thể tải thông tin cá nhân');
@@ -36,15 +48,23 @@ const EditProfile = () => {
     setLoading(true);
     try {
       const payload = {
-        fullName: values.fullName,
         email: values.email,
         phoneNumber: values.phoneNumber,
-        department: values.department,
-        position: values.position,
         birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
         birthYear: values.birthDate ? values.birthDate.year() : null
       };
       await managerService.updateProfile(payload);
+      
+      // Update user context with new fullName to sync with header
+      if (user) {
+        const updatedUser = {
+          ...user,
+          fullName: values.fullName,
+          email: values.email
+        };
+        login(updatedUser);
+      }
+      
       message.success('Cập nhật thông tin thành công');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -73,9 +93,8 @@ const EditProfile = () => {
           <Form.Item
             name="fullName"
             label="Họ và Tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
           >
-            <Input />
+            <Input disabled />
           </Form.Item>
 
           <Form.Item
@@ -135,20 +154,11 @@ const EditProfile = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="department"
-            label="Phòng/Ban"
-          >
-            <Input disabled />
-          </Form.Item>
+          {/* Phòng/Ban hidden as per requirement */}
+          {null}
 
-          <Form.Item
-            name="position"
-            label="Chức Vụ"
-            rules={[{ required: true, message: 'Vui lòng nhập chức vụ' }]}
-          >
-            <Input />
-          </Form.Item>
+          {/* Chức Vụ hidden as per requirement */}
+          {null}
 
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>

@@ -1,13 +1,13 @@
 import {
-    BookOutlined,
-    CalendarOutlined,
-    FileTextOutlined,
-    LogoutOutlined,
-    MessageOutlined,
-    UserOutlined,
-    VideoCameraOutlined,
-    BarChartOutlined,
-    SettingOutlined
+  BarChartOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+  MessageOutlined,
+  SettingOutlined,
+  UserOutlined,
+  VideoCameraOutlined
 } from '@ant-design/icons';
 import { Avatar, Badge, Dropdown, Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
@@ -42,12 +42,12 @@ export default function NavigationMenu() {
       label: 'Bài giảng',
       onClick: () => navigate('/lectures')
     },
-    {
-      key: 'materials',
-      icon: <FileTextOutlined />,
-      label: 'Tài liệu học tập',
-      onClick: () => navigate('/student/materials')
-    },
+    // {
+    //   key: 'materials',
+    //   icon: <FileTextOutlined />,
+    //   label: 'Tài liệu học tập',
+    //   onClick: () => navigate('/student/materials')
+    // },
     {
       key: 'attendance',
       icon: <CalendarOutlined />,

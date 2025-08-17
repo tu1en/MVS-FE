@@ -14,6 +14,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
   const [formData, setFormData] = useState({
     className: '',
     description: '',
+    introVideoUrl: '', // Thêm field cho video giới thiệu
     teacherId: null,
     roomId: null,
     educationLevel: '',
@@ -410,6 +411,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
         courseTemplateId: template.id,
         className: formData.className,
         description: formData.description,
+        introVideoUrl: formData.introVideoUrl || null, // Thêm video URL
         teacherId: formData.teacherId,
         roomId: formData.roomId,
         startDate: formData.startDate,
@@ -442,6 +444,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     setFormData({
       className: '',
       description: '',
+      introVideoUrl: '', // Reset video URL
       teacherId: null,
       roomId: null,
       startDate: '',
@@ -625,6 +628,28 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Mô tả về lớp học, yêu cầu đầu vào, mục tiêu..."
                   />
+                </div>
+
+                {/* Video Giới thiệu */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🎥 Video Giới thiệu (Tùy chọn)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.introVideoUrl}
+                    onChange={(e) => handleFieldChange('introVideoUrl', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      formData.validation.introVideoUrl ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="https://www.youtube.com/watch?v=... hoặc https://vimeo.com/..."
+                  />
+                  {formData.validation.introVideoUrl && (
+                    <p className="mt-1 text-sm text-red-600">{formData.validation.introVideoUrl}</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Hỗ trợ: YouTube, Vimeo, Zoom, Google Meet. Video này sẽ hiển thị trong trang khóa học công khai.
+                  </p>
                 </div>
               </div>
 

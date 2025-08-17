@@ -26,11 +26,11 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
+import WysiwygEditor from '../../components/common/WysiwygEditor';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
-import SubmissionService from '../../services/submissionService';
 import FileUploadService from '../../services/fileUploadService';
-import WysiwygEditor from '../../components/common/WysiwygEditor';
+import SubmissionService from '../../services/submissionService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -260,7 +260,11 @@ const StudentAssignments = () => {
       title: 'Ngày giao',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      render: (date) => {
+        if (!date) return 'Chưa có thông tin';
+        const createdDate = dayjs(date);
+        return createdDate.isValid() ? createdDate.format('DD/MM/YYYY') : 'Chưa có thông tin';
+      },
     },
     {
       title: 'Hạn nộp',
@@ -439,7 +443,11 @@ const StudentAssignments = () => {
                 {selectedAssignment.points || 0} điểm
               </Descriptions.Item>
               <Descriptions.Item label="Ngày giao">
-                {dayjs(selectedAssignment.createdAt).format('DD/MM/YYYY HH:mm')}
+                {selectedAssignment.createdAt ? 
+                  dayjs(selectedAssignment.createdAt).isValid() ? 
+                    dayjs(selectedAssignment.createdAt).format('DD/MM/YYYY HH:mm') : 
+                    'Chưa có thông tin' : 
+                  'Chưa có thông tin'}
               </Descriptions.Item>
               <Descriptions.Item label="Hạn nộp">
                 <Space>

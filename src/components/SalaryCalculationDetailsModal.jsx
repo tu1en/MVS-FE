@@ -53,6 +53,9 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
         const weekdayHours = employeeRecord.weekdayWorkingHours || Math.max((employeeRecord.totalWorkingHours || 0) - weekendHours, 0);
         const regularHours = weekdayHours;
         const hourlyRate = isTeacher ? (employeeRecord.hourlyRate || 0) : Math.round((employeeRecord.baseSalary || 0) / 176);
+        
+        console.log('🔄 Modal: hourlySalary from backend:', employeeRecord.hourlySalary);
+        console.log('🔄 Modal: hourlyRate calculated:', hourlyRate);
 
         const topCV = employeeRecord.topCVResult || {};
         const insurance = topCV.insuranceDetails || {};
@@ -92,6 +95,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             contractEndDate: null,
             contractSalary: employeeRecord.baseSalary,
             baseSalary: employeeRecord.baseSalary,
+            hourlySalary: isTeacher ? (employeeRecord.hourlySalary || hourlyRate) : null,
             salaryType: isTeacher ? 'THEO_GIO' : 'GROSS',
             hourlyRate
           },
@@ -103,7 +107,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             weekendHours
           },
           salaryCalculationSteps: {
-            step1_BaseSalary: employeeRecord.baseSalary,
+            step1_BaseSalary: isTeacher ? hourlyRate : employeeRecord.baseSalary,
             step2_RegularPay: weekdayPay,
             step3_OvertimePay: 0,
             step4_HolidayPay: 0,
@@ -121,7 +125,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             netSalary
           },
           calculationFormulas: [
-            `Lương cơ bản (hợp đồng): ${formatCurrency(employeeRecord.baseSalary)}`,
+            isTeacher ? `Đơn giá giờ (hợp đồng): ${formatCurrency(hourlyRate)}` : `Lương cơ bản (hợp đồng): ${formatCurrency(employeeRecord.baseSalary)}`,
             isTeacher ? `Lương ngày thường = Đơn giá giờ × Giờ ngày thường = ${formatCurrency(hourlyRate)} × ${weekdayHours}h = ${formatCurrency(weekdayPay)}` : `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
             isTeacher ? `Lương cuối tuần (2x) = Đơn giá giờ × 2 × Giờ cuối tuần = ${formatCurrency(hourlyRate)} × 2 × ${weekendHours}h = ${formatCurrency(weekendPay)}` : `Lương thô = ${formatCurrency(employeeRecord.grossPay)}`,
             isTeacher ? `Tổng GROSS = Ngày thường + Cuối tuần = ${formatCurrency(grossSalary)}` : `BHXH (8%) = ${formatCurrency(socialInsurance)}`,
@@ -213,12 +217,12 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                 </Descriptions>
               </Col>
               <Col span={12}>
-                <Alert
-                  message="Thông tin được tính toán bằng hệ thống TopCV với dữ liệu hợp đồng và chấm công thực tế"
-                  type="info"
-                  showIcon
-                  style={{ marginBottom: 16 }}
-                />
+                {/* <Alert
+                  // message="Thông tin được tính toán bằng hệ thống TopCV với dữ liệu hợp đồng và chấm công thực tế"
+                  // type="info"
+                  // showIcon
+                  // style={{ marginBottom: 16 }}
+                /> */}
               </Col>
             </Row>
           </Card>
@@ -238,7 +242,9 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                   <Descriptions.Item label="Giờ làm việc">{details.contractDetails?.workingHours || 'N/A'}</Descriptions.Item>
                   <Descriptions.Item label="Trạng thái hợp đồng">
                     <Tag color={details.contractDetails?.contractStatus === 'ACTIVE' ? 'green' : 'orange'}>
-                      {details.contractDetails?.contractStatus || 'N/A'}
+                      {details.contractDetails?.contractStatus === 'ACTIVE' ? 'Đang hoạt động' : 
+                       details.contractDetails?.contractStatus === 'EXPIRED' ? 'Hết hạn' :
+                       details.contractDetails?.contractStatus === 'TERMINATED' ? 'Đã chấm dứt' : 'N/A'}
                     </Tag>
                   </Descriptions.Item>
                 </Descriptions>
@@ -249,14 +255,19 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                     {formatDate(details.contractDetails?.contractStartDate || employeeRecord?.contractStartDate)}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày kết thúc hợp đồng">
-                    {formatDate(details.contractDetails?.contractEndDate || employeeRecord?.contractEndDate)}
+                    {details.contractDetails?.contractEndDate || employeeRecord?.contractEndDate ? 
+                     formatDate(details.contractDetails?.contractEndDate || employeeRecord?.contractEndDate) : 'Không có'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Lương theo hợp đồng">
+                  <Descriptions.Item label="Lương theo giờ">
                     <Text strong style={{ color: '#1890ff' }}>
-                      {formatCurrency(details.contractDetails?.contractSalary || details.contractDetails?.baseSalary)}
+                      {formatCurrency(details.contractDetails?.hourlySalary || details.contractDetails?.contractSalary || details.contractDetails?.baseSalary)}
                     </Text>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Loại lương">{details.contractDetails?.salaryType}</Descriptions.Item>
+                  <Descriptions.Item label="Loại lương">
+                    {details.contractDetails?.salaryType === 'THEO_GIO' ? 'Theo giờ' :
+                     details.contractDetails?.salaryType === 'GROSS' ? 'Lương gộp' :
+                     details.contractDetails?.salaryType === 'NET' ? 'Lương thực nhận' : details.contractDetails?.salaryType}
+                  </Descriptions.Item>
                 </Descriptions>
               </Col>
             </Row>
@@ -266,7 +277,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
  
 
           {/* Working Hours from Attendance System */}
-          <Card title={<><ClockCircleOutlined /> Giờ làm việc thực tế (Từ hệ thống chấm công)</>} style={{ marginBottom: 16 }}>
+          <Card title={<><ClockCircleOutlined /> Giờ làm việc thực tế  </>} style={{ marginBottom: 16 }}>
             <Row gutter={16}>
               <Col span={6}>
                 <Statistic
@@ -312,7 +323,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
               >
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Row justify="space-between">
-                    <Text>Lương cơ bản (hợp đồng):</Text>
+                    <Text>{details.contractDetails?.contractType === 'TEACHER' ? 'Đơn giá giờ (hợp đồng):' : 'Lương cơ bản (hợp đồng):'}</Text>
                     <Text strong>{formatCurrency(details.salaryCalculationSteps?.step1_BaseSalary)}</Text>
                   </Row>
                   <Row justify="space-between">
@@ -337,6 +348,11 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                       <Text strong style={{ color: '#722ed1' }}>{formatCurrency(details.salaryCalculationSteps?.step5_WeekendPay)}</Text>
                     </Row>
                   )}
+                  <Divider />
+                  <Row justify="space-between">
+                    <Text>Trừ thuế theo TopCV:</Text>
+                    <Text strong style={{ color: '#f5222d' }}>-{formatCurrency(details.salaryCalculationSteps?.deductions?.personalIncomeTax || 0)}</Text>
+                  </Row>
                   <Divider />
                   <Row justify="space-between">
                     <Text strong>Tổng lương gộp:</Text>
@@ -401,8 +417,8 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             </Col>
           </Row>
 
-          {/* Weekend pay explanation and tax progressive breakdown - redesigned */}
-          <Row gutter={16}>
+          {/* Weekend pay explanation and tax progressive breakdown - COMMENTED OUT */}
+          {/* <Row gutter={16}>
             <Col xs={24} md={12}>
               <Card
                 size="small"
@@ -418,7 +434,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                   {details.taxProgressive?.length > 0 ? (
                     <Space direction="vertical" style={{ width: '100%' }}>
                       {details.taxProgressive.map((b) => (
-                        <Row key={b.idx} justify="space-between" style={{ fontSize: 13 }}>
+                        <Row key={b.idx} justify="space-between" style={{ fontSize: '13px' }}>
                           <Text>Bậc {b.idx} ({Math.round((b.rate || 0) * 100)}%): {formatCurrency(b.taxable)}</Text>
                           <Text strong>= {formatCurrency(b.tax)}</Text>
                         </Row>
@@ -430,7 +446,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                 </Space>
               </Card>
             </Col>
-          </Row>
+          </Row> */}
 
           {/* Final Result - redesigned */}
           <Card style={{ borderColor: '#b7eb8f', background: '#f6ffed', marginBottom: 16 }}>
@@ -443,8 +459,8 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             </div>
           </Card>
 
-          {/* Calculation Formulas from TopCV */}
-          <Card title={<><CalculatorOutlined /> Công thức tính lương TopCV</>}>
+          {/* Calculation Formulas from TopCV - COMMENTED OUT */}
+          {/* <Card title={<><CalculatorOutlined /> Công thức tính lương TopCV</>}>
             <div style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '6px' }}>
               {details.calculationFormulas?.map((formula, index) => (
                 <Paragraph key={index} code style={{ margin: '4px 0', fontSize: '13px' }}>
@@ -472,7 +488,7 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                 Xem chi tiết cách tính lương
               </Button>
             </div>
-          </Card>
+          </Card> */}
         </div>
       ) : (
         <Alert

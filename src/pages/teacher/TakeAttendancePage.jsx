@@ -213,7 +213,17 @@ const TakeAttendancePage = () => {
             console.error('Cấu hình lỗi:', err.config);
             console.error('Phản hồi lỗi:', err.response);
             
-            setError(`Gửi điểm danh thất bại. Lỗi: ${err.message}`);
+            // Check if it's a time validation error
+            if (err.response && err.response.data && err.response.data.message) {
+                const errorMessage = err.response.data.message;
+                if (errorMessage.includes('24 giờ') || errorMessage.includes('quá sớm') || errorMessage.includes('quá muộn')) {
+                    setError(`⏰ Lỗi thời gian điểm danh: ${errorMessage}`);
+                } else {
+                    setError(`Gửi điểm danh thất bại: ${errorMessage}`);
+                }
+            } else {
+                setError(`Gửi điểm danh thất bại. Lỗi: ${err.message}`);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -266,6 +276,17 @@ const TakeAttendancePage = () => {
                     <span className="block sm:inline"> Đã lưu điểm danh.</span>
                 </div>
             )}
+
+            {/* Time window warning */}
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative mb-4" role="alert">
+                <div className="flex items-center">
+                    <span className="text-lg mr-2">⏰</span>
+                    <div>
+                        <strong className="font-bold">Lưu ý về thời gian điểm danh:</strong>
+                        <span className="block sm:inline"> Chỉ có thể điểm danh trong vòng 24 giờ trước và sau buổi học.</span>
+                    </div>
+                </div>
+            </div>
 
             <form onSubmit={handleSubmit}>
                 <div className="overflow-x-auto">

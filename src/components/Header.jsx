@@ -123,10 +123,10 @@ function Header() {
                     {authUser?.avatar ? (
                       <img src={authUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <span>{authUser?.username?.charAt(0) || authUser?.name?.charAt(0) || authUser?.email?.charAt(0) || 'U'}</span>
+                      <span>{authUser?.fullName?.charAt(0) || authUser?.name?.charAt(0) || authUser?.username?.charAt(0) || authUser?.email?.charAt(0) || 'U'}</span>
                     )}
                   </div>
-                  <span className="hidden md:inline font-medium">{authUser?.username || authUser?.name || authUser?.email || 'Người dùng'}</span>
+                  <span className="hidden md:inline font-medium">{authUser?.fullName || authUser?.name || authUser?.username || authUser?.email || 'Người dùng'}</span>
                   <svg className={`w-4 h-4 transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>

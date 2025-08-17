@@ -44,31 +44,6 @@ const TeacherAnnouncementsPage = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'HIGH':
-        return 'bg-red-500';
-      case 'MEDIUM':
-        return 'bg-yellow-500';
-      case 'LOW':
-        return 'bg-green-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getPriorityLabel = (priority) => {
-    switch (priority) {
-      case 'HIGH':
-        return 'Cao';
-      case 'MEDIUM':
-        return 'Trung bình';
-      case 'LOW':
-        return 'Thấp';
-      default:
-        return 'Bình thường';
-    }
-  };
 
   const getTargetAudienceIcon = (targetAudience) => {
     switch (targetAudience) {
@@ -105,10 +80,7 @@ const TeacherAnnouncementsPage = () => {
                          announcement.content.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesFilter = filterType === 'all' || 
-                         (filterType === 'pinned' && announcement.isPinned) ||
-                         (filterType === 'high' && announcement.priority === 'HIGH') ||
-                         (filterType === 'medium' && announcement.priority === 'MEDIUM') ||
-                         (filterType === 'low' && announcement.priority === 'LOW');
+                         (filterType === 'pinned' && announcement.isPinned);
     
     return matchesSearch && matchesFilter;
   });
@@ -175,9 +147,6 @@ const TeacherAnnouncementsPage = () => {
           >
             <option value="all">Tất cả</option>
             <option value="pinned">Ghim</option>
-            <option value="high">Ưu tiên cao</option>
-            <option value="medium">Ưu tiên trung bình</option>
-            <option value="low">Ưu tiên thấp</option>
           </select>
         </div>
       </div>
@@ -205,9 +174,6 @@ const TeacherAnnouncementsPage = () => {
                       <Pin className="h-4 w-4 text-yellow-500" />
                     )}
                     {getTargetAudienceIcon(announcement.targetAudience)}
-                    <Badge className={`${getPriorityColor(announcement.priority)} text-white`}>
-                      {getPriorityLabel(announcement.priority)}
-                    </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4" />
@@ -308,9 +274,6 @@ const TeacherAnnouncementsPage = () => {
                       <Pin className="h-4 w-4 text-yellow-500" />
                     )}
                     {getTargetAudienceIcon(selectedAnnouncement.targetAudience)}
-                    <Badge className={`${getPriorityColor(selectedAnnouncement.priority)} text-white`}>
-                      {getPriorityLabel(selectedAnnouncement.priority)}
-                    </Badge>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">
                     {selectedAnnouncement.title}

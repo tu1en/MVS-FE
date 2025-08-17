@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ProfileDataService from '../../services/profileDataService';
 import { validateEmail } from '../../utils/validation';
 import dayjs from 'dayjs';
+import { useAuth } from '../../context/AuthContext';
 
 const { Option } = Select;
 
@@ -12,6 +13,7 @@ const EditProfile = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formReady, setFormReady] = useState(false);
+  const { user: authUser, login } = useAuth();
 
   // Initialize form with default values to prevent React warnings
   const defaultValues = {
@@ -37,12 +39,16 @@ const EditProfile = () => {
           'OTHER': 'Khác'
         };
         
+        const serverData = result.data || {};
         const profileData = { 
           ...defaultValues, 
-          ...result.data,
-          birthDate: result.data.birthDate ? dayjs(result.data.birthDate) : null,
-          gender: result.data.gender ? genderDisplayMapping[result.data.gender] || result.data.gender : null
+          ...serverData,
+          birthDate: serverData.birthDate ? dayjs(serverData.birthDate) : null,
+          gender: serverData.gender ? genderDisplayMapping[serverData.gender] || serverData.gender : null
         };
+        if (!profileData.fullName) {
+          profileData.fullName = serverData.fullName || serverData.name || '';
+        }
         
         // Set form ready first, then set field values after form is rendered
         setFormReady(true);
@@ -51,6 +57,16 @@ const EditProfile = () => {
         setTimeout(() => {
           form.setFieldsValue(profileData);
         }, 0);
+
+        // Sync to AuthContext for header display
+        if (typeof login === 'function') {
+          login({
+            ...(authUser || {}),
+            fullName: profileData.fullName || authUser?.fullName,
+            email: profileData.email || authUser?.email,
+            username: profileData.username || authUser?.username
+          });
+        }
         
         if (result.source === 'localStorage') {
           message.warning({
@@ -65,6 +81,9 @@ const EditProfile = () => {
           ...result.data,
           birthDate: result.data?.birthDate ? dayjs(result.data.birthDate) : null
         };
+        if (!fallbackData.fullName) {
+          fallbackData.fullName = result.data?.fullName || result.data?.name || '';
+        }
         
         // Set form ready first, then set field values after form is rendered
         setFormReady(true);
@@ -73,6 +92,16 @@ const EditProfile = () => {
         setTimeout(() => {
           form.setFieldsValue(fallbackData);
         }, 0);
+
+        // Sync to AuthContext even on fallback
+        if (typeof login === 'function') {
+          login({
+            ...(authUser || {}),
+            fullName: fallbackData.fullName || authUser?.fullName,
+            email: fallbackData.email || authUser?.email,
+            username: fallbackData.username || authUser?.username
+          });
+        }
         
         // Only show offline message if we actually have localStorage data
         if (result.source === 'localStorage' && result.data && Object.keys(result.data).length > 0) {
@@ -116,16 +145,29 @@ const EditProfile = () => {
         'Khác': 'OTHER'
       };
       
+      // Exclude fullName from submission (read-only)
+      const { fullName, ...restValues } = values;
       const profileData = {
-        ...values,
+        ...restValues,
         birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
         gender: values.gender ? genderMapping[values.gender] || values.gender : null
       };
 
       const result = await ProfileDataService.updateProfileWithFallback(profileData);
       
+      // Update AuthContext so header reflects latest name immediately
+      if (typeof login === 'function') {
+        login({
+          ...(authUser || {}),
+          fullName: values.fullName || authUser?.fullName,
+          email: values.email || authUser?.email,
+          username: authUser?.username
+        });
+      }
+
       if (result.success) {
-        message.success(result.message);      } else {
+        message.success(result.message);
+      } else {
         message.warning(result.message);
       }
     } catch (error) {
@@ -157,9 +199,8 @@ const EditProfile = () => {
           <Form.Item
             name="fullName"
             label="Họ và Tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
           >
-            <Input />
+            <Input disabled />
           </Form.Item>
 
           <Form.Item

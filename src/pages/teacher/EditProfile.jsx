@@ -1,9 +1,9 @@
-import { App, Button, Card, Form, Input, Select, Spin, DatePicker } from 'antd';
+import { Button, Card, Form, Input, DatePicker, Select, App, Spin } from 'antd';
 import dayjs from 'dayjs';
-
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import ProfileDataService from '../../services/profileDataService';
 import { validateEmail, validatePhoneNumber } from '../../utils/validation';
+import { useAuth } from '../../context/AuthContext';
 
 const { Option } = Select;
 
@@ -14,6 +14,7 @@ const EditProfile = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [invalidPrefix, setInvalidPrefix] = useState(false);
   const [formReady, setFormReady] = useState(false);
+  const { user: authUser, login } = useAuth();
 
   // Initialize form with default values to prevent React warnings
   const defaultValues = {
@@ -35,6 +36,10 @@ const EditProfile = () => {
       if (result.success) {
         const serverData = result.data || {};
         const profileData = { ...defaultValues, ...serverData };
+        // Ensure fullName is populated even if backend returns 'name' or 'full_name'
+        if (!profileData.fullName) {
+          profileData.fullName = serverData.fullName || serverData.name || serverData.full_name || '';
+        }
         // Map birthDate (YYYY-MM-DD) to dayjs for DatePicker
         if (serverData.birthDate) {
           try {
@@ -50,6 +55,16 @@ const EditProfile = () => {
         setTimeout(() => {
           form.setFieldsValue(profileData);
         }, 0);
+
+        // Sync fullName and other display fields to AuthContext so Header shows full name
+        if (authUser && typeof login === 'function') {
+          login({
+            ...authUser,
+            fullName: profileData.fullName || authUser.fullName,
+            email: profileData.email || authUser.email,
+            username: profileData.username || authUser.username
+          });
+        }
         
         if (result.source === 'localStorage') {
           message.warning({
@@ -69,6 +84,16 @@ const EditProfile = () => {
         setTimeout(() => {
           form.setFieldsValue(fallbackData);
         }, 0);
+
+        // Even on fallback, try to sync name to AuthContext from local data if available
+        if (authUser && typeof login === 'function') {
+          login({
+            ...authUser,
+            fullName: fallbackData.fullName || authUser.fullName,
+            email: fallbackData.email || authUser.email,
+            username: fallbackData.username || authUser.username
+          });
+        }
         
         // Only show offline message if we actually have localStorage data
         if (result.source === 'localStorage' && result.data && Object.keys(result.data).length > 0) {

@@ -2,7 +2,6 @@ import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, File
 import { App, Card, Col, Row, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ROLE } from '../constants/constants';
 import { useBackButton } from '../hooks/useBackButton';
 import api from '../services/api';
 
@@ -19,20 +18,11 @@ export default function TeacherDashboard() {
   });
 
   useEffect(() => {
-    // Check if user is authenticated and has teacher role
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    
-    if (!token || role !== ROLE.TEACHER) {
-      console.error('User is not authenticated or not a teacher');
-      message.error('Bạn không có quyền truy cập trang này');
-      navigate('/login');
-      return;
-    }
-    
+    // ProtectedRoute already ensures only TEACHER can access this page
+    // Just load dashboard data without extra permission toasts
     loadDashboardData();
-  }, [navigate, message]);
-  
+  }, []);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);

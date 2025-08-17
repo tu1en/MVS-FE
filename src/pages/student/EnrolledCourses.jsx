@@ -103,7 +103,7 @@ const EnrolledCourses = () => {
       isEnrolled: true,
       progress: Number.isFinite(Number(enrolledCourse?.progress))
         ? Number(enrolledCourse?.progress)
-        : Math.floor(Math.random() * 100), // TODO: replace with real progress
+        : 0, // Temporarily set to 0 due to backend limitations
       price: 0, // already paid
     };
   };
@@ -187,27 +187,15 @@ const EnrolledCourses = () => {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{courses.length}</div>
-              <div className="text-sm text-gray-600">Đã đăng ký</div>
-            </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {courses.length > 0 ? Math.round(Math.random() * 100) : 0}%
-              </div>
-              <div className="text-sm text-gray-600">Tiến độ TB</div>
-            </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                {Math.max((allCourses?.length || 0) - (courses?.length || 0), 0)}
-              </div>
-              <div className="text-sm text-gray-600">Chưa đăng ký</div>
-            </div>
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{Math.floor((courses?.length || 0) * 0.3)}</div>
-              <div className="text-sm text-gray-600">Hoàn thành</div>
+          {/* Stats - Temporarily hidden due to backend limitations */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <p className="text-gray-600 text-sm">
+                📊 Thống kê chi tiết đang được phát triển
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                Hiện tại chỉ hiển thị: {courses.length} khóa học đã đăng ký, {Math.max((allCourses?.length || 0) - (courses?.length || 0), 0)} khóa học chưa đăng ký
+              </p>
             </div>
           </div>
         </div>
@@ -263,20 +251,16 @@ const EnrolledCourses = () => {
                     </div>
                   </div>
 
-                  {/* Progress for enrolled courses */}
+                  {/* Progress for enrolled courses - Temporarily hidden due to backend limitations */}
                   {course.isEnrolled && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-600">Tiến độ học tập:</span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {Number.isFinite(Number(course?.progress)) ? Number(course.progress) : 0}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full"
-                          style={{ width: `${Math.max(0, Math.min(100, Number(course?.progress) || 0))}%` }}
-                        ></div>
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-sm text-blue-600">
+                          📚 Khóa học đã đăng ký
+                        </p>
+                        <p className="text-xs text-blue-500 mt-1">
+                          Tiến độ học tập sẽ được hiển thị khi tính năng hoàn thiện
+                        </p>
                       </div>
                     </div>
                   )}

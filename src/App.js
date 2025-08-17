@@ -13,7 +13,6 @@ import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
 import Layout from "./components/Layout.jsx";
-import PreventBackNavigation from "./components/PreventBackNavigation.jsx";
 import BlankPage from "./pages/BlankPage.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import SelectRoleLogin from "./pages/SelectRoleLogin.jsx";
@@ -25,6 +24,7 @@ import { useAuth } from './context/AuthContext.js'; // Import useAuth
 // Dashboards
 import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AdminNotificationPage from './pages/AdminNotificationPage.jsx';
 import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
 import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
 import ExplanationReports from './pages/manager/ExplanationReports.jsx';
@@ -53,6 +53,7 @@ import TeacherCourseManagement from "./pages/teacher/TeacherCourseManagement.jsx
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
+import TeacherLeaveNotices from './pages/teacher/TeacherLeaveNotices.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
@@ -266,7 +267,6 @@ function App() {
     <AuthProvider>
       <AntApp>
         <Router>
-          <PreventBackNavigation />
           <Layout>
             <Routes>
               <Route path="/login" element={<PublicRoute><LoginScreen /></PublicRoute>} />
@@ -306,6 +306,7 @@ function App() {
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
+              <Route path="/teacher/leave-notices" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveNotices /></ProtectedRoute>} />
               <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
               <Route path="/teacher/course-management" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherCourseManagement /></ProtectedRoute>} />
 
@@ -360,6 +361,7 @@ function App() {
               <Route path="/admin/system-logs" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemActivityLogsPage /></ProtectedRoute>} />
               <Route path="/admin/system-charts" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemChartsPage /></ProtectedRoute>} />
               <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemSettingsPage /></ProtectedRoute>} />
+              <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminNotificationPage /></ProtectedRoute>} />
               <Route path="/admin/system-management" element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}><SystemManagement /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
@@ -395,6 +397,7 @@ function App() {
               <Route path="/accountant" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedRoute>} />
               <Route path="/accountant/account" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
               <Route path="/accountant/edit-profile" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><AccountantEditProfile /></ProtectedRoute>} />
+              <Route path="/accountant/contracts" element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ContractManagement /></ProtectedRoute>} />
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
 
