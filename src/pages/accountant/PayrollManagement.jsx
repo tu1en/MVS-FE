@@ -308,7 +308,7 @@ const PayrollManagement = () => {
       const csvData = payrollData.map(row => {
         const method = row.calculationMethod === 'HOURLY' ? 'Theo giờ' : 'Theo tháng';
         const rate = row.calculationMethod === 'HOURLY' ? row.hourlyRate : '';
-        return `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${method},${rate},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`;
+        return `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'GIÁO VIÊN' : 'Nhân viên'}",${method},${rate},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`;
       }).join('\n');
       
       const csvContent = csvHeader + csvData;
@@ -443,7 +443,7 @@ const PayrollManagement = () => {
       width: 120,
       render: (type) => (
         <Tag color={type === 'TEACHER' ? 'blue' : 'green'}>
-          {type === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}
+          {type === 'TEACHER' ? 'GIÁO VIÊN' : 'Nhân viên'}
         </Tag>
       ),
     },
@@ -716,7 +716,7 @@ const PayrollManagement = () => {
                 onChange={(val) => setRoleFilter(val)}
               >
                 <Option value="ALL">Tất cả (GV + NV)</Option>
-                <Option value="TEACHER">Giảng viên</Option>
+                <Option value="TEACHER">GIÁO VIÊN</Option>
                 <Option value="STAFF">Nhân viên</Option>
               </Select>
             </Space>

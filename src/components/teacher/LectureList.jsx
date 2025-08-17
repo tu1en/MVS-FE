@@ -2,8 +2,8 @@ import { App, Modal } from 'antd';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 import scheduleService from '../../services/scheduleService';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 const LectureList = ({ courseId, courseName, isStudentView = false }) => {
   const navigate = useNavigate();
@@ -33,13 +33,21 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
 
   // Function to organize lectures by schedule dates
   const organizeLecturesByDate = useCallback((lecturesData, scheduleData) => {
+    console.log('🔍 organizeLecturesByDate: Starting organization...');
+    console.log('📅 Schedules data:', scheduleData);
+    console.log('📚 Lectures data:', lecturesData);
+    
     const organized = {};
     
     // Create date groups from schedule
     scheduleData.forEach(schedule => {
       const scheduleDate = schedule.date || schedule.classDate;
+      console.log(`📅 Schedule ${schedule.id}: date=${scheduleDate}, dayOfWeek=${schedule.day}, dayName=${schedule.dayName}`);
+      
       if (scheduleDate) {
         const dateKey = new Date(scheduleDate).toISOString().split('T')[0];
+        console.log(`📅 Creating date group for: ${dateKey}`);
+        
         if (!organized[dateKey]) {
           organized[dateKey] = {
             date: scheduleDate,
@@ -47,8 +55,12 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
             lectures: []
           };
         }
+      } else {
+        console.warn(`⚠️ Schedule ${schedule.id} has no date:`, schedule);
       }
     });
+
+    console.log('📅 Created date groups:', Object.keys(organized));
 
     // Organize lectures into date groups
     lecturesData.forEach(lecture => {
@@ -62,6 +74,41 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
         if (organized[lectureDateKey]) {
           organized[lectureDateKey].lectures.push(lecture);
           assigned = true;
+          console.log(`✅ Lecture ${lecture.id} assigned to date: ${lectureDateKey}`);
+        }
+      }
+      
+      // NEW LOGIC: Try to match lecture with schedule by content similarity
+      if (!assigned && lecture.content) {
+        // Extract chapter information from lecture content
+        const content = lecture.content.toLowerCase();
+        let matchedDate = null;
+        
+        // Look for chapter patterns in content
+        if (content.includes('chương 1') || content.includes('hàm số') || content.includes('đồ thị')) {
+          // Chapter 1: Functions and Graphs - assign to first available date
+          const availableDates = Object.keys(organized).filter(key => key !== 'unscheduled');
+          if (availableDates.length > 0) {
+            matchedDate = availableDates[0]; // Monday
+          }
+        } else if (content.includes('chương 2') || content.includes('phương trình') || content.includes('bất phương trình')) {
+          // Chapter 2: Equations and Inequalities - assign to second available date
+          const availableDates = Object.keys(organized).filter(key => key !== 'unscheduled');
+          if (availableDates.length > 1) {
+            matchedDate = availableDates[1]; // Tuesday
+          }
+        } else if (content.includes('chương 3') || content.includes('thực hành') || content.includes('ứng dụng')) {
+          // Chapter 3: Practice and Application - assign to third available date
+          const availableDates = Object.keys(organized).filter(key => key !== 'unscheduled');
+          if (availableDates.length > 2) {
+            matchedDate = availableDates[2]; // Wednesday
+          }
+        }
+        
+        if (matchedDate && organized[matchedDate]) {
+          organized[matchedDate].lectures.push(lecture);
+          assigned = true;
+          console.log(`✅ Lecture ${lecture.id} assigned to date ${matchedDate} by content matching`);
         }
       }
       
@@ -76,6 +123,7 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
           };
         }
         organized[unscheduledKey].lectures.push(lecture);
+        console.log(`⚠️ Lecture ${lecture.id} assigned to unscheduled group`);
       }
     });
 
@@ -86,7 +134,10 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
       return new Date(dateA) - new Date(dateB);
     });
 
-    return Object.fromEntries(sortedEntries);
+    const result = Object.fromEntries(sortedEntries);
+    console.log('📋 Final organized result:', result);
+    
+    return result;
   }, []);
 
   // Memoize loadLectures to prevent unnecessary re-renders
@@ -274,7 +325,7 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-blue-700">
                   {dateKey === 'unscheduled' 
-                    ? 'Chưa lên lịch' 
+                    ? '📚 Chưa lên lịch' 
                     : `${new Date(dateGroup.date).toLocaleDateString('vi-VN', {
                         weekday: 'long',
                         year: 'numeric',
@@ -284,19 +335,38 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
                   }
                 </h3>
                 {dateGroup.schedule && (
-                  <p className="text-sm text-gray-600">
-                    {dateGroup.schedule.startTime && dateGroup.schedule.endTime && (
-                      <span>
-                        ⏰ {new Date(dateGroup.schedule.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - 
-                        {new Date(dateGroup.schedule.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}
-                      </span>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {dateGroup.schedule.startTimeString && dateGroup.schedule.endTimeString && (
+                      <div className="flex items-center">
+                        <span className="mr-2">⏰</span>
+                        <span className="font-medium">
+                          {dateGroup.schedule.startTimeString} - {dateGroup.schedule.endTimeString}
+                        </span>
+                      </div>
                     )}
                     {dateGroup.schedule.room && (
-                      <span className="ml-4">📍 Phòng: {dateGroup.schedule.room}</span>
+                      <div className="flex items-center">
+                        <span className="mr-2">📍</span>
+                        <span>Phòng: <span className="font-medium">{dateGroup.schedule.room}</span></span>
+                      </div>
                     )}
-                  </p>
+                    {dateGroup.schedule.dayName && (
+                      <div className="flex items-center">
+                        <span className="mr-2">📅</span>
+                        <span className="font-medium">{dateGroup.schedule.dayName}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
+              {dateKey === 'unscheduled' && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    💡 <strong>Hướng dẫn:</strong> Những bài giảng này chưa được gán vào lịch học cụ thể. 
+                    Bạn có thể kéo thả để sắp xếp hoặc liên hệ giáo viên để cập nhật lịch học.
+                  </p>
+                </div>
+              )}
               <div className="space-y-4">
                 {dateGroup.lectures.map((lecture) => (
             <div key={lecture.id} className="bg-white rounded-lg shadow-md p-6 border">
@@ -354,10 +424,10 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
               {/* Lecture Info */}
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                 {lecture.startTime && (
-                  <span>⏰ Bắt đầu: {new Date(lecture.startTime).toLocaleString()}</span>
+                  <span>⏰ Bắt đầu: {lecture.startTime}</span>
                 )}
                 {lecture.endTime && (
-                  <span>⏱️ Kết thúc: {new Date(lecture.endTime).toLocaleString()}</span>
+                  <span>⏱️ Kết thúc: {lecture.endTime}</span>
                 )}
                 {lecture.isRecordingEnabled && (
                   <span className="text-red-500">🔴 Ghi hình</span>
