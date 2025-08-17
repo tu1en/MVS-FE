@@ -15,7 +15,8 @@ import {
   Statistic,
   Row,
   Col,
-  Tabs
+  Tabs,
+  AutoComplete
 } from 'antd';
 import {
   PlusOutlined,
@@ -29,6 +30,7 @@ import {
 } from '@ant-design/icons';
 import moment from 'moment';
 import axiosInstance from '../../config/axiosInstance';
+import adminNotificationService from '../../services/adminNotificationService';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -42,6 +44,33 @@ const AdminNotificationManagement = () => {
   const [form] = Form.useForm();
   const [stats, setStats] = useState({});
   const [activeTab, setActiveTab] = useState('all');
+  const [targetOptions, setTargetOptions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedAudience, setSelectedAudience] = useState('');
+
+  // Helper function to parse date from backend
+  const parseBackendDate = (dateString) => {
+    if (!dateString) return null;
+    
+    // Backend sends in format: yyyy-MM-dd HH:mm:ss with timezone Asia/Ho_Chi_Minh
+    let date = moment(dateString, 'YYYY-MM-DD HH:mm:ss');
+    
+    // If that fails, try other common formats
+    if (!date.isValid()) {
+      date = moment(dateString, 'YYYY-MM-DDTHH:mm:ss');
+    }
+    if (!date.isValid()) {
+      date = moment(dateString, moment.ISO_8601);
+    }
+    if (!date.isValid()) {
+      date = moment(dateString, 'YYYY-MM-DDTHH:mm:ss.SSS');
+    }
+    if (!date.isValid()) {
+      date = moment(dateString); // Default moment parsing
+    }
+    
+    return date.isValid() ? date : null;
+  };
 
   useEffect(() => {
     fetchNotifications();
@@ -51,7 +80,7 @@ const AdminNotificationManagement = () => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get('/api/notifications/admin/all');
+      const response = await axiosInstance.get('/notifications/admin/all');
       setNotifications(response.data);
     } catch (error) {
       message.error('Không thể tải danh sách thông báo');
@@ -63,31 +92,139 @@ const AdminNotificationManagement = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axiosInstance.get('/api/notifications/admin/stats');
+      const response = await axiosInstance.get('/notifications/admin/stats');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
   };
 
+  // Handle audience change and load target options
+  const handleAudienceChange = async (value) => {
+    setSelectedAudience(value);
+    form.setFieldsValue({ targetDetails: '', targetDetailsId: '' }); // Clear target details
+    
+    // Map audience types to API endpoints
+    const audienceTypeMap = {
+      'ALL': 'students', // Default to students for "all", user can search for any type
+      'STUDENTS': 'students',
+      'PARENTS': 'parents', 
+      'TEACHERS': 'teachers',
+      'ACCOUNTANTS': 'accountants',
+      'MANAGERS': 'managers',
+      'SPECIFIC_USER': 'students',
+      'SPECIFIC_CLASS': 'classes'
+    };
+    
+    if (audienceTypeMap[value]) {
+      try {
+        setSearchLoading(true);
+        const options = await adminNotificationService.getTargetOptions(audienceTypeMap[value]);
+        
+        const formattedOptions = options.map(item => ({
+          value: item.id.toString(),
+          label: value === 'SPECIFIC_CLASS' 
+            ? `${item.name} (${item.studentCount || 0} học sinh)`
+            : `${item.name} - ${item.email}`,
+          key: item.id.toString(),
+          data: item
+        }));
+        
+        setTargetOptions(formattedOptions);
+      } catch (error) {
+        console.error('Error loading target options:', error);
+        message.error('Không thể tải danh sách đối tượng');
+      } finally {
+        setSearchLoading(false);
+      }
+    } else {
+      setTargetOptions([]);
+    }
+  };
+
+  // Handle search in autocomplete
+  const handleSearch = async (searchText) => {
+    if (!searchText || searchText.length < 2) {
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      
+      // Determine search type based on selected audience
+      let searchType = '';
+      switch (selectedAudience) {
+        case 'STUDENTS':
+        case 'SPECIFIC_USER':
+          searchType = 'STUDENTS';
+          break;
+        case 'TEACHERS':
+          searchType = 'TEACHERS';
+          break;
+        case 'PARENTS':
+          searchType = 'PARENTS';
+          break;
+        case 'MANAGERS':
+          searchType = 'MANAGERS';
+          break;
+        case 'ACCOUNTANTS':
+          searchType = 'ACCOUNTANTS';
+          break;
+        case 'ALL':
+        default:
+          searchType = ''; // Search all types
+          break;
+      }
+      
+      const results = await adminNotificationService.searchUsers(searchText, searchType);
+      
+      const formattedOptions = results.map(item => ({
+        value: item.id.toString(),
+        label: `${item.name} - ${item.email} (${item.type})`,
+        key: item.id.toString(),
+        data: item
+      }));
+      
+      setTargetOptions(formattedOptions);
+    } catch (error) {
+      console.error('Error searching:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleCreateOrUpdate = async (values) => {
     try {
+      // Validate data using service
+      const validation = adminNotificationService.validateNotificationData(values);
+      if (!validation.isValid) {
+        validation.errors.forEach(error => message.error(error));
+        return;
+      }
+
       const notificationData = {
         ...values,
+        // Sử dụng ID thay vì tên để gửi cho backend
+        targetDetails: values.targetDetailsId || values.targetDetails,
         scheduledAt: values.scheduledAt ? values.scheduledAt.format('YYYY-MM-DDTHH:mm:ss') : null,
         createdBy: 'Admin' // Replace with actual admin user info
       };
+      
+      // Xóa field không cần thiết
+      delete notificationData.targetDetailsId;
 
       if (editingNotification) {
-        await axiosInstance.put(`/api/notifications/admin/${editingNotification.id}`, notificationData);
+        await axiosInstance.put(`/notifications/admin/${editingNotification.id}`, notificationData);
         message.success('Cập nhật thông báo thành công!');
       } else {
-        await axiosInstance.post('/api/notifications/admin/create', notificationData);
+        await axiosInstance.post('/notifications/admin/create', notificationData);
         message.success('Tạo thông báo thành công!');
       }
 
       setModalVisible(false);
       setEditingNotification(null);
+      setSelectedAudience('');
+      setTargetOptions([]);
       form.resetFields();
       fetchNotifications();
       fetchStats();
@@ -97,18 +234,65 @@ const AdminNotificationManagement = () => {
     }
   };
 
-  const handleEdit = (notification) => {
+  // Helper function để tìm tên từ ID
+  const findNameFromId = async (audienceType, targetId) => {
+    if (!targetId) return '';
+    
+    try {
+      const audienceTypeMap = {
+        'ALL': 'students',
+        'STUDENTS': 'students',
+        'PARENTS': 'parents', 
+        'TEACHERS': 'teachers',
+        'ACCOUNTANTS': 'accountants',
+        'MANAGERS': 'managers',
+        'SPECIFIC_USER': 'students',
+        'SPECIFIC_CLASS': 'classes'
+      };
+      
+      const options = await adminNotificationService.getTargetOptions(audienceTypeMap[audienceType]);
+      const found = options.find(item => item.id.toString() === targetId.toString());
+      
+      if (found) {
+        return audienceType === 'SPECIFIC_CLASS' 
+          ? `${found.name} (${found.studentCount || 0} học sinh)`
+          : `${found.name} - ${found.email}`;
+      }
+    } catch (error) {
+      console.error('Error finding name from ID:', error);
+    }
+    
+    return targetId; // Fallback to ID if name not found
+  };
+
+  const handleEdit = async (notification) => {
     setEditingNotification(notification);
+    setSelectedAudience(notification.targetAudience || '');
+    
+    // Tìm tên để hiển thị thay vì ID
+    let displayName = '';
+    if (notification.targetDetails && 
+        ['ALL', 'STUDENTS', 'PARENTS', 'TEACHERS', 'ACCOUNTANTS', 'MANAGERS', 'SPECIFIC_USER', 'SPECIFIC_CLASS'].includes(notification.targetAudience)) {
+      displayName = await findNameFromId(notification.targetAudience, notification.targetDetails);
+    }
+    
     form.setFieldsValue({
       ...notification,
-      scheduledAt: notification.scheduledAt ? moment(notification.scheduledAt) : null
+      targetDetails: displayName || notification.targetDetails,
+      targetDetailsId: notification.targetDetails, // Lưu ID gốc
+      scheduledAt: notification.scheduledAt ? parseBackendDate(notification.scheduledAt) : null
     });
     setModalVisible(true);
+    
+    // Load target options if editing specific user/class notification
+    if (['SPECIFIC_USER', 'SPECIFIC_CLASS'].includes(notification.targetAudience)) {
+      handleAudienceChange(notification.targetAudience);
+    }
   };
 
   const handleDelete = async (id) => {
     try {
-      await axiosInstance.delete(`/api/notifications/admin/${id}`);
+      await axiosInstance.delete(`/notifications/admin/${id}`);
       message.success('Xóa thông báo thành công!');
       fetchNotifications();
       fetchStats();
@@ -120,7 +304,7 @@ const AdminNotificationManagement = () => {
 
   const handleSendNow = async (id) => {
     try {
-      await axiosInstance.post(`/api/notifications/admin/${id}/send-now`);
+      await axiosInstance.post(`/notifications/admin/${id}/send-now`);
       message.success('Gửi thông báo thành công!');
       fetchNotifications();
       fetchStats();
@@ -198,14 +382,34 @@ const AdminNotificationManagement = () => {
       title: 'Thời gian lên lịch',
       dataIndex: 'scheduledAt',
       key: 'scheduledAt',
-      render: (scheduledAt) => scheduledAt ? moment(scheduledAt).format('DD/MM/YYYY HH:mm') : 'Ngay lập tức',
+      render: (scheduledAt) => {
+        if (!scheduledAt) return 'Ngay lập tức';
+        
+        const date = parseBackendDate(scheduledAt);
+        if (!date) {
+          console.error('Invalid date format for scheduledAt:', scheduledAt);
+          return 'Ngày không hợp lệ';
+        }
+        
+        return date.format('DD/MM/YYYY HH:mm');
+      },
       width: 150,
     },
     {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (createdAt) => moment(createdAt).format('DD/MM/YYYY HH:mm'),
+      render: (createdAt) => {
+        if (!createdAt) return 'Chưa có';
+        
+        const date = parseBackendDate(createdAt);
+        if (!date) {
+          console.error('Invalid date format for createdAt:', createdAt);
+          return 'Ngày không hợp lệ';
+        }
+        
+        return date.format('DD/MM/YYYY HH:mm');
+      },
       width: 150,
     },
     {
@@ -407,7 +611,10 @@ const AdminNotificationManagement = () => {
                 label="Đối tượng nhận"
                 rules={[{ required: true, message: 'Vui lòng chọn đối tượng!' }]}
               >
-                <Select>
+                <Select 
+                  placeholder="Chọn đối tượng nhận"
+                  onChange={handleAudienceChange}
+                >
                   <Option value="ALL">Tất cả</Option>
                   <Option value="STUDENTS">Học sinh</Option>
                   <Option value="PARENTS">Phụ huynh</Option>
@@ -423,9 +630,61 @@ const AdminNotificationManagement = () => {
               <Form.Item
                 name="targetDetails"
                 label="Chi tiết đối tượng"
-                tooltip="ID của người dùng hoặc lớp học cụ thể (nếu có)"
+                tooltip="Chọn hoặc nhập tên để tìm kiếm đối tượng cụ thể. Để trống để gửi cho tất cả đối tượng đã chọn."
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      // Nếu có giá trị nhưng không có ID tương ứng, báo lỗi
+                      if (value && value.trim()) {
+                        const targetDetailsId = form.getFieldValue('targetDetailsId');
+                        if (!targetDetailsId) {
+                          return Promise.reject(new Error('Vui lòng chọn từ danh sách gợi ý'));
+                        }
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
-                <Input placeholder="Nhập ID (nếu chọn đối tượng cụ thể)" />
+                <AutoComplete
+                  options={targetOptions}
+                  onSearch={handleSearch}
+                  onSelect={(value, option) => {
+                    // Khi chọn, set label thay vì value để hiển thị tên
+                    form.setFieldsValue({ targetDetails: option.label });
+                    // Lưu ID vào hidden field hoặc biến riêng để submit
+                    form.setFieldsValue({ targetDetailsId: value });
+                  }}
+                  onChange={(value) => {
+                    // Nếu người dùng xóa hết hoặc nhập tự do
+                    if (!value) {
+                      form.setFieldsValue({ targetDetailsId: '' });
+                    }
+                  }}
+                  placeholder={
+                    selectedAudience === 'SPECIFIC_CLASS' 
+                      ? "Tìm kiếm lớp học cụ thể..." 
+                      : selectedAudience === 'STUDENTS'
+                      ? "Tìm kiếm học sinh cụ thể..."
+                      : selectedAudience === 'TEACHERS'
+                      ? "Tìm kiếm giáo viên cụ thể..."
+                      : selectedAudience === 'PARENTS'
+                      ? "Tìm kiếm phụ huynh cụ thể..."
+                      : selectedAudience === 'MANAGERS'
+                      ? "Tìm kiếm quản lý cụ thể..."
+                      : selectedAudience === 'ACCOUNTANTS'
+                      ? "Tìm kiếm kế toán cụ thể..."
+                      : "Tìm kiếm đối tượng cụ thể..."
+                  }
+                  loading={searchLoading}
+                  filterOption={false}
+                  allowClear
+                />
+              </Form.Item>
+              
+              {/* Hidden field để lưu ID */}
+              <Form.Item name="targetDetailsId" style={{ display: 'none' }}>
+                <Input type="hidden" />
               </Form.Item>
             </Col>
           </Row>
@@ -433,13 +692,55 @@ const AdminNotificationManagement = () => {
           <Form.Item
             name="scheduledAt"
             label="Thời gian gửi"
-            tooltip="Để trống để gửi ngay lập tức"
+            tooltip="Để trống để gửi ngay lập tức. Nếu chọn thời gian, phải sau ít nhất 10 phút từ bây giờ."
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve(); // Allow empty for immediate send
+                  
+                  const now = moment();
+                  const minAllowedTime = now.clone().add(10, 'minutes');
+                  
+                  if (value.isBefore(minAllowedTime)) {
+                    return Promise.reject(new Error('Thời gian gửi phải sau ít nhất 10 phút từ bây giờ'));
+                  }
+                  
+                  return Promise.resolve();
+                }
+              }
+            ]}
           >
             <DatePicker
               showTime
               format="DD/MM/YYYY HH:mm"
               placeholder="Chọn thời gian gửi (để trống để gửi ngay)"
               style={{ width: '100%' }}
+              disabledDate={(current) => current && current < moment().startOf('day')}
+              disabledTime={(current) => {
+                if (!current) return {};
+                
+                const now = moment();
+                const isToday = current.isSame(now, 'day');
+                
+                if (isToday) {
+                  const currentHour = now.hour();
+                  const currentMinute = now.minute();
+                  
+                  return {
+                    disabledHours: () => Array.from({ length: currentHour }, (_, i) => i),
+                    disabledMinutes: (selectedHour) => {
+                      if (selectedHour === currentHour) {
+                        // Disable minutes until current minute + 10
+                        const minAllowedMinute = currentMinute + 10;
+                        return Array.from({ length: Math.min(60, minAllowedMinute) }, (_, i) => i);
+                      }
+                      return [];
+                    }
+                  };
+                }
+                
+                return {};
+              }}
             />
           </Form.Item>
 

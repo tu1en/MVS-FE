@@ -372,6 +372,11 @@ function NavigationBar() {
           icon: '🏖️'
         },
         {
+          name: 'Thông Báo Nghỉ Học',
+          path: '/teacher/leave-notices',
+          icon: '📅'
+        },
+        {
           name: 'Yêu Cầu Giải Trình',
           path: '/teacher/explanation-request',
           icon: '📝'

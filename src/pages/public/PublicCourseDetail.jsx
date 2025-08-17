@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CourseDescription from '../../components/course/CourseDescription';
+import YouTubeEmbed from '../../components/ui/YouTubeEmbed';
 import API_CONFIG from '../../config/api-config';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
@@ -71,6 +72,8 @@ const PublicCourseDetail = () => {
       isPublic: d.isPublic === true || d.public === true,
       // Teacher
       teacherName: d.teacherName || d.instructorName || d.teacher_name || d.teacher?.fullName || null,
+      // Video intro
+      introVideoUrl: d.introVideoUrl || null,
       // Lessons
       lessonCount: d.lessonCount || (Array.isArray(d.lessons) ? d.lessons.length : undefined),
       // Ratings (nếu BE không có thì để undefined, không random)
@@ -425,6 +428,16 @@ const PublicCourseDetail = () => {
                   {/* Overview Tab */}
                   {activeTab === 'overview' && (
                     <div className="space-y-6">
+                      {/* Video giới thiệu */}
+                      {course.introVideoUrl && (
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900 mb-4">🎥 Video giới thiệu</h3>
+                          <div className="bg-gray-100 rounded-xl overflow-hidden">
+                            <YouTubeEmbed url={course.introVideoUrl} />
+                          </div>
+                        </div>
+                      )}
+                      
                       <div>
                         <h3 className="text-xl font-bold text-gray-900 mb-4">Mô tả khóa học</h3>
                         <div className="prose max-w-none">

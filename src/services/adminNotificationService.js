@@ -1,6 +1,6 @@
 import axiosInstance from '../config/axiosInstance';
 
-const API_BASE_URL = '/api/notifications/admin';
+const API_BASE_URL = '/notifications/admin';
 
 export const adminNotificationService = {
   // Create new admin notification
@@ -127,6 +127,31 @@ export const adminNotificationService = {
     };
   },
 
+  // Get target options based on audience type
+  getTargetOptions: async (audienceType) => {
+    try {
+      const endpoint = `/notifications/admin/targets/${audienceType.toLowerCase()}`;
+      const response = await axiosInstance.get(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching ${audienceType} options:`, error);
+      throw error;
+    }
+  },
+
+  // Search users for autocomplete
+  searchUsers: async (query, type = '') => {
+    try {
+      const response = await axiosInstance.get('/notifications/admin/targets/search', {
+        params: { query, type }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error searching users:', error);
+      throw error;
+    }
+  },
+
   // Validate notification data
   validateNotificationData: (data) => {
     const errors = [];
@@ -143,13 +168,22 @@ export const adminNotificationService = {
       errors.push('Phải chọn đối tượng nhận thông báo');
     }
 
-    if ((data.targetAudience === 'SPECIFIC_USER' || data.targetAudience === 'SPECIFIC_CLASS') 
-        && (!data.targetDetails || data.targetDetails.trim().length === 0)) {
-      errors.push('Phải nhập ID cụ thể khi chọn đối tượng cụ thể');
+    // Only require targetDetails for SPECIFIC_USER and SPECIFIC_CLASS
+    if (data.targetAudience === 'SPECIFIC_USER' && (!data.targetDetails || data.targetDetails.trim().length === 0)) {
+      errors.push('Phải chọn người dùng cụ thể');
+    }
+    
+    if (data.targetAudience === 'SPECIFIC_CLASS' && (!data.targetDetails || data.targetDetails.trim().length === 0)) {
+      errors.push('Phải chọn lớp học cụ thể');
     }
 
-    if (data.scheduledAt && data.scheduledAt.isBefore(new Date())) {
-      errors.push('Thời gian lên lịch phải sau thời điểm hiện tại');
+    if (data.scheduledAt) {
+      const now = new Date();
+      const minAllowedTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
+      
+      if (data.scheduledAt.isBefore(minAllowedTime)) {
+        errors.push('Thời gian lên lịch phải sau ít nhất 10 phút từ bây giờ');
+      }
     }
 
     return {

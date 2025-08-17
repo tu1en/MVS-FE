@@ -23,6 +23,7 @@ import {
   Tag,
   Tooltip
 } from 'antd';
+import axios from 'axios';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import SalaryCalculationDetailsModal from '../../components/SalaryCalculationDetailsModal';
@@ -30,6 +31,101 @@ import PayrollService from '../../services/payrollService';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
+
+// Sample data generator for development (following DataLoader pattern)
+const getSamplePayrollData = (selectedPeriod) => {
+  const periodMoment = selectedPeriod || moment();
+  const period = periodMoment.format('YYYY-MM');
+  const startOfMonth = periodMoment.clone().startOf('month').format('YYYY-MM-DD');
+  const endOfMonth = periodMoment.clone().endOf('month').format('YYYY-MM-DD');
+  
+  return [
+    {
+      id: `GV001_${period}`,
+      userId: 'GV001',
+      fullName: 'Nguyễn Văn An',
+      email: 'an.nguyen@school.edu.vn',
+      department: 'Giảng dạy',
+      contractType: 'TEACHER',
+      baseSalary: 8000000,
+      teachingHours: 120, // Giờ dạy
+      totalWorkingHours: 183, // Tổng giờ làm
+      weekendWorkingHours: 24,
+      weekdayWorkingHours: 159,
+      hourlyRate: 50000,
+      personalIncomeTax: 800000,
+      employeeInsurance: 640000,
+      deductions: 1440000,
+      grossPay: 9150000,
+      totalSalary: 7710000,
+      weekendPay: 1200000,
+      calculationMethod: 'HOURLY',
+      standardMonthlyHours: 160,
+      totalWorkingDays: 22,
+      actualWorkingDays: 20,
+      status: 'PROCESSED',
+      processedDate: new Date().toISOString().split('T')[0],
+      payPeriodStart: startOfMonth,
+      payPeriodEnd: endOfMonth
+    },
+    {
+      id: `GV002_${period}`,
+      userId: 'GV002',
+      fullName: 'Trần Thị Bình',
+      email: 'binh.tran@school.edu.vn',
+      department: 'Giảng dạy',
+      contractType: 'TEACHER',
+      baseSalary: 7500000,
+      teachingHours: 148, // Giờ dạy
+      totalWorkingHours: 175, // Tổng giờ làm
+      weekendWorkingHours: 16,
+      weekdayWorkingHours: 159,
+      hourlyRate: 45000,
+      personalIncomeTax: 650000,
+      employeeInsurance: 600000,
+      deductions: 1250000,
+      grossPay: 7875000,
+      totalSalary: 6625000,
+      weekendPay: 720000,
+      calculationMethod: 'HOURLY',
+      standardMonthlyHours: 160,
+      totalWorkingDays: 22,
+      actualWorkingDays: 21,
+      status: 'PROCESSED',
+      processedDate: new Date().toISOString().split('T')[0],
+      payPeriodStart: startOfMonth,
+      payPeriodEnd: endOfMonth
+    },
+    {
+      id: `NV003_${period}`,
+      userId: 'NV003',
+      fullName: 'Lê Văn Cường',
+      email: 'cuong.le@school.edu.vn',
+      department: 'Hành chính',
+      contractType: 'STAFF',
+      baseSalary: 6000000,
+      teachingHours: 0, // Nhân viên hành chính không có giờ dạy
+      totalWorkingHours: 176, // Tổng giờ làm
+      weekendWorkingHours: 0,
+      weekdayWorkingHours: 176,
+      hourlyRate: 0,
+      personalIncomeTax: 420000,
+      employeeInsurance: 480000,
+      deductions: 900000,
+      grossPay: 6000000,
+      totalSalary: 5100000,
+      weekendPay: 0,
+      calculationMethod: 'MONTHLY',
+      standardMonthlyHours: 176,
+      totalWorkingDays: 22,
+      actualWorkingDays: 22,
+      status: 'PROCESSED',
+      processedDate: new Date().toISOString().split('T')[0],
+      payPeriodStart: startOfMonth,
+      payPeriodEnd: endOfMonth
+    }
+  ];
+};
 
 const PayrollManagement = () => {
   const [loading, setLoading] = useState(false);
@@ -83,11 +179,24 @@ const PayrollManagement = () => {
         const actualWorkingDays = Number(record.actualWorkingDays ?? 0);
         const actualWorkingHours = Number(record.actualWorkingHours ?? (actualWorkingDays * 8));
         const weekendWorkingHours = Number(record.weekendWorkingHours ?? 0);
-        const weekdayWorkingHours = Number(record.weekdayWorkingHours ?? Math.max(actualWorkingHours - weekendWorkingHours, 0));
+        const weekdayWorkingHours = Number(record.weekendWorkingHours ?? Math.max(actualWorkingHours - weekendWorkingHours, 0));
         const weekendPay = Number(record.weekendPay ?? 0);
         const standardMonthlyHours = Number(record.standardMonthlyHours ?? 0);
         const calculationMethod = record.calculationMethod || (record.contractType === 'TEACHER' ? 'HOURLY' : 'MONTHLY');
         const hourlySalary = Number(record.hourlySalary ?? 0);
+
+        // Debug log để kiểm tra dữ liệu từ backend
+        console.log('🔍 Backend record for user:', record.userName, {
+          totalTeachingHours: record.totalTeachingHours,
+          actualWorkingHours: record.actualWorkingHours,
+          contractType: record.contractType,
+          proratedGrossSalary: record.proratedGrossSalary,
+          netSalary: record.netSalary,
+          hourlySalary: record.hourlySalary,
+          contractSalary: record.contractSalary,
+          // Log toàn bộ record để debug
+          fullRecord: record
+        });
 
         const startOfMonth = periodMoment.clone().startOf('month').format('YYYY-MM-DD');
         const endOfMonth = periodMoment.clone().endOf('month').format('YYYY-MM-DD');
@@ -95,15 +204,16 @@ const PayrollManagement = () => {
         return ({
         id: `${record.userId}_${period}`,
         userId: record.userId,
-        fullName: record.userName,
+        fullName: record.userName || 'Không có tên',
         email: record.userEmail || '',
         department: record.contractType === 'TEACHER' ? 'Giảng dạy' : 'Hành chính',
         contractType: record.contractType,
         baseSalary,
-        teachingHours: calculationMethod === 'HOURLY' ? actualWorkingHours : 0,
-        totalWorkingHours: actualWorkingHours,
+        totalTeachingHours: record.totalTeachingHours || (record.contractType === 'TEACHER' ? actualWorkingHours : 0),
+        actualWorkingHours: actualWorkingHours,
         weekendWorkingHours,
         weekdayWorkingHours,
+        hourlySalary: record.hourlySalary || 0,
         hourlyRate: calculationMethod === 'HOURLY' ? hourlySalary : 0,
         personalIncomeTax: pit,
         employeeInsurance: si,
@@ -113,7 +223,7 @@ const PayrollManagement = () => {
         weekendPay,
         calculationMethod,
         standardMonthlyHours,
-        totalWorkingDays: Number(record.totalWorkingDays ?? (standardMonthlyHours ? standardMonthlyHours / 8 : 0)),
+        totalWorkingDays: Number(record.totalWorkingDays ?? (standardMonthlyHours ? standardMonthlyHours / 8 : actualWorkingDays)),
         actualWorkingDays,
         topCVResult: record.topCVResult || null,
         shiftSummary: record.shiftSummary || '',
@@ -127,12 +237,20 @@ const PayrollManagement = () => {
       });
       });
 
+      // Log warning if no data found
+      if (payrollRecords.length === 0) {
+        console.warn('Không có dữ liệu payroll từ backend cho kỳ:', period);
+      }
+
       setPayrollData(transformedData);
       
       // Calculate statistics from real data
       const stats = {
         totalEmployees: transformedData.length,
-        totalSalary: transformedData.reduce((sum, item) => sum + (item.totalSalary || 0), 0),
+        totalSalary: transformedData.reduce((sum, item) => {
+          const salary = Number(item.totalSalary || 0);
+          return sum + (isNaN(salary) ? 0 : salary);
+        }, 0),
         processedCount: transformedData.filter(item => item.status === 'PROCESSED').length,
         pendingCount: transformedData.filter(item => item.status === 'PENDING').length
       };
@@ -140,7 +258,22 @@ const PayrollManagement = () => {
 
     } catch (error) {
       console.error('Error loading payroll data:', error);
-      message.error('Không thể tải dữ liệu bảng lương!');
+      console.log('Backend payroll API failed, loading sample data for development...');
+      
+      // Load sample data when API fails (following DataLoader pattern)
+      const sampleData = getSamplePayrollData(selectedPeriod);
+      setPayrollData(sampleData);
+      
+      // Calculate statistics from sample data
+      const stats = {
+        totalEmployees: sampleData.length,
+        totalSalary: sampleData.reduce((sum, item) => sum + Number(item.totalSalary || 0), 0),
+        processedCount: sampleData.filter(item => item.status === 'PROCESSED').length,
+        pendingCount: sampleData.filter(item => item.status === 'PENDING').length
+      };
+      setStatistics(stats);
+      
+      message.warning('Đang sử dụng dữ liệu mẫu để test giao diện');
     } finally {
       setLoading(false);
     }
@@ -171,12 +304,11 @@ const PayrollManagement = () => {
       const period = selectedPeriod.format('YYYY-MM');
       
       // Generate CSV data from current payroll data
-      const csvHeader = 'Mã NV,Họ tên,Phòng ban,Loại HĐ,Phương thức,Đơn giá (giờ),Lương tháng (gross),Tổng lương,Trạng thái\n';
+      const csvHeader = 'Mã NV,Họ tên,Phòng ban,Loại HĐ,Phương thức,Đơn giá (giờ),Tổng lương,Trạng thái\n';
       const csvData = payrollData.map(row => {
         const method = row.calculationMethod === 'HOURLY' ? 'Theo giờ' : 'Theo tháng';
         const rate = row.calculationMethod === 'HOURLY' ? row.hourlyRate : '';
-        const monthly = row.calculationMethod === 'MONTHLY' ? row.baseSalary : '';
-        return `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${method},${rate},${monthly},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`;
+        return `${row.userId},"${row.fullName}","${row.department}","${row.contractType === 'TEACHER' ? 'Giảng viên' : 'Nhân viên'}",${method},${rate},${row.totalSalary},"${row.status === 'PROCESSED' ? 'Đã xử lý' : 'Chờ xử lý'}"`;
       }).join('\n');
       
       const csvContent = csvHeader + csvData;
@@ -237,13 +369,22 @@ const PayrollManagement = () => {
 
   const handleMarkAsPaid = async (payrollId) => {
     try {
-      // Update local state to mark as paid
-      setPayrollData(prevData => 
-        prevData.map(item => 
-          item.id === payrollId ? { ...item, status: 'PAID' } : item
-        )
-      );
-      message.success('Đã đánh dấu là đã trả lương!');
+      // Gọi API backend để cập nhật trạng thái
+      const response = await axios.put(`/api/payroll/${payrollId}/status`, {
+        status: 'PAID'
+      });
+      
+      if (response.data.success) {
+        // Cập nhật local state sau khi backend thành công
+        setPayrollData(prevData => 
+          prevData.map(item => 
+            item.id === payrollId ? { ...item, status: 'PAID' } : item
+          )
+        );
+        message.success('Đã đánh dấu là đã trả lương!');
+      } else {
+        message.error('Lỗi khi cập nhật trạng thái: ' + response.data.message);
+      }
     } catch (error) {
       console.error('Error marking as paid:', error);
       message.error('Lỗi khi đánh dấu đã trả lương: ' + error.message);
@@ -269,6 +410,11 @@ const PayrollManagement = () => {
       }
     });
     setSalaryDetailsModalVisible(true);
+  };
+
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return 'Chưa có dữ liệu';
+    return value.toLocaleString() + ' VNĐ';
   };
 
   const columns = [
@@ -316,88 +462,99 @@ const PayrollManagement = () => {
       render: (rate, record) => record.calculationMethod === 'HOURLY' ? `${Number(rate || 0).toLocaleString()} VNĐ/giờ` : 'N/A',
     },
     {
-      title: 'Lương tháng (gross)',
-      dataIndex: 'baseSalary',
-      key: 'baseSalary',
-      width: 180,
-      render: (value, record) => record.calculationMethod === 'MONTHLY' ? `${Number(value || 0)?.toLocaleString()} VNĐ` : 'N/A',
-    },
-    {
       title: 'Giờ dạy',
-      dataIndex: 'teachingHours',
-      key: 'teachingHours',
+      dataIndex: 'totalTeachingHours',
+      key: 'totalTeachingHours',
       width: 100,
       render: (value, record) => {
         if (value && value > 0) {
           return `${parseFloat(value).toFixed(1)}h`;
         }
-        return 'N/A';
+        return <span style={{ color: '#999' }}>Chưa có dữ liệu</span>;
       },
     },
     {
       title: 'Tổng giờ làm',
-      dataIndex: 'totalWorkingHours',
-      key: 'totalWorkingHours',
-      width: 120,
-      render: (value, record) => (
-        <div>
-          <div>{value ? `${parseFloat(value).toFixed(1)}h` : 'N/A'}</div>
-          {record.contractType === 'TEACHER' && record.shiftSummary && (
-            <div style={{ color: '#8c8c8c', fontSize: 12 }}>{record.shiftSummary}</div>
-          )}
-        </div>
-      ),
+      dataIndex: 'actualWorkingHours',
+      key: 'actualWorkingHours',
+      render: (value, record) => {
+        // Giáo viên: giờ làm = 0, Nhân viên: hiển thị giờ làm thực tế
+        if (record.contractType === 'TEACHER') {
+          return <span style={{ color: '#999' }}>0</span>;
+        }
+        return value ? `${value} giờ` : 'Chưa có dữ liệu';
+      }
     },
     {
       title: 'Tổng lương',
-      dataIndex: 'totalSalary',
-      key: 'totalSalary',
-      width: 150,
-      render: (value) => (
-        <span style={{ fontWeight: 'bold', color: '#52c41a' }}>
-          {value?.toLocaleString()} VNĐ
-        </span>
-      ),
+      dataIndex: 'proratedGrossSalary',
+      key: 'proratedGrossSalary',
+      render: (value, record) => {
+        if (record.contractType === 'TEACHER') {
+          // Giáo viên: lương theo giờ nhân số giờ dạy
+          const hourlySalary = record.hourlySalary || 0;
+          const teachingHours = record.totalTeachingHours || 0;
+          const calculatedSalary = hourlySalary * teachingHours;
+          return calculatedSalary > 0 ? formatCurrency(calculatedSalary) : 'Chưa có dữ liệu';
+        }
+        // Nhân viên: hiển thị lương thực tế
+        return value ? formatCurrency(value) : 'Chưa có dữ liệu';
+      }
     },
     {
       title: 'Gross (tạm tính)',
-      dataIndex: 'grossPay',
-      key: 'grossPay',
-      width: 150,
-      render: (value) => (
-        <span>{Number(value || 0).toLocaleString()} VNĐ</span>
-      ),
+      dataIndex: 'netSalary',
+      key: 'netSalary',
+      render: (value, record) => {
+        // Ẩn cột này cho giáo viên
+        if (record.contractType === 'TEACHER') {
+          return <span style={{ color: '#999' }}>-</span>;
+        }
+        return value ? formatCurrency(value) : 'Chưa có dữ liệu';
+      }
     },
     {
       title: 'Thuế TNCN',
-      dataIndex: 'personalIncomeTax',
+      dataIndex: 'topCVResult',
       key: 'personalIncomeTax',
-      width: 130,
-      render: (value) => (
-        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
-      ),
+      render: (value, record) => {
+        // Ẩn cột này cho giáo viên
+        if (record.contractType === 'TEACHER') {
+          return <span style={{ color: '#999' }}>-</span>;
+        }
+        const pit = value?.personalIncomeTax;
+        return pit ? formatCurrency(pit) : 'Chưa có dữ liệu';
+      }
     },
     {
       title: 'BH NLĐ',
-      dataIndex: 'employeeInsurance',
+      dataIndex: 'topCVResult',
       key: 'employeeInsurance',
-      width: 120,
-      render: (value) => (
-        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
-      ),
+      render: (value, record) => {
+        // Ẩn cột này cho giáo viên
+        if (record.contractType === 'TEACHER') {
+          return <span style={{ color: '#999' }}>-</span>;
+        }
+        const si = value?.socialInsuranceEmployee;
+        return si ? formatCurrency(si) : 'Chưa có dữ liệu';
+      }
     },
     {
       title: 'Khấu trừ',
-      dataIndex: 'deductions',
+      dataIndex: 'topCVResult',
       key: 'deductions',
-      width: 130,
-      render: (value) => (
-        <span style={{ color: '#f5222d' }}>- {Number(value || 0).toLocaleString()} VNĐ</span>
-      ),
+      render: (value, record) => {
+        // Ẩn cột này cho giáo viên
+        if (record.contractType === 'TEACHER') {
+          return <span style={{ color: '#999' }}>-</span>;
+        }
+        const pit = value?.personalIncomeTax || 0;
+        const si = value?.socialInsuranceEmployee || 0;
+        const total = pit + si;
+        return total > 0 ? formatCurrency(total) : 'Chưa có dữ liệu';
+      }
     },
-    {
-      // Net pay already shown by existing 'Tổng lương' column below
-    },
+
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -596,6 +753,14 @@ const PayrollManagement = () => {
             />
           </Col>
         </Row>
+
+        {/* Message when no data */}
+        {payrollData.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+            <h3>Chưa có dữ liệu bảng lương cho kỳ này</h3>
+            <p>Vui lòng tạo bảng lương bằng cách nhấn nút "Tạo bảng lương" ở trên</p>
+          </div>
+        )}
 
         {/* Table */}
         <Table

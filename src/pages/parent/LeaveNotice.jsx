@@ -61,57 +61,34 @@ const LeaveNotice = () => {
   const [dateRange, setDateRange] = useState([dayjs(), dayjs().add(7, 'days')]);
   const { RangePicker } = DatePicker;
 
-  // Mock data
+  // Load children and leave notices data
   useEffect(() => {
-    const mockChildren = [
-      {
-        id: 1,
-        name: 'Nguyễn Minh An',
-        grade: 'Lớp 11A',
-        teacherName: 'Cô Hoàng Thị Mai'
-      },
-      {
-        id: 2,
-        name: 'Nguyễn Minh Hằng',
-        grade: 'Lớp 9B',
-        teacherName: 'Thầy Trần Văn Bình'
-      }
-    ];
-
-    const mockNotices = [
-      {
-        id: 1,
-        studentId: 1,
-        studentName: 'Nguyễn Minh An',
-        type: 'LATE',
-        date: '2025-08-15',
-        arriveAt: '09:30',
-        reasonCode: 'FAMILY',
-        note: 'Đi khám bệnh định kỳ',
-        status: 'ACKNOWLEDGED',
-        ackAt: '2025-08-14 16:30:00',
-        ackByTeacher: 'Cô Hoàng Thị Mai',
-        createdAt: '2025-08-14 15:00:00'
-      },
-      {
-        id: 2,
-        studentId: 1,
-        studentName: 'Nguyễn Minh An',
-        type: 'FULL_DAY',
-        date: '2025-08-20',
-        reasonCode: 'SICK',
-        note: 'Sốt nhẹ, cần nghỉ ngơi',
-        status: 'SENT',
-        createdAt: '2025-08-13 20:15:00'
-      }
-    ];
-
-    setChildren(mockChildren);
-    setLeaveNotices(mockNotices);
-    if (mockChildren.length > 0) {
-      setSelectedChildId(mockChildren[0].id);
-    }
+    loadChildren();
+    loadLeaveNotices();
   }, []);
+
+  const loadChildren = async () => {
+    try {
+      const response = await parentAPI.getChildren();
+      setChildren(response.data || []);
+      if (response.data && response.data.length > 0) {
+        setSelectedChildId(response.data[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading children:', error);
+      message.error('Không thể tải danh sách con em');
+    }
+  };
+
+  const loadLeaveNotices = async () => {
+    try {
+      const response = await parentAPI.getLeaveNotices();
+      setLeaveNotices(response.data || []);
+    } catch (error) {
+      console.error('Error loading leave notices:', error);
+      message.error('Không thể tải danh sách thông báo nghỉ học');
+    }
+  };
 
   // Fetch class sessions for selected child
   const fetchClassSessions = async (childId, startDate, endDate) => {
@@ -206,22 +183,17 @@ const LeaveNotice = () => {
         noticeData.leaveAt = values.leaveAt.format('HH:mm');
       }
 
-      // Mock API call
-      console.log('Creating leave notice:', noticeData);
+      // Call real API
+      const response = await parentAPI.createLeaveNotice(noticeData);
       
-      // Simulate API response
-      const newNotice = {
-        id: Date.now(),
-        ...noticeData,
-        studentName: children.find(c => c.id === selectedChildId)?.name,
-        status: 'SENT',
-        createdAt: new Date().toISOString()
-      };
-
-      setLeaveNotices(prev => [newNotice, ...prev]);
       message.success('Thông báo nghỉ học đã được gửi thành công');
       form.resetFields();
       setNoticeType('FULL_DAY');
+      setUploadedFile(null);
+      setFileList([]);
+      
+      // Reload leave notices
+      loadLeaveNotices();
 
     } catch (error) {
       console.error('Error creating leave notice:', error);

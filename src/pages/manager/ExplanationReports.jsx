@@ -73,7 +73,7 @@ const ExplanationReports = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [pagination.current, pagination.pageSize, dateRange, selectedStatus, selectedRole, selectedDepartment]);
+  }, [pagination.current, pagination.pageSize, dateRange, selectedStatus, selectedRole, selectedDepartment, viewScope]);
 
   const fetchStatistics = async () => {
     try {

@@ -92,6 +92,8 @@ const AccountantEvidencePage = () => {
   const [templates, setTemplates] = useState([]);
   const [reviewedByMe, setReviewedByMe] = useState([]);
   const [allReviewed, setAllReviewed] = useState([]);
+  const [availableViolations, setAvailableViolations] = useState([]);
+  const [isLoadingViolations, setIsLoadingViolations] = useState(false);
   
   // Modal states
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -114,18 +116,26 @@ const AccountantEvidencePage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
-  // Validate violationId exists before upload
+  // Validate violationId exists in available explanations
   const preValidateViolationId = async (violationId) => {
     try {
       if (!violationId || Number.isNaN(Number(violationId))) {
         messageApi.error('Mã vi phạm phải là số hợp lệ');
         return false;
       }
-      // This API returns 400 if violationId không tồn tại
-      await accountantEvidenceService.getEvidenceByViolation(Number(violationId));
+      
+      const vId = Number(violationId);
+      
+      // Check if violation exists in our available explanations
+      const foundExplanation = availableViolations.find(exp => exp.id === vId);
+      if (!foundExplanation) {
+        messageApi.error(`Không tìm thấy yêu cầu giải trình với ID: ${violationId}`);
+        return false;
+      }
+      
       return true;
     } catch (err) {
-      messageApi.error(`Không tìm thấy vi phạm với ID: ${violationId}`);
+      messageApi.error(`Lỗi xác thực mã vi phạm: ${violationId}`);
       return false;
     }
   };
@@ -137,46 +147,155 @@ const AccountantEvidencePage = () => {
       const vId = url.searchParams.get('violationId');
       if (vId) {
         setSelectedViolationId(vId);
-        // prefill upload forms
+        // prefill upload forms - try dropdown first, fallback to manual input
         const vNum = Number(vId);
         if (!Number.isNaN(vNum)) {
-          uploadForm?.setFieldsValue({ violationId: vNum });
-          bulkUploadForm?.setFieldsValue({ violationId: vNum });
+          // Use setTimeout to ensure forms are rendered before setting values
+          setTimeout(() => {
+            uploadForm?.setFieldsValue({ violationId: vNum });
+            bulkUploadForm?.setFieldsValue({ violationId: vNum });
+            
+            // If dropdown doesn't have this value, use manual input
+            if (availableViolations.length > 0 && !availableViolations.find(v => v.id === vNum)) {
+              uploadForm?.setFieldsValue({ violationId: undefined, manualViolationId: vNum });
+              bulkUploadForm?.setFieldsValue({ violationId: undefined, manualViolationId: vNum });
+            }
+          }, 100);
         }
       }
     } catch (_) {}
 
     loadData();
   }, []);
+  
+  // Reload data when URL violationId parameter changes
+  useEffect(() => {
+    const handleUrlChange = () => {
+      loadData();
+    };
+    
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
+  
+  
+  // Update form values when violations list is loaded
+  useEffect(() => {
+    if (availableViolations.length > 0 && selectedViolationId) {
+      const vNum = Number(selectedViolationId);
+      if (!Number.isNaN(vNum)) {
+        // Check if this violation exists in the dropdown
+        const foundExplanation = availableViolations.find(v => v.id === vNum);
+        if (foundExplanation) {
+          uploadForm?.setFieldsValue({ violationId: vNum, manualViolationId: undefined });
+          bulkUploadForm?.setFieldsValue({ violationId: vNum, manualViolationId: undefined });
+        } else {
+          uploadForm?.setFieldsValue({ violationId: undefined, manualViolationId: vNum });
+          bulkUploadForm?.setFieldsValue({ violationId: undefined, manualViolationId: vNum });
+        }
+      }
+    }
+  }, [availableViolations, selectedViolationId, uploadForm, bulkUploadForm]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       
+      // Check if violationId is provided in URL
+      const url = new URL(window.location.href);
+      const vId = url.searchParams.get('violationId');
+      
+      if (vId) {
+        // Load evidence for specific violation
+        try {
+          const violationEvidenceResponse = await accountantEvidenceService.getEvidenceByViolation(Number(vId));
+          setEvidenceList(violationEvidenceResponse.data || []);
+          setFilteredEvidence(violationEvidenceResponse.data || []);
+          
+          // Still load other tabs but focus on the violation evidence
+          const pendingResponse = await accountantEvidenceService.getPendingReview();
+          setPendingReview(pendingResponse.data);
+          
+          const reviewedResp = await accountantEvidenceService.getReviewedByMe();
+          setReviewedByMe(reviewedResp.data || []);
+          
+          const allReviewedResp = await accountantEvidenceService.getAllReviewed();
+          setAllReviewed(allReviewedResp.data || []);
+          
+        } catch (violationError) {
+          console.error('Error loading violation evidence:', violationError);
+          messageApi.warning(`Không tìm thấy minh chứng cho vi phạm ID: ${vId}`);
+          // Fall back to loading all data
+          const uploadsResponse = await accountantEvidenceService.getMyUploads();
+          setEvidenceList(uploadsResponse.data);
+          setFilteredEvidence(uploadsResponse.data);
+        }
+      } else {
+        // Load my uploads when no specific violation
+        const uploadsResponse = await accountantEvidenceService.getMyUploads();
+        setEvidenceList(uploadsResponse.data);
+        setFilteredEvidence(uploadsResponse.data);
+        
+        // Load pending review
+        const pendingResponse = await accountantEvidenceService.getPendingReview();
+        console.log('🔍 Pending review data:', pendingResponse.data);
+        setPendingReview(pendingResponse.data);
+        
+        // Load reviewed-by-me list
+        const reviewedResp = await accountantEvidenceService.getReviewedByMe();
+        setReviewedByMe(reviewedResp.data || []);
+
+        // Load all reviewed overview
+        const allReviewedResp = await accountantEvidenceService.getAllReviewed();
+        setAllReviewed(allReviewedResp.data || []);
+      }
+      
       // Load statistics
       const statsResponse = await accountantEvidenceService.getStatistics();
       setStatistics(statsResponse.data);
       
-      // Load my uploads
-      const uploadsResponse = await accountantEvidenceService.getMyUploads();
-      setEvidenceList(uploadsResponse.data);
-      setFilteredEvidence(uploadsResponse.data);
-      
-      // Load pending review
-      const pendingResponse = await accountantEvidenceService.getPendingReview();
-      setPendingReview(pendingResponse.data);
-      
       // Load templates
       const templatesResponse = await accountantEvidenceService.getTemplates();
       setTemplates(templatesResponse.data);
-
-      // Load reviewed-by-me list
-      const reviewedResp = await accountantEvidenceService.getReviewedByMe();
-      setReviewedByMe(reviewedResp.data || []);
-
-      // Load all reviewed overview
-      const allReviewedResp = await accountantEvidenceService.getAllReviewed();
-      setAllReviewed(allReviewedResp.data || []);
+      
+      // Load available explanations for evidence upload dropdown
+      if (!isLoadingViolations) {
+        setIsLoadingViolations(true);
+        try {
+          const explanationsResponse = await accountantEvidenceService.getUserExplanationsForEvidence();
+          const explanationsData = explanationsResponse.data.content || explanationsResponse.data;
+        
+        // For accountant role, show all explanations that can have evidence uploaded
+        // Don't filter by user since accountants can upload evidence for any violation
+        const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        const roleStr = ((currentUser?.role || currentUser?.roleName || '') + '').toUpperCase();
+        const isAccountant = roleStr.includes('ACCOUNTANT');
+        
+        
+        let userExplanations;
+        if (isAccountant) {
+          // Accountants can see all explanations to upload evidence
+          userExplanations = explanationsData;
+        } else {
+          // For other roles, filter by user (but this shouldn't happen for accountants)
+          userExplanations = explanationsData;
+        }
+        
+        
+        // Force update with new state
+        setAvailableViolations([...userExplanations]); // Spread to force new array reference
+        
+          // Verify state after setting
+          setTimeout(() => {
+          }, 100);
+        } catch (error) {
+          console.error('Error loading user explanations:', error);
+          messageApi.warning('Không thể tải danh sách vi phạm. Vui lòng nhập mã vi phạm thủ công.');
+          setAvailableViolations([]);
+        } finally {
+          setIsLoadingViolations(false);
+        }
+      }
       
     } catch (error) {
       messageApi.error('Không thể tải dữ liệu');
@@ -189,12 +308,20 @@ const AccountantEvidencePage = () => {
   const handleUpload = async (values) => {
     try {
       setLoading(true);
-      const ok = await preValidateViolationId(values.violationId);
+      
+      // Get violationId from either dropdown or manual input
+      const violationId = values.violationId || values.manualViolationId;
+      if (!violationId) {
+        messageApi.error('Vui lòng chọn vi phạm hoặc nhập mã vi phạm');
+        setLoading(false);
+        return;
+      }
+      
+      const ok = await preValidateViolationId(violationId);
       if (!ok) { setLoading(false); return; }
       
       const formData = new FormData();
-      // Use violationId from the form input instead of a placeholder
-      formData.append('violationId', values.violationId);
+      formData.append('violationId', violationId);
       const fileList = values.file;
       if (!fileList || fileList.length === 0) {
         messageApi.error('Vui lòng chọn file');
@@ -202,9 +329,10 @@ const AccountantEvidencePage = () => {
         return;
       }
       formData.append('file', fileList[0].originFileObj);
-      formData.append('description', values.description);
-      formData.append('evidenceType', values.evidenceType);
-      formData.append('category', values.category);
+      formData.append('description', values.description || '');
+      formData.append('evidenceType', values.evidenceType || '');
+      formData.append('category', values.category || '');
+      
       
       const response = await accountantEvidenceService.uploadSupportingEvidence(formData);
       
@@ -212,12 +340,13 @@ const AccountantEvidencePage = () => {
         messageApi.success('Tải lên minh chứng thành công');
         setUploadModalVisible(false);
         uploadForm.resetFields();
-        loadData();
+        loadData(); // Reload seeder data
       }
       
     } catch (error) {
-      messageApi.error('Lỗi khi tải lên minh chứng');
       console.error('Upload error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Lỗi không xác định';
+      messageApi.error(`Lỗi khi tải lên minh chứng: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -226,12 +355,20 @@ const AccountantEvidencePage = () => {
   const handleBulkUpload = async (values) => {
     try {
       setLoading(true);
-      const ok = await preValidateViolationId(values.violationId);
+      
+      // Get violationId from either dropdown or manual input
+      const violationId = values.violationId || values.manualViolationId;
+      if (!violationId) {
+        messageApi.error('Vui lòng chọn vi phạm hoặc nhập mã vi phạm');
+        setLoading(false);
+        return;
+      }
+      
+      const ok = await preValidateViolationId(violationId);
       if (!ok) { setLoading(false); return; }
       
       const formData = new FormData();
-      // Use violationId provided by the form for bulk upload
-      formData.append('violationId', values.violationId);
+      formData.append('violationId', violationId);
       formData.append('category', values.category);
       
       const fileList = values.files || [];
@@ -309,6 +446,10 @@ const AccountantEvidencePage = () => {
   const handleDownload = async (evidenceId) => {
     try {
       const response = await accountantEvidenceService.generateDownloadUrl(evidenceId);
+      if (response.data === '#') {
+        messageApi.info('File chỉ tồn tại trong môi trường demo');
+        return;
+      }
       window.open(response.data, '_blank');
     } catch (error) {
       messageApi.error('Lỗi khi tải xuống file');
@@ -490,12 +631,15 @@ const AccountantEvidencePage = () => {
       title: 'File',
       dataIndex: 'originalFilename',
       key: 'filename',
-      render: (text, record) => (
-        <Space>
-          <FileTextOutlined />
-          <Text>{text}</Text>
-        </Space>
-      )
+      render: (text, record) => {
+        console.log('🔍 Rendering file column:', { text, record });
+        return (
+          <Space>
+            <FileTextOutlined />
+            <Text>{text || 'Không có tên file'}</Text>
+          </Space>
+        );
+      }
     },
     {
       title: 'Loại vi phạm',
@@ -528,7 +672,14 @@ const AccountantEvidencePage = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2}>Quản lý Minh chứng Hỗ trợ</Title>
+      <Title level={2}>
+        Quản lý Minh chứng Hỗ trợ
+        {selectedViolationId && (
+          <span style={{ fontSize: '14px', color: '#666', marginLeft: '10px' }}>
+            (Vi phạm ID: {selectedViolationId})
+          </span>
+        )}
+      </Title>
       
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -776,9 +927,33 @@ const AccountantEvidencePage = () => {
         >
           <Form.Item
             name="violationId"
-            label="Mã vi phạm"
+            label="Chọn vi phạm cần minh chứng"
             rules={[
-              { required: true, message: 'Vui lòng nhập mã vi phạm' },
+              { required: true, message: 'Vui lòng chọn vi phạm' }
+            ]}
+          >
+            <Select 
+              style={{ width: '100%' }} 
+              placeholder="Chọn yêu cầu giải trình"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+              notFoundContent="Không tìm thấy vi phạm nào"
+              options={availableViolations.map((explanation) => ({
+                value: explanation.id,
+                label: `ID: ${explanation.id} - ${explanation.submitterName || 'Không rõ'} - ${explanation.absenceDate ? new Date(explanation.absenceDate).toLocaleDateString('vi-VN') : 'Không rõ ngày'} - ${explanation.reason ? explanation.reason.substring(0, 40) + (explanation.reason.length > 40 ? '...' : '') : 'Không có lý do'}`
+              }))}
+            >
+            </Select>
+          </Form.Item>
+          
+          {/* Fallback input for manual ID entry - always show as alternative */}
+          <Form.Item
+            name="manualViolationId"
+            label={availableViolations.length > 0 ? "Hoặc nhập mã vi phạm thủ công" : "Nhập mã vi phạm"}
+            rules={[
               { type: 'number', transform: (v) => (typeof v === 'string' ? Number(v) : v), message: 'Mã vi phạm phải là số' }
             ]}
           >
@@ -867,9 +1042,33 @@ const AccountantEvidencePage = () => {
         >
           <Form.Item
             name="violationId"
-            label="Mã vi phạm"
+            label="Chọn vi phạm cần minh chứng"
             rules={[
-              { required: true, message: 'Vui lòng nhập mã vi phạm' },
+              { required: true, message: 'Vui lòng chọn vi phạm' }
+            ]}
+          >
+            <Select 
+              style={{ width: '100%' }} 
+              placeholder="Chọn yêu cầu giải trình"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+              notFoundContent="Không tìm thấy vi phạm nào"
+              options={availableViolations.map((explanation) => ({
+                value: explanation.id,
+                label: `ID: ${explanation.id} - ${explanation.submitterName || 'Không rõ'} - ${explanation.absenceDate ? new Date(explanation.absenceDate).toLocaleDateString('vi-VN') : 'Không rõ ngày'} - ${explanation.reason ? explanation.reason.substring(0, 40) + (explanation.reason.length > 40 ? '...' : '') : 'Không có lý do'}`
+              }))}
+            >
+            </Select>
+          </Form.Item>
+          
+          {/* Fallback input for manual ID entry - always show as alternative */}
+          <Form.Item
+            name="manualViolationId"
+            label={availableViolations.length > 0 ? "Hoặc nhập mã vi phạm thủ công" : "Nhập mã vi phạm"}
+            rules={[
               { type: 'number', transform: (v) => (typeof v === 'string' ? Number(v) : v), message: 'Mã vi phạm phải là số' }
             ]}
           >

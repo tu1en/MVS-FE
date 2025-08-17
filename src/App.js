@@ -53,6 +53,7 @@ import TeacherCourseManagement from "./pages/teacher/TeacherCourseManagement.jsx
 import TeacherCoursesSimple from "./pages/teacher/TeacherCoursesSimple.jsx";
 import TeacherExplanationRequest from './pages/teacher/TeacherExplanationRequest.jsx';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest.jsx';
+import TeacherLeaveNotices from './pages/teacher/TeacherLeaveNotices.jsx';
 import TeacherLectures from "./pages/teacher/TeacherLectures.jsx";
 import TeacherMessagesPage from "./pages/teacher/TeacherMessagesPage.jsx";
 import TeachingHistoryPage from './pages/teacher/TeachingHistoryPage.jsx';
@@ -306,6 +307,7 @@ function App() {
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherAnnouncementsPage /></ProtectedRoute>} />
               <Route path="/teacher/teaching-history" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeachingHistoryPage /></ProtectedRoute>} />
               <Route path="/teacher/leave-requests" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveRequest /></ProtectedRoute>} />
+              <Route path="/teacher/leave-notices" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherLeaveNotices /></ProtectedRoute>} />
               <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
               <Route path="/teacher/course-management" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherCourseManagement /></ProtectedRoute>} />
 

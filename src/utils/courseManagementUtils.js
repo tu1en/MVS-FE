@@ -3,6 +3,26 @@
  */
 
 /**
+ * Validate video URL
+ * @param {string} url - Video URL to validate
+ * @returns {boolean} Whether URL is valid
+ */
+export const isValidVideoUrl = (url) => {
+  if (!url || !url.trim()) return true; // Empty URL is valid (optional field)
+  
+  const videoPatterns = [
+    /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([\w-]+)/, // YouTube
+    /^https?:\/\/youtu\.be\/([\w-]+)/, // YouTube short
+    /^https?:\/\/(?:www\.)?vimeo\.com\/\d+/, // Vimeo
+    /^https?:\/\/.*\.(mp4|avi|mov|mkv|webm)$/, // Direct video files
+    /^https?:\/\/.*zoom\.us\/.+/, // Zoom links
+    /^https?:\/\/.*meet\.google\.com\/.+/, // Google Meet
+  ];
+  
+  return videoPatterns.some(pattern => pattern.test(url.trim()));
+};
+
+/**
  * Format date to Vietnamese locale
  * @param {string|Date} dateString - Date to format
  * @returns {string} Formatted date string
@@ -140,6 +160,11 @@ export const validateClassForm = (formData) => {
 
   if (formData.maxStudents < 1 || formData.maxStudents > 100) {
     validation.maxStudents = 'Số học viên phải từ 1 đến 100';
+  }
+
+  // Validate video URL if provided
+  if (formData.introVideoUrl && !isValidVideoUrl(formData.introVideoUrl)) {
+    validation.introVideoUrl = 'URL video không hợp lệ. Hỗ trợ: YouTube, Vimeo, Zoom, Google Meet';
   }
 
   return validation;

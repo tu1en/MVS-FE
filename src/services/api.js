@@ -949,13 +949,12 @@ export const parentAPI = {
 
   /**
    * Create leave notice for child
-   * @param {number} childId - The ID of the child
    * @param {Object} noticeData - The leave notice data
    * @returns {Promise} Created notice data
    */
-  createLeaveNotice: async (childId, noticeData) => {
+  createLeaveNotice: async (noticeData) => {
     try {
-      const response = await apiClient.post(`/parent/children/${childId}/leave-notices`, noticeData);
+      const response = await apiClient.post('/parent/leave-notices', noticeData);
       return response;
     } catch (error) {
       console.error('Error creating leave notice:', error);
@@ -964,19 +963,12 @@ export const parentAPI = {
   },
 
   /**
-   * Get leave notices for child
-   * @param {number} childId - The ID of the child
-   * @param {string} from - Start date (optional)
-   * @param {string} to - End date (optional)
+   * Get all leave notices for current parent
    * @returns {Promise} Leave notices data
    */
-  getLeaveNotices: async (childId, from = null, to = null) => {
+  getLeaveNotices: async () => {
     try {
-      const params = {};
-      if (from) params.from = from;
-      if (to) params.to = to;
-      
-      const response = await apiClient.get(`/parent/children/${childId}/leave-notices`, { params });
+      const response = await apiClient.get('/parent/leave-notices');
       return response;
     } catch (error) {
       console.error('Error fetching leave notices:', error);
