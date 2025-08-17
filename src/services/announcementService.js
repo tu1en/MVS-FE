@@ -382,6 +382,63 @@ class AnnouncementService {
       throw error;
     }
   }
+
+  /**
+   * Get announcements for parent
+   * @returns {Promise<Array>} List of announcements for parent
+   */
+  static async getAnnouncementsForParent() {
+    try {
+      const response = await apiClient.get('/announcements/parent');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching announcements for parent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get unread announcements count for parent
+   * @returns {Promise<number>} Unread count for parent
+   */
+  static async getUnreadCountForParent() {
+    try {
+      const response = await apiClient.get('/announcements/parent/unread-count');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread count for parent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent unread announcements for parent
+   * @param {number} limit - Number of recent announcements to fetch
+   * @returns {Promise<Array>} Recent unread announcements for parent
+   */
+  static async getRecentUnreadForParent(limit = 5) {
+    try {
+      const response = await apiClient.get('/announcements/parent/recent-unread', { params: { limit } });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching recent unread announcements for parent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark all announcements as read for parent
+   * @returns {Promise<Object>} Mark all read result for parent
+   */
+  static async markAllAsReadForParent() {
+    try {
+      const response = await apiClient.get('/announcements/parent/mark-all-read');
+      return response.data;
+    } catch (error) {
+      console.error('Error marking all announcements as read for parent:', error);
+      throw error;
+    }
+  }
 }
 
 export default AnnouncementService;

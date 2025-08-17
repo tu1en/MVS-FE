@@ -22,7 +22,6 @@ import {
   DeleteOutlined, 
   EyeOutlined,
   UserOutlined,
-  TeamOutlined,
   FilePdfOutlined,
   CheckOutlined
 } from '@ant-design/icons';
@@ -38,7 +37,6 @@ const { TextArea } = Input;
 
 const ContractManagement = () => {
   const [teacherContracts, setTeacherContracts] = useState([]);
-  const [staffContracts, setStaffContracts] = useState([]);
   const [candidatesReady, setCandidatesReady] = useState([]);
   const [loading, setLoading] = useState(false);
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
@@ -47,10 +45,10 @@ const ContractManagement = () => {
   const [candidatePosition, setCandidatePosition] = useState('');
   const [searchText, setSearchText] = useState('');
   const [filteredTeacherContracts, setFilteredTeacherContracts] = useState([]);
-  const [filteredStaffContracts, setFilteredStaffContracts] = useState([]);
   const [candidateForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
+
   // Bộ lọc trạng thái hợp đồng
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [completedContracts, setCompletedContracts] = useState(new Set());
@@ -71,6 +69,70 @@ const ContractManagement = () => {
     return m2;
   };
 
+  // ===== Contract ID helpers =====
+  // New format: HĐLĐ-CT36-XXMM/YYYY (e.g., HĐLĐ-CT36-2308/2025)
+  const CONTRACT_ID_PREFIX = 'HĐLĐ-CT36-';
+  const CONTRACT_ID_REGEX = /^HĐLĐ-CT36-(\d{2})(\d{2}\/\d{4})$/;
+
+  const getCurrentMonthYear = () => moment().format('MM/YYYY');
+
+  const getUsedCodesForMonthYear = (monthYear) => {
+    const used = new Set();
+    (teacherContracts || []).forEach((c) => {
+      const id = (c?.contractId ?? '').toString();
+      const match = id.match(CONTRACT_ID_REGEX);
+      if (match && match[2] === monthYear) {
+        used.add(match[1]);
+      }
+    });
+    return used;
+  };
+
+  const generateUniqueTwoDigitCode = (monthYear) => {
+    const used = getUsedCodesForMonthYear(monthYear);
+    // Prefer 10..99
+    const pool = [];
+    for (let i = 10; i <= 99; i++) pool.push(i);
+    // Shuffle pool (Fisher-Yates)
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    for (const n of pool) {
+      const code = n.toString().padStart(2, '0');
+      if (!used.has(code)) return code;
+    }
+    // Fallback to 00..99
+    const pool2 = [];
+    for (let i = 0; i <= 99; i++) pool2.push(i);
+    for (let i = pool2.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool2[i], pool2[j]] = [pool2[j], pool2[i]];
+    }
+    for (const n of pool2) {
+      const code = n.toString().padStart(2, '0');
+      if (!used.has(code)) return code;
+    }
+    // Worst case: return a random two-digit value
+    return Math.floor(Math.random() * 90 + 10).toString();
+  };
+
+  const generateContractId = (monthYear = getCurrentMonthYear()) => {
+    const code = generateUniqueTwoDigitCode(monthYear);
+    return `${CONTRACT_ID_PREFIX}${code}${monthYear}`;
+  };
+
+  const contractIdDisplay = (id) => {
+    const str = (id ?? '').toString();
+    const match = str.match(CONTRACT_ID_REGEX);
+    if (match) {
+      return `${str} (ký vào ${match[2]})`;
+    }
+    return str || '—';
+  };
+
+
+
   // Fetch data khi component mount
   useEffect(() => {
     fetchContracts();
@@ -80,21 +142,17 @@ const ContractManagement = () => {
   // Filter contracts when data changes
   useEffect(() => {
     filterContracts(searchText);
-  }, [teacherContracts, staffContracts, searchText, statusFilter]);
+  }, [teacherContracts, searchText, statusFilter]);
+
+  // Show raw DB contract IDs without reformatting
 
   // Lấy danh sách hợp đồng theo loại
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const [teacherResponse, staffResponse] = await Promise.all([
-        axiosInstance.get('/contracts/type/TEACHER'),
-        axiosInstance.get('/contracts/type/STAFF')
-      ]);
-      
+      const teacherResponse = await axiosInstance.get('/contracts/type/TEACHER');
       setTeacherContracts(teacherResponse.data);
-      setStaffContracts(staffResponse.data);
       setFilteredTeacherContracts(teacherResponse.data);
-      setFilteredStaffContracts(staffResponse.data);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       message.error('Không thể tải danh sách hợp đồng!');
@@ -114,10 +172,10 @@ const ContractManagement = () => {
     }
   };
 
-  // 🔄 REFACTORED: Xử lý tạo hợp đồng mới với mutually exclusive salary fields
+  // Xử lý tạo hợp đồng mới
   const handleCreateContract = async (values) => {
-    console.log('🔄 REFACTORED: Creating contract with mutually exclusive salary values:', values);
-    
+    console.log('Creating contract:', values);
+
     // Validate required fields
     if (!values.fullName || values.fullName.trim() === '') {
       message.error('Vui lòng nhập họ tên!');
@@ -131,30 +189,15 @@ const ContractManagement = () => {
       message.error('Vui lòng nhập vị trí công việc!');
       return;
     }
-    
-    // 🔄 NEW: Validate mutually exclusive salary logic
+
+    // Chỉ cho phép lương theo giờ (Teacher contract)
     const hasHourly = values.hourlySalary && values.hourlySalary > 0;
-    const hasGross = values.grossSalary && values.grossSalary > 0;
-    const hasNet = values.netSalary && values.netSalary > 0;
-    const hasGrossOrNet = hasGross || hasNet;
-    
-    if (!hasHourly && !hasGrossOrNet) {
-      message.error('Vui lòng có ít nhất một loại lương (theo giờ hoặc GROSS/NET)!');
+    if (!hasHourly) {
+      message.error('Vui lòng kiểm tra Lương theo giờ (chỉ áp dụng cho Hợp đồng Giáo viên)!');
       return;
     }
-    
-    if (hasHourly && hasGrossOrNet) {
-      message.error('Không thể có cả lương theo giờ và lương GROSS/NET cùng lúc!');
-      return;
-    }
-    
-    console.log('🔍 SALARY VALIDATION PASSED:', {
-      hasHourly,
-      hasGross,
-      hasNet,
-      hasGrossOrNet
-    });
-    
+    console.log('SALARY VALIDATION PASSED (hourly only):', { hourlySalary: values.hourlySalary });
+
     try {
       // Generate userId if not provided (for manual contract creation)
       let userId = values.userId;
@@ -166,57 +209,48 @@ const ContractManagement = () => {
         userId = Date.now(); // Simple timestamp-based ID
       }
 
-      // 🔄 REFACTORED: Handle salary based on mutually exclusive fields
-    let finalSalary = 0;
-    let salaryType = '';
-    
-    if (hasHourly) {
-      // For hourly salary, estimate monthly: hourly * 80 hours
+      // Không tự sinh/sửa ID hợp đồng ở FE. Để BE/DB quyết định.
+
+      // Tính lương tổng hợp từ lương theo giờ (ước tính theo 80 giờ/tháng)
+      let finalSalary = 0;
+      let salaryType = 'Hourly';
       finalSalary = values.hourlySalary * 80;
-      salaryType = 'Hourly';
-      console.log('💰 HOURLY SALARY: ', values.hourlySalary, 'VND/hour, Estimated Monthly:', finalSalary);
-    } else if (hasGross) {
-      // Use gross salary
-      finalSalary = values.grossSalary;
-      salaryType = 'Gross';
-      console.log('💰 GROSS SALARY:', finalSalary, 'VND/month');
-    } else if (hasNet) {
-      // Use net salary
-      finalSalary = values.netSalary;
-      salaryType = 'Net';
-      console.log('💰 NET SALARY:', finalSalary, 'VND/month');
-    }    
-      
-      // 🔄 REFACTORED: Enhanced contract data with mutually exclusive salary fields
+      console.log('HOURLY SALARY: ', values.hourlySalary, 'VND/hour, Estimated Monthly:', finalSalary);
+
+      // Dữ liệu hợp đồng - mặc định TEACHER, chỉ dùng lương theo giờ
       const contractData = {
-        contractId: values.contractId,
         userId: userId,
         fullName: values.fullName,
         email: values.email,
         phoneNumber: values.phoneNumber || '',
         address: values.address || '',
         birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        citizenId: values.cccd,
+        qualification: values.qualification,
         position: values.position,
         department: values.department || 'Phòng Giáo vụ',
-        contractType: values.contractType || 'STAFF',
+        contractType: 'TEACHER',
         salary: finalSalary, // Main salary field for compatibility
         workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
         status: values.status || 'ACTIVE',
         contractTerms: values.contractTerms || 'Điều khoản hợp đồng chuẩn',
         comments: values.comments || 'Hợp đồng được tạo từ ứng viên đã duyệt',
-        // 🔄 REFACTORED: Mutually exclusive salary fields - chỉ một trong ba có giá trị
-        hourlySalary: hasHourly ? values.hourlySalary : null,
-        grossSalary: hasGross ? values.grossSalary : null,
-        netSalary: hasNet ? values.netSalary : null,
+        // Chỉ giữ lương theo giờ
+        hourlySalary: values.hourlySalary,
+        // Thông tin giảng dạy
+        subject: values.subject,
+        classLevel: values.classLevel,
+        // Lịch làm việc
+        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
+        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
+        workSchedule: values.workSchedule || '',
         salaryType: salaryType // Additional info for logging
       };
 
-      console.log('🔄 REFACTORED: Sending contract creation request with mutually exclusive salary data:', contractData);
-      console.log('🔄 REWRITTEN: Salary field breakdown:', {
+      console.log('Sending contract creation request (TEACHER, hourly only):', contractData);
+      console.log('Salary field breakdown:', {
         salary: contractData.salary,
-        hourlySalary: contractData.hourlySalary,
-        grossSalary: contractData.grossSalary,
-        netSalary: contractData.netSalary
+        hourlySalary: contractData.hourlySalary
       });
 
       await axiosInstance.post('/contracts', contractData);
@@ -227,180 +261,8 @@ const ContractManagement = () => {
       fetchContracts();
       fetchCandidatesReady();
     } catch (error) {
-      console.error('🔄 REFACTORED Error creating contract:', error);
+      console.error('Error creating contract:', error);
       message.error('Có lỗi xảy ra khi tạo hợp đồng!');
-    }
-  };
-
-  // Xử lý cập nhật hợp đồng
-  const handleUpdateContract = async (values) => {
-    try {
-      const contractData = {
-        ...values,
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        citizenId: values.cccd || values.citizenId || '',
-        // Format working schedule fields for backend
-        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
-        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
-        workSchedule: values.workSchedule || ''
-      };
-
-      await axiosInstance.put(`/contracts/${editingContract.id}`, contractData);
-      message.success('Cập nhật hợp đồng thành công!');
-      setEditModalVisible(false);
-      setEditingContract(null);
-      editForm.resetFields();
-      fetchContracts();
-    } catch (error) {
-      console.error('Error updating contract:', error);
-      message.error('Không thể cập nhật hợp đồng!');
-    }
-  };
-
-  // Xử lý đánh dấu hợp đồng hoàn thành (chỉ ẩn nút, không thay đổi trạng thái)
-  const handleCompleteContract = async (id) => {
-    try {
-      // Chỉ đánh dấu local để ẩn nút, không thay đổi trạng thái hợp đồng
-      setCompletedContracts(prev => new Set([...prev, id]));
-      message.success('Đã đánh dấu hợp đồng hoàn thành!');
-    } catch (error) {
-      console.error('Error marking contract as completed:', error);
-      message.error('Không thể đánh dấu hợp đồng hoàn thành!');
-    }
-  };
-
-  // ĐÃ XÓA: Tính năng gia hạn hợp đồng
-
-  // Xử lý chỉnh sửa hợp đồng
-  const handleEditContract = (record) => {
-    if (record.status === 'EXPIRED') {
-      message.warning('Không thể chỉnh sửa hợp đồng đã hết hạn!');
-      return;
-    }
-    
-    console.log('🔍 DEBUG: Editing contract:', record);
-    console.log('🔍 DEBUG: Contract salary fields:', {
-      grossSalary: record.grossSalary,
-      netSalary: record.netSalary,
-      hourlySalary: record.hourlySalary,
-    });
-    console.log('🔍 DEBUG: Contract type:', record.contractType);
-    
-    setEditingContract(record);
-    
-    // Populate form with contract data
-    editForm.setFieldsValue({
-      contractId: record.contractId,
-      fullName: record.fullName,
-      email: record.email,
-      phoneNumber: record.phoneNumber,
-      position: record.position,
-      birthDate: parseToMoment(record.birthDate),
-      citizenId: record.citizenId,
-      address: record.address,
-      qualification: record.qualification,
-      subject: record.subject,
-      educationLevel: record.educationLevel,
-      status: record.status,
-      contractTerms: record.contractTerms,
-      evaluation: record.evaluation,
-    });
-    
-    setEditModalVisible(true);
-  };
-
-  // Generate Contract ID based on current date and sequence
-  const generateContractId = () => {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = String(today.getFullYear()).slice(-2);
-    // For demo purposes, we'll use a simple sequence. In production, this should come from backend
-    const sequence = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
-    return `${sequence}${month}${year}`;
-  };
-
-  // 🔄 REFACTORED: Mở modal tạo hợp đồng với logic lương mutually exclusive
-  const handleSelectCandidate = async (candidate) => {
-    console.log('🔄 REFACTORED: Selected candidate for contract creation:', candidate);
-    setSelectedCandidate(candidate);
-    setCandidateModalVisible(true);
-    // Reset form trước khi set dữ liệu mới
-    candidateForm.resetFields();
-    
-    // Không tự động gán loại hợp đồng theo vị trí nữa. Người dùng sẽ chọn trong Select.
-
-    try {
-      // Lấy dữ liệu offer từ backend (với logic mutually exclusive salary)
-      console.log('🔄 REFACTORED: Fetching mutually exclusive salary data for candidate ID:', candidate.id);
-      const response = await axiosInstance.get(`/contracts/candidates/${candidate.id}/offer`);
-      const offerData = response.data;
-      
-      console.log('🔄 REFACTORED: Received mutually exclusive salary data:', offerData);
-      
-      // Generate Contract ID
-      const contractId = generateContractId();
-      
-      // 🔄 NEW: Validate mutually exclusive salary logic
-      const hasHourly = offerData.hourlySalary && offerData.hourlySalary > 0;
-      const hasGross = offerData.grossSalary && offerData.grossSalary > 0;
-      const hasNet = offerData.netSalary && offerData.netSalary > 0;
-      
-      console.log('🔍 SALARY VALIDATION:', {
-        hasHourly,
-        hasGross, 
-        hasNet,
-        hourlySalary: offerData.hourlySalary,
-        grossSalary: offerData.grossSalary,
-        netSalary: offerData.netSalary
-      });
-      
-      // Điền thông tin cơ bản vào form
-      candidateForm.setFieldsValue({
-        contractId: contractId,
-        userId: candidate.id,
-        fullName: candidate.fullName,
-        email: candidate.email,
-        phoneNumber: candidate.phoneNumber || '',
-        address: candidate.address || '',
-        birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
-        position: candidate.position,
-        department: 'Phòng Giáo vụ', // Default department
-        // contractType: để người dùng chọn
-        status: 'ACTIVE',
-        // 🔄 REFACTORED: Mutually exclusive salary data từ backend
-        comments: offerData.comments || 'Chưa có nhận xét',
-        // Backend đã đảm bảo chỉ một loại lương có giá trị, các loại khác sẽ là null
-        hourlySalary: offerData.hourlySalary,
-        grossSalary: offerData.grossSalary,
-        netSalary: offerData.netSalary
-      });
-      
-      console.log('🔄 REFACTORED: Form populated with mutually exclusive salary data.');
-      
-    } catch (error) {
-      console.error('🔄 REFACTORED Error fetching offer data:', error);
-      message.error('Không thể lấy dữ liệu offer cho ứng viên này!');
-      
-      // Fallback: điền thông tin cơ bản không có offer data
-      const contractId = generateContractId();
-      candidateForm.setFieldsValue({
-        contractId: contractId,
-        userId: candidate.id,
-        fullName: candidate.fullName,
-        email: candidate.email,
-        phoneNumber: candidate.phoneNumber || '',
-        address: candidate.address || '',
-        birthDate: candidate.birthDate ? moment(candidate.birthDate) : undefined,
-        position: candidate.position,
-        department: 'Phòng Giáo vụ',
-        // contractType: để người dùng chọn
-        status: 'ACTIVE',
-        comments: 'Chưa có nhận xét',
-        // Tất cả salary fields để null khi có lỗi
-        hourlySalary: null,
-        grossSalary: null,
-        netSalary: null
-      });
     }
   };
 
@@ -434,10 +296,7 @@ const ContractManagement = () => {
     };
 
     setFilteredTeacherContracts(filterData(teacherContracts));
-    setFilteredStaffContracts(filterData(staffContracts));
   };
-
-
 
   // Hàm validate ngày sinh: không được ở tương lai
   const validateBirthDate = (_, value) => {
@@ -460,14 +319,145 @@ const ContractManagement = () => {
     }
   };
 
+  // Mở modal chỉnh sửa và đổ dữ liệu hợp đồng
+  const handleEditContract = (record) => {
+    setEditingContract(record);
+    setEditModalVisible(true);
+
+    const workShifts = Array.isArray(record.workShifts)
+      ? record.workShifts
+      : (record.workShifts ? record.workShifts.split(',').map(s => s.trim()).filter(Boolean) : []);
+    const workDays = Array.isArray(record.workDays)
+      ? record.workDays
+      : (record.workDays ? record.workDays.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+    editForm.setFieldsValue({
+      contractId: record.contractId,
+      fullName: record.fullName,
+      birthDate: parseToMoment(record.birthDate),
+      email: record.email,
+      phoneNumber: record.phoneNumber,
+      cccd: record.citizenId || record.cccd || '',
+      address: record.address || '',
+      qualification: record.qualification || '',
+      subject: record.subject || '',
+      classLevel: record.classLevel || record.educationLevel || '',
+      workShifts,
+      workDays,
+      workSchedule: record.workSchedule || '',
+      position: record.position || '',
+      hourlySalary: record.hourlySalary || undefined,
+    });
+  };
+
+  // Cập nhật hợp đồng (PUT /contracts/{id})
+  const handleUpdateContract = async (values) => {
+    try {
+      if (!editingContract || !editingContract.id) {
+        message.error('Không xác định được hợp đồng cần cập nhật!');
+        return;
+      }
+
+      const payload = {
+        // Không chỉnh sửa các trường chỉ đọc, nhưng gửi kèm để BE an toàn
+        contractId: values.contractId || editingContract.contractId,
+        fullName: editingContract.fullName,
+        email: editingContract.email,
+        phoneNumber: editingContract.phoneNumber,
+        position: editingContract.position,
+        contractType: 'TEACHER',
+
+        // Các trường cho phép chỉnh sửa
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        citizenId: values.cccd,
+        address: values.address,
+        qualification: values.qualification,
+        subject: values.subject,
+        classLevel: values.classLevel,
+        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
+        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
+        workSchedule: values.workSchedule || ''
+      };
+
+      await axiosInstance.put(`/contracts/${editingContract.id}`, payload);
+      message.success('Cập nhật hợp đồng thành công!');
+      setEditModalVisible(false);
+      setEditingContract(null);
+      editForm.resetFields();
+      fetchContracts();
+    } catch (error) {
+      console.error('Error updating contract:', error);
+      message.error('Không thể cập nhật hợp đồng!');
+    }
+  };
+
+  // Chọn ứng viên để tạo hợp đồng, tải thông tin Offer (nếu có)
+  const handleSelectCandidate = async (record) => {
+    try {
+      setSelectedCandidate(record);
+      setCandidatePosition(record.position || '');
+      setCandidateModalVisible(true);
+
+      candidateForm.setFieldsValue({
+        fullName: record.fullName || '',
+        email: record.email || '',
+        phoneNumber: record.phoneNumber || '',
+        position: record.position || '',
+        hourlySalary: record.hourlySalary,
+        cccd: record.citizenId || record.cccd || '',
+        qualification: record.qualification || '',
+        address: record.address || '',
+        birthDate: parseToMoment(record.birthDate),
+        subject: record.subject || '',
+        classLevel: record.classLevel || record.educationLevel || ''
+      });
+
+      if (record.id) {
+        try {
+          const res = await axiosInstance.get(`/contracts/candidates/${record.id}/offer`);
+          const offer = res.data || {};
+          candidateForm.setFieldsValue({
+            hourlySalary: offer.hourlySalary ?? candidateForm.getFieldValue('hourlySalary'),
+            subject: offer.subject || candidateForm.getFieldValue('subject'),
+            classLevel: offer.classLevel || candidateForm.getFieldValue('classLevel'),
+            workShifts: Array.isArray(offer.workShifts)
+              ? offer.workShifts
+              : (offer.workShifts ? offer.workShifts.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workShifts')),
+            workDays: Array.isArray(offer.workDays)
+              ? offer.workDays
+              : (offer.workDays ? offer.workDays.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workDays')),
+            workSchedule: offer.workSchedule || candidateForm.getFieldValue('workSchedule'),
+          });
+        } catch (e) {
+          // Không có offer cụ thể cũng không sao
+          console.warn('Không thể tải thông tin Offer của ứng viên:', e);
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting candidate:', error);
+    }
+  };
+
+  // Đánh dấu hoàn thành (cục bộ UI)
+  const handleCompleteContract = (id) => {
+    setCompletedContracts((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    message.success('Đã đánh dấu hợp đồng là hoàn thành (chỉ hiển thị trên UI).');
+  };
+
   // Cấu hình cột cho bảng hợp đồng
   const contractColumns = [
     {
       title: 'ID Hợp đồng',
       dataIndex: 'contractId',
       key: 'contractId',
-      width: 120,
-      render: (text) => <strong style={{ color: '#1890ff' }}>{text}</strong>
+      width: 220,
+      render: (text) => (
+        <strong style={{ color: '#1890ff' }}>{(text ?? '').toString()}</strong>
+      )
     },
     {
       title: 'Họ tên',
@@ -558,7 +548,6 @@ const ContractManagement = () => {
               }
             />
           </Tooltip>
-          {/* ĐÃ XÓA nút Gia hạn hợp đồng */}
           {!completedContracts.has(record.id) && (record.status === 'ACTIVE' || record.status === 'NEAR_EXPIRY') && (
             <Popconfirm
               title="Bạn có chắc chắn muốn đánh dấu hợp đồng này đã hoàn thành?"
@@ -661,23 +650,6 @@ const ContractManagement = () => {
           </TabPane>
 
           <TabPane 
-            tab={<span><TeamOutlined /> Hợp đồng Nhân viên ({staffContracts.length})</span>} 
-            key="staff"
-          >
-            <Table
-              columns={contractColumns}
-              dataSource={filteredStaffContracts}
-              rowKey="id"
-              loading={loading}
-              pagination={{ 
-                pageSize: 10, 
-                showSizeChanger: true, 
-                showTotal: (total) => `Tổng ${total} hợp đồng` 
-              }}
-            />
-          </TabPane>
-
-          <TabPane 
             tab={<span><PlusOutlined /> Tạo hợp đồng từ ứng viên đã duyệt ({candidatesReady.length})</span>} 
             key="create"
           >
@@ -715,7 +687,7 @@ const ContractManagement = () => {
         >
           <Form.Item name="contractId" label="ID Hợp đồng">
             <Input 
-              placeholder="Tự động tạo" 
+              placeholder="Sẽ được tạo tự động sau khi lưu" 
               readOnly 
               style={{ 
                 backgroundColor: '#f0f8ff', 
@@ -789,90 +761,56 @@ const ContractManagement = () => {
             <Input placeholder="Nhập trình độ chuyên môn" />
           </Form.Item>
 
-          {/* Subject and Class Level fields - Only for Teachers */}
-          {(() => {
-            // For edit mode, check the editing contract's type and position
-            const isTeacher = editingContract ? 
-              (editingContract.contractType === 'TEACHER' || 
-               editingContract.position?.toLowerCase().includes('giáo viên')) :
-              (candidatePosition.toLowerCase().includes('giáo viên') || 
-               candidatePosition.toLowerCase().includes('teacher'));
-            
-            if (isTeacher) {
-              return (
-                <>
-                  <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
-                    <Input placeholder="Nhập môn giảng dạy" />
-                  </Form.Item>
+          <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
+            <Input placeholder="Nhập môn giảng dạy" />
+          </Form.Item>
 
-                  <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
-                    <Input placeholder="Nhập lớp học" />
-                  </Form.Item>
-                </>
-              );
-            }
-            return null; // Don't show for HR/Accountant staff
-          })()}
+          <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
+            <Input placeholder="Nhập lớp học" />
+          </Form.Item>
 
-          {/* Working Schedule Fields - Only for Teachers in Edit Mode */}
-          {(() => {
-            // For edit mode, check the editing contract's type and position
-            const isTeacher = editingContract ? 
-              (editingContract.contractType === 'TEACHER' || 
-               editingContract.position?.toLowerCase().includes('giáo viên')) :
-              (candidatePosition.toLowerCase().includes('giáo viên') || 
-               candidatePosition.toLowerCase().includes('teacher'));
-            
-            if (isTeacher) {
-              return (
-                <>
-                  <Form.Item 
-                    name="workShifts" 
-                    label="Ca làm việc" 
-                    rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
-                  >
-                    <Select 
-                      mode="multiple" 
-                      placeholder="Chọn ca làm việc"
-                      options={[
-                        { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
-                        { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
-                        { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
-                      ]}
-                    />
-                  </Form.Item>
+          <Form.Item 
+            name="workShifts" 
+            label="Ca làm việc" 
+            rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
+          >
+            <Select 
+              mode="multiple" 
+              placeholder="Chọn ca làm việc"
+              options={[
+                { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
+                { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
+                { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
+              ]}
+            />
+          </Form.Item>
 
-                  <Form.Item 
-                    name="workDays" 
-                    label="Ngày trong tuần" 
-                    rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
-                  >
-                    <Select 
-                      mode="multiple" 
-                      placeholder="Chọn ngày trong tuần"
-                      options={[
-                        { value: 'monday', label: 'Thứ 2' },
-                        { value: 'tuesday', label: 'Thứ 3' },
-                        { value: 'wednesday', label: 'Thứ 4' },
-                        { value: 'thursday', label: 'Thứ 5' },
-                        { value: 'friday', label: 'Thứ 6' },
-                        { value: 'saturday', label: 'Thứ 7' },
-                        { value: 'sunday', label: 'Chủ nhật' }
-                      ]}
-                    />
-                  </Form.Item>
+          <Form.Item 
+            name="workDays" 
+            label="Ngày trong tuần" 
+            rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
+          >
+            <Select 
+              mode="multiple" 
+              placeholder="Chọn ngày trong tuần"
+              options={[
+                { value: 'monday', label: 'Thứ 2' },
+                { value: 'tuesday', label: 'Thứ 3' },
+                { value: 'wednesday', label: 'Thứ 4' },
+                { value: 'thursday', label: 'Thứ 5' },
+                { value: 'friday', label: 'Thứ 6' },
+                { value: 'saturday', label: 'Thứ 7' },
+                { value: 'sunday', label: 'Chủ nhật' }
+              ]}
+            />
+          </Form.Item>
 
-                  <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
-                    <Input.TextArea 
-                      rows={3} 
-                      placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
-                    />
-                  </Form.Item>
-                </>
-              );
-            }
-            return null; // Don't show for HR/Accountant staff
-          })()}
+          <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
+            />
+          </Form.Item>
 
           <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
             <Input 
@@ -886,49 +824,22 @@ const ContractManagement = () => {
             />
           </Form.Item>
 
-          {/* Salary fields - only show in edit mode and read-only, based on contract type */}
-          {editingContract && (
-            <>
-              {/* For Staff Contracts: Show Gross and Net Salary */}
-              {(editingContract.contractType === 'STAFF' || 
-                !editingContract.position?.toLowerCase().includes('giáo viên')) && (
-                <>
-                  {editingContract.grossSalary && (
-                    <Form.Item name="grossSalary" label="Lương GROSS">
-                      <InputNumber
-                        style={{ 
-                          width: '100%',
-                          backgroundColor: '#f5f5f5',
-                          color: '#666',
-                          cursor: 'not-allowed'
-                        }}
-                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                        readOnly
-                        disabled
-                      />
-                    </Form.Item>
-                  )}
-                  {editingContract.netSalary && (
-                    <Form.Item name="netSalary" label="Lương NET">
-                      <InputNumber
-                        style={{ 
-                          width: '100%',
-                          backgroundColor: '#f5f5f5',
-                          color: '#666',
-                          cursor: 'not-allowed'
-                        }}
-                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                        readOnly
-                        disabled
-                      />
-                    </Form.Item>
-                  )}
-                </>
-              )}
-            </>
-          )}
+          <Form.Item name="hourlySalary" label="Lương theo giờ">
+            <InputNumber
+              style={{ 
+                width: '100%',
+                backgroundColor: '#f0f8ff',
+                border: '2px solid #52c41a',
+                color: '#52c41a',
+                fontWeight: 'bold'
+              }}
+              placeholder="Lấy từ duyệt ứng viên"
+              readOnly
+              disabled
+              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+            />
+          </Form.Item>
 
           <Form.Item>
             <Space>
@@ -1016,185 +927,77 @@ const ContractManagement = () => {
             <Input placeholder="Nhập trình độ chuyên môn" />
           </Form.Item>
 
-          {/* Subject and Class Level fields - Only for Teachers (based on selected contractType) */}
-          {(() => {
-            const selectedType = candidateForm?.getFieldValue ? candidateForm.getFieldValue('contractType') : null;
-            const isTeacher = selectedType === 'TEACHER';
+          <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
+            <Input placeholder="Nhập môn giảng dạy" />
+          </Form.Item>
 
-            if (isTeacher) {
-              return (
-                <>
-                  <Form.Item name="subject" label="Môn giảng dạy" rules={[{ required: true, message: 'Vui lòng nhập môn giảng dạy!' }]}>
-                    <Input placeholder="Nhập môn giảng dạy" />
-                  </Form.Item>
+          <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
+            <Input placeholder="Nhập lớp học" />
+          </Form.Item>
 
-                  <Form.Item name="classLevel" label="Lớp học" rules={[{ required: true, message: 'Vui lòng nhập lớp học!' }]}>
-                    <Input placeholder="Nhập lớp học" />
-                  </Form.Item>
-                </>
-              );
-            }
-            return null; // Don't show for HR/Accountant staff
-          })()}
+          <Form.Item 
+            name="workShifts" 
+            label="Ca làm việc" 
+            rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
+          >
+            <Select 
+              mode="multiple" 
+              placeholder="Chọn ca làm việc"
+              options={[
+                { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
+                { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
+                { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
+              ]}
+            />
+          </Form.Item>
 
-          {/* Working Schedule Fields - Only for Teachers (based on selected contractType) */}
-          {(() => {
-            const selectedType = candidateForm?.getFieldValue ? candidateForm.getFieldValue('contractType') : null;
-            const isTeacher = selectedType === 'TEACHER';
+          <Form.Item 
+            name="workDays" 
+            label="Ngày trong tuần" 
+            rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
+          >
+            <Select 
+              mode="multiple" 
+              placeholder="Chọn ngày trong tuần"
+              options={[
+                { value: 'monday', label: 'Thứ 2' },
+                { value: 'tuesday', label: 'Thứ 3' },
+                { value: 'wednesday', label: 'Thứ 4' },
+                { value: 'thursday', label: 'Thứ 5' },
+                { value: 'friday', label: 'Thứ 6' },
+                { value: 'saturday', label: 'Thứ 7' },
+                { value: 'sunday', label: 'Chủ nhật' }
+              ]}
+            />
+          </Form.Item>
 
-            if (isTeacher) {
-              return (
-                <>
-                  <Form.Item 
-                    name="workShifts" 
-                    label="Ca làm việc" 
-                    rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
-                  >
-                    <Select 
-                      mode="multiple" 
-                      placeholder="Chọn ca làm việc"
-                      options={[
-                        { value: 'morning', label: 'Ca sáng (7:30 - 9:30)' },
-                        { value: 'afternoon', label: 'Ca chiều (14:00 - 17:00)' },
-                        { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
-                      ]}
-                    />
-                  </Form.Item>
-
-                  <Form.Item 
-                    name="workDays" 
-                    label="Ngày trong tuần" 
-                    rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
-                  >
-                    <Select 
-                      mode="multiple" 
-                      placeholder="Chọn ngày trong tuần"
-                      options={[
-                        { value: 'monday', label: 'Thứ 2' },
-                        { value: 'tuesday', label: 'Thứ 3' },
-                        { value: 'wednesday', label: 'Thứ 4' },
-                        { value: 'thursday', label: 'Thứ 5' },
-                        { value: 'friday', label: 'Thứ 6' },
-                        { value: 'saturday', label: 'Thứ 7' },
-                        { value: 'sunday', label: 'Chủ nhật' }
-                      ]}
-                    />
-                  </Form.Item>
-
-                  <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
-                    <Input.TextArea 
-                      rows={3} 
-                      placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
-                    />
-                  </Form.Item>
-                </>
-              );
-            }
-          })()}
+          <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
+            />
+          </Form.Item>
 
           <Form.Item name="position" label="Vị trí">
             <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </Form.Item>
 
-          <Form.Item 
-            name="contractType" 
-            label="Loại hợp đồng" 
-            rules={[{ required: true, message: 'Vui lòng chọn loại hợp đồng!' }]}
-          >
-            <Select placeholder="Chọn loại hợp đồng">
-              <Option value="TEACHER">Hợp đồng Giáo viên</Option>
-              <Option value="STAFF">Hợp đồng Nhân viên</Option>
-            </Select>
-          </Form.Item>
-
-          {/* Offer Management Fields - Read Only */}
-          <Form.Item name="comments" label="Nhận xét">
-            <Input 
-              placeholder="Tự động lấy từ Offer" 
-              readOnly 
+          <Form.Item name="hourlySalary" label="Lương theo giờ">
+            <InputNumber
               style={{ 
-                backgroundColor: '#f0f8ff', 
-                border: '1px solid #52c41a',
+                width: '100%',
+                backgroundColor: '#f0f8ff',
+                border: '2px solid #52c41a',
                 color: '#52c41a',
                 fontWeight: 'bold'
-              }} 
+              }}
+              placeholder="Lấy từ duyệt ứng viên"
+              readOnly
+              disabled
+              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
             />
           </Form.Item>
-
-          {/* REFACTORED: All positions show all salary fields with mutual exclusivity */}
-          {(() => {
-            // Get current form values to determine which salary type is active
-            const formValues = candidateForm.getFieldsValue();
-            const hasHourly = formValues.hourlySalary && formValues.hourlySalary > 0;
-            const hasGrossNet = (formValues.grossSalary && formValues.grossSalary > 0) || 
-                               (formValues.netSalary && formValues.netSalary > 0);
-            
-            console.log(' Salary field states:', {
-              hasHourly,
-              hasGrossNet,
-              hourlySalary: formValues.hourlySalary,
-              grossSalary: formValues.grossSalary,
-              netSalary: formValues.netSalary
-            });
-            
-            return (
-              <>
-                {/* READ-ONLY: Lương theo giờ từ dữ liệu duyệt ứng viên */}
-                <Form.Item name="hourlySalary" label="Lương theo giờ">
-                  <InputNumber
-                    style={{ 
-                      width: '100%',
-                      backgroundColor: hasHourly ? '#f0f8ff' : '#f5f5f5',
-                      border: hasHourly ? '2px solid #52c41a' : '1px solid #d9d9d9',
-                      color: hasHourly ? '#52c41a' : '#999',
-                      fontWeight: hasHourly ? 'bold' : 'normal'
-                    }}
-                    placeholder="Lấy từ duyệt ứng viên"
-                    readOnly
-                    disabled
-                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                  />
-                </Form.Item>
-
-                {/* READ-ONLY: Lương GROSS từ dữ liệu duyệt ứng viên */}
-                <Form.Item name="grossSalary" label="Lương GROSS">
-                  <InputNumber
-                    style={{ 
-                      width: '100%',
-                      backgroundColor: hasGrossNet ? '#f0f8ff' : '#f5f5f5',
-                      border: hasGrossNet ? '2px solid #52c41a' : '1px solid #d9d9d9',
-                      color: hasGrossNet ? '#52c41a' : '#999',
-                      fontWeight: hasGrossNet ? 'bold' : 'normal'
-                    }}
-                    placeholder="Lấy từ duyệt ứng viên"
-                    readOnly
-                    disabled
-                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                  />
-                </Form.Item>
-
-                {/* READ-ONLY: Lương NET từ dữ liệu duyệt ứng viên */}
-                <Form.Item name="netSalary" label="Lương NET">
-                  <InputNumber
-                    style={{ 
-                      width: '100%',
-                      backgroundColor: hasGrossNet ? '#f0f8ff' : '#f5f5f5',
-                      border: hasGrossNet ? '2px solid #52c41a' : '1px solid #d9d9d9',
-                      color: hasGrossNet ? '#52c41a' : '#999',
-                      fontWeight: hasGrossNet ? 'bold' : 'normal'
-                    }}
-                    placeholder="Lấy từ duyệt ứng viên"
-                    readOnly
-                    disabled
-                    formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                    parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                  />
-                </Form.Item>
-              </>
-            );
-          })()}
 
           <Form.Item>
             <Space>

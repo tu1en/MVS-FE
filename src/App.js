@@ -33,6 +33,7 @@ import PersonalAttendanceHistory from './pages/manager/PersonalAttendanceHistory
 import TeacherAttendanceStatus from './pages/manager/TeacherAttendanceStatus.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import ParentDashboard from './pages/ParentDashboard.jsx';
+import ParentAnnouncements from './pages/parent/ParentAnnouncements.jsx';
 import StudentsDashboard from './pages/StudentsDashboard.jsx';
 import SystemActivityLogsPage from './pages/SystemActivityLogsPage.jsx';
 import SystemChartsPage from './pages/SystemChartsPage.jsx';
@@ -347,6 +348,7 @@ function App() {
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
               <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedRoute>} />
+              <Route path="/parent/announcements" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentAnnouncements /></ProtectedRoute>} />
               <Route path="/parent/leave-notice" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentLeaveNotice /></ProtectedRoute>} />
               <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentAttendance /></ProtectedRoute>} />
               <Route path="/parent/children/:childId/attendance" element={<ProtectedRoute allowedRoles={["PARENT"]}><ParentAttendance /></ProtectedRoute>} />

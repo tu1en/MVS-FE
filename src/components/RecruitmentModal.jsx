@@ -409,7 +409,7 @@ const RecruitmentModal = ({ visible, onCancel }) => {
                           </Paragraph>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text strong style={{ color: '#1890ff' }}>
-                              💰 {job.salaryRange}
+                               {job.salaryRange} VNĐ/giờ
                             </Text>
                           </div>
                         </div>

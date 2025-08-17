@@ -21,6 +21,7 @@ export const announcementNotificationService = {
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
       const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
+      const isParent = roleStr === '7' || roleStr === 'PARENT';
       
       let totalCount = 0;
       
@@ -48,6 +49,8 @@ export const announcementNotificationService = {
         endpoint = '/announcements/accountant/unread-count';
       } else if (isStudent) {
         endpoint = '/announcements/student/unread-count';
+      } else if (isParent) {
+        endpoint = '/announcements/parent/unread-count';
       } else if (isManager || isAdmin) {
         // Manager and Admin - only show admin notifications
         console.log('Manager/Admin role detected - only showing admin notifications');
@@ -120,6 +123,7 @@ export const announcementNotificationService = {
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
       const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
+      const isParent = roleStr === '7' || roleStr === 'PARENT';
       
       let allAnnouncements = [];
       
@@ -156,6 +160,8 @@ export const announcementNotificationService = {
         endpoint = `/announcements/accountant/recent-unread?limit=${limit}`;
       } else if (isStudent) {
         endpoint = `/announcements/student/recent-unread?limit=${limit}`;
+      } else if (isParent) {
+        endpoint = `/announcements/parent/recent-unread?limit=${limit}`;
       } else if (isManager || isAdmin) {
         console.log('Manager/Admin role detected - only showing admin notifications');
         return allAnnouncements.slice(0, limit);
@@ -196,6 +202,7 @@ export const announcementNotificationService = {
       const isAdmin = roleStr === '4' || roleStr === 'ADMIN';
       const isAccountant = roleStr === '5' || roleStr === 'ACCOUNTANT';
       const isTeachingAssistant = roleStr === '6' || roleStr === 'TEACHING_ASSISTANT';
+      const isParent = roleStr === '7' || roleStr === 'PARENT';
       
       let endpoint;
       if (isTeacher || isTeachingAssistant) {
@@ -204,6 +211,8 @@ export const announcementNotificationService = {
         endpoint = '/announcements/accountant/mark-all-read';
       } else if (isStudent) {
         endpoint = '/announcements/student/mark-all-read';
+      } else if (isParent) {
+        endpoint = '/announcements/parent/mark-all-read';
       } else if (isManager || isAdmin) {
         console.log('Manager/Admin role detected - no mark all read needed');
         return { success: true };

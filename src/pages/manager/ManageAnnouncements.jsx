@@ -35,7 +35,52 @@ const ManageAnnouncements = () => {
       title: 'Ngày Tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      render: (date) => {
+        if (!date) return 'N/A';
+        
+        // Handle various date formats from backend
+        let parsedDate;
+        if (typeof date === 'string') {
+          // Replace space with 'T' if needed for ISO format
+          const isoString = date.replace(' ', 'T');
+          parsedDate = dayjs(isoString);
+        } else if (Array.isArray(date)) {
+          // Handle array format [year, month, day, hour, minute, second, nano]
+          if (date.length >= 3) {
+            parsedDate = dayjs(new Date(date[0], date[1] - 1, date[2], 
+                           date[3] || 0, date[4] || 0, date[5] || 0));
+          } else {
+            parsedDate = dayjs(date);
+          }
+        } else {
+          parsedDate = dayjs(date);
+        }
+        
+        // Check if date is valid
+        if (!parsedDate.isValid()) {
+          console.warn('Invalid date in ManageAnnouncements:', date);
+          return 'Invalid Date';
+        }
+        
+        return parsedDate.format('DD/MM/YYYY');
+      },
+    },
+    {
+      title: 'Đối tượng nhận thông báo',
+      dataIndex: 'targetAudience',
+      key: 'targetAudience',
+      render: (targetAudience) => {
+        const audienceMap = {
+          'ALL': { text: 'Tất cả', color: 'purple' },
+          'STUDENTS': { text: 'Học sinh', color: 'blue' },
+          'TEACHERS': { text: 'Giáo viên', color: 'green' },
+          'PARENTS': { text: 'Phụ huynh', color: 'orange' },
+          'ACCOUNTANTS': { text: 'Kế toán', color: 'cyan' }
+        };
+        
+        const audience = audienceMap[targetAudience] || { text: targetAudience || 'N/A', color: 'default' };
+        return <Tag color={audience.color}>{audience.text}</Tag>;
+      },
     },
     {
       title: 'Trạng Thái',
@@ -113,7 +158,26 @@ const ManageAnnouncements = () => {
         <div>
           <p>{announcement.content}</p>
           <p>
-            <strong>Ngày tạo:</strong> {dayjs(announcement.createdAt).format('DD/MM/YYYY')}
+            <strong>Ngày tạo:</strong> {(() => {
+              if (!announcement.createdAt) return 'N/A';
+              
+              let parsedDate;
+              if (typeof announcement.createdAt === 'string') {
+                const isoString = announcement.createdAt.replace(' ', 'T');
+                parsedDate = dayjs(isoString);
+              } else if (Array.isArray(announcement.createdAt)) {
+                if (announcement.createdAt.length >= 3) {
+                  parsedDate = dayjs(new Date(announcement.createdAt[0], announcement.createdAt[1] - 1, announcement.createdAt[2], 
+                                 announcement.createdAt[3] || 0, announcement.createdAt[4] || 0, announcement.createdAt[5] || 0));
+                } else {
+                  parsedDate = dayjs(announcement.createdAt);
+                }
+              } else {
+                parsedDate = dayjs(announcement.createdAt);
+              }
+              
+              return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY') : 'Invalid Date';
+            })()}
           </p>
         </div>
       ),

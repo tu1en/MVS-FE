@@ -102,18 +102,23 @@ const NotificationBell = () => {
       rolePath = 'accountant';
     } else if (roleStr === '1' || roleStr === 'STUDENT') {
       rolePath = 'student';
+    } else if (roleStr === '7' || roleStr === 'PARENT') {
+      rolePath = 'parent';
     } else {
       // Check URL to determine role if localStorage is empty
       const isTeacherPage = window.location.href.includes('/teacher');
       const isAccountantPage = window.location.href.includes('/accountant');
+      const isParentPage = window.location.href.includes('/parent');
       if (isTeacherPage) {
         rolePath = 'teacher';
       } else if (isAccountantPage) {
         rolePath = 'accountant';
+      } else if (isParentPage) {
+        rolePath = 'parent';
       } else {
         rolePath = 'student';
       }
-      console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage, 'isAccountantPage:', isAccountantPage);
+      console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage, 'isAccountantPage:', isAccountantPage, 'isParentPage:', isParentPage);
     }
     
     console.log('NotificationBell: Determined rolePath:', rolePath);
@@ -122,28 +127,44 @@ const NotificationBell = () => {
     navigate(targetUrl);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    
+  // Format absolute received time like "17/08/2025 00:20" with robust parsing
+  const formatAbsoluteTime = (dateInput) => {
+    if (!dateInput) return '';
+
     let date;
-    if (typeof dateString === 'string') {
-      const isoString = dateString.replace(' ', 'T');
-      date = new Date(isoString);
-    } else {
-      date = new Date(dateString);
+    try {
+      if (Array.isArray(dateInput)) {
+        // Handle [year, month, day, hour, minute, second]
+        const [y, m, d, hh = 0, mm = 0, ss = 0] = dateInput;
+        date = new Date(y, (m || 1) - 1, d || 1, hh, mm, ss);
+      } else if (typeof dateInput === 'string') {
+        let s = dateInput.trim();
+        // If format like '2025-08-17 00:20:00', make it ISO-like
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:.*/.test(s)) s = s.replace(' ', 'T');
+        // If missing timezone, Date will treat as local which is fine here
+        date = new Date(s);
+        // Fallback: try parse number string
+        if (isNaN(date.getTime()) && /^\d+$/.test(s)) {
+          date = new Date(parseInt(s, 10));
+        }
+      } else if (typeof dateInput === 'number') {
+        date = new Date(dateInput);
+      } else {
+        date = new Date(dateInput);
+      }
+    } catch (e) {
+      return '';
     }
-    
-    if (isNaN(date.getTime())) {
-      return 'Vừa xong';
-    }
-    
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Vừa xong';
-    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
-    return `${Math.floor(diffInMinutes / 1440)} ngày trước`;
+
+    if (isNaN(date.getTime())) return '';
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const dd = pad2(date.getDate());
+    const MM = pad2(date.getMonth() + 1);
+    const yyyy = date.getFullYear();
+    const hh = pad2(date.getHours());
+    const mm = pad2(date.getMinutes());
+    return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
   };
 
   const notificationContent = (
@@ -184,7 +205,7 @@ const NotificationBell = () => {
                       {item.title}
                     </span>
                     <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                      {formatDate(item.createdAt)}
+                      {formatAbsoluteTime(item.createdAt)}
                     </span>
                   </div>
                 }
