@@ -103,32 +103,32 @@ export default function LoginScreen() {
       // userData.role is normalized by authService to a plain role name
       switch (userData.role) {
         case ROLE.ADMIN:
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           break;
         case ROLE.TEACHER:
-          navigate('/teacher');
+          navigate('/teacher', { replace: true });
           break;
         case ROLE.STUDENT:
-          navigate('/student');
+          navigate('/student', { replace: true });
           break;
         case ROLE.MANAGER:
-          navigate('/manager');
+          navigate('/manager', { replace: true });
           break;
         case ROLE.ACCOUNTANT:
           console.log(`Navigating to ACCOUNTANT dashboard...`);
-          navigate('/accountant');
+          navigate('/accountant', { replace: true });
           break;
         case ROLE.TEACHING_ASSISTANT:
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
-          navigate('/teaching-assistant');
+          navigate('/teaching-assistant', { replace: true });
           break;
         case ROLE.PARENT:
           console.log(`Navigating to PARENT dashboard...`);
-          navigate('/parent');
+          navigate('/parent', { replace: true });
           break;
         default:
           console.warn('Unknown role after login:', userData.role);
-          navigate('/');
+          navigate('/', { replace: true });
       }
     } catch (err) {
       console.error('Lỗi đăng nhập:', err);
@@ -206,31 +206,31 @@ export default function LoginScreen() {
       console.log(`Navigating to ${userData.role} dashboard...`);
       switch (userData.role) {
         case ROLE.ADMIN:
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           break;
         case ROLE.MANAGER:
-          navigate('/manager');
+          navigate('/manager', { replace: true });
           break;
         case ROLE.TEACHER:
-          navigate('/teacher');
+          navigate('/teacher', { replace: true });
           break;
         case ROLE.STUDENT:
-          navigate('/student');
+          navigate('/student', { replace: true });
           break;
         case ROLE.ACCOUNTANT:
           console.log(`Navigating to ACCOUNTANT dashboard...`);
-          navigate('/accountant');
+          navigate('/accountant', { replace: true });
           break;
         case ROLE.TEACHING_ASSISTANT:
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
-          navigate('/teaching-assistant');
+          navigate('/teaching-assistant', { replace: true });
           break;
         case ROLE.PARENT:
           console.log(`Navigating to PARENT dashboard...`);
-          navigate('/parent');
+          navigate('/parent', { replace: true });
           break;
         default:
-          navigate('/');
+          navigate('/', { replace: true });
       }
     } catch (error) {
         console.error('Google login error:', error);

@@ -10,14 +10,12 @@ import { Card, Col, Divider, message, Row, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import { useBackButton } from '../hooks/useBackButton';
 import api from '../services/api.js';
 
 const { Title } = Typography;
 
 const AccountantDashboard = () => {
   const navigate = useNavigate();
-  useBackButton();
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({

@@ -16,7 +16,7 @@ function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { logout: ctxLogout, user: authUser } = useAuth();
-  const { isLogin } = useSelector((state) => state.auth);
+  const { isLogin, role: reduxRole } = useSelector((state) => state.auth);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const settingsMenuRef = useRef(null);
@@ -68,6 +68,63 @@ function Header() {
     setShowSettingsMenu(!showSettingsMenu);
   };
 
+  // Determine the correct home path based on login state and role, resolving from
+  // AuthContext -> Redux -> localStorage to avoid undefined role race conditions.
+  const roleFromAuth = authUser?.role;
+  const roleFromRedux = reduxRole;
+  const roleFromStorage = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
+
+  const normalizeRole = (r) => {
+    if (r === undefined || r === null) return null;
+    const raw = String(r).trim();
+    // Handle numeric codes first (as seen in some Redux/localStorage states)
+    const numericMap = {
+      '0': 'admin',            // legacy fallback -> ADMIN
+      '1': 'student',
+      '2': 'teacher',
+      '3': 'manager',
+      '4': 'admin',            // align with getNormalizedRole in authUtils
+      '5': 'accountant',
+      '6': 'teaching-assistant',
+      '7': 'parent',
+    };
+    if (raw in numericMap) return numericMap[raw];
+
+    // Handle string roles
+    const upper = raw.replace('ROLE_', '').toUpperCase();
+    switch (upper) {
+      case 'TEACHING_ASSISTANT':
+        return 'teaching-assistant';
+      case 'ADMIN':
+      case 'MANAGER':
+      case 'TEACHER':
+      case 'STUDENT':
+      case 'ACCOUNTANT':
+      case 'PARENT':
+        return upper.toLowerCase();
+      case 'GUEST':
+        return null; // guest -> root '/'
+      default:
+        return null;
+    }
+  };
+
+  // Fallback: infer role from current URL path segment if auth state isn't ready yet
+  const pathRoleFromLocation = (() => {
+    if (typeof window === 'undefined') return null;
+    const seg = (window.location.pathname.split('/')[1] || '').trim();
+    const known = new Set(['student', 'teacher', 'manager', 'admin', 'accountant', 'teaching-assistant', 'parent']);
+    return known.has(seg) ? seg : null;
+  })();
+
+  const resolvedSegment =
+    normalizeRole(roleFromAuth) ||
+    normalizeRole(roleFromRedux) ||
+    normalizeRole(roleFromStorage) ||
+    pathRoleFromLocation;
+
+  const homePath = resolvedSegment ? `/${resolvedSegment}` : '/';
+
   return (
     <header className="bg-white text-primary shadow-md fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -81,7 +138,7 @@ function Header() {
       
         {/* Logo and App Name */}
         <div className="flex items-center space-x-6">
-          <Link to="/" className="text-xl font-bold text-primary hover:text-primary-dark transition-colors">
+          <Link to={homePath} className="text-xl font-bold text-primary hover:text-primary-dark transition-colors">
             Minh Việt Education
           </Link>
           {/* Navigation Links */}

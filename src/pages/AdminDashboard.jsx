@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import { useBackButton } from '../hooks/useBackButton';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  useBackButton(); // Thêm hook xử lý nút back
 
   useEffect(() => {
     const role = localStorage.getItem('role');
