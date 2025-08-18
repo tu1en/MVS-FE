@@ -447,7 +447,7 @@ const ContractManagement = () => {
       next.add(id);
       return next;
     });
-    message.success('Đã đánh dấu hợp đồng là hoàn thành (chỉ hiển thị trên UI).');
+    message.success('Đã đánh dấu hợp đồng là hoàn thành .');
   };
 
   // Gia hạn hợp đồng (ký lại)
@@ -513,7 +513,7 @@ const ContractManagement = () => {
         switch(status) {
           case 'ACTIVE':
             color = 'green';
-            text = 'Đang hoạt động';
+            text = 'Còn hạn';
             break;
           case 'NEAR_EXPIRY':
             color = 'orange';
@@ -655,7 +655,7 @@ const ContractManagement = () => {
             onChange={(val) => setStatusFilter(val)}
           >
             <Option value="ALL">Tất cả trạng thái</Option>
-            <Option value="ACTIVE">Đang hoạt động</Option>
+            <Option value="ACTIVE">Còn hạn</Option>
             <Option value="NEAR_EXPIRY">Sắp hết hạn</Option>
             <Option value="EXPIRED">Hết hạn</Option>
           </Select>
