@@ -311,7 +311,7 @@ const AssignmentDetail = () => {
                         <CheckCircleOutlined className="text-green-500 text-xl mt-1" />
                         <div>
                             <Text type="secondary" className="block font-medium">Điểm tối đa</Text>
-                            <Text strong className="text-base">{assignment.points || '100'}</Text>
+                            <Text strong className="text-base">{assignment.points || '100'}/{assignment.points || '100'}</Text>
                         </div>
                     </div>
                 </div>

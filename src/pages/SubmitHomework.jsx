@@ -155,7 +155,7 @@ function SubmitHomework() {
           </div>
           <div>
             <Text strong>Điểm tối đa: </Text>
-            <Text>{assignment.points || 10} điểm</Text>
+            <Text>{assignment.points || 10}/{assignment.points || 10}</Text>
           </div>
         </Card>
 

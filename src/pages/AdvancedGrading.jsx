@@ -511,7 +511,7 @@ const AdvancedGrading = () => {
                   </Button>
               {rubrics.map(rubric => (
                 <Card key={rubric.id} style={{ marginBottom: 16 }}>
-                  <h4>{rubric.criteria} ({rubric.maxPoints} điểm)</h4>
+                  <h4>{rubric.criteria} ({rubric.maxPoints}/{rubric.maxPoints})</h4>
                   <p>{rubric.description}</p>
                   <Row gutter={8}>
                     {rubric.levels.map((level, index) => (
@@ -520,7 +520,7 @@ const AdvancedGrading = () => {
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontWeight: 'bold' }}>{level.name}</div>
                             <div style={{ fontSize: '18px', color: '#1890ff' }}>
-                              {level.points} điểm
+                              {level.points}/{level.points}
                             </div>
                             <div style={{ fontSize: '12px', color: '#666' }}>
                               {level.description}

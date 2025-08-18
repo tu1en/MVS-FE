@@ -26,7 +26,6 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import WysiwygEditor from '../../components/common/WysiwygEditor';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import FileUploadService from '../../services/fileUploadService';
@@ -281,7 +280,7 @@ const StudentAssignments = () => {
       title: 'Điểm tối đa',
       dataIndex: 'points',
       key: 'points',
-      render: (points) => `${points || 0} điểm`,
+      render: (points) => `${points || 0}/${points || 0}`,
     },
     {
       title: 'Điểm đạt được',
@@ -440,7 +439,7 @@ const StudentAssignments = () => {
                 {selectedAssignment.classroomName || 'Chưa xác định'}
               </Descriptions.Item>
               <Descriptions.Item label="Điểm tối đa">
-                {selectedAssignment.points || 0} điểm
+                {selectedAssignment.points || 0}/{selectedAssignment.points || 0}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày giao">
                 {selectedAssignment.createdAt ? 
@@ -509,7 +508,7 @@ const StudentAssignments = () => {
             <Divider />
             
             <Form form={form} onFinish={handleSubmit} layout="vertical">
-              <Form.Item
+              {/* <Form.Item
                 label="Nội dung bài làm (Rich Text Editor)"
               >
                 <WysiwygEditor
@@ -521,11 +520,11 @@ const StudentAssignments = () => {
                   // allowImageUpload={true}
                   className="w-full"
                 />
-              </Form.Item>
+              </Form.Item> */}
 
               <Form.Item
                 name="file"
-                label="File nộp bài (tùy chọn)"
+                label="File nộp bài"
               >
                 <Dragger {...uploadProps}>
                   <p className="ant-upload-drag-icon">

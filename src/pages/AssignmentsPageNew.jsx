@@ -1,15 +1,20 @@
 import { ClockCircleOutlined, FileOutlined, FileTextOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
-import { App, Button, DatePicker, Descriptions, Divider, Form, Input, InputNumber, Modal, Select, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
-import moment from 'moment';
+import { App, Button, Descriptions, Divider, Form, Input, InputNumber, Modal, Select, Space, Spin, Table, Tabs, Tag, Typography, Upload } from 'antd';
+import dayjs from 'dayjs';
+import 'dayjs/locale/vi';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AssignmentStatusCell from '../components/AssignmentStatusCell';
+import VietnameseDatePicker from '../components/common/VietnameseDatePicker';
 import WysiwygEditor from '../components/common/WysiwygEditor';
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 import { useAuth } from '../context/AuthContext';
 import AssignmentService from '../services/assignmentService';
 import ClassroomService from '../services/classroomService';
 import FileUploadService from '../services/fileUploadService';
+
+// Cấu hình dayjs với locale tiếng Việt
+dayjs.locale('vi');
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -368,8 +373,8 @@ function AssignmentsPageNew() {
   };
 
   const getAssignmentStatus = (assignment) => {
-    const now = new Date();
-    const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+    const now = dayjs();
+    const dueDate = assignment.dueDate ? dayjs(assignment.dueDate) : null;
     const submission = submissions[assignment.id];
 
     if (submission) {
@@ -379,7 +384,7 @@ function AssignmentsPageNew() {
       return { status: 'submitted', color: 'processing', text: 'Đã nộp' };
     }
 
-    if (dueDate && now > dueDate) {
+    if (dueDate && now.isAfter(dueDate)) {
       return { status: 'overdue', color: 'error', text: 'Quá hạn' };
     }
 
@@ -387,16 +392,13 @@ function AssignmentsPageNew() {
   };
 
   const handleCreateAssignment = async (values) => {
-    // Chuẩn hóa dueDate từ Antd DatePicker (Dayjs/Moment) sang Moment để so sánh/chuyển đổi chính xác
-    const dueMoment = moment.isMoment(values?.dueDate)
-      ? values.dueDate
-      : values?.dueDate?.toDate
-        ? moment(values.dueDate.toDate())
-        : moment(values?.dueDate);
+    // Chuẩn hóa dueDate từ Antd DatePicker (Dayjs) sang Dayjs để so sánh/chuyển đổi chính xác
+    const dueDate = dayjs(values?.dueDate);
 
     // Validate due date - không cho phép chọn ngày trong quá khứ
-    if (!dueMoment.isValid() || dueMoment.isBefore(moment().startOf('day'))) {
-      message.error('Hạn nộp không thể là ngày trong quá khứ.');
+    const minDate = dayjs().add(1, 'day').startOf('day');
+    if (!dueDate.isValid() || dueDate.isBefore(minDate)) {
+      message.error('Hạn nộp phải từ ngày mai trở đi.');
       return;
     }
     const selectedClassroomId = values.classroomId;
@@ -462,8 +464,8 @@ function AssignmentsPageNew() {
         description: values.description,
         richTextContent: richTextContent || '',
         attachments: attachments,
-        // Gửi ngày (không có giờ) để backend xử lý
-        dueDate: dueMoment.format('YYYY-MM-DD'),
+        // Gửi ngày và giờ để backend xử lý (LocalDateTime format)
+        dueDate: dueDate.format('YYYY-MM-DDTHH:mm:ss'),
         points: values.points || values.maxScore || 10, // Backend expects 'points', not 'maxScore'
         classroomId: finalClassroomId, // Use the extracted ID
       };
@@ -733,10 +735,10 @@ function AssignmentsPageNew() {
     // Reset form first
     assignmentForm.resetFields();
     
-    // Convert dueDate from ISO string to moment object for DatePicker
+    // Convert dueDate from ISO string to dayjs object for DatePicker
     const initialValues = {
       ...assignment,
-      dueDate: assignment.dueDate ? moment(assignment.dueDate) : null,
+      dueDate: assignment.dueDate ? dayjs(assignment.dueDate) : null,
       classroomId: assignment.classroomId || (courseId ? parseInt(courseId, 10) : undefined)
     };
     
@@ -789,7 +791,7 @@ function AssignmentsPageNew() {
               key: 'overdue',
               label: 'Quá hạn',
               children: renderStudentAssignmentsList(upcomingAssignments.filter(assignment => 
-                !submissions[assignment?.id] && assignment?.dueDate && new Date(assignment.dueDate + 'T23:59:59') < new Date()
+                !submissions[assignment?.id] && assignment?.dueDate && dayjs(assignment.dueDate + 'T23:59:59').isBefore(dayjs())
               ))
             }
           ]}
@@ -831,7 +833,7 @@ function AssignmentsPageNew() {
             <Space>
               <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
               <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
-                {dueDate.toLocaleDateString('vi-VN')}
+                {dayjs(date).format('DD/MM/YYYY')}
               </span>
             </Space>
           );
@@ -841,7 +843,7 @@ function AssignmentsPageNew() {
         title: 'Điểm',
         dataIndex: 'points',
         key: 'points',
-        render: (points) => `${points || 10} điểm`,
+        render: (points) => `${points || 10}/${points || 10}`,
       },
       {
         title: 'Trạng thái',
@@ -958,6 +960,7 @@ function AssignmentsPageNew() {
 
   // Teacher view components
   const renderTeacherDashboard = () => {
+    const allAssignments = [...upcomingAssignments, ...pastAssignments];
     return (
       <div className="teacher-dashboard">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -988,25 +991,25 @@ function AssignmentsPageNew() {
             {
               key: 'all',
               label: 'Tất cả bài tập',
-              children: renderTeacherAssignmentsList(upcomingAssignments)
+              children: renderTeacherAssignmentsList(allAssignments)
             },
             {
               key: 'needGrading',
-              label: `Cần chấm điểm (${getAssignmentsNeedingGrading(upcomingAssignments).length})`,
-              children: renderTeacherAssignmentsList(getAssignmentsNeedingGrading(upcomingAssignments))
+              label: `Cần chấm điểm (${getAssignmentsNeedingGrading(allAssignments).length})`,
+              children: renderTeacherAssignmentsList(getAssignmentsNeedingGrading(allAssignments))
             },
             {
               key: 'upcoming',
               label: 'Sắp đến hạn',
-              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => 
-                new Date(assignment?.dueDate) > new Date()
+              children: renderTeacherAssignmentsList(allAssignments.filter(assignment => 
+                dayjs(assignment?.dueDate).isAfter(dayjs())
               ))
             },
             {
               key: 'past',
               label: 'Đã hết hạn',
-              children: renderTeacherAssignmentsList(upcomingAssignments.filter(assignment => 
-                new Date(assignment?.dueDate) < new Date()
+              children: renderTeacherAssignmentsList(allAssignments.filter(assignment => 
+                dayjs(assignment?.dueDate).isBefore(dayjs())
               ))
             }
           ]}
@@ -1048,7 +1051,7 @@ function AssignmentsPageNew() {
             <Space>
               <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : '#1890ff' }} />
               <span style={{ color: isOverdue ? '#ff4d4f' : 'inherit' }}>
-                {dueDate.toLocaleDateString('vi-VN')}
+                {dayjs(date).format('DD/MM/YYYY')}
               </span>
             </Space>
           );
@@ -1058,7 +1061,7 @@ function AssignmentsPageNew() {
         title: 'Điểm',
         dataIndex: 'points',
         key: 'points',
-        render: (points) => `${points || 10} điểm`,
+        render: (points) => `${points || 10}/${points || 10}`,
       },
       {
         title: 'Trạng thái',
@@ -1302,10 +1305,10 @@ function AssignmentsPageNew() {
               </Descriptions.Item>
               <Descriptions.Item label="Hạn nộp">
                 {currentAssignment.dueDate 
-                  ? new Date(currentAssignment.dueDate).toLocaleDateString('vi-VN') 
+                  ? dayjs(currentAssignment.dueDate).format('DD/MM/YYYY') 
                   : 'Không có hạn nộp'}
               </Descriptions.Item>
-              <Descriptions.Item label="Điểm tối đa">{currentAssignment.points || 10} điểm</Descriptions.Item>
+                              <Descriptions.Item label="Điểm tối đa">{currentAssignment.points || 10}/{currentAssignment.points || 10}</Descriptions.Item>
             </Descriptions>
             
             <Divider />
@@ -1316,7 +1319,7 @@ function AssignmentsPageNew() {
                 <Title level={5}>Bài nộp hiện tại:</Title>
                 <Descriptions bordered column={1}>
                   <Descriptions.Item label="Thời gian nộp">
-                    {new Date(submissions[currentAssignment.id].submittedAt).toLocaleString('vi-VN')}
+                    {dayjs(submissions[currentAssignment.id].submittedAt).format('DD/MM/YYYY HH:mm')}
                   </Descriptions.Item>
                   <Descriptions.Item label="Nội dung">
                     <MarkdownRenderer content={submissions[currentAssignment.id].content || 'Không có nội dung'} />
@@ -1344,7 +1347,7 @@ function AssignmentsPageNew() {
             )}
             
             {/* Submission form if due date has not passed or no submission exists */}
-            {(!currentAssignment.dueDate || new Date() < new Date(currentAssignment.dueDate + 'T23:59:59') || !submissions[currentAssignment.id]) && (
+            {(!currentAssignment.dueDate || dayjs().isBefore(dayjs(currentAssignment.dueDate + 'T23:59:59')) || !submissions[currentAssignment.id]) && (
               <>
                 <Title level={5}>{submissions[currentAssignment.id] ? 'Nộp lại bài:' : 'Nộp bài:'}</Title>
                 <Form
@@ -1422,7 +1425,7 @@ function AssignmentsPageNew() {
                     const [y, mo, d, h = 0, mi = 0, s = 0] = dateVal;
                     dt = new Date(y, (mo || 1) - 1, d || 1, h, mi, s);
                   } else if (typeof dateVal === 'string') {
-                    const m = moment(dateVal, ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss', moment.ISO_8601], true);
+                    const m = dayjs(dateVal, ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss', dayjs.ISO_8601], true);
                     dt = m.isValid() ? m.toDate() : new Date(dateVal);
                   } else if (dateVal instanceof Date) {
                     dt = dateVal;
@@ -1430,7 +1433,7 @@ function AssignmentsPageNew() {
                     dt = new Date(dateVal);
                   }
                   if (!dt || Number.isNaN(dt.getTime())) return '—';
-                  return moment(dt).format('DD/MM/YYYY HH:mm');
+                  return dayjs(dt).format('DD/MM/YYYY HH:mm');
                 },
               },
               {
@@ -1579,13 +1582,15 @@ function AssignmentsPageNew() {
             label="Hạn nộp"
             rules={[{ required: true, message: 'Vui lòng chọn hạn nộp!' }]}
           >
-            <DatePicker
-              format="DD/MM/YYYY"
+            <VietnameseDatePicker
+              format="DD/MM/YYYY HH:mm"
               placeholder="Chọn hạn nộp"
               style={{ width: '100%' }}
+              showTime={{ format: 'HH:mm' }}
               disabledDate={(current) => {
-                // Không cho phép chọn ngày trong quá khứ
-                return current && current < moment().startOf('day');
+                // Chỉ cho phép chọn từ NGÀY MAI trở đi
+                const tomorrow = dayjs().add(1, 'day').startOf('day');
+                return current && current < tomorrow;
               }}
             />
           </Form.Item>

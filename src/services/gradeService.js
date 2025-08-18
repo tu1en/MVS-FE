@@ -1,4 +1,6 @@
 import axiosInstance from '../config/axiosInstance';
+import ProfileDataService from './profileDataService';
+import SubmissionService from './submissionService';
 
 // Use the configured axios instance instead of creating a new one
 const apiClient = axiosInstance;
@@ -12,79 +14,79 @@ class GradeService {
    */
   static async getMyGrades(classroomId = null) {
     try {
-      // Get student's assignments first - use the correct endpoint for current authenticated student
+      // 1) Lấy danh sách bài tập được giao cho học sinh hiện tại
       const assignmentResponse = await apiClient.get('/assignments/student/me');
-      const assignments = Array.isArray(assignmentResponse.data?.data) ? assignmentResponse.data.data :
-                         Array.isArray(assignmentResponse.data) ? assignmentResponse.data : [];
+      const assignments = Array.isArray(assignmentResponse.data?.data)
+        ? assignmentResponse.data.data
+        : Array.isArray(assignmentResponse.data)
+          ? assignmentResponse.data
+          : [];
 
       if (assignments.length === 0) {
         console.info('No assignments found for current student');
         return [];
       }
 
-      // Get current user ID from assignments or submissions
-      const userResponse = await apiClient.get('/classrooms/student/me');
-      const userInfo = userResponse.data?.[0]; // Get user info from first classroom
-      
-      if (!userInfo) {
-        return [];
+      // 2) Lấy thông tin học sinh hiện tại để lấy studentId
+      const profileResult = await ProfileDataService.fetchProfileWithFallback('student');
+      const studentId = profileResult?.data?.id
+        || profileResult?.data?.studentId
+        || localStorage.getItem('userId')
+        || localStorage.getItem('studentId');
+
+      if (!studentId) {
+        console.warn('Cannot resolve current studentId. Returning assignments without grades.');
       }
 
-      // For each assignment, try to get the submission and grade
-      const gradePromises = assignments.map(async (assignment) => {
-        try {
-          // Try to get submission for this assignment - need to extract student ID
-          // Since we don't have direct student ID, we'll use a different approach
-          const submissionResponse = await apiClient.get(`/submissions/assignment/${assignment.id}`);
-          const submissions = Array.isArray(submissionResponse.data) ? submissionResponse.data : [];
-          
-          // Find current user's submission (this is a limitation - we need student ID)
-          // For now, we'll return assignment info and mark if there's any submission
-          return {
-            id: assignment.id,
-            type: 'assignment',
-            title: assignment.title,
-            description: assignment.description,
-            classroomId: assignment.classroomId,
-            classroomName: assignment.classroomName,
-            subject: assignment.subject,
-            maxPoints: assignment.points || 0,
-            earnedPoints: null, // Will be filled if submission found
-            isGraded: false,
-            submittedAt: null,
-            gradedAt: null,
-            feedback: null,
-            dueDate: assignment.dueDate,
-            createdAt: assignment.createdAt
-          };
-        } catch (error) {
-          console.error(`Error fetching submission for assignment ${assignment.id}:`, error);
-          return {
-            id: assignment.id,
-            type: 'assignment',
-            title: assignment.title,
-            description: assignment.description,
-            classroomId: assignment.classroomId,
-            classroomName: assignment.classroomName,
-            subject: assignment.subject,
-            maxPoints: assignment.points || 0,
-            earnedPoints: null,
-            isGraded: false,
-            submittedAt: null,
-            gradedAt: null,
-            feedback: null,
-            dueDate: assignment.dueDate,
-            createdAt: assignment.createdAt
-          };
+      // 3) Lấy toàn bộ submissions của học sinh (tránh 403 ở endpoint của giáo viên)
+      const submissions = studentId
+        ? await SubmissionService.getStudentSubmissions(studentId)
+        : [];
+      const submissionByAssignmentId = new Map();
+      submissions.forEach(sub => {
+        const aId = sub.assignmentId || sub.assignment?.id;
+        if (aId != null && !submissionByAssignmentId.has(aId)) {
+          submissionByAssignmentId.set(aId, sub);
         }
       });
 
-      const grades = await Promise.all(gradePromises);
-      const validGrades = grades.filter(grade => grade !== null);
+      // 4) Hợp nhất assignments với submissions → map đúng các trường StudentGradesAttendance cần
+      const validGrades = assignments.map((assignment) => {
+        const sub = submissionByAssignmentId.get(assignment.id);
+        const score = sub?.score != null ? sub.score : null;
+        const feedback = sub?.feedback || sub?.teacherFeedback || null;
+        const isGraded = sub ? (sub.graded === true || sub.score != null) : false;
 
-      // Filter by classroomId if provided
+        return {
+          id: assignment.id,
+          type: 'assignment',
+          assignmentTitle: assignment.title,
+          score: score,
+          feedback: feedback,
+          classroomId: assignment.classroomId
+            ?? assignment.classroom?.id
+            ?? assignment.courseId
+            ?? assignment.classroomID,
+          classroomName: assignment.classroomName
+            ?? assignment.classroom?.name
+            ?? assignment.classroom?.className
+            ?? assignment.courseName,
+          subject: assignment.subject
+            ?? assignment.classroom?.subject
+            ?? assignment.subjectName,
+          maxPoints: assignment.points || 0,
+          isGraded: isGraded,
+          submittedAt: sub?.submittedAt || sub?.createdAt || null,
+          gradedAt: sub?.gradedAt || sub?.updatedAt || null,
+          dueDate: assignment.dueDate,
+          createdAt: assignment.createdAt
+        };
+      });
+
+      // Filter by classroomId if provided (coerce to number safely)
       if (classroomId) {
-        return validGrades.filter(grade => grade.classroomId === parseInt(classroomId));
+        const cid = Number(classroomId);
+        return validGrades.filter(grade => Number(grade.classroomId) === cid);
       }
 
       return validGrades;

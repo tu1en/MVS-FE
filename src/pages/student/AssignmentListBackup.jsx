@@ -96,7 +96,7 @@ const AssignmentListBackup = () => {
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                        <span>Điểm tối đa: {assignment.points}</span>
+                                        <span>Điểm tối đa: {assignment.points}/{assignment.points}</span>
                                     </div>
                                 </div>
                             </div>

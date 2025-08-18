@@ -16,11 +16,39 @@ const MyPayroll = () => {
   const [issueOpen, setIssueOpen] = useState(false);
   const [issue, setIssue] = useState({ subject: '', description: '', file: null });
 
+  // Helper function to format payroll period
+  const formatPayrollPeriod = (payrollPeriod) => {
+    if (!payrollPeriod) return null;
+    
+    try {
+      // Handle different formats: "2025-08", "20258", etc.
+      if (typeof payrollPeriod === 'string') {
+        if (payrollPeriod.includes('-')) {
+          // Format: "2025-08" -> "08/2025"
+          const [year, month] = payrollPeriod.split('-');
+          return `${month.padStart(2, '0')}/${year}`;
+        } else if (payrollPeriod.length === 5) {
+          // Format: "20258" -> "08/2025" (assuming last digit is month)
+          const year = payrollPeriod.substring(0, 4);
+          const month = payrollPeriod.substring(4);
+          return `${month.padStart(2, '0')}/${year}`;
+        }
+      }
+      return payrollPeriod;
+    } catch (error) {
+      console.warn('Error formatting payroll period:', payrollPeriod, error);
+      return payrollPeriod;
+    }
+  };
+
   const load = async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
       const res = await PayrollService.getMyPayroll(user.id, period.format('YYYY-MM'));
+      console.log('Payroll data received:', res);
+      console.log('Contract type:', res?.contractType);
+      console.log('Payroll period:', res?.payrollPeriod);
       // BE có thể trả 204 No Content → axios data = '' hoặc undefined
       setData(res || null);
     } catch (e) {
@@ -82,12 +110,12 @@ const MyPayroll = () => {
 
           <Card title="Chi tiết">
             <Descriptions column={2} bordered>
-              <Descriptions.Item label="Loại HĐ">{data.contractType}</Descriptions.Item>
-              <Descriptions.Item label="Kỳ lương">{(data.payrollPeriod)||''}</Descriptions.Item>
-              <Descriptions.Item label="Ngày công chuẩn">{data.totalWorkingDays}</Descriptions.Item>
-              <Descriptions.Item label="Ngày công thực tế">{data.actualWorkingDays}</Descriptions.Item>
-              <Descriptions.Item label="Giờ ngày thường">{data.weekdayWorkingHours}</Descriptions.Item>
-              <Descriptions.Item label="Giờ cuối tuần">{data.weekendWorkingHours}</Descriptions.Item>
+              <Descriptions.Item label="Loại HĐ">{data.contractType || data.contract?.type || 'Chưa xác định'}</Descriptions.Item>
+              <Descriptions.Item label="Kỳ lương">{formatPayrollPeriod(data.payrollPeriod) || period.format('MM/YYYY')}</Descriptions.Item>
+              <Descriptions.Item label="Ngày công chuẩn">{data.totalWorkingDays || 0}</Descriptions.Item>
+              <Descriptions.Item label="Ngày công thực tế">{data.actualWorkingDays || 0}</Descriptions.Item>
+              <Descriptions.Item label="Giờ ngày thường">{data.weekdayWorkingHours || 0}</Descriptions.Item>
+              <Descriptions.Item label="Giờ cuối tuần">{data.weekendWorkingHours || 0}</Descriptions.Item>
             </Descriptions>
             <Divider />
             <Alert type="info" message="Số liệu tính theo TopCV từ hợp đồng và chấm công" />

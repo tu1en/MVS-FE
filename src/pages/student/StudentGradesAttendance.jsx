@@ -283,8 +283,8 @@ const StudentGradesAttendance = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {grades.map((grade) => (
-                        <tr key={grade.id} className="hover:bg-gray-50">
+                      {grades.map((grade, idx) => (
+                        <tr key={`${grade?.id ?? 'na'}-${grade?.classroomId ?? 'c'}-${idx}`} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-4 py-2">
                             {grade.assignmentTitle || `Bài tập ${grade.id}`}
                           </td>
