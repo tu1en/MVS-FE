@@ -72,10 +72,11 @@ const MyPayroll = () => {
         <Space direction="vertical" style={{ width: '100%' }}>
           <Card title="Thông tin tổng hợp">
             <Row gutter={16}>
-              <Col span={6}><Statistic title="Gross" value={Number(data.proratedGrossSalary||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
-              <Col span={6}><Statistic title="Thuế TNCN" value={Number(data.topCVResult?.personalIncomeTax||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
-              <Col span={6}><Statistic title="BH NLĐ" value={Number(data.topCVResult?.insuranceDetails?.totalEmployeeContribution||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
-              <Col span={6}><Statistic title="Thực nhận (Net)" valueStyle={{ color: '#52c41a' }} value={Number(data.netSalary||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
+              {/* Ẩn thống kê Gross */}
+              {/* <Col span={6}><Statistic title="Gross" value={Number(data.proratedGrossSalary||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col> */}
+              <Col span={8}><Statistic title="Thuế TNCN" value={Number(data.topCVResult?.personalIncomeTax||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
+              <Col span={8}><Statistic title="BH NLĐ" value={Number(data.topCVResult?.insuranceDetails?.totalEmployeeContribution||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
+              <Col span={8}><Statistic title="Thực nhận (Net)" valueStyle={{ color: '#52c41a' }} value={Number(data.netSalary||0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" VNĐ" /></Col>
             </Row>
           </Card>
 

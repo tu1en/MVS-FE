@@ -17,30 +17,30 @@ const NotificationBell = () => {
   useEffect(() => {
     const role = localStorage.getItem('role');
     setCurrentRole(role);
-    console.log('=== NotificationBell Debug Info ===');
-    console.log('localStorage role:', role);
-    console.log('localStorage role type:', typeof role);
-    console.log('Current URL:', window.location.href);
+    // console.log('=== NotificationBell Debug Info ===');
+    // console.log('localStorage role:', role);
+    // console.log('localStorage role type:', typeof role);
+    // console.log('Current URL:', window.location.href);
     
     // Check if we're on teacher page to determine role
     const isTeacherPage = window.location.href.includes('/teacher');
-    console.log('Is teacher page:', isTeacherPage);
+    // console.log('Is teacher page:', isTeacherPage);
     
     if (isTeacherPage && (!role || role === 'null')) {
-      console.log('FORCE SETTING TEACHER ROLE');
+      // console.log('FORCE SETTING TEACHER ROLE');
       localStorage.setItem('role', '2');
       setCurrentRole('2');
     }
     
-    console.log('Final role:', localStorage.getItem('role'));
-    console.log('=== End Debug Info ===');
+    // console.log('Final role:', localStorage.getItem('role'));
+    // console.log('=== End Debug Info ===');
   }, []);
 
   const fetchAnnouncementNotifications = async () => {
-    console.log('NotificationBell: Fetching announcement notifications...');
+    // console.log('NotificationBell: Fetching announcement notifications...');
     try {
       setLoading(true);
-      console.log('NotificationBell: Making API calls...');
+      // console.log('NotificationBell: Making API calls...');
       
       // Get unread count and recent announcements in parallel
       const [count, recentAnnouncements] = await Promise.all([
@@ -48,8 +48,8 @@ const NotificationBell = () => {
         announcementNotificationService.getRecentUnreadAnnouncements(5)
       ]);
       
-      console.log('NotificationBell: Unread count received:', count);
-      console.log('NotificationBell: Recent announcements received:', recentAnnouncements);
+      // console.log('NotificationBell: Unread count received:', count);
+      // console.log('NotificationBell: Recent announcements received:', recentAnnouncements);
       
       setAnnouncements(recentAnnouncements || []);
       setUnreadCount(count || 0);
@@ -83,14 +83,14 @@ const NotificationBell = () => {
   };
 
   const handleViewAll = () => {
-    console.log('NotificationBell: handleViewAll called');
+    // console.log('NotificationBell: handleViewAll called');
     
     // Get fresh role from localStorage and currentRole state
     const freshRole = localStorage.getItem('role');
     const roleToUse = currentRole || freshRole;
-    console.log('NotificationBell: Current role from localStorage:', freshRole);
-    console.log('NotificationBell: Current role from state:', currentRole);
-    console.log('NotificationBell: Role to use:', roleToUse, 'type:', typeof roleToUse);
+    // console.log('NotificationBell: Current role from localStorage:', freshRole);
+    // console.log('NotificationBell: Current role from state:', currentRole);
+    // console.log('NotificationBell: Role to use:', roleToUse, 'type:', typeof roleToUse);
     
     // Handle both string and number role values
     const roleStr = String(roleToUse).toUpperCase();
@@ -118,12 +118,12 @@ const NotificationBell = () => {
       } else {
         rolePath = 'student';
       }
-      console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage, 'isAccountantPage:', isAccountantPage, 'isParentPage:', isParentPage);
+      // console.log('NotificationBell: Role detection from URL - isTeacherPage:', isTeacherPage, 'isAccountantPage:', isAccountantPage, 'isParentPage:', isParentPage);
     }
     
-    console.log('NotificationBell: Determined rolePath:', rolePath);
+    // console.log('NotificationBell: Determined rolePath:', rolePath);
     const targetUrl = `/${rolePath}/announcements`;
-    console.log('NotificationBell: Navigating to:', targetUrl);
+    // console.log('NotificationBell: Navigating to:', targetUrl);
     navigate(targetUrl);
   };
 

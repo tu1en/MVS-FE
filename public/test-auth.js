@@ -17,7 +17,7 @@ window.testAuth = {
       });
       
       const data = await response.json();
-      console.log('Username login result:', data);
+      // console.log('Username login result:', data);
       return data;
     } catch (error) {
       console.error('Username login error:', error);
@@ -40,7 +40,7 @@ window.testAuth = {
       });
       
       const data = await response.json();
-      console.log('Email login result:', data);
+      // console.log('Email login result:', data);
       return data;
     } catch (error) {
       console.error('Email login error:', error);
@@ -63,7 +63,7 @@ window.testAuth = {
       });
       
       const data = await response.json();
-      console.log('Backend connectivity test:', data);
+      // console.log('Backend connectivity test:', data);
       return data;
     } catch (error) {
       console.error('Backend connectivity error:', error);
@@ -72,7 +72,7 @@ window.testAuth = {
   }
 };
 
-console.log('Test functions available:');
-console.log('- window.testAuth.testUsername() - Test with username');
-console.log('- window.testAuth.testEmail() - Test with email');
-console.log('- window.testAuth.testBackend() - Test backend connectivity');
+// console.log('Test functions available:');
+// console.log('- window.testAuth.testUsername() - Test with username');
+// console.log('- window.testAuth.testEmail() - Test with email');
+// console.log('- window.testAuth.testBackend() - Test backend connectivity');

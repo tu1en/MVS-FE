@@ -51,6 +51,7 @@ const TeacherSchedule = () => {
           description: event.description || '',
           classroomId: event.classroomId,
           classroomName: event.classroomName || 'Lớp học',
+          lectureId: event.lectureId, // Add lectureId from API response
           startDatetime: event.startDatetime,
           endDatetime: event.endDatetime,
           location: event.location || event.room || 'Phòng học',
@@ -73,10 +74,21 @@ const TeacherSchedule = () => {
   };
 
   const handleScheduleClick = (schedule) => {
+    console.log('🔍 Schedule clicked:', schedule);
+    
     if (schedule && schedule.classroomId) {
-      // Navigate to attendance page with only classroomId
-      // TakeAttendancePage will auto-select the appropriate lecture
-      navigate(`/teacher/attendance/take/${schedule.classroomId}`);
+      if (schedule.lectureId) {
+        // Nếu có lectureId, sử dụng nó
+        console.log('🔍 Navigating with lectureId:', schedule.lectureId);
+        navigate(`/teacher/attendance/take/${schedule.classroomId}/${schedule.lectureId}`);
+      } else {
+        // Nếu không có lectureId, pass classroomId và scheduleDate để tìm lecture tương ứng
+        const scheduleDate = dayjs(schedule.startDatetime).format('YYYY-MM-DD');
+        console.log('🔍 No lectureId, navigating with classroomId and date:', schedule.classroomId, scheduleDate);
+        navigate(`/teacher/attendance/take/${schedule.classroomId}`, {
+          state: { scheduleDate: scheduleDate }
+        });
+      }
     } else {
       message.warning('Không thể mở lịch học này');
     }

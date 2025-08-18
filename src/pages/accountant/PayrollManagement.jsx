@@ -1,27 +1,27 @@
 import {
-  CalculatorOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  EyeOutlined,
-  FileExcelOutlined,
-  TeamOutlined
+    CalculatorOutlined,
+    CalendarOutlined,
+    DollarOutlined,
+    EyeOutlined,
+    FileExcelOutlined,
+    TeamOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Input,
-  message,
-  Modal,
-  Progress,
-  Row,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Input,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Tag,
+    Tooltip
 } from 'antd';
 import axios from 'axios';
 import moment from 'moment';
@@ -485,34 +485,36 @@ const PayrollManagement = () => {
         return value ? `${value} giờ` : 'Chưa có dữ liệu';
       }
     },
-    {
-      title: 'Tổng lương',
-      dataIndex: 'proratedGrossSalary',
-      key: 'proratedGrossSalary',
-      render: (value, record) => {
-        if (record.contractType === 'TEACHER') {
-          // Giáo viên: lương theo giờ nhân số giờ dạy
-          const hourlySalary = record.hourlySalary || 0;
-          const teachingHours = record.totalTeachingHours || 0;
-          const calculatedSalary = hourlySalary * teachingHours;
-          return calculatedSalary > 0 ? formatCurrency(calculatedSalary) : 'Chưa có dữ liệu';
-        }
-        // Nhân viên: hiển thị lương thực tế
-        return value ? formatCurrency(value) : 'Chưa có dữ liệu';
-      }
-    },
-    {
-      title: 'Gross (tạm tính)',
-      dataIndex: 'netSalary',
-      key: 'netSalary',
-      render: (value, record) => {
-        // Ẩn cột này cho giáo viên
-        if (record.contractType === 'TEACHER') {
-          return <span style={{ color: '#999' }}>-</span>;
-        }
-        return value ? formatCurrency(value) : 'Chưa có dữ liệu';
-      }
-    },
+    // Ẩn cột Tổng lương (Gross)
+    // {
+    //   title: 'Tổng lương',
+    //   dataIndex: 'proratedGrossSalary',
+    //   key: 'proratedGrossSalary',
+    //   render: (value, record) => {
+    //     if (record.contractType === 'TEACHER') {
+    //       // Giáo viên: lương theo giờ nhân số giờ dạy
+    //       const hourlySalary = record.hourlySalary || 0;
+    //       const teachingHours = record.totalTeachingHours || 0;
+    //       const calculatedSalary = hourlySalary * teachingHours;
+    //       return calculatedSalary > 0 ? formatCurrency(calculatedSalary) : 'Chưa có dữ liệu';
+    //     }
+    //     // Nhân viên: hiển thị lương thực tế
+    //     return value ? formatCurrency(value) : 'Chưa có dữ liệu';
+    //   }
+    // },
+    // Ẩn cột Gross (tạm tính)
+    // {
+    //   title: 'Gross (tạm tính)',
+    //   dataIndex: 'netSalary',
+    //   key: 'netSalary',
+    //   render: (value, record) => {
+    //     // Ẩn cột này cho giáo viên
+    //     if (record.contractType === 'TEACHER') {
+    //       return <span style={{ color: '#999' }}>-</span>;
+    //     }
+    //     return value ? formatCurrency(value) : 'Chưa có dữ liệu';
+    //   }
+    // },
     {
       title: 'Thuế TNCN',
       dataIndex: 'topCVResult',
@@ -836,9 +838,10 @@ const PayrollManagement = () => {
               </Col>
             </Row>
             <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={12}>
+              {/* Ẩn hiển thị lương thô */}
+              {/* <Col span={12}>
                 <strong>Lương thô:</strong> {selectedEmployee.grossPay?.toLocaleString()} VNĐ
-              </Col>
+              </Col> */}
               <Col span={12}>
                 <strong>Các khoản trừ:</strong> {selectedEmployee.deductions?.toLocaleString()} VNĐ
               </Col>

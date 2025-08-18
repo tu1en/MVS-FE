@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Table, Button, Select, DatePicker, Space, Tag, Progress, Alert } from 'antd';
-import { DollarOutlined, TeamOutlined, TrendingUpOutlined, CalendarOutlined, DownloadOutlined } from '@ant-design/icons';
-import { Line, Column, Pie } from '@ant-design/plots';
-import moment from 'moment';
+import { DollarOutlined, DownloadOutlined, TeamOutlined, TrendingUpOutlined } from '@ant-design/icons';
+import { Line, Pie } from '@ant-design/plots';
+import { Alert, Button, Card, Col, DatePicker, Progress, Row, Select, Space, Statistic, Table, Tag } from 'antd';
 import axios from 'axios';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
@@ -141,7 +141,8 @@ const PayrollDashboard = ({ userRole = 'EMPLOYEE' }) => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        {/* Ẩn thống kê tổng lương gộp */}
+        {/* <Col span={6}>
           <Card>
             <Statistic
               title="Tổng lương gộp"
@@ -151,7 +152,7 @@ const PayrollDashboard = ({ userRole = 'EMPLOYEE' }) => {
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
-        </Col>
+        </Col> */}
         <Col span={6}>
           <Card>
             <Statistic
@@ -237,13 +238,14 @@ const PayrollDashboard = ({ userRole = 'EMPLOYEE' }) => {
         key: 'employeeCount',
         align: 'center'
       },
-      {
-        title: 'Tổng lương gộp',
-        dataIndex: 'totalGrossSalary',
-        key: 'totalGrossSalary',
-        render: (value) => formatCurrency(value),
-        align: 'right'
-      },
+      // Ẩn cột tổng lương gộp
+      // {
+      //   title: 'Tổng lương gộp',
+      //   dataIndex: 'totalGrossSalary',
+      //   key: 'totalGrossSalary',
+      //   render: (value) => formatCurrency(value),
+      //   align: 'right'
+      // },
       {
         title: 'Tổng lương thực nhận',
         dataIndex: 'totalNetSalary',

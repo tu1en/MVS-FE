@@ -1,24 +1,24 @@
 import {
-  CalculatorOutlined,
-  ClockCircleOutlined,
-  IdcardOutlined,
-  UserOutlined
+    CalculatorOutlined,
+    ClockCircleOutlined,
+    IdcardOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Descriptions,
-  Divider,
-  Modal,
-  Row,
-  Space,
-  Spin,
-  Statistic,
-  Tag,
-  Typography,
-  message
+    Alert,
+    Button,
+    Card,
+    Col,
+    Descriptions,
+    Divider,
+    Modal,
+    Row,
+    Space,
+    Spin,
+    Statistic,
+    Tag,
+    Typography,
+    message
 } from 'antd';
 import React, { useEffect, useState } from 'react';
 
@@ -128,7 +128,9 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             isTeacher ? `Đơn giá giờ (hợp đồng): ${formatCurrency(hourlyRate)}` : `Lương cơ bản (hợp đồng): ${formatCurrency(employeeRecord.baseSalary)}`,
             isTeacher ? `Lương ngày thường = Đơn giá giờ × Giờ ngày thường = ${formatCurrency(hourlyRate)} × ${weekdayHours}h = ${formatCurrency(weekdayPay)}` : `Lương thực tế = Lương cơ bản × (Ngày làm thực tế / Ngày làm chuẩn)`,
             isTeacher ? `Lương cuối tuần (2x) = Đơn giá giờ × 2 × Giờ cuối tuần = ${formatCurrency(hourlyRate)} × 2 × ${weekendHours}h = ${formatCurrency(weekendPay)}` : `Lương thô = ${formatCurrency(employeeRecord.grossPay)}`,
-            isTeacher ? `Tổng GROSS = Ngày thường + Cuối tuần = ${formatCurrency(grossSalary)}` : `BHXH (8%) = ${formatCurrency(socialInsurance)}`,
+            // Ẩn hiển thị tổng GROSS
+        // isTeacher ? `Tổng GROSS = Ngày thường + Cuối tuần = ${formatCurrency(grossSalary)}` : `BHXH (8%) = ${formatCurrency(socialInsurance)}`,
+        `BHXH (8%) = ${formatCurrency(socialInsurance)}`,
             isTeacher ? `BHXH/BHYT/BHTN = 0 (HĐ theo giờ)` : `BHYT (1.5%) = ${formatCurrency(healthInsurance)}`,
             isTeacher ? `Thuế TNCN = 0 (HĐ theo giờ)` : `BHTN (1%) = ${formatCurrency(unemploymentInsurance)}`,
             isTeacher ? `Lương thực nhận = ${formatCurrency(netSalary)}` : `Thuế TNCN (lũy tiến) = ${formatCurrency(personalIncomeTax)}`,
@@ -357,7 +359,8 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
                   <Row justify="space-between">
                     <Text strong>Tổng lương gộp:</Text>
                     <Text strong style={{ color: '#52c41a', fontSize: '16px' }}>
-                      {formatCurrency(details.salaryCalculationSteps?.grossSalary)}
+                      {/* Ẩn hiển thị lương gộp */}
+            {/* {formatCurrency(details.salaryCalculationSteps?.grossSalary)} */}
                     </Text>
                   </Row>
                 </Space>
@@ -546,7 +549,8 @@ const SalaryCalculationDetailsModal = ({ visible, onCancel, payrollId, employeeR
             <Row justify="space-between"><Text>Lương cuối tuần (2x):</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.step5_WeekendPay)}</Text></Row>
           )}
           <Divider />
-          <Row justify="space-between"><Text strong>Tổng lương gộp:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.grossSalary)}</Text></Row>
+                      {/* Ẩn hiển thị tổng lương gộp */}
+            {/* <Row justify="space-between"><Text strong>Tổng lương gộp:</Text><Text strong>{formatCurrency(details?.salaryCalculationSteps?.grossSalary)}</Text></Row> */}
         </Space>
       </Modal>
 

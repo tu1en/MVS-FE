@@ -4,12 +4,11 @@ import moment from 'moment';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AssignmentStatusCell from '../components/AssignmentStatusCell';
-import DebugPanel from '../components/DebugPanel';
+import WysiwygEditor from '../components/common/WysiwygEditor';
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 import { useAuth } from '../context/AuthContext';
 import AssignmentService from '../services/assignmentService';
 import ClassroomService from '../services/classroomService';
-import WysiwygEditor from '../components/common/WysiwygEditor';
 import FileUploadService from '../services/fileUploadService';
 
 const { Title, Text } = Typography;
@@ -395,9 +394,9 @@ function AssignmentsPageNew() {
         ? moment(values.dueDate.toDate())
         : moment(values?.dueDate);
 
-    // Validate due date strictly > now để tránh @Future fail ở BE
-    if (!dueMoment.isValid() || !dueMoment.isAfter(moment())) {
-      message.error('Hạn nộp phải ở tương lai (sau thời điểm hiện tại).');
+    // Validate due date - không cho phép chọn ngày trong quá khứ
+    if (!dueMoment.isValid() || dueMoment.isBefore(moment().startOf('day'))) {
+      message.error('Hạn nộp không thể là ngày trong quá khứ.');
       return;
     }
     const selectedClassroomId = values.classroomId;
@@ -463,8 +462,8 @@ function AssignmentsPageNew() {
         description: values.description,
         richTextContent: richTextContent || '',
         attachments: attachments,
-        // Gửi LocalDateTime (không timezone) để backend @Future không bị lệch múi giờ
-        dueDate: dueMoment.format('YYYY-MM-DDTHH:mm:ss'),
+        // Gửi ngày (không có giờ) để backend xử lý
+        dueDate: dueMoment.format('YYYY-MM-DD'),
         points: values.points || values.maxScore || 10, // Backend expects 'points', not 'maxScore'
         classroomId: finalClassroomId, // Use the extracted ID
       };
@@ -722,7 +721,7 @@ function AssignmentsPageNew() {
               key: 'overdue',
               label: 'Quá hạn',
               children: renderStudentAssignmentsList(upcomingAssignments.filter(assignment => 
-                !submissions[assignment?.id] && new Date(assignment?.dueDate) < new Date()
+                !submissions[assignment?.id] && assignment?.dueDate && new Date(assignment.dueDate + 'T23:59:59') < new Date()
               ))
             }
           ]}
@@ -791,7 +790,7 @@ function AssignmentsPageNew() {
         render: (_, record) => {
           if (userRole === 'STUDENT') {
             const submission = submissions[record.id];
-            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate);
+            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate + 'T23:59:59');
             
             if (submission) {
               return (
@@ -1007,7 +1006,7 @@ function AssignmentsPageNew() {
         render: (_, record) => {
           if (userRole === 'STUDENT') {
             const submission = submissions[record.id];
-            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate);
+            const isOverdue = record.dueDate && new Date() > new Date(record.dueDate + 'T23:59:59');
             
             if (submission) {
               return (
@@ -1235,7 +1234,7 @@ function AssignmentsPageNew() {
               </Descriptions.Item>
               <Descriptions.Item label="Hạn nộp">
                 {currentAssignment.dueDate 
-                  ? new Date(currentAssignment.dueDate).toLocaleString('vi-VN') 
+                  ? new Date(currentAssignment.dueDate).toLocaleDateString('vi-VN') 
                   : 'Không có hạn nộp'}
               </Descriptions.Item>
               <Descriptions.Item label="Điểm tối đa">{currentAssignment.points || 10} điểm</Descriptions.Item>
@@ -1277,7 +1276,7 @@ function AssignmentsPageNew() {
             )}
             
             {/* Submission form if due date has not passed or no submission exists */}
-            {(!currentAssignment.dueDate || new Date() < new Date(currentAssignment.dueDate) || !submissions[currentAssignment.id]) && (
+            {(!currentAssignment.dueDate || new Date() < new Date(currentAssignment.dueDate + 'T23:59:59') || !submissions[currentAssignment.id]) && (
               <>
                 <Title level={5}>{submissions[currentAssignment.id] ? 'Nộp lại bài:' : 'Nộp bài:'}</Title>
                 <Form
@@ -1462,8 +1461,8 @@ function AssignmentsPageNew() {
               onChange={setRichTextContent}
               placeholder="Nhập nội dung chi tiết bài tập với formatting, hình ảnh, file đính kèm..."
               height="300px"
-              allowFileUpload={true}
-              allowImageUpload={true}
+              // allowFileUpload={true}
+              // allowImageUpload={true}
               className="w-full"
             />
           </Form.Item>
@@ -1513,25 +1512,12 @@ function AssignmentsPageNew() {
             rules={[{ required: true, message: 'Vui lòng chọn hạn nộp!' }]}
           >
             <DatePicker
-              showTime
-              format="YYYY-MM-DD HH:mm:ss"
+              format="DD/MM/YYYY"
               placeholder="Chọn hạn nộp"
               style={{ width: '100%' }}
-              disabledDate={(current) => current && current < moment().startOf('day')}
-              disabledTime={(date) => {
-                if (!date) return {};
-                const now = moment();
-                if (date.isSame(now, 'day')) {
-                  const disabledHours = Array.from({ length: now.hour() }, (_, i) => i);
-                  const disabledMinutes = Array.from({ length: now.minute() }, (_, i) => i);
-                  const disabledSeconds = Array.from({ length: now.second() }, (_, i) => i);
-                  return {
-                    disabledHours: () => disabledHours,
-                    disabledMinutes: () => disabledMinutes,
-                    disabledSeconds: () => disabledSeconds,
-                  };
-                }
-                return {};
+              disabledDate={(current) => {
+                // Không cho phép chọn ngày trong quá khứ
+                return current && current < moment().startOf('day');
               }}
             />
           </Form.Item>
@@ -1553,51 +1539,7 @@ function AssignmentsPageNew() {
         </Form>
       </Modal>
       
-      {/* Debug Panel - Only show in development environment */}
-      {process.env.NODE_ENV === 'development' && (
-        <DebugPanel
-          title="Assignment Debugging"
-          data={{
-            userId,
-            userRole,
-            courseId,
-            assignmentCounts: {
-              upcoming: upcomingAssignments.length,
-              past: pastAssignments.length,
-              submissionsList: submissionsList.length
-            },
-            uiState: {
-              isGradeModalVisible,
-              isCreateModalVisible,
-              isSubmitModalVisible,
-              loading,
-              grading,
-              creating
-            },
-            selectedAssignment: selectedAssignment ? {
-              id: selectedAssignment.id,
-              title: selectedAssignment.title,
-              dueDate: selectedAssignment.dueDate
-            } : null,
-            classroomInfo: {
-              courseId,
-              classroomCount: classrooms.length,
-              teacherClassroomCount: teacherClassrooms.length
-            }
-          }}
-          onRunTest={() => {
-            // Test function - fetch submissions for currently selected assignment
-            if (selectedAssignment) {
-              handleGradeClick(selectedAssignment);
-            } else {
-              console.log("No assignment selected for testing");
-              message.info("Please select an assignment first");
-            }
-          }}
-          onRefresh={() => fetchData()}
-          collapsed={true}
-        />
-      )}
+    
     </div>
   );
 }

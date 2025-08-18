@@ -1,7 +1,7 @@
 // Debug script for messages loading issue
 // Copy and paste this into browser console after logging in
 
-console.log('🔧 Messages Debug Script Started');
+// console.log('🔧 Messages Debug Script Started');
 
 // Check authentication
 const checkAuth = () => {
@@ -9,10 +9,10 @@ const checkAuth = () => {
     const userRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
     
-    console.log('👤 Authentication Status:');
-    console.log('   User ID:', userId);
-    console.log('   User Role:', userRole);
-    console.log('   Token:', token ? 'Present' : 'Missing');
+    // console.log('👤 Authentication Status:');
+    // console.log('   User ID:', userId);
+    // console.log('   User Role:', userRole);
+    // console.log('   Token:', token ? 'Present' : 'Missing');
     
     return { userId, userRole, token };
 };
@@ -38,62 +38,62 @@ const testAPIs = async () => {
         { name: 'Student Classrooms', url: `/classrooms/student/${userId}` }
     ];
     
-    console.log('🧪 Testing API Endpoints:');
+    // console.log('🧪 Testing API Endpoints:');
     
     for (const endpoint of endpoints) {
         try {
-            console.log(`\n📡 Testing ${endpoint.name}...`);
-            console.log(`   URL: ${baseURL}${endpoint.url}`);
+            // console.log(`\n📡 Testing ${endpoint.name}...`);
+            // console.log(`   URL: ${baseURL}${endpoint.url}`);
             
             const response = await fetch(`${baseURL}${endpoint.url}`, { headers });
-            console.log(`   Status: ${response.status} ${response.statusText}`);
+            // console.log(`   Status: ${response.status} ${response.statusText}`);
             
             if (response.ok) {
                 const data = await response.json();
-                console.log(`   ✅ Success:`, data);
-                console.log(`   📊 Data type: ${Array.isArray(data) ? 'Array' : typeof data}`);
+                // console.log(`   ✅ Success:`, data);
+                // console.log(`   📊 Data type: ${Array.isArray(data) ? 'Array' : typeof data}`);
                 if (Array.isArray(data)) {
-                    console.log(`   📊 Array length: ${data.length}`);
+                    // console.log(`   📊 Array length: ${data.length}`);
                 }
             } else {
                 const errorText = await response.text();
-                console.log(`   ❌ Error Response:`, errorText);
+                // console.log(`   ❌ Error Response:`, errorText);
             }
         } catch (error) {
-            console.log(`   💥 Network Error:`, error.message);
+            // console.log(`   💥 Network Error:`, error.message);
         }
     }
 };
 
 // Check DOM elements
 const checkDOM = () => {
-    console.log('\n🎯 DOM Elements Check:');
+    // console.log('\n🎯 DOM Elements Check:');
     
     const spinners = document.querySelectorAll('.ant-spin');
-    console.log(`   Spinners found: ${spinners.length}`);
+    // console.log(`   Spinners found: ${spinners.length}`);
     
     const messagingPage = document.querySelector('[data-testid="messaging-page"]');
-    console.log(`   Messaging page element: ${messagingPage ? 'Found' : 'Not found'}`);
+    // console.log(`   Messaging page element: ${messagingPage ? 'Found' : 'Not found'}`);
     
     const loadingText = Array.from(document.querySelectorAll('*')).find(el => 
         el.textContent && el.textContent.includes('Đang tải')
     );
-    console.log(`   Loading text: ${loadingText ? 'Found' : 'Not found'}`);
+    // console.log(`   Loading text: ${loadingText ? 'Found' : 'Not found'}`);
     
     if (spinners.length > 0) {
-        console.log('⚠️  Loading spinner is still visible - indicates loading issue');
+        // console.log('⚠️  Loading spinner is still visible - indicates loading issue');
     }
 };
 
 // Main debug function
 const debugMessages = async () => {
-    console.log('🚀 Starting Messages Debug...\n');
+    // console.log('🚀 Starting Messages Debug...\n');
     
     checkAuth();
     await testAPIs();
     checkDOM();
     
-    console.log('\n✅ Debug completed. Check the logs above for issues.');
+    // console.log('\n✅ Debug completed. Check the logs above for issues.');
 };
 
 // Auto-run after 2 seconds to allow page to load

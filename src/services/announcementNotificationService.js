@@ -7,10 +7,10 @@ export const announcementNotificationService = {
       const role = localStorage.getItem('role');
       const userId = localStorage.getItem('userId');
       const token = localStorage.getItem('token');
-      console.log('=== API Debug Info ===');
-      console.log('AnnouncementNotificationService: Getting unread count for role:', role, 'userId:', userId, 'type:', typeof role);
-      console.log('AnnouncementNotificationService: Token exists:', !!token);
-      console.log('AnnouncementNotificationService: Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+      // console.log('=== API Debug Info ===');
+      // console.log('AnnouncementNotificationService: Getting unread count for role:', role, 'userId:', userId, 'type:', typeof role);
+      // console.log('AnnouncementNotificationService: Token exists:', !!token);
+      // console.log('AnnouncementNotificationService: Token preview:', token ? token.substring(0, 20) + '...' : 'null');
       
       // Handle both string and number role values
       // Normalize role: support numeric, plain text, or ROLE_ prefixed strings
@@ -28,17 +28,17 @@ export const announcementNotificationService = {
       // First, try to get admin notifications for this user
       if (userId && userId !== 'undefined' && userId !== 'null' && !isNaN(userId)) {
         try {
-          console.log('AnnouncementNotificationService: Checking admin notifications for userId:', userId);
+          // console.log('AnnouncementNotificationService: Checking admin notifications for userId:', userId);
           const adminNotificationsResponse = await apiClient.get(`/notifications/user/${userId}`);
           const adminNotifications = adminNotificationsResponse.data || [];
           const unreadAdminCount = adminNotifications.filter(n => !n.isRead).length;
-          console.log('AnnouncementNotificationService: Admin notifications count:', unreadAdminCount);
+          // console.log('AnnouncementNotificationService: Admin notifications count:', unreadAdminCount);
           totalCount += unreadAdminCount;
         } catch (error) {
-          console.log('AnnouncementNotificationService: No admin notifications or error:', error.message);
+          // console.log('AnnouncementNotificationService: No admin notifications or error:', error.message);
         }
       } else {
-        console.log('AnnouncementNotificationService: Invalid or missing userId:', userId);
+        // console.log('AnnouncementNotificationService: Invalid or missing userId:', userId);
       }
       
       // Then, get role-specific announcements
@@ -53,30 +53,30 @@ export const announcementNotificationService = {
         endpoint = '/announcements/parent/unread-count';
       } else if (isManager || isAdmin) {
         // Manager and Admin - only show admin notifications
-        console.log('Manager/Admin role detected - only showing admin notifications');
-        console.log('=== End API Debug ===');
+        // console.log('Manager/Admin role detected - only showing admin notifications');
+        // console.log('=== End API Debug ===');
         return totalCount;
       } else {
         // Default to public/general endpoint or handle unknown roles  
-        console.log('Unknown role detected:', roleStr, '- only showing admin notifications');
-        console.log('=== End API Debug ===');
+        // console.log('Unknown role detected:', roleStr, '- only showing admin notifications');
+        // console.log('=== End API Debug ===');
         return totalCount;
       }
       
-      console.log('AnnouncementNotificationService: Using endpoint:', endpoint);
+      // console.log('AnnouncementNotificationService: Using endpoint:', endpoint);
       
       try {
         const response = await apiClient.get(endpoint);
-        console.log('AnnouncementNotificationService: Response status:', response.status);
-        console.log('AnnouncementNotificationService: Response headers:', response.headers);
-        console.log('AnnouncementNotificationService: Unread count response:', response.data);
+        // console.log('AnnouncementNotificationService: Response status:', response.status);
+        // console.log('AnnouncementNotificationService: Response headers:', response.headers);
+        // console.log('AnnouncementNotificationService: Unread count response:', response.data);
         totalCount += (response.data || 0);
       } catch (error) {
-        console.log('AnnouncementNotificationService: Role-specific announcements error:', error.message);
+        // console.log('AnnouncementNotificationService: Role-specific announcements error:', error.message);
       }
       
-      console.log('AnnouncementNotificationService: Total count:', totalCount);
-      console.log('=== End API Debug ===');
+      // console.log('AnnouncementNotificationService: Total count:', totalCount);
+      // console.log('=== End API Debug ===');
       return totalCount;
     } catch (error) {
       console.error('=== API Error Debug ===');
@@ -130,7 +130,7 @@ export const announcementNotificationService = {
       // First, get admin notifications for this user
       if (userId && userId !== 'undefined' && userId !== 'null' && !isNaN(userId)) {
         try {
-          console.log('AnnouncementNotificationService: Getting recent admin notifications for userId:', userId);
+          // console.log('AnnouncementNotificationService: Getting recent admin notifications for userId:', userId);
           const adminNotificationsResponse = await apiClient.get(`/notifications/user/${userId}`);
           const adminNotifications = adminNotificationsResponse.data || [];
           const unreadAdminNotifications = adminNotifications
@@ -143,13 +143,13 @@ export const announcementNotificationService = {
               priority: n.priority || 'NORMAL',
               type: 'admin'
             }));
-          console.log('AnnouncementNotificationService: Admin notifications:', unreadAdminNotifications.length);
+          // console.log('AnnouncementNotificationService: Admin notifications:', unreadAdminNotifications.length);
           allAnnouncements.push(...unreadAdminNotifications);
         } catch (error) {
-          console.log('AnnouncementNotificationService: No admin notifications or error:', error.message);
+          // console.log('AnnouncementNotificationService: No admin notifications or error:', error.message);
         }
       } else {
-        console.log('AnnouncementNotificationService: Invalid or missing userId:', userId);
+        // console.log('AnnouncementNotificationService: Invalid or missing userId:', userId);
       }
       
       // Then, get role-specific announcements
@@ -163,10 +163,10 @@ export const announcementNotificationService = {
       } else if (isParent) {
         endpoint = `/announcements/parent/recent-unread?limit=${limit}`;
       } else if (isManager || isAdmin) {
-        console.log('Manager/Admin role detected - only showing admin notifications');
+        // console.log('Manager/Admin role detected - only showing admin notifications');
         return allAnnouncements.slice(0, limit);
       } else {
-        console.log('Unknown role detected - only showing admin notifications');
+        // console.log('Unknown role detected - only showing admin notifications');
         return allAnnouncements.slice(0, limit);
       }
       
@@ -178,7 +178,7 @@ export const announcementNotificationService = {
         }));
         allAnnouncements.push(...roleAnnouncements);
       } catch (error) {
-        console.log('AnnouncementNotificationService: Role-specific announcements error:', error.message);
+        // console.log('AnnouncementNotificationService: Role-specific announcements error:', error.message);
       }
       
       // Sort by creation date (newest first) and limit
@@ -214,10 +214,10 @@ export const announcementNotificationService = {
       } else if (isParent) {
         endpoint = '/announcements/parent/mark-all-read';
       } else if (isManager || isAdmin) {
-        console.log('Manager/Admin role detected - no mark all read needed');
+        // console.log('Manager/Admin role detected - no mark all read needed');
         return { success: true };
       } else {
-        console.log('Unknown role detected - no mark all read needed');
+        // console.log('Unknown role detected - no mark all read needed');
         return { success: true };
       }
       const response = await apiClient.post(endpoint);

@@ -39,7 +39,7 @@ const TeacherSchedulePage = () => {
     setLoading(true);
     try {
       // Gọi API thực tế
-      const response = await axios.get('/api/teacher/schedule', {
+      const response = await axios.get('/api/teacher/schedules', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Select, DatePicker, Space, Tag, Modal, message, Tabs, Statistic, Row, Col } from 'antd';
-import { DollarOutlined, CheckOutlined, CloseOutlined, EyeOutlined, CalculatorOutlined, FileExcelOutlined } from '@ant-design/icons';
-import moment from 'moment';
+import { CalculatorOutlined, CheckOutlined, DollarOutlined, EyeOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { Button, Card, Col, DatePicker, message, Modal, Row, Select, Space, Statistic, Table, Tabs, Tag } from 'antd';
 import axios from 'axios';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
@@ -204,10 +204,11 @@ const SalaryManagement = ({ userRole = 'MANAGER' }) => {
 
           <div style={{ marginTop: 16, padding: 16, backgroundColor: '#f0f2f5', borderRadius: 4 }}>
             <Row gutter={16}>
-              <Col span={12}>
+              {/* Ẩn hiển thị tổng lương gộp */}
+              {/* <Col span={12}>
                 <p><strong>Tổng lương gộp:</strong> <span style={{ color: '#52c41a', fontSize: '16px', fontWeight: 'bold' }}>{formatCurrency(payroll.grossSalary)}</span></p>
-              </Col>
-              <Col span={12}>
+              </Col> */}
+              <Col span={24}>
                 <p><strong>Lương thực nhận:</strong> <span style={{ color: '#1890ff', fontSize: '16px', fontWeight: 'bold' }}>{formatCurrency(payroll.netSalary)}</span></p>
               </Col>
             </Row>
@@ -260,13 +261,14 @@ const SalaryManagement = ({ userRole = 'MANAGER' }) => {
       key: 'period',
       render: (_, record) => `${record.payrollMonth}/${record.payrollYear}`
     },
-    {
-      title: 'Lương gộp',
-      dataIndex: 'grossSalary',
-      key: 'grossSalary',
-      render: (value) => formatCurrency(value),
-      align: 'right'
-    },
+    // Ẩn cột lương gộp (Gross)
+    // {
+    //   title: 'Lương gộp',
+    //   dataIndex: 'grossSalary',
+    //   key: 'grossSalary',
+    //   render: (value) => formatCurrency(value),
+    //   align: 'right'
+    // },
     {
       title: 'Lương thực nhận',
       dataIndex: 'netSalary',
@@ -361,7 +363,8 @@ const SalaryManagement = ({ userRole = 'MANAGER' }) => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        {/* Ẩn thống kê tổng lương gộp */}
+        {/* <Col span={6}>
           <Card>
             <Statistic
               title="Tổng lương gộp"
@@ -370,7 +373,7 @@ const SalaryManagement = ({ userRole = 'MANAGER' }) => {
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
-        </Col>
+        </Col> */}
         <Col span={6}>
           <Card>
             <Statistic

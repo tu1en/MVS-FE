@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import API_CONFIG from '../../config/api-config';
 import { useAuth } from '../../context/AuthContext';
 import { teacherAttendanceService } from '../../services/teacherAttendanceService';
@@ -7,7 +7,9 @@ import { teacherAttendanceService } from '../../services/teacherAttendanceServic
 const TakeAttendancePage = () => {
     const { classroomId, lectureId: urlLectureId } = useParams(); // Get IDs from URL
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, loading } = useAuth();
+    const scheduleDate = location.state?.scheduleDate; // Get scheduleDate from navigation state
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -79,12 +81,122 @@ const TakeAttendancePage = () => {
             console.log('TakeAttendancePage: Đã tải bài giảng:', lecturesData);
             setLectures(lecturesData);
 
-            // Tự chọn bài giảng đầu tiên nếu URL không có hoặc không hợp lệ với lớp hiện tại
+            // Chọn bài giảng dựa trên URL
             if (lecturesData.length > 0) {
-                const validLecture = lecturesData.find(l => l.id.toString() === urlLectureId);
-                const selectedLecture = validLecture || lecturesData[0];
-                setActualLectureId(selectedLecture.id);
-                console.log('TakeAttendancePage: Đã chọn ID bài giảng:', selectedLecture.id);
+                console.log('TakeAttendancePage: lecturesData received:', lecturesData);
+                console.log('TakeAttendancePage: urlLectureId:', urlLectureId);
+                console.log('TakeAttendancePage: scheduleDate from navigation:', scheduleDate);
+                console.log('TakeAttendancePage: Available lecture IDs:', lecturesData.map(l => l.id));
+                console.log('TakeAttendancePage: urlLectureId type:', typeof urlLectureId);
+                console.log('TakeAttendancePage: All lecture dates:', lecturesData.map(l => ({
+                    id: l.id, 
+                    title: l.title, 
+                    rawDate: l.lectureDate,
+                    rawDateType: typeof l.lectureDate,
+                    isArray: Array.isArray(l.lectureDate)
+                })));
+                
+                if (urlLectureId) {
+                    // Tìm lecture dựa trên URL parameter
+                    const validLecture = lecturesData.find(l => l.id.toString() === urlLectureId);
+                    console.log('TakeAttendancePage: validLecture found:', validLecture);
+                    
+                    if (validLecture) {
+                        setActualLectureId(validLecture.id);
+                        console.log('TakeAttendancePage: Đã chọn lecture từ URL:', validLecture.id, validLecture.title);
+                    } else {
+                        console.warn('TakeAttendancePage: Lecture ID từ URL không hợp lệ:', urlLectureId);
+                        console.warn('TakeAttendancePage: Available lectures:', lecturesData.map(l => ({id: l.id, title: l.title})));
+                        setError(`Không tìm thấy bài giảng với ID ${urlLectureId} trong lớp này.`);
+                        setIsLoading(false); // Stop loading to show error
+                    }
+                } else {
+                    // Nếu không có lectureId trong URL, tìm lecture dựa trên scheduleDate
+                    let selectedLecture = null;
+                    
+                    if (scheduleDate) {
+                        // Trước tiên tìm lecture có lectureDate khớp chính xác
+                        selectedLecture = lecturesData.find(lecture => {
+                            if (lecture.lectureDate) {
+                                try {
+                                    let lectureDate;
+                                    
+                                    // Handle different date formats
+                                    if (Array.isArray(lecture.lectureDate)) {
+                                        // If it's an array [year, month, day], convert to date string
+                                        const [year, month, day] = lecture.lectureDate;
+                                        lectureDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                                    } else if (typeof lecture.lectureDate === 'string') {
+                                        // If it's already a string, try to parse it
+                                        if (lecture.lectureDate.includes('T')) {
+                                            lectureDate = lecture.lectureDate.split('T')[0];
+                                        } else {
+                                            lectureDate = lecture.lectureDate;
+                                        }
+                                    } else {
+                                        // Try to convert to date and format
+                                        lectureDate = new Date(lecture.lectureDate).toISOString().split('T')[0];
+                                    }
+                                    
+                                    console.log(`Comparing: Lecture ID ${lecture.id} - ${lectureDate} === ${scheduleDate} (${lecture.title})`);
+                                    return lectureDate === scheduleDate;
+                                } catch (error) {
+                                    console.warn(`Error parsing date for lecture ${lecture.id}:`, error);
+                                    return false;
+                                }
+                            }
+                            return false;
+                        });
+                        
+                        if (selectedLecture) {
+                            console.log('TakeAttendancePage: Tìm thấy lecture cho ngày:', scheduleDate, selectedLecture);
+                        } else {
+                            console.log('TakeAttendancePage: Không tìm thấy lecture chính xác cho ngày:', scheduleDate);
+                            
+                            // Nếu không tìm thấy chính xác, tìm lecture gần nhất
+                            const targetDate = new Date(scheduleDate);
+                            let closestLecture = null;
+                            let minDifference = Infinity;
+                            
+                            lecturesData.forEach(lecture => {
+                                if (lecture.lectureDate) {
+                                    try {
+                                        let lectureDate;
+                                        
+                                        if (Array.isArray(lecture.lectureDate)) {
+                                            const [year, month, day] = lecture.lectureDate;
+                                            lectureDate = new Date(year, month - 1, day); // month is 0-indexed in Date
+                                        } else {
+                                            lectureDate = new Date(lecture.lectureDate + 'T00:00:00');
+                                        }
+                                        
+                                        const difference = Math.abs(lectureDate - targetDate);
+                                        if (difference < minDifference) {
+                                            minDifference = difference;
+                                            closestLecture = lecture;
+                                        }
+                                    } catch (error) {
+                                        console.warn(`Error parsing date for closest lecture ${lecture.id}:`, error);
+                                    }
+                                }
+                            });
+                            
+                            if (closestLecture) {
+                                selectedLecture = closestLecture;
+                                console.log('TakeAttendancePage: Chọn lecture gần nhất:', closestLecture.id, 'cho ngày:', scheduleDate);
+                            }
+                        }
+                    }
+                    
+                    // Fallback về lecture đầu tiên nếu không tìm thấy
+                    if (!selectedLecture) {
+                        selectedLecture = lecturesData[0];
+                        console.log('TakeAttendancePage: Fallback to first lecture:', selectedLecture.id);
+                    }
+                    
+                    setActualLectureId(selectedLecture.id);
+                    console.log('TakeAttendancePage: Selected lecture:', selectedLecture.id, selectedLecture.title);
+                }
             } else {
                 // Không có bài giảng - dừng tải và báo lỗi
                 console.log('TakeAttendancePage: Không có bài giảng cho lớp', classroomId);
@@ -156,6 +268,13 @@ const TakeAttendancePage = () => {
 
     // Tải danh sách bài giảng trước
     useEffect(() => {
+        console.log('🔄 URL parameters changed - classroomId:', classroomId, 'urlLectureId:', urlLectureId);
+        // Reset state khi URL thay đổi
+        setActualLectureId(null);
+        setStudents([]);
+        setError(null);
+        fetchAttempted.current = false;
+        
         fetchLectures();
     }, [fetchLectures]);
 
@@ -253,9 +372,58 @@ const TakeAttendancePage = () => {
                 {lectures.length > 0 && actualLectureId && (
                     <span className="text-sm text-gray-600 ml-2">
                         ({lectures.find(l => l.id === actualLectureId)?.title || 'Không rõ tiêu đề'})
+                        {lectures.find(l => l.id === actualLectureId)?.lectureDate && (
+                            <span className="ml-2">
+                                - Ngày: {(() => {
+                                    const lecture = lectures.find(l => l.id === actualLectureId);
+                                    const date = lecture?.lectureDate;
+                                    
+                                    if (Array.isArray(date)) {
+                                        const [year, month, day] = date;
+                                        return new Date(year, month - 1, day).toLocaleDateString('vi-VN');
+                                    } else {
+                                        return new Date(date + 'T00:00:00').toLocaleDateString('vi-VN');
+                                    }
+                                })()}
+                            </span>
+                        )}
                     </span>
                 )}
             </h2>
+            
+            {/* Debug info để kiểm tra */}
+            <div className="bg-gray-100 p-3 rounded mb-4">
+                <details>
+                    <summary className="cursor-pointer font-bold">Debug Info (Click để mở)</summary>
+                    <div className="mt-2 text-sm">
+                        <p><strong>URL Lecture ID:</strong> {urlLectureId}</p>
+                        <p><strong>Schedule Date:</strong> {scheduleDate || 'None'}</p>
+                        <p><strong>Actual Lecture ID:</strong> {actualLectureId}</p>
+                        <p><strong>Classroom ID:</strong> {classroomId}</p>
+                        <p><strong>Available Lectures:</strong></p>
+                        <ul className="ml-4">
+                            {lectures.map(lecture => (
+                                <li key={lecture.id} className={lecture.id === actualLectureId ? "font-bold text-blue-600" : ""}>
+                                    ID: {lecture.id} - {lecture.title} 
+                                    {lecture.lectureDate && ` (${(() => {
+                                        const date = lecture.lectureDate;
+                                        try {
+                                            if (Array.isArray(date)) {
+                                                const [year, month, day] = date;
+                                                return new Date(year, month - 1, day).toLocaleDateString('vi-VN');
+                                            } else {
+                                                return new Date(date + 'T00:00:00').toLocaleDateString('vi-VN');
+                                            }
+                                        } catch (error) {
+                                            return 'Invalid Date';
+                                        }
+                                    })()})`}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </details>
+            </div>
             
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
