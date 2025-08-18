@@ -106,14 +106,20 @@ const RecruitmentModal = ({ visible, onCancel }) => {
     } catch (err) {
       console.error('Error submitting application:', err);
       
-      // Xử lý thông báo lỗi cơ bản
-      let errorMessage = `Không thể gửi đơn ứng tuyển: ${err.response?.data?.message || err.message}`;
-
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.message) {
+      // Chỉ hiển thị thông báo lỗi từ backend, không hiển thị thông báo mặc định
+      let errorMessage = 'Không thể gửi đơn ứng tuyển';
+      
+      if (err.response?.data) {
+        // Ưu tiên message từ backend
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error;
+        }
+      } else if (err.message && !err.message.includes('CV file is required')) {
+        // Chỉ hiển thị message từ frontend nếu không phải lỗi CV
         errorMessage = err.message;
       }
 
