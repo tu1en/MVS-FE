@@ -48,13 +48,55 @@ const TeacherLeaveNotices = () => {
     try {
       setLoading(true);
       const response = await api.get('/teacher/leave-notices');
-      setLeaveNotices(response.data || []);
+      console.log('Teacher leave notices response:', response.data);
+      if (response.data?.length > 0) {
+        console.log('First notice createdAt:', response.data[0].createdAt);
+        console.log('First notice full object:', response.data[0]);
+        console.log('Student field:', response.data[0].student);
+        console.log('StudentName field:', response.data[0].studentName);
+      }
+      
+      // Enrich data with student names from API
+      const enrichedNotices = await Promise.all(
+        (response.data || []).map(async (notice) => {
+          if (!notice.studentName) {
+            try {
+              // Try to get student name from user API
+              const studentResponse = await api.get(`/users/${notice.studentId}`);
+              const student = studentResponse.data;
+              notice.studentName = student?.fullName || student?.name || `Học sinh ID: ${notice.studentId}`;
+            } catch (error) {
+              console.warn(`Could not fetch student name for ID ${notice.studentId}:`, error);
+              notice.studentName = `Học sinh ID: ${notice.studentId}`;
+            }
+          }
+          return notice;
+        })
+      );
+      setLeaveNotices(enrichedNotices || []);
     } catch (error) {
       console.error('Error loading leave notices:', error);
       message.error('Không thể tải danh sách thông báo nghỉ học');
       setLeaveNotices([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to format LocalDateTime array from Java to readable date
+  const formatCreatedAt = (createdAtArray) => {
+    try {
+      if (Array.isArray(createdAtArray) && createdAtArray.length >= 6) {
+        // Java LocalDateTime array format: [year, month, day, hour, minute, second, nano]
+        const [year, month, day, hour, minute, second] = createdAtArray;
+        // Note: month is 1-based in Java, but 0-based in JavaScript Date
+        const date = new Date(year, month - 1, day, hour, minute, second);
+        return moment(date).format('DD/MM/YYYY HH:mm');
+      }
+      return 'Chưa xác định';
+    } catch (error) {
+      console.error('Error formatting createdAt:', error);
+      return 'Chưa xác định';
     }
   };
 
@@ -242,7 +284,7 @@ const TeacherLeaveNotices = () => {
                     title={
                       <div>
                         <Space>
-                          <Text strong>{notice.studentName}</Text>
+                          <Text strong>{notice.studentName || `Học sinh ID: ${notice.studentId}`}</Text>
                           <Tag color={getLeaveTypeColor(notice.type)}>
                             {getLeaveTypeText(notice.type)}
                           </Tag>
@@ -279,7 +321,7 @@ const TeacherLeaveNotices = () => {
                         )}
                         <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
                           <UserOutlined style={{ marginRight: '4px' }} />
-                          Gửi lúc: {moment(notice.createdAt).format('DD/MM/YYYY HH:mm')}
+                          Gửi lúc: {notice.createdAt ? formatCreatedAt(notice.createdAt) : 'Chưa xác định'}
                         </div>
                       </div>
                     }
@@ -315,7 +357,7 @@ const TeacherLeaveNotices = () => {
               <Col span={12}>
                 <Text strong>Học sinh:</Text>
                 <br />
-                <Text>{selectedNotice.studentName}</Text>
+                <Text>{selectedNotice.studentName || `Học sinh ID: ${selectedNotice.studentId}`}</Text>
               </Col>
               <Col span={12}>
                 <Text strong>Loại thông báo:</Text>
@@ -369,7 +411,7 @@ const TeacherLeaveNotices = () => {
                 <Text strong>Thông tin gửi:</Text>
                 <br />
                 <Text type="secondary">
-                  Gửi lúc: {moment(selectedNotice.createdAt).format('DD/MM/YYYY HH:mm')}
+                  Gửi lúc: {selectedNotice.createdAt ? formatCreatedAt(selectedNotice.createdAt) : 'Chưa xác định'}
                 </Text>
                 {selectedNotice.ackAt && (
                   <>

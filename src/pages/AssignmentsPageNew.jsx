@@ -540,10 +540,85 @@ function AssignmentsPageNew() {
     if (!selectedAssignment) return;
     
     try {
-      // Create form data for file upload
-      const formData = new FormData();
+      // Kiểm tra file hiện tại nếu có
+      const currentSubmission = submissions[selectedAssignment.id];
+      const currentFile = currentSubmission?.fileSubmissionUrl;
+      
+      // Nếu có file mới và có file cũ, hiển thị thông báo ghi đè
+      if (fileList.length > 0 && currentFile) {
+        const confirmed = await new Promise((resolve) => {
+          Modal.confirm({
+            title: '🔄 Thay thế file bài làm',
+            content: (
+              <div>
+                <div style={{ marginBottom: '16px' }}>
+                  <p><strong>📎 File hiện tại:</strong></p>
+                  <p style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f0f0f0', 
+                    borderRadius: '4px',
+                    fontFamily: 'monospace'
+                  }}>
+                    {currentFile.split('/').pop() || 'Không xác định tên file'}
+                  </p>
+                </div>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <p><strong>📤 File mới:</strong></p>
+                  <p style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#e6f7ff', 
+                    borderRadius: '4px',
+                    fontFamily: 'monospace'
+                  }}>
+                    {fileList[0].name}
+                  </p>
+                </div>
+                
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: '#fff7e6', 
+                  border: '1px solid #ffd591',
+                  borderRadius: '6px',
+                  marginTop: '16px'
+                }}>
+                  <p style={{ margin: 0, color: '#d46b08' }}>
+                    ⚠️ <strong>Lưu ý quan trọng:</strong> File cũ sẽ bị thay thế hoàn toàn và không thể khôi phục!
+                  </p>
+                </div>
+              </div>
+            ),
+            okText: '✅ Đồng ý thay thế',
+            cancelText: '❌ Hủy bỏ',
+            okButtonProps: { 
+              style: { backgroundColor: '#ff4d4f', borderColor: '#ff4d4f' } 
+            },
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false)
+          });
+        });
+        
+        if (!confirmed) {
+          message.info('Giữ nguyên file cũ, không thay đổi gì');
+          return;
+        }
+      }
+      
+      // Tiến hành upload và submit
+      let fileUrl = null;
       if (fileList.length > 0) {
+        // Create form data for file upload
+        const formData = new FormData();
         formData.append('file', fileList[0].originFileObj);
+        
+        // Upload file mới
+        const uploadResult = await AssignmentService.uploadFile(formData);
+        fileUrl = uploadResult.fileUrl;
+        
+        // Thông báo nếu đã thay thế file
+        if (currentFile) {
+          message.success(`Đã thay thế file cũ bằng: ${fileList[0].name}`);
+        }
       }
       
       const submissionData = {
@@ -552,13 +627,6 @@ function AssignmentsPageNew() {
         comment: submissionComment,
         submittedAt: new Date().toISOString()
       };
-      
-      // Call service to upload file first if there's a file
-      let fileUrl = null;
-      if (fileList.length > 0) {
-        const uploadResult = await AssignmentService.uploadFile(formData);
-        fileUrl = uploadResult.fileUrl;
-      }
       
       // Add file URL to submission data if a file was uploaded
       if (fileUrl) {

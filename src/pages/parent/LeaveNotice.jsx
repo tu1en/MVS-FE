@@ -1,38 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Form, 
-  Radio, 
-  DatePicker, 
-  TimePicker, 
-  Select, 
-  Input, 
-  Button, 
-  Upload, 
-  List, 
-  Badge, 
-  Typography, 
-  Row, 
-  Col, 
-  Modal, 
-  message,
-  Tag,
-  Divider,
-  Empty,
-  Table,
-  Space
-} from 'antd';
-import { 
-  PlusOutlined, 
-  UploadOutlined, 
-  CalendarOutlined, 
+import {
+  CalendarOutlined,
   ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  DeleteOutlined,
-  EyeOutlined
+  EyeOutlined,
+  PlusOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Empty,
+  Form,
+  Input,
+  List,
+  message,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  TimePicker,
+  Typography,
+  Upload
+} from 'antd';
 import dayjs from 'dayjs';
+import React, { useEffect, useState } from 'react';
 import ChildSwitcher from '../../components/parent/ChildSwitcher';
 import { parentAPI } from '../../services/api';
 
@@ -59,6 +55,7 @@ const LeaveNotice = () => {
   const [classSessions, setClassSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [dateRange, setDateRange] = useState([dayjs(), dayjs().add(7, 'days')]);
+  const [fileList, setFileList] = useState([]);
   const { RangePicker } = DatePicker;
 
   // Load children and leave notices data
@@ -69,10 +66,47 @@ const LeaveNotice = () => {
 
   const loadChildren = async () => {
     try {
+      console.log('Loading children...');
       const response = await parentAPI.getChildren();
-      setChildren(response.data || []);
+      console.log('Children response:', response);
+      console.log('Children data:', response.data);
+      
+      // Debug: Log each child's structure
       if (response.data && response.data.length > 0) {
-        setSelectedChildId(response.data[0].id);
+        console.log('First child structure:', response.data[0]);
+        console.log('First child keys:', Object.keys(response.data[0]));
+        console.log('First child values:', Object.values(response.data[0]));
+      }
+      
+      // Transform data to ensure required fields exist
+      const transformedChildren = (response.data || []).map(child => ({
+        ...child, // Keep all other fields FIRST
+        id: child.studentId, // Use studentId instead of relationship id - OVERRIDE after spread
+        studentId: child.studentId, // Keep original studentId for API calls
+        relationshipId: child.id, // Keep relationship ID for reference
+        name: child.student?.fullName || child.student?.name || `Học sinh ${child.studentId}`,
+        grade: child.student?.grade || child.student?.class || 'Chưa xác định',
+        teacherName: child.student?.teacherName || child.student?.teacher || 'Chưa xác định',
+        avatar: child.student?.avatar || child.student?.profilePicture,
+        relationType: child.relationType,
+        relationDisplayName: child.relationDisplayName
+      }));
+      
+      console.log('Transformed children:', transformedChildren);
+      
+      setChildren(transformedChildren);
+      if (transformedChildren.length > 0) {
+        const selectedId = transformedChildren[0].id;
+        const originalId = transformedChildren[0].relationshipId;
+        console.log('Setting selected child ID:', selectedId, '(was relationship ID:', originalId, ')');
+        console.log('First child after transform:', {
+          id: transformedChildren[0].id,
+          studentId: transformedChildren[0].studentId,
+          relationshipId: transformedChildren[0].relationshipId
+        });
+        setSelectedChildId(selectedId);
+      } else {
+        console.log('No children data found');
       }
     } catch (error) {
       console.error('Error loading children:', error);
@@ -158,6 +192,17 @@ const LeaveNotice = () => {
     try {
       setLoading(true);
       
+      // Validate required fields
+      if (!selectedChildId) {
+        message.error('Vui lòng chọn con em');
+        return;
+      }
+      
+      if (!values.reasonCode) {
+        message.error('Vui lòng chọn lý do nghỉ học');
+        return;
+      }
+      
       // Validate business rules
       const selectedDate = dayjs(values.date);
       const today = dayjs();
@@ -169,19 +214,28 @@ const LeaveNotice = () => {
 
       // Prepare notice data
       const noticeData = {
-        studentId: selectedChildId,
+        studentId: selectedChildId, // This should be the actual student ID, not relationship ID
         type: noticeType,
         date: selectedDate.format('YYYY-MM-DD'),
         reasonCode: values.reasonCode,
-        note: values.note || '',
-        attachments: values.attachments?.fileList || []
+        note: values.note || ''
       };
 
       if (noticeType === 'LATE') {
-        noticeData.arriveAt = values.arriveAt.format('HH:mm');
+        if (!values.arriveAt) {
+          message.error('Vui lòng chọn giờ đến trường');
+          return;
+        }
+        noticeData.arriveAt = values.arriveAt.format('HH:mm:ss');
       } else if (noticeType === 'EARLY') {
-        noticeData.leaveAt = values.leaveAt.format('HH:mm');
+        if (!values.leaveAt) {
+          message.error('Vui lòng chọn giờ về');
+          return;
+        }
+        noticeData.leaveAt = values.leaveAt.format('HH:mm:ss');
       }
+
+      console.log('Sending notice data:', noticeData);
 
       // Call real API
       const response = await parentAPI.createLeaveNotice(noticeData);
@@ -189,7 +243,6 @@ const LeaveNotice = () => {
       message.success('Thông báo nghỉ học đã được gửi thành công');
       form.resetFields();
       setNoticeType('FULL_DAY');
-      setUploadedFile(null);
       setFileList([]);
       
       // Reload leave notices
@@ -434,6 +487,8 @@ const LeaveNotice = () => {
                   listType="text"
                   beforeUpload={() => false}
                   multiple
+                  fileList={fileList}
+                  onChange={({ fileList }) => setFileList(fileList)}
                 >
                   <Button icon={<UploadOutlined />}>
                     Tải lên tài liệu (nếu có)

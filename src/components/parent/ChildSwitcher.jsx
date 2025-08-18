@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, Select, Avatar, Typography, Row, Col, Tag } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
+import { Avatar, Card, Col, Row, Select, Tag, Typography } from 'antd';
+import React from 'react';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -38,25 +38,32 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
               }}
               size="large"
               placeholder="Chọn học sinh"
+              disabled={children.length === 0}
             >
-              {children.map(child => (
-                <Option key={child.id} value={child.id}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar 
-                      size="small" 
-                      icon={<UserOutlined />} 
-                      src={child.avatar}
-                      style={{ marginRight: '8px' }}
-                    />
-                    {child.name}
-                  </div>
+              {children.length > 0 ? (
+                children.map(child => (
+                  <Option key={child.id} value={child.id}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Avatar 
+                        size="small" 
+                        icon={<UserOutlined />} 
+                        src={child.avatar}
+                        style={{ marginRight: '8px' }}
+                      />
+                      {child.name || child.fullName || child.studentName || `Học sinh ${child.id}`}
+                    </div>
+                  </Option>
+                ))
+              ) : (
+                <Option value="" disabled>
+                  Không có dữ liệu con em
                 </Option>
-              ))}
+              )}
             </Select>
           </div>
         </Col>
 
-        {selectedChild && (
+        {selectedChild ? (
           <Col xs={24} sm={12} md={16}>
             <Row gutter={[16, 8]} align="middle">
               <Col xs={24} md={12}>
@@ -77,7 +84,7 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
                       fontWeight: 'bold',
                       display: 'block'
                     }}>
-                      {selectedChild.name}
+                      {selectedChild.name || selectedChild.fullName || selectedChild.studentName || `Học sinh ${selectedChild.id}`}
                     </Text>
                     <Tag 
                       color="rgba(255,255,255,0.2)" 
@@ -87,7 +94,7 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
                         borderRadius: '12px'
                       }}
                     >
-                      {selectedChild.grade}
+                      {selectedChild.relationDisplayName || selectedChild.relationType || 'Chưa xác định'}
                     </Tag>
                   </div>
                 </div>
@@ -100,41 +107,53 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
                     fontSize: '12px',
                     display: 'block'
                   }}>
-                    Giáo viên chủ nhiệm:
+                    Quan hệ:
                   </Text>
                   <Text style={{ 
                     color: 'white', 
                     fontSize: '14px',
                     fontWeight: '500'
                   }}>
-                    {selectedChild.teacherName}
+                    {selectedChild.relationDisplayName || selectedChild.relationType || 'Chưa xác định'}
                   </Text>
                 </div>
               </Col>
             </Row>
           </Col>
-        )}
-      </Row>
-
-      {children.length > 1 && (
-        <Row style={{ marginTop: '12px' }}>
-          <Col span={24}>
-            <div style={{ 
-              display: 'flex', 
-              flexWrap: 'wrap', 
-              gap: '8px',
-              justifyContent: 'flex-end'
-            }}>
+        ) : (
+          <Col xs={24} sm={12} md={16}>
+            <div style={{ color: 'rgba(255,255,255,0.9)' }}>
               <Text style={{ 
-                color: 'rgba(255,255,255,0.7)', 
-                fontSize: '12px'
+                color: 'rgba(255,255,255,0.8)', 
+                fontSize: '12px',
+                display: 'block'
               }}>
-                Quản lý {children.length} học sinh
+                Vui lòng chọn con em để xem thông tin
               </Text>
             </div>
           </Col>
-        </Row>
-      )}
+        )}
+      </Row>
+
+      <Row style={{ marginTop: '12px' }}>
+        <Col span={24}>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '8px',
+            justifyContent: 'flex-end'
+          }}>
+            <Text style={{ 
+              color: 'rgba(255,255,255,0.7)', 
+              fontSize: '12px'
+            }}>
+              {children.length === 0 ? 'Chưa có dữ liệu con em' : 
+               children.length === 1 ? 'Quản lý 1 học sinh' : 
+               `Quản lý ${children.length} học sinh`}
+            </Text>
+          </div>
+        </Col>
+      </Row>
     </Card>
   );
 };

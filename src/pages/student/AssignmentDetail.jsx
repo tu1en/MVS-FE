@@ -12,13 +12,13 @@ import { Button, Card, Divider, Form, Input, Space, Spin, Tag, Typography, Uploa
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import WysiwygEditor from '../../components/common/WysiwygEditor';
 import { ROLE } from '../../constants/constants';
 import { useAuth } from '../../context/AuthContext';
 import AssignmentService from '../../services/assignmentService';
 import FileUploadService from '../../services/fileUploadService';
 import SubmissionService from '../../services/submissionService';
 import UTF8EncodingFixer from '../../utils/utf8EncodingFixer';
-import WysiwygEditor from '../../components/common/WysiwygEditor';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -421,8 +421,8 @@ const AssignmentDetail = () => {
                                 onChange={setRichTextContent}
                                 placeholder="Nhập nội dung bài làm với formatting, hình ảnh, file đính kèm..."
                                 height="300px"
-                                allowFileUpload={true}
-                                allowImageUpload={true}
+                                // allowFileUpload={true}
+                                // allowImageUpload={true}
                                 className="w-full"
                             />
                         </Form.Item>

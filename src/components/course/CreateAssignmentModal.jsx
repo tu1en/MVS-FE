@@ -218,8 +218,8 @@ const CreateAssignmentModal = ({ visible, classData, onCancel, onSuccess }) => {
                   onChange={(content) => handleFieldChange('richTextContent', content)}
                   placeholder="Nhập hướng dẫn chi tiết với formatting, hình ảnh, file đính kèm..."
                   height="250px"
-                  allowFileUpload={true}
-                  allowImageUpload={true}
+                  // allowFileUpload={true}
+                  // allowImageUpload={true}
                   className="w-full"
                 />
               </div>

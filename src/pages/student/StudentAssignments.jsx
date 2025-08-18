@@ -1,28 +1,28 @@
 import {
-    BookOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    DownloadOutlined,
-    ExclamationCircleOutlined,
-    FileTextOutlined,
-    UploadOutlined
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Descriptions,
-    Divider,
-    Empty,
-    Form,
-    Input,
-    message,
-    Modal,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Typography,
-    Upload
+  Button,
+  Card,
+  Descriptions,
+  Divider,
+  Empty,
+  Form,
+  Input,
+  message,
+  Modal,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+  Upload
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
@@ -517,8 +517,8 @@ const StudentAssignments = () => {
                   onChange={setRichTextContent}
                   placeholder="Nhập nội dung bài làm với formatting, hình ảnh, file đính kèm..."
                   height="300px"
-                  allowFileUpload={true}
-                  allowImageUpload={true}
+                  // allowFileUpload={true}
+                  // allowImageUpload={true}
                   className="w-full"
                 />
               </Form.Item>

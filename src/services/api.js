@@ -954,11 +954,11 @@ export const parentAPI = {
    */
   createLeaveNotice: async (noticeData) => {
     try {
+      // Use the new general endpoint that accepts studentId in request body
       const response = await apiClient.post('/parent/leave-notices', noticeData);
       return response;
     } catch (error) {
       console.error('Error creating leave notice:', error);
-      throw error;
     }
   },
 
