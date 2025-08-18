@@ -966,6 +966,7 @@ const RecruitmentManagement = () => {
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { title: 'Địa chỉ', dataIndex: 'address', render: (text) => <span className="vietnamese-text">{text || '-'}</span> },
     { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
     { 
       title: 'Ngày ứng tuyển', 

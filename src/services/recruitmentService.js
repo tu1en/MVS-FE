@@ -21,18 +21,8 @@ export const recruitmentService = {
       console.error('❌ Error submitting application:', error);
       console.error('❌ Error response:', error.response?.data);
       
-      // Xử lý thông báo lỗi từ backend
-      let errorMessage = 'Có lỗi xảy ra khi gửi đơn ứng tuyển!';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data) {
-        errorMessage = error.response.data;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      message.error(errorMessage);
+      // Không hiển thị thông báo lỗi ở đây, để component xử lý
+      // Chỉ log lỗi và throw error để component có thể xử lý
       throw error;
     }
   },

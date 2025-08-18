@@ -59,8 +59,13 @@ const ChangePassword = () => {
       return;
     }
     
-    if (newPassword.length < 6) {
-      setMessage('Mật khẩu mới phải có ít nhất 6 ký tự');
+    if (newPassword.length < 8) {
+      setMessage('Mật khẩu mới phải có ít nhất 8 ký tự');
+      return;
+    }
+    
+    if (!/[A-Z]/.test(newPassword)) {
+      setMessage('Mật khẩu mới phải có ít nhất 1 ký tự viết hoa');
       return;
     }
     
@@ -135,8 +140,18 @@ const ChangePassword = () => {
             onChange={(e) => setNewPassword(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
           />
-          {newPassword === oldPassword && newPassword && (
-            <p className="text-sm text-red-500 mt-1">Mật khẩu mới không được trùng với mật khẩu cũ</p>
+          {newPassword && (
+            <div className="text-sm text-gray-600 mt-1 space-y-1">
+              <div className={`${newPassword.length >= 8 ? 'text-green-600' : 'text-red-500'}`}>
+                ✓ Mật khẩu phải có ít nhất 8 ký tự
+              </div>
+              <div className={`${/[A-Z]/.test(newPassword) ? 'text-green-600' : 'text-red-500'}`}>
+                ✓ Phải có ít nhất 1 ký tự viết hoa
+              </div>
+              <div className={`${newPassword !== oldPassword ? 'text-green-600' : 'text-red-500'}`}>
+                ✓ Không được trùng với mật khẩu cũ
+              </div>
+            </div>
           )}
         </div>
         
