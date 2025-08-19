@@ -510,7 +510,11 @@ const RecruitmentManagement = () => {
         message.success('Tạo vị trí thành công!');
       }
       setShowPositionModal(false);
-      fetchPositions();
+      // Cập nhật cả vị trí và kế hoạch để số lượng được cập nhật ngay lập tức
+      await Promise.all([
+        fetchPositions(),
+        fetchPlans()
+      ]);
     } catch (err) {
       // Xử lý lỗi validation từ backend
       if (err.response && err.response.status === 400) {
@@ -525,7 +529,11 @@ const RecruitmentManagement = () => {
     try {
       await axiosInstance.delete(`/job-positions/${id}`);
       message.success('Xóa vị trí thành công!');
-      fetchPositions();
+      // Cập nhật cả vị trí và kế hoạch để số lượng được cập nhật ngay lập tức
+      await Promise.all([
+        fetchPositions(),
+        fetchPlans()
+      ]);
     } catch (err) {
       message.error('Không thể xóa vị trí!');
     }
@@ -927,8 +935,32 @@ const RecruitmentManagement = () => {
       width: 80,
       render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
     },
-    { title: 'Vị trí', dataIndex: 'title', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Mô tả', dataIndex: 'description', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Vị trí', 
+      dataIndex: 'title', 
+      width: 200,
+      render: (text) => (
+        <span className="vietnamese-text" title={text}>
+          {text && text.length > 20 ? `${text.substring(0, 20)}...` : text}
+        </span>
+      )
+    },
+    { 
+      title: 'Mô tả', 
+      dataIndex: 'description', 
+      width: 400,
+      render: (text) => {
+        if (!text) return <span className="vietnamese-text">-</span>;
+        if (text.length > 250) {
+          return (
+            <span className="vietnamese-text" title={text}>
+              {text.substring(0, 250)}...
+            </span>
+          );
+        }
+        return <span className="vietnamese-text">{text}</span>;
+      }
+    },
     { 
       title: 'Mức lương', 
       dataIndex: 'salaryRange', 
@@ -967,7 +999,16 @@ const RecruitmentManagement = () => {
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Số điện thoại', dataIndex: 'phoneNumber', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Địa chỉ', dataIndex: 'address', render: (text) => <span className="vietnamese-text">{text || '-'}</span> },
-    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Vị trí', 
+      dataIndex: 'jobTitle', 
+      width: 200,
+      render: (text) => (
+        <span className="vietnamese-text" title={text}>
+          {text && text.length > 20 ? `${text.substring(0, 20)}...` : text}
+        </span>
+      )
+    },
     { 
       title: 'Ngày ứng tuyển', 
       dataIndex: 'createdAt',
@@ -1039,7 +1080,16 @@ const RecruitmentManagement = () => {
     },
     { title: 'Họ tên', dataIndex: 'fullName', render: (text) => <span className="vietnamese-text">{text}</span> },
     { title: 'Email', dataIndex: 'email', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Vị trí', 
+      dataIndex: 'jobTitle', 
+      width: 200,
+      render: (text) => (
+        <span className="vietnamese-text" title={text}>
+          {text && text.length > 20 ? `${text.substring(0, 20)}...` : text}
+        </span>
+      )
+    },
     {
       title: 'Trạng thái lịch',
       dataIndex: 'hasSchedule',
@@ -1181,7 +1231,16 @@ const RecruitmentManagement = () => {
       render: (_, __, index) => <span className="vietnamese-text">{index + 1}</span>
     },
     { title: 'Họ tên', dataIndex: 'applicantName', render: (text) => <span className="vietnamese-text">{text}</span> },
-    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Vị trí', 
+      dataIndex: 'jobTitle', 
+      width: 200,
+      render: (text) => (
+        <span className="vietnamese-text" title={text}>
+          {text && text.length > 20 ? `${text.substring(0, 20)}...` : text}
+        </span>
+      )
+    },
     { 
       title: 'Ngày phỏng vấn', 
       dataIndex: 'startTime', 
@@ -1307,7 +1366,16 @@ const RecruitmentManagement = () => {
         </span>
       )
     },
-    { title: 'Vị trí', dataIndex: 'jobTitle', render: (text) => <span className="vietnamese-text">{text}</span> },
+    { 
+      title: 'Vị trí', 
+      dataIndex: 'jobTitle', 
+      width: 200,
+      render: (text) => (
+        <span className="vietnamese-text" title={text}>
+          {text && text.length > 20 ? `${text.substring(0, 20)}...` : text}
+        </span>
+      )
+    },
     { 
       title: 'Ngày phỏng vấn', 
       dataIndex: 'startTime', 
@@ -1506,8 +1574,14 @@ const RecruitmentManagement = () => {
           <Form.Item name="title" label="Tên vị trí" rules={[{ required: true, message: 'Vui lòng nhập tên vị trí' }, { max: 50, message: 'Vị trí tối đa 50 ký tự!' }]}>
             <Input className="vietnamese-text" maxLength={50} />
           </Form.Item>
-          <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả' }, { max: 200, message: 'Mô tả tối đa 200 ký tự!' }]}>
-            <Input.TextArea className="vietnamese-text" maxLength={200} />
+          <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả' }, { max: 500, message: 'Mô tả tối đa 500 ký tự!' }]}>
+            <Input.TextArea 
+              className="vietnamese-text" 
+              maxLength={500} 
+              rows={4}
+              style={{ minHeight: '120px' }}
+              placeholder="Nhập mô tả chi tiết về vị trí công việc..."
+            />
           </Form.Item>
           <Form.Item name="contractType" hidden>
             <Input value="PART_TIME" />
