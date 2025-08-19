@@ -346,7 +346,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 justify-center items-start pt-8 px-4">
+    <div 
+      className="flex min-h-screen justify-center items-start pt-8 px-4"
+      style={{
+        backgroundImage: `url('/loginbg.jpg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <img
@@ -354,7 +362,7 @@ export default function LoginScreen() {
             src={process.env.PUBLIC_URL + '/logo/mvs.jpg'}
             className="mx-auto h-64 w-auto"
           />
-          <h2 className="mt-6 text-2xl font-bold tracking-tight text-gray-900">
+          <h2 className="mt-6 text-2xl font-bold tracking-tight text-white">
             Chào mừng bạn đến với Minh Việt Education
           </h2>
         </div>

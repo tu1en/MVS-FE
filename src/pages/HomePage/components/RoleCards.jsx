@@ -82,20 +82,20 @@ export default function RoleCards() {
   return (
     <section className="py-20 px-6 w-full">
       <div className="text-center mb-12">
-        <Title level={2} className="text-3xl font-bold mb-4">
+        <Title level={2} className="text-3xl font-bold mb-4" style={{ color: 'white' }}>
           Tin Tức Giáo Dục
         </Title>
-        <Text className="text-gray-600 text-lg">
+        <Text className="text-lg" style={{ color: 'white' }}>
           Cập nhật những tin tức mới nhất về giáo dục và công nghệ
         </Text>
       </div>
       {loading ? (
         <div className="text-center">
           <Spin size="large" />
-          <p className="mt-4 text-gray-600">Đang tải tin tức...</p>
+          <p className="mt-4" style={{ color: 'white' }}>Đang tải tin tức...</p>
         </div>
       ) : blogs.length === 0 ? (
-        <div className="text-center text-gray-500">Chưa có tin tức nào.</div>
+        <div className="text-center" style={{ color: 'white' }}>Chưa có tin tức nào.</div>
       ) : (
         <Row gutter={[24, 24]}>
           {blogs.map((blog) => {

@@ -1,26 +1,52 @@
 import HomeBanner from './components/HomeBanner';
 import RoleCards from './components/RoleCards';
-import FeatureSection from './components/FeatureSection';
 import Footer from '../../components/Footer';
 import RecruitmentModal from '../../components/RecruitmentModal';
 import { useSelector } from 'react-redux';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from 'antd';
 
 export default function HomePage() {
   const { isLogin } = useSelector((state) => state.auth);
   const [showRecruitModal, setShowRecruitModal] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState('blackboard.jpg');
 
   const openRecruitModal = () => setShowRecruitModal(true);
   const closeRecruitModal = () => setShowRecruitModal(false);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const windowHeight = window.innerHeight;
+      
+      // Khi cuộn xuống quá 50% chiều cao màn hình, chuyển sang blackboard2.jpg
+      if (scrollPosition > windowHeight * 0.5) {
+        setBackgroundImage('blackboard2.jpg');
+      } else {
+        setBackgroundImage('blackboard.jpg');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <div className="w-full min-h-screen flex flex-col">
+    <div 
+      className="w-full min-h-screen flex flex-col"
+      style={{
+        backgroundImage: `url('/${backgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        transition: 'background-image 0.5s ease-in-out'
+      }}
+    >
       <div className="mx-auto px-4 sm:px-6 max-w-screen-xl flex-1">
         <HomeBanner />
         <section className="py-16 text-center">
-          <h2 className="text-3xl font-bold mb-6">Tại sao chọn chúng tôi?</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold mb-6 text-white">Tại sao chọn chúng tôi?</h2>
+          <p className="text-white max-w-2xl mx-auto text-lg">
             Hệ thống học trực tuyến giúp bạn quản lý điểm, bài tập, điểm danh và báo cáo một cách hiện đại, nhanh chóng và minh bạch.
           </p>
         </section>
@@ -33,7 +59,6 @@ export default function HomePage() {
           </div>
         )}
         <RoleCards />
-        <FeatureSection />
       </div>
       {!isLogin && <Footer />}
       {/* Modal tuyển dụng */}

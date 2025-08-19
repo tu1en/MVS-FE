@@ -127,7 +127,7 @@ export default function ParentDashboard() {
           <Card hoverable onClick={() => navigate('/parent/children') }>
             <div className="text-center">
               <TeamOutlined className="text-4xl text-blue-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Con em của tôi</h2>
+              <h2 className="text-xl font-semibold mb-2">Thông tin con cái</h2>
               <Text>Theo dõi tiến độ học tập và điểm danh</Text>
             </div>
           </Card>
