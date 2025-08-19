@@ -46,6 +46,7 @@ const ContractManagement = () => {
   const [candidateForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [canEditHourly, setCanEditHourly] = useState(false);
 
   // Bộ lọc trạng thái hợp đồng
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -234,7 +235,6 @@ const ContractManagement = () => {
         contractType: 'TEACHER',
         salary: finalSalary, // Main salary field for compatibility
         workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
-        status: values.status || 'ACTIVE',
         contractTerms: values.contractTerms || 'Điều khoản hợp đồng chuẩn',
         comments: values.comments || 'Hợp đồng được tạo từ ứng viên đã duyệt',
         // Chỉ giữ lương theo giờ
@@ -278,14 +278,34 @@ const ContractManagement = () => {
     const filterData = (contracts) => {
       let result = contracts;
 
-      // Lọc theo từ khóa tìm kiếm (tên hoặc 4 số cuối ID)
+      // Lọc theo từ khóa tìm kiếm (tên hoặc 9 ký tự cuối ID)
       if (searchValue) {
         result = result.filter(contract => {
           const fullName = contract.fullName?.toLowerCase() || '';
           const contractId = contract.contractId?.toString() || '';
-          const last4Digits = contractId.slice(-4);
-          const searchLower = searchValue.toLowerCase();
-          return fullName.includes(searchLower) || last4Digits.includes(searchLower);
+          const idLower = contractId.toLowerCase();
+          const last9Lower = idLower.slice(-9);
+          const searchLower = searchValue.trim().toLowerCase();
+          const afterPrefixLower = idLower.startsWith(CONTRACT_ID_PREFIX.toLowerCase())
+            ? idLower.slice(CONTRACT_ID_PREFIX.length)
+            : idLower;
+          const startsWithDigit = /^\d/.test(searchLower);
+
+          // Nếu nhập bắt đầu bằng số, chỉ lọc theo tiền tố của ID hợp đồng
+          if (startsWithDigit) {
+            return (
+              idLower.startsWith(searchLower) ||
+              afterPrefixLower.startsWith(searchLower) ||
+              last9Lower.startsWith(searchLower)
+            );
+          }
+
+          // Mặc định: theo tên (chứa) hoặc ID (bắt đầu)
+          return (
+            fullName.includes(searchLower) ||
+            idLower.startsWith(searchLower) ||
+            last9Lower.startsWith(searchLower)
+          );
         });
       }
 
@@ -325,6 +345,10 @@ const ContractManagement = () => {
   const handleEditContract = (record) => {
     setEditingContract(record);
     setEditModalVisible(true);
+    // Chỉ cho phép sửa lương theo giờ NGAY SAU KHI KÝ LẠI: status=ACTIVE và startDate = hôm nay
+    const start = record?.startDate ? moment(record.startDate) : null;
+    const justRenewed = record?.status === 'ACTIVE' && start && start.isSame(moment(), 'day');
+    setCanEditHourly(!!justRenewed);
 
     const workShifts = Array.isArray(record.workShifts)
       ? record.workShifts
@@ -380,6 +404,11 @@ const ContractManagement = () => {
         workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
         workSchedule: values.workSchedule || ''
       };
+
+      // Chỉ gửi hourlySalary nếu được phép (vừa ký lại xong)
+      if (canEditHourly) {
+        payload.hourlySalary = values.hourlySalary;
+      }
 
       await axiosInstance.put(`/contracts/${editingContract.id}`, payload);
       message.success('Cập nhật hợp đồng thành công!');
@@ -523,6 +552,10 @@ const ContractManagement = () => {
             color = 'red';
             text = 'Hết hạn';
             break;
+          case 'PENDING':
+            color = 'geekblue';
+            text = 'Chưa có hiệu lực';
+            break;
           default:
             color = 'blue';
             text = status;
@@ -642,7 +675,7 @@ const ContractManagement = () => {
       <Card title="Quản lý Hợp đồng" className="contract-card">
         <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Input.Search
-            placeholder="Tìm kiếm theo tên hoặc 4 số cuối ID hợp đồng"
+            placeholder="Tìm kiếm theo tên hoặc 9 ký tự cuối ID hợp đồng"
             value={searchText}
             onChange={(e) => handleSearch(e.target.value)}
             onSearch={handleSearch}
@@ -658,6 +691,7 @@ const ContractManagement = () => {
             <Option value="ACTIVE">Còn hạn</Option>
             <Option value="NEAR_EXPIRY">Sắp hết hạn</Option>
             <Option value="EXPIRED">Hết hạn</Option>
+            <Option value="PENDING">Chưa có hiệu lực</Option>
           </Select>
         </div>
         <Tabs defaultActiveKey="teachers" className="contract-tabs">
@@ -853,7 +887,10 @@ const ContractManagement = () => {
             />
           </Form.Item>
 
-          <Form.Item name="hourlySalary" label="Lương theo giờ">
+          <Form.Item 
+            name="hourlySalary" 
+            label="Lương theo giờ"
+          >
             <InputNumber
               style={{ 
                 width: '100%',
@@ -863,10 +900,19 @@ const ContractManagement = () => {
                 fontWeight: 'bold'
               }}
               placeholder="Lấy từ duyệt ứng viên"
-              readOnly
-              disabled
+              readOnly={!canEditHourly}
+              disabled={!canEditHourly}
+              controls={false}
+              precision={0}
+              inputMode="numeric"
+              onKeyDown={(e) => {
+                // Chặn các phím không phải số, CHO PHÉP dấu phẩy "," để người dùng gõ phân tách
+                if (['e','E','+','-','.','.'].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
               formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-              parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+              parser={value => value ? value.replace(/[^0-9]/g, '') : ''}
             />
           </Form.Item>
 
