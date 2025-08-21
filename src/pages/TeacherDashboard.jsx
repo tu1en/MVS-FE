@@ -2,13 +2,11 @@ import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, File
 import { App, Card, Col, Row, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBackButton } from '../hooks/useBackButton';
 import api from '../services/api';
 
 export default function TeacherDashboard() {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  useBackButton(); // Thêm hook xử lý nút back
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     classStats: { totalClasses: 0, activeClasses: 0, totalStudents: 0 },

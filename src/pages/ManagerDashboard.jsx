@@ -3,12 +3,10 @@ import { Card, Col, Row, Statistic, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
-import { useBackButton } from '../hooks/useBackButton';
 import { managerService } from '../services/managerService';
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
-  useBackButton(); // Thêm hook xử lý nút back
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalCourses: 0,

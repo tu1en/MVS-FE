@@ -196,27 +196,37 @@ const AccountList = () => {
                         3: 'MANAGER',
                         4: 'ADMIN',
                         5: 'ACCOUNTANT',
-                        6: 'TEACHING_ASSISTANT',
                         7: 'PARENT'
                     };
-                    role = roleIdMap[record.roleId] || 'USER';
-                }
+                    role = roleIdMap[record.roleId] || '';
+                } 
                 
                 // Debug logging
                 if (record.roleId === 7 || record.roleId === '7') {
                     console.log('Debug PARENT role:', { record, roles, roleId: record.roleId, mappedRole: role });
                 }
                 
+                // Chuẩn hóa role để hiển thị trong Select
+                // 1) Nếu nhận về 'ROLE_*' thì bỏ prefix để khớp options trong dropdown
+                if (typeof role === 'string' && role.startsWith('ROLE_')) {
+                    role = role.replace('ROLE_', '');
+                }
+                // 2) Nếu backend trả 'USER' thì coi như chưa chọn vai trò (để hiện placeholder)
+                if (role === 'USER') {
+                    role = '';
+                }
+                
                 // Nếu là admin (dòng đầu tiên), chỉ hiển thị label, không cho đổi
-                if (index === 0 && role === 'ADMIN') {
+                if (index === 0 && (role === 'ADMIN' || role === 'ROLE_ADMIN')) {
                     return <span style={{ fontWeight: 'bold' }}>{getRoleLabel(role)}</span>;
                 }
                 return (
                     <Select
-                        value={role}
+                        value={role || undefined}
+                        placeholder="Chọn vai trò"
                         style={{ width: 140 }}
                         onChange={(value) => handleRoleUpdate(record.id, value)}
-                        disabled={index === 0 && role === 'ADMIN'}
+                        disabled={index === 0 && (role === 'ADMIN' || role === 'ROLE_ADMIN')}
                     >
                         {roleOptions.map(option => (
                             <Option key={option.value} value={option.value}>{option.label}</Option>
@@ -235,7 +245,7 @@ const AccountList = () => {
                     onChange={() => handleStatusToggle(record.id, record.enabled)}
                     checkedChildren="Hoạt động"
                     unCheckedChildren="Tạm khóa"
-                    disabled={index === 0 && Array.isArray(record.roles) && record.roles[0] === 'ADMIN'}
+                    disabled={index === 0 && Array.isArray(record.roles) && (record.roles[0] === 'ADMIN' || record.roles[0] === 'ROLE_ADMIN')}
                 />
             ),
         },
@@ -250,7 +260,7 @@ const AccountList = () => {
             key: 'action',
             render: (_, record, index) => (
                 <Space size="middle">
-                    <Button type="primary" size="small" onClick={() => handleResetPassword(record.id)} disabled={index === 0 && Array.isArray(record.roles) && record.roles[0] === 'ADMIN'}>
+                    <Button type="primary" size="small" onClick={() => handleResetPassword(record.id)} disabled={index === 0 && Array.isArray(record.roles) && (record.roles[0] === 'ADMIN' || record.roles[0] === 'ROLE_ADMIN')}>
                         Đặt lại mật khẩu
                     </Button>
                 </Space>
@@ -364,6 +374,7 @@ const AccountList = () => {
                                     <Option value="ROLE_TEACHER">Giáo viên</Option>
                                     <Option value="ROLE_MANAGER">Quản lý</Option>
                                     <Option value="ROLE_ACCOUNTANT">Kế toán viên</Option>
+                                    <Option value="ROLE_PARENT">Phụ huynh</Option>
                                 </Select>
                             </Form.Item>
 

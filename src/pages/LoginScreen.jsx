@@ -103,32 +103,32 @@ export default function LoginScreen() {
       // userData.role is normalized by authService to a plain role name
       switch (userData.role) {
         case ROLE.ADMIN:
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           break;
         case ROLE.TEACHER:
-          navigate('/teacher');
+          navigate('/teacher', { replace: true });
           break;
         case ROLE.STUDENT:
-          navigate('/student');
+          navigate('/student', { replace: true });
           break;
         case ROLE.MANAGER:
-          navigate('/manager');
+          navigate('/manager', { replace: true });
           break;
         case ROLE.ACCOUNTANT:
           console.log(`Navigating to ACCOUNTANT dashboard...`);
-          navigate('/accountant');
+          navigate('/accountant', { replace: true });
           break;
         case ROLE.TEACHING_ASSISTANT:
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
-          navigate('/teaching-assistant');
+          navigate('/teaching-assistant', { replace: true });
           break;
         case ROLE.PARENT:
           console.log(`Navigating to PARENT dashboard...`);
-          navigate('/parent');
+          navigate('/parent', { replace: true });
           break;
         default:
           console.warn('Unknown role after login:', userData.role);
-          navigate('/');
+          navigate('/', { replace: true });
       }
     } catch (err) {
       console.error('Lỗi đăng nhập:', err);
@@ -206,31 +206,31 @@ export default function LoginScreen() {
       console.log(`Navigating to ${userData.role} dashboard...`);
       switch (userData.role) {
         case ROLE.ADMIN:
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           break;
         case ROLE.MANAGER:
-          navigate('/manager');
+          navigate('/manager', { replace: true });
           break;
         case ROLE.TEACHER:
-          navigate('/teacher');
+          navigate('/teacher', { replace: true });
           break;
         case ROLE.STUDENT:
-          navigate('/student');
+          navigate('/student', { replace: true });
           break;
         case ROLE.ACCOUNTANT:
           console.log(`Navigating to ACCOUNTANT dashboard...`);
-          navigate('/accountant');
+          navigate('/accountant', { replace: true });
           break;
         case ROLE.TEACHING_ASSISTANT:
           console.log(`Navigating to TEACHING_ASSISTANT dashboard...`);
-          navigate('/teaching-assistant');
+          navigate('/teaching-assistant', { replace: true });
           break;
         case ROLE.PARENT:
           console.log(`Navigating to PARENT dashboard...`);
-          navigate('/parent');
+          navigate('/parent', { replace: true });
           break;
         default:
-          navigate('/');
+          navigate('/', { replace: true });
       }
     } catch (error) {
         console.error('Google login error:', error);
@@ -346,7 +346,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 justify-center items-start pt-8 px-4">
+    <div 
+      className="flex min-h-screen justify-center items-start pt-8 px-4"
+      style={{
+        backgroundImage: `url('/loginbg.jpg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <img
@@ -354,7 +362,7 @@ export default function LoginScreen() {
             src={process.env.PUBLIC_URL + '/logo/mvs.jpg'}
             className="mx-auto h-64 w-auto"
           />
-          <h2 className="mt-6 text-2xl font-bold tracking-tight text-gray-900">
+          <h2 className="mt-6 text-2xl font-bold tracking-tight text-white">
             Chào mừng bạn đến với Minh Việt Education
           </h2>
         </div>

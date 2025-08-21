@@ -137,11 +137,19 @@ const PublicCourseDashboard = () => {
   // Loading Component
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div 
+        className="flex justify-center items-center min-h-screen"
+        style={{
+          backgroundImage: `url('/blackboard2.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-4 border-blue-500 border-t-transparent mx-auto mb-8"></div>
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">Đang tải khóa học...</h2>
-          <p className="text-gray-500">Vui lòng chờ trong giây lát</p>
+          <h2 className="text-2xl font-bold text-white mb-4">Đang tải khóa học...</h2>
+          <p className="text-white">Vui lòng chờ trong giây lát</p>
         </div>
       </div>
     );
@@ -150,7 +158,15 @@ const PublicCourseDashboard = () => {
   // Error Component
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div 
+        className="container mx-auto px-4 py-8 min-h-screen"
+        style={{
+          backgroundImage: `url('/blackboard2.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
         <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-4">
           <div className="flex items-center">
             <div className="text-4xl mr-4">😞</div>
@@ -172,7 +188,15 @@ const PublicCourseDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen"
+      style={{
+        backgroundImage: `url('/blackboard2.jpg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-12">
