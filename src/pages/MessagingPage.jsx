@@ -1,11 +1,11 @@
-import { MessageOutlined, SendOutlined, StarOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Button, Card, Empty, Input, List, message, Rate, Select, Space, Spin, Tabs, Typography } from 'antd';
+import { SendOutlined, StarOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Card, Empty, Input, Layout, List, message, Rate, Select, Space, Spin, Tabs, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
-import ClassroomService from '../services/classroomService';
 
 const { Title, Text } = Typography;
+const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -30,6 +30,9 @@ function MessagingPage() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [rating, setRating] = useState(5);
+
+  // UI mới: sidebar + khung chat
+  const [selectedTeacherObj, setSelectedTeacherObj] = useState(null);
 
   // Thêm trạng thái loading cho từng danh sách tin nhắn
   const [refreshingInbox, setRefreshingInbox] = useState(false);
@@ -139,7 +142,7 @@ function MessagingPage() {
       const results = await Promise.allSettled([
         fetchMessages(),
         fetchSentMessages(),
-        fetchTeachers(), 
+        fetchTeachers(),
         fetchCourses()
       ]);
 
@@ -241,23 +244,67 @@ function MessagingPage() {
     }
   };
 
+  // Chuẩn hóa dữ liệu giáo viên từ nhiều nguồn khác nhau
+  const normalizeTeacher = (raw) => {
+    if (!raw) return null;
+    const id = raw.id || raw.teacherId || raw.userId || raw.instructorId || raw.teacher?.id;
+    if (!id) return null;
+    const fullName = raw.fullName || raw.username || raw.name || raw.teacherName || raw.teacher?.fullName || `Giáo viên #${id}`;
+    const username = raw.username || raw.email || raw.teacher?.email || undefined;
+    return { id: Number(id), fullName, username };
+  };
+
+  const uniqueById = (list) => {
+    const map = new Map();
+    list.forEach((t) => { if (t && t.id != null && !map.has(t.id)) map.set(t.id, t); });
+    return Array.from(map.values());
+  };
+
   const fetchTeachers = async () => {
     try {
       console.log('👨‍🏫 Fetching teachers...');
+
+      // Ưu tiên lấy từ lớp học của học sinh để đúng phạm vi giao tiếp
+      if (userRole === 'STUDENT' || userRole === 'ROLE_STUDENT' || userRole === '1') {
+        try {
+          const clsRes = await apiClient.get('/classrooms/student/me');
+          const cls = clsRes.data?.data || clsRes.data || [];
+          const fromClasses = (Array.isArray(cls) ? cls : []).map((c) => (
+            normalizeTeacher({
+              id: c.teacherId || c.instructorId || c.teacher?.id,
+              fullName: c.teacherName || c.teacher?.fullName,
+              username: c.teacher?.username,
+            })
+          )).filter(Boolean);
+          if (fromClasses.length) {
+            if (isMountedRef.current) setTeachers(uniqueById(fromClasses));
+            return;
+          }
+        } catch (e) {
+          console.warn('⚠️ Cannot derive teachers from classrooms, fallback to /users/teachers');
+        }
+      }
+
+      // Fallback: lấy toàn bộ giáo viên (BE có thể trả nhiều format)
       const response = await apiClient.get('/users/teachers');
+      const raw = response?.data;
+      let list = [];
+      if (Array.isArray(raw)) list = raw;
+      else if (Array.isArray(raw?.data)) list = raw.data;
+      else if (Array.isArray(raw?.content)) list = raw.content;
+      else if (raw && typeof raw === 'object') list = Object.values(raw).find(Array.isArray) || [];
+
+      const normalized = list.map(normalizeTeacher).filter(Boolean);
       if (isMountedRef.current) {
-        console.log(`✅ Teachers fetched:`, response.data);
-        setTeachers(response.data || []);
+        setTeachers(uniqueById(normalized));
       }
     } catch (error) {
       if (isMountedRef.current) {
         console.error('❌ Error fetching teachers:', error);
-        console.error('   Status:', error.response?.status);
-        console.error('   Data:', error.response?.data);
-        // Only show error if it's not a cancellation error
         if (error.code !== 'ERR_CANCELED') {
           message.error('Không thể tải danh sách giáo viên');
         }
+        setTeachers([]);
       }
     }
   };
@@ -574,9 +621,9 @@ function MessagingPage() {
           value={selectedTeacher}
           onChange={setSelectedTeacher}
         >
-          {teachers.map(teacher => (
+          {(Array.isArray(teachers) ? teachers : []).map(teacher => (
             <Option key={teacher.id} value={teacher.id}>
-              {teacher.username || teacher.fullName}
+              {teacher.fullName || teacher.username || `Giáo viên #${teacher.id}`}
             </Option>
           ))}
         </Select>
@@ -606,6 +653,56 @@ function MessagingPage() {
       </Button>
     </Space>
   );
+
+  // ===== UI MỚI: 1 giao diện chung với Sidebar hội thoại =====
+  const formatDate = (iso) => {
+    try {
+      return new Date(iso).toLocaleString('vi-VN');
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const getTeacherLabel = (t) => t?.fullName || t?.username || `Giáo viên #${t?.id}`;
+
+  const conversationList = () => {
+    // Tạo danh sách hội thoại từ teachers; nếu trống, lấy từ messages đã nhận/gửi
+    const teacherMap = new Map();
+    (Array.isArray(teachers) ? teachers : []).forEach((t) => {
+      if (t && t.id != null) teacherMap.set(Number(t.id), t);
+    });
+
+    const all = [...(messages || []), ...(sentMessages || [])];
+    all.forEach((m) => {
+      const tid = m.senderId === userId ? m.recipientId : m.senderId;
+      if (tid != null && !teacherMap.has(Number(tid))) {
+        teacherMap.set(Number(tid), { id: Number(tid), fullName: m.senderName || m.recipientName });
+      }
+    });
+
+    const items = Array.from(teacherMap.values()).map((t) => {
+      const conv = all
+        .filter((m) => m.senderId === t.id || m.recipientId === t.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const last = conv[0];
+      return {
+        id: t.id,
+        teacher: t,
+        lastMessage: last?.content || '',
+        lastTime: last?.createdAt || null,
+      };
+    });
+
+    return items;
+  };
+
+  const getConversationMessages = () => {
+    if (!selectedTeacherObj) return [];
+    const all = [...(messages || []), ...(sentMessages || [])];
+    return all
+      .filter((m) => m.senderId === selectedTeacherObj.id || m.recipientId === selectedTeacherObj.id)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  };
 
   const renderFeedback = () => (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -675,70 +772,90 @@ function MessagingPage() {
     );
   }
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Đang tải...</div>
-        <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-          User ID: {userId} | Role: {userRole}
-        </div>
-        <Button 
-          style={{ marginTop: 16 }} 
-          onClick={retryLoading}
-          disabled={retryCount >= 3}
-        >
-          Thử lại ({retryCount}/3)
-        </Button>
-      </div>
-    );
-  }
+  // Không chặn toàn trang khi loading; sẽ hiển thị spinner cục bộ trong layout bên dưới
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <div>
-          <Title level={2}>Giao tiếp và phản hồi</Title>
-          <Text type="secondary">
-            Gửi tin nhắn cho giáo viên và đánh giá khóa học
-          </Text>
+    <Layout style={{ height: 'calc(100vh - 64px)' }}>
+      {/* Sidebar danh bạ */}
+      <Sider width={340} style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}>
+        <div style={{ padding: 16 }}>
+          <Title level={4} style={{ margin: 0 }}>Tin nhắn</Title>
+          <Text type="secondary">Chọn giáo viên để trò chuyện</Text>
+        </div>
+        <List
+          dataSource={conversationList()}
+          renderItem={(item) => (
+            <List.Item
+              onClick={() => { setSelectedTeacherObj(item.teacher); setActiveTab('messages'); }}
+              style={{ cursor: 'pointer', background: selectedTeacherObj?.id === item.id ? '#f0faff' : 'transparent' }}
+            >
+              <List.Item.Meta
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={getTeacherLabel(item.teacher)}
+                description={item.lastMessage ? `${item.lastMessage.slice(0, 40)}${item.lastMessage.length>40?'…':''}` : '—'}
+              />
+              <div style={{ fontSize: 12, color: '#999' }}>{item.lastTime ? formatDate(item.lastTime) : ''}</div>
+            </List.Item>
+          )}
+          locale={{ emptyText: <Empty description="Không có đối tượng để nhắn" /> }}
+        />
+      </Sider>
+
+      {/* Khung nội dung */}
+      <Content style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0', background: '#fff' }}>
+          <Space>
+            <Avatar icon={<UserOutlined />} />
+            <div>
+              <Title level={5} style={{ margin: 0 }}>{selectedTeacherObj ? getTeacherLabel(selectedTeacherObj) : 'Chưa chọn đối tượng'}</Title>
+              <Text type="secondary">Giao tiếp và phản hồi</Text>
+            </div>
+          </Space>
         </div>
 
-        {/* Tab Navigation */}
-        <Card>
-          <Space size="large">
-            <Button
-              type={activeTab === 'messages' ? 'primary' : 'default'}
-              icon={<MessageOutlined />}
-              onClick={() => setActiveTab('messages')}
-            >
-              Tin nhắn ({messages.length})
-            </Button>
-            <Button
-              type={activeTab === 'send' ? 'primary' : 'default'}
-              icon={<SendOutlined />}
-              onClick={() => setActiveTab('send')}
-            >
-              Gửi tin nhắn
-            </Button>
-            <Button
-              type={activeTab === 'feedback' ? 'primary' : 'default'}
-              icon={<StarOutlined />}
-              onClick={() => setActiveTab('feedback')}
-            >
-              Đánh giá khóa học
-            </Button>
-          </Space>
-        </Card>
+        <div style={{ padding: 16 }}>
+          <Card style={{ marginBottom: 12 }}>
+            {activeTab === 'messages' ? (
+              // hiển thị hội thoại của giáo viên đã chọn hoặc fallback danh sách hộp thư/đã gửi
+              selectedTeacherObj ? (
+                <List
+                  dataSource={getConversationMessages()}
+                  renderItem={(m) => (
+                    <List.Item style={{ justifyContent: m.senderId === userId ? 'flex-end' : 'flex-start' }}>
+                      <Card style={{ maxWidth: '70%', background: m.senderId === userId ? '#e6f7ff' : '#fff' }}>
+                        <div style={{ marginBottom: 6 }}><Text strong>{m.subject || 'Tin nhắn'}</Text></div>
+                        <div>{m.content}</div>
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#999' }}>{formatDate(m.createdAt)}</div>
+                      </Card>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                renderMessages()
+              )
+            ) : activeTab === 'send' ? renderSendMessage() : renderFeedback()}
+          </Card>
 
-        {/* Tab Content */}
-        <Card>
-          {activeTab === 'messages' && renderMessages()}
-          {activeTab === 'send' && renderSendMessage()}
-          {activeTab === 'feedback' && renderFeedback()}
-        </Card>
-      </Space>
-    </div>
+          {activeTab !== 'feedback' && (
+            <Card>
+              <Space.Compact style={{ width: '100%' }}>
+                <Input.TextArea
+                  placeholder="Nhập tin nhắn..."
+                  autoSize={{ minRows: 1, maxRows: 4 }}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                />
+                <Button type="primary" icon={<SendOutlined />} onClick={() => {
+                  if (selectedTeacherObj) { setSelectedTeacher(selectedTeacherObj.id); sendMessage(); }
+                  else if (selectedTeacher) { sendMessage(); }
+                  else { message.error('Chọn người nhận trước khi gửi'); }
+                }} />
+              </Space.Compact>
+            </Card>
+          )}
+        </div>
+      </Content>
+    </Layout>
   );
 }
 

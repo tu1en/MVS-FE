@@ -214,6 +214,30 @@ export const teacherAttendanceService = {
   },
 
   /**
+   * Get attendance status for a lecture
+   * @param {number} lectureId - Lecture ID
+   * @param {number} classroomId - Classroom ID
+   * @returns {Promise<Object>} Attendance status information
+   */
+  async getAttendanceStatus(lectureId, classroomId) {
+    try {
+      console.log(`Getting attendance status for lecture ${lectureId} in classroom ${classroomId}`);
+
+      const response = await apiClient.get(`/attendance/lecture/${lectureId}/status`, {
+        params: {
+          classroomId: classroomId
+        },
+        timeout: 15000
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error getting attendance status:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Submit attendance records
    * @param {Object} attendanceData - Attendance data with lecture, classroom, and records
    * @returns {Promise<Object>} Submission result

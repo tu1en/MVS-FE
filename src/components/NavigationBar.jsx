@@ -4,10 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api'; // Added import for api
 import { syncFromLocalStorage } from '../store/slices/authSlice';
 import { isUserLoggedIn, performLogout } from '../utils/authUtils';
-import { useAuth } from '../context/AuthContext';
 
 /**
  * NavigationBar component that provides sidebar navigation based on user role
@@ -217,7 +217,6 @@ function NavigationBar() {
       ]
     }
   ];
-
   // Define navigation items for STUDENT - Updated with new routes
   const studentNavItems = [
     {
@@ -476,10 +475,15 @@ function NavigationBar() {
           path: '/manager/teacher-attendance-status',
           icon: '👨‍🏫'
         },
-        { 
-          name: 'Ca làm việc hàng ngày', 
+        {
+          name: 'Ca làm việc hàng ngày',
           path: '/manager/daily-shift-attendance',
           icon: '🕒'
+        },
+        {
+          name: 'Yêu cầu điểm danh bù',
+          path: '/manager/makeup-attendance',
+          icon: '🔄'
         }
       ]
     },
@@ -710,18 +714,14 @@ function NavigationBar() {
                 </button>
               )}
               {/* Ẩn Báo Cáo và Tạo Lớp Mới cho admin */}
-              <button 
+              <button
                 className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
                 onClick={() => navigate('/change-password')}
               >
                 <span className="mr-3 text-xl">🔑</span>
                 <span>Đổi Mật Khẩu</span>
               </button>
-              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-                <span className="mr-3 text-xl">⚙️</span>
-                <span>Cài Đặt</span>
-              </button>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-100 transition-colors flex items-center"
               >

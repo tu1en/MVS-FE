@@ -1,20 +1,21 @@
 import {
-  Award,
-  BookOpen,
-  CheckCircle,
-  Clock,
-  Heart,
-  MessageCircle,
-  RefreshCw,
-  Share2,
-  User,
-  Users
+    Award,
+    BookOpen,
+    CheckCircle,
+    Clock,
+    Heart,
+    MessageCircle,
+    RefreshCw,
+    Share2,
+    User,
+    Users
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CourseDescription from '../../components/course/CourseDescription';
 import YouTubeEmbed from '../../components/ui/YouTubeEmbed';
 import API_CONFIG from '../../config/api-config';
+import { normalizeCourseData } from '../../constants/displayConstants';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
 
@@ -42,6 +43,11 @@ const PublicCourseDetail = () => {
 
   const normalizeCourse = (raw) => {
     const d = raw?.data ?? raw;
+
+    // Use the standardized normalization function for consistency
+    const baseNormalized = normalizeCourseData(d);
+
+    // Add specific fields needed for this component
     const startDate = d.startDate || d.start_date || d.start_time || d.start || null;
     const endDate = d.endDate || d.end_date || d.end_time || d.end || null;
     let totalWeeks = d.totalWeeks || d.total_weeks || d.weeks || d.durationWeeks || null;
@@ -53,31 +59,23 @@ const PublicCourseDetail = () => {
         totalWeeks = Math.max(1, Math.ceil(diffDays / 7));
       } catch (_) { /* noop */ }
     }
+
     return {
-      id: d.id,
-      // Names & description
-      name: d.name || d.className || d.courseTemplateName || d.templateName || d.title,
+      ...baseNormalized,
+      // Override with component-specific fields
       className: d.className,
-      description: d.description || d.courseTemplateDescription || d.templateDescription || d.overview || '',
-      subject: d.subject || d.subjectName || d.courseTemplateName,
-      // Dates
       startDate,
       endDate,
       totalWeeks,
-      // Capacity
-      currentStudents: d.currentStudents || d.currentEnrollment || d.enrolled || d.students || 0,
-      maxStudents: d.maxStudents || d.maxStudentsPerTemplate || d.capacity || d.max_students || 0,
-      // Tuition/public
-      tuitionFee: d.tuitionFee || d.enrollmentFee || d.enrollment_fee || d.fee,
-      isPublic: d.isPublic === true || d.public === true,
-      // Teacher
-      teacherName: d.teacherName || d.instructorName || d.teacher_name || d.teacher?.fullName || null,
+      // Teacher - now consistently uses COURSE_FALLBACKS.instructor
+      teacherName: baseNormalized.instructor,
+      instructorName: baseNormalized.instructor,
       // Video intro
-      introVideoUrl: d.introVideoUrl || null,
+      introVideoUrl: d.introVideoUrl || d.videoUrl || null,
       // Lessons
       lessonCount: d.lessonCount || (Array.isArray(d.lessons) ? d.lessons.length : undefined),
       // Ratings (nếu BE không có thì để undefined, không random)
-      rating: d.averageRating || d.rating,
+      rating: d.averageRating || d.rating || baseNormalized.rating,
       totalRatings: d.totalRatings || d.reviewsCount
     };
   };
@@ -102,7 +100,8 @@ const PublicCourseDetail = () => {
       // Nếu là route lớp công khai /public/classes/:id hoặc chưa có số bài học, gọi thêm API lessons để bổ sung
       try {
         if (!normalized.lessonCount || normalized.lessonCount === 0) {
-          const resLessons = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CLASSES_LESSONS(id)}`);
+          // Dùng endpoint public để tránh 403
+          const resLessons = await fetch(`${API_CONFIG.BASE_URL}/public/courses/by-class/${id}/lessons`);
           if (resLessons.ok) {
             const lessonPayload = await resLessons.json();
             const lessons = Array.isArray(lessonPayload?.data) ? lessonPayload.data : (Array.isArray(lessonPayload) ? lessonPayload : []);
@@ -353,7 +352,7 @@ const PublicCourseDetail = () => {
                         {/* Ẩn đánh giá trên header */}
                         <div className="flex items-center gap-1 text-gray-600">
                           <Users className="w-4 h-4" />
-                          <span>{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''} học viên</span>
+                          <span>Tối đa 30 học sinh</span>
                         </div>
                         {stats.duration && (
                           <div className="flex items-center gap-1 text-gray-600">
@@ -393,8 +392,8 @@ const PublicCourseDetail = () => {
                     <div className="text-sm text-gray-600">Thời lượng</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''}</div>
-                    <div className="text-sm text-gray-600">Học viên</div>
+                    <div className="text-2xl font-bold text-purple-600">30</div>
+                    <div className="text-sm text-gray-600">Học sinh tối đa</div>
                   </div>
                   {/* Ẩn ô đánh giá trong quick stats */}
                 </div>
@@ -567,11 +566,9 @@ const PublicCourseDetail = () => {
                       <p className="text-sm text-gray-600 mb-2">
                         Nhấn nút để chuyển đến Messenger và hoàn tất đăng ký.
                       </p>
-                      {stats.maxStudents ? (
-                        <p className="text-xs text-gray-500">
-                          Chỗ còn lại: {Math.max(0, stats.maxStudents - (stats.students || 0))} / {stats.maxStudents}
-                        </p>
-                      ) : null}
+                      <p className="text-xs text-gray-500">
+                        Tối đa 30 học sinh
+                      </p>
                     </div>
                   </div>
 

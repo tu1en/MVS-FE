@@ -1,4 +1,5 @@
-import { Alert, Space, Spin, Table, Typography } from 'antd';
+import { ClockCircleOutlined } from '@ant-design/icons';
+import { Alert, Space, Spin, Table, Tag, Tooltip, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import { attendanceService } from '../../services/attendanceService';
@@ -50,6 +51,33 @@ const TeachingHistoryPage = () => {
             title: 'Tên Buổi Học',
             dataIndex: 'lectureTitle',
             key: 'lectureTitle',
+            render: (text, record) => (
+                <Space direction="vertical" size={0}>
+                    <span>{text}</span>
+                    {record.hasPendingMakeupRequest && (
+                        <Tooltip title="Buổi học này cần được manager xác nhận do quên điểm danh">
+                            <Tag
+                                color="red"
+                                icon={<ClockCircleOutlined />}
+                                style={{ fontSize: '11px' }}
+                            >
+                                Cần kiểm tra
+                            </Tag>
+                        </Tooltip>
+                    )}
+                    {record.isMakeupAttendance && !record.hasPendingMakeupRequest && (
+                        <Tooltip title={`Điểm danh bù cho buổi học ngày ${record.originalSessionDate ? moment(record.originalSessionDate).format('DD/MM/YYYY') : 'N/A'}. Lý do: ${record.makeupReason || 'N/A'}`}>
+                            <Tag
+                                color="orange"
+                                icon={<ClockCircleOutlined />}
+                                style={{ fontSize: '11px' }}
+                            >
+                                Điểm danh bù
+                            </Tag>
+                        </Tooltip>
+                    )}
+                </Space>
+            )
         },
         {
             title: 'Lớp Học',

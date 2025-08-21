@@ -1,6 +1,7 @@
 import { Alert, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { normalizeCourseData } from '../../constants/displayConstants';
 import { useAuth } from '../../context/AuthContext';
 import ClassroomService from '../../services/classroomService';
 import courseService from '../../services/courseService';
@@ -47,20 +48,25 @@ const EnrolledCourses = () => {
       try {
         const response = await courseService.getPublicCourses();
         const list = Array.isArray(response?.data) ? response.data : (response?.data?.data || []);
-        const transformedCourses = (Array.isArray(list) ? list : []).map((course) => ({
-          id: course.id,
-          className: fallback(course.name, 'Khóa học'),
-          description: fallback(course.description, 'Đang cập nhật'),
-          teacherName: fallback(course.instructorName, 'Đang cập nhật'),
-          price: Number(course.enrollmentFee) || 0,
-          duration: Number.isFinite(Number(course.totalWeeks)) ? `${Number(course.totalWeeks)} tuần` : '—',
-          students: Number.isFinite(Number(course.maxStudentsPerTemplate)) ? Number(course.maxStudentsPerTemplate) : 0,
-          rating: 4.5,
-          level: fallback(course.level, 'Cơ bản'),
-          isEnrolled: false,
-          progress: 0,
-          subject: course.subject,
-        }));
+        const transformedCourses = (Array.isArray(list) ? list : []).map((course) => {
+          // Use normalized course data for consistency
+          const normalized = normalizeCourseData(course);
+          return {
+            id: normalized.id,
+            className: normalized.name,
+            description: normalized.description,
+            teacherName: normalized.instructor, // Now consistently uses COURSE_FALLBACKS.instructor
+            price: normalized.enrollmentFee,
+            duration: normalized.duration, // Now consistently uses formatDuration()
+            students: normalized.maxStudents,
+            currentStudents: normalized.currentStudents,
+            rating: normalized.rating,
+            level: normalized.level,
+            isEnrolled: false,
+            progress: 0,
+            subject: normalized.subject,
+          };
+        });
         setAllCourses(transformedCourses);
       } catch (error) {
         console.error('Error loading all courses:', error);
@@ -86,20 +92,20 @@ const EnrolledCourses = () => {
   };
 
   const normalizeEnrolled = (enrolledCourse) => {
+    // Use normalized course data for consistency
+    const normalized = normalizeCourseData(enrolledCourse);
     const id = enrolledCourse?.id ?? enrolledCourse?.courseId ?? enrolledCourse?.classId;
-    const durationWeeks = Number(enrolledCourse?.total_weeks);
+
     return {
       ...enrolledCourse,
       id,
-      className: fallback(enrolledCourse?.className ?? enrolledCourse?.name ?? enrolledCourse?.title, 'Khóa học'),
-      description: fallback(enrolledCourse?.description, 'Đang cập nhật'),
-      teacherName: fallback(enrolledCourse?.teacherName ?? enrolledCourse?.instructor, 'Đang cập nhật'),
-      students: Number.isFinite(Number(enrolledCourse?.students)) ? Number(enrolledCourse?.students) : 0,
-      rating: Number.isFinite(Number(enrolledCourse?.rating)) ? Number(enrolledCourse?.rating) : 4.5,
-      level: fallback(enrolledCourse?.level, 'Cơ bản'),
-      duration:
-        enrolledCourse?.duration ??
-        (Number.isFinite(durationWeeks) ? `${durationWeeks} tuần` : '—'),
+      className: normalized.name,
+      description: normalized.description,
+      teacherName: normalized.instructor, // Now consistently uses COURSE_FALLBACKS.instructor
+      students: normalized.maxStudents,
+      rating: normalized.rating,
+      level: normalized.level,
+      duration: normalized.duration, // Now consistently uses formatDuration()
       isEnrolled: true,
       progress: Number.isFinite(Number(enrolledCourse?.progress))
         ? Number(enrolledCourse?.progress)

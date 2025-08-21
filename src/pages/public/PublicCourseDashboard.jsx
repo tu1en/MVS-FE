@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { BookOpen, Heart, RefreshCw, Search, Star } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { BookOpen, Heart, RefreshCw, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import API_CONFIG from '../../config/api-config';
+import { normalizeCourseData } from '../../constants/displayConstants';
 
 const PublicCourseDashboard = () => {
   const [courses, setCourses] = useState([]);
@@ -39,22 +40,26 @@ const PublicCourseDashboard = () => {
       
       const mapped = (Array.isArray(raw) ? raw : [])
         .filter(c => c.isPublic === true)
-        .map(c => ({
-          id: c.id,
-          title: c.className || c.courseTemplateName || `Lớp ${c.id}`,
-          description: c.description || 'Chưa có mô tả khóa học',
-          enrollmentFee: c.tuitionFee || 0,
-          maxStudents: c.maxStudents || 30,
-          currentStudents: c.currentEnrollment || Math.floor(Math.random() * (c.maxStudents || 30)),
-          subject: c.courseTemplateName || 'Chưa phân loại',
-          instructor: c.teacherName || 'Chưa có giảng viên',
-          duration: c.duration || `${Math.floor(Math.random() * 8) + 8} tuần`,
-          level: c.level || ['Cơ bản', 'Trung cấp', 'Nâng cao'][Math.floor(Math.random() * 3)],
-          rating: c.rating || (4.5 + Math.random() * 0.5),
-          category: getCategoryFromSubject(c.courseTemplateName || ''),
-          color: getColorFromCategory(getCategoryFromSubject(c.courseTemplateName || '')),
-          icon: getIconFromSubject(c.courseTemplateName || '')
-        }));
+        .map(c => {
+          // Use normalized course data for consistency
+          const normalized = normalizeCourseData(c);
+          return {
+            id: normalized.id,
+            title: normalized.name,
+            description: normalized.description,
+            enrollmentFee: normalized.enrollmentFee,
+            maxStudents: normalized.maxStudents,
+            currentStudents: normalized.currentStudents,
+            subject: normalized.subject,
+            instructor: normalized.instructor, // Now consistently uses COURSE_FALLBACKS.instructor
+            duration: normalized.duration, // Now consistently uses formatDuration()
+            level: normalized.level,
+            rating: normalized.rating,
+            category: getCategoryFromSubject(normalized.subject),
+            color: getColorFromCategory(getCategoryFromSubject(normalized.subject)),
+            icon: getIconFromSubject(normalized.subject)
+          };
+        });
       
       setCourses(mapped);
     } catch (error) {
@@ -127,14 +132,7 @@ const PublicCourseDashboard = () => {
     });
   };
 
-  const getLevelBadge = (level) => {
-    const levelConfig = {
-      'Cơ bản': { color: '#10B981', icon: '🌱' },
-      'Trung cấp': { color: '#3B82F6', icon: '🚀' },
-      'Nâng cao': { color: '#8B5CF6', icon: '⭐' }
-    };
-    return levelConfig[level] || levelConfig['Cơ bản'];
-  };
+
 
   // Loading Component
   if (loading) {
@@ -247,8 +245,6 @@ const PublicCourseDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredCourses.map(course => {
-              const levelConfig = getLevelBadge(course.level);
-              
               return (
                 <div key={course.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
                   
@@ -269,16 +265,7 @@ const PublicCourseDashboard = () => {
                       <Heart className={`w-5 h-5 ${likedCourses.has(course.id) ? 'fill-current' : ''}`} />
                     </button>
 
-                    {/* Level Badge */}
-                    <div className="absolute top-4 left-4">
-                      <div 
-                        className="flex items-center gap-2 text-white px-3 py-1 rounded-full font-semibold text-sm shadow-lg"
-                        style={{ backgroundColor: levelConfig.color }}
-                      >
-                        <span>{levelConfig.icon}</span>
-                        <span>{course.level}</span>
-                      </div>
-                    </div>
+
 
                     {/* Course Icon */}
                     <div className="text-6xl text-white/90 group-hover:scale-110 transition-transform duration-300">
@@ -297,15 +284,11 @@ const PublicCourseDashboard = () => {
 
                   {/* Course Content */}
                   <div className="p-6">
-                    {/* Title and Rating */}
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 flex-1">
+                    {/* Title */}
+                    <div className="mb-3">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
                         {course.title}
                       </h3>
-                      <div className="flex items-center gap-1 ml-3">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="text-sm font-semibold text-gray-700">{course.rating.toFixed(1)}</span>
-                      </div>
                     </div>
 
                     {/* Description */}
@@ -325,7 +308,7 @@ const PublicCourseDashboard = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Học viên:</span>
-                        <span className="text-gray-700">{course.currentStudents}/{course.maxStudents}</span>
+                        <span className="text-gray-700">Tối đa 30 học sinh</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Môn học:</span>
@@ -333,22 +316,13 @@ const PublicCourseDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Enrollment Progress */}
+                    {/* Student Count Info */}
                     <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">Đăng ký</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">Số học sinh:</span>
                         <span className="text-sm text-gray-600">
-                          {Math.round((course.currentStudents / course.maxStudents) * 100)}%
+                          Tối đa 30 học sinh
                         </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${Math.round((course.currentStudents / course.maxStudents) * 100)}%`,
-                            background: course.color
-                          }}
-                        ></div>
                       </div>
                     </div>
 

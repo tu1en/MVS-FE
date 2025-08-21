@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
 
@@ -299,18 +299,10 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[70vh]">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{state.students.length}</div>
-              <div className="text-sm text-blue-800">Học viên hiện tại</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{maxStudents - state.students.length}</div>
-              <div className="text-sm text-green-800">Chỗ trống</div>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-gray-600">{maxStudents}</div>
-              <div className="text-sm text-gray-800">Tối đa</div>
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-gray-600">30</div>
+              <div className="text-sm text-gray-800">Số học sinh tối đa</div>
             </div>
           </div>
 

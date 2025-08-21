@@ -25,7 +25,7 @@ import {
 } from 'antd';
 import axios from 'axios';
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import SalaryCalculationDetailsModal from '../../components/SalaryCalculationDetailsModal';
 import PayrollService from '../../services/payrollService';
 
@@ -43,12 +43,12 @@ const getSamplePayrollData = (selectedPeriod) => {
     {
       id: `GV001_${period}`,
       userId: 'GV001',
-      fullName: 'Nguyễn Văn An',
+      fullName: 'Lê Quý Thịnh',
       email: 'an.nguyen@school.edu.vn',
       department: 'Giảng dạy',
       contractType: 'TEACHER',
       baseSalary: 8000000,
-      teachingHours: 120, // Giờ dạy
+      totalTeachingHours: 120, // Giờ dạy
       totalWorkingHours: 183, // Tổng giờ làm
       weekendWorkingHours: 24,
       weekdayWorkingHours: 159,
@@ -76,7 +76,7 @@ const getSamplePayrollData = (selectedPeriod) => {
       department: 'Giảng dạy',
       contractType: 'TEACHER',
       baseSalary: 7500000,
-      teachingHours: 148, // Giờ dạy
+      totalTeachingHours: 148, // Giờ dạy
       totalWorkingHours: 175, // Tổng giờ làm
       weekendWorkingHours: 16,
       weekdayWorkingHours: 159,
@@ -104,7 +104,7 @@ const getSamplePayrollData = (selectedPeriod) => {
       department: 'Hành chính',
       contractType: 'STAFF',
       baseSalary: 6000000,
-      teachingHours: 0, // Nhân viên hành chính không có giờ dạy
+      totalTeachingHours: 0, // Nhân viên hành chính không có giờ dạy
       totalWorkingHours: 176, // Tổng giờ làm
       weekendWorkingHours: 0,
       weekdayWorkingHours: 176,
@@ -539,6 +539,51 @@ const PayrollManagement = () => {
         }
         const si = value?.socialInsuranceEmployee;
         return si ? formatCurrency(si) : 'Chưa có dữ liệu';
+      }
+    },
+    {
+      title: 'Tiền ghi tăng',
+      dataIndex: 'weekendPay',
+      key: 'weekendPay',
+      render: (value, record) => {
+        // Hiển thị tiền làm cuối tuần (ghi tăng)
+        return value ? formatCurrency(value) : <span style={{ color: '#999' }}>0</span>;
+      }
+    },
+    {
+      title: 'Thưởng THCK',
+      dataIndex: 'bonusAmount',
+      key: 'bonusAmount',
+      render: (value, record) => {
+        // Thưởng thành tích cuối kỳ - có thể lấy từ topCVResult hoặc field riêng
+        return value ? formatCurrency(value) : <span style={{ color: '#999' }}>0</span>;
+      }
+    },
+    {
+      title: 'Phụ cấp VTT',
+      dataIndex: 'transportAllowance',
+      key: 'transportAllowance',
+      render: (value, record) => {
+        // Phụ cấp vận tải/đi lại
+        return value ? formatCurrency(value) : <span style={{ color: '#999' }}>0</span>;
+      }
+    },
+    {
+      title: 'Trợ cấp thái',
+      dataIndex: 'maternityAllowance',
+      key: 'maternityAllowance',
+      render: (value, record) => {
+        // Trợ cấp thai sản
+        return value ? formatCurrency(value) : <span style={{ color: '#999' }}>0</span>;
+      }
+    },
+    {
+      title: 'Thưởng lao',
+      dataIndex: 'laborBonus',
+      key: 'laborBonus',
+      render: (value, record) => {
+        // Thưởng lao động
+        return value ? formatCurrency(value) : <span style={{ color: '#999' }}>0</span>;
       }
     },
     {

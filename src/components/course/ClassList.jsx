@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
 import { formatVietnameseText } from '../../utils/viTextUtils';
@@ -323,7 +323,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
                   <div className="flex justify-between">
                     <span className="text-gray-600 vietnamese-text">Học viên:</span>
                     <span className="font-medium vietnamese-text">
-                      {classItem.currentStudents || 0}/{classItem.maxStudents || 0}
+                      {classItem.currentStudents || "Tối đa 30 học sinh"}/{classItem.maxStudents || "Tối đa 30 học sinh"}
                     </span>
                   </div>
                   

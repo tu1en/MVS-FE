@@ -151,6 +151,13 @@ const classManagementService = {
   },
 
   /**
+   * Cập nhật nhanh một phần thông tin lớp (partial fields)
+   */
+  updateClassPartial: (id, partial) => {
+    return apiClient.put(API_CONFIG.ENDPOINTS.CLASSES_BY_ID(id), partial);
+  },
+
+  /**
    * Cập nhật nhanh công khai lớp học
    */
   updateClassPublic: (id, isPublic) => {
