@@ -35,19 +35,218 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
           placeholder="Nhập lương GROSS"
         />
         {grossSalary && (
-                      <Button 
-              size="small" 
-              type="primary"
-              onClick={() => onShowSalaryDetails(recordId, grossSalary)}
-              style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-            >
-              Chi Tiết
-            </Button>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => onShowSalaryDetails(recordId, grossSalary)}
+            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+          >
+            Chi Tiết
+          </Button>
         )}
       </div>
     </div>
   );
 };
+
+/*
+// Component cho cột Lương GROSS với input
+const GrossSalaryColumnOld = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
+  const [grossSalary, setGrossSalary] = useState(offer);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setGrossSalary(offer);
+  }, [offer]);
+
+  const handleGrossChange = async (value) => {
+    if (value && value < 1000000) {
+      value = 1000000;
+    }
+    setGrossSalary(value);
+    await onOfferUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={grossSalary}
+          onChange={handleGrossChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương GROSS"
+        />
+        {grossSalary && (
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => onShowSalaryDetails(recordId, grossSalary)}
+            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+          >
+            Chi Tiết
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Component cho cột Lương theo giờ (Part-time) 
+const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
+  const [inputHourlyRate, setInputHourlyRate] = useState(hourlyRate);
+
+  useEffect(() => {
+    setInputHourlyRate(hourlyRate);
+  }, [hourlyRate]);
+
+  const handleHourlyRateChange = async (value) => {
+    if (value && value < 100000) {
+      value = 100000;
+    }
+    setInputHourlyRate(value);
+    await onHourlyRateUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputHourlyRate}
+          onChange={handleHourlyRateChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={100000}
+          min={100000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương/giờ"
+        />
+        <Button 
+          size="small" 
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            handleHourlyRateChange(currentValue + 100000);
+          }}
+        >
+          +100k
+        </Button>
+        <Button 
+          size="small"
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            if (currentValue > 100000) {
+              handleHourlyRateChange(currentValue - 100000);
+            }
+          }}
+        >
+          -100k
+        </Button>
+      </div>
+      {inputHourlyRate && (
+        <div className="text-xs text-gray-500 vietnamese-text mt-1">
+          (Lương theo giờ: {inputHourlyRate.toLocaleString('vi-VN')} VNĐ/giờ)
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Component cho cột Lương NET với input 
+const NetSalaryColumnOld = ({ offer, recordId, contractType, numberOfDependents, onOfferUpdate }) => {
+  const [netSalary, setNetSalary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [inputNetSalary, setInputNetSalary] = useState(null);
+
+  useEffect(() => {
+    const calculateNetSalary = async () => {
+      if (!offer) {
+        // Nếu chưa có offer, cho phép nhập NET trước
+        setInputNetSalary(null);
+        setNetSalary(null);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get(`/interview-schedules/${recordId}/salary-calculation`, {
+          params: { numberOfDependents: contractType === 'FULL_TIME' ? numberOfDependents ?? 0 : 0 }
+        });
+        const calculatedNet = response.data.netSalary;
+        setNetSalary(calculatedNet);
+        setInputNetSalary(calculatedNet);
+      } catch (err) {
+        console.error('Error calculating net salary:', err);
+        // Fallback to estimation if API fails
+        const grossSalary = parseInt(offer);
+        const estimatedNet = grossSalary * 0.8;
+        setNetSalary(estimatedNet);
+        setInputNetSalary(estimatedNet);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    calculateNetSalary();
+  }, [offer, recordId, contractType, numberOfDependents]);
+
+  const handleNetChange = async (value) => {
+    if (!value) return;
+    
+    setInputNetSalary(value);
+    setLoading(true);
+    
+    try {
+      // Calculate GROSS from NET using backend
+      const response = await axiosInstance.post(`/interview-schedules/${recordId}/calculate-gross-from-net`, {
+        netSalary: value,
+        numberOfDependents: contractType === 'FULL_TIME' ? (numberOfDependents ?? 0) : 0
+      });
+      const calculatedGross = response.data.grossSalary;
+      await onOfferUpdate(recordId, calculatedGross);
+    } catch (err) {
+      console.error('Error calculating gross from net:', err);
+      // Fallback: estimate gross as net * 1.25
+      const estimatedGross = Math.round(value * 1.25);
+      await onOfferUpdate(recordId, estimatedGross);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <span className="vietnamese-text text-gray-400">Đang tính...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputNetSalary}
+          onChange={handleNetChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương NET"
+        />
+      </div>
+      {!offer && inputNetSalary && (
+        <div className="text-xs text-blue-500 vietnamese-text mt-1">
+          (Nhập NET trước - GROSS sẽ được tính tự động)
+        </div>
+      )}
+    </div>
+  );
+};
+*/
 
 // Component cho cột Lương theo giờ (Part-time)
 const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
@@ -192,7 +391,6 @@ const NetSalaryColumn = ({ offer, recordId, contractType, numberOfDependents, on
           placeholder="Nhập lương NET"
         />
       </div>
-      {/* Bỏ dòng hiển thị '(Tính toán chính xác từ GROSS: ...) ' theo yêu cầu */}
       {!offer && inputNetSalary && (
         <div className="text-xs text-blue-500 vietnamese-text mt-1">
           (Nhập NET trước - GROSS sẽ được tính tự động)
@@ -1399,6 +1597,73 @@ const RecruitmentManagement = () => {
         </div>
       )
     },
+    /*
+    {
+      title: 'Lương GROSS',
+      dataIndex: 'offer',
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <GrossSalaryColumnOld 
+              offer={text} 
+              recordId={record.id} 
+              onOfferUpdate={handleOfferUpdate} 
+              onShowSalaryDetails={handleShowSalaryDetails} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      title: 'Lương NET',
+      dataIndex: 'offer',
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <NetSalaryColumnOld 
+              offer={text} 
+              recordId={record.id} 
+              contractType={record.contractType}
+              numberOfDependents={dependentsByInterview[record.id] || 0}
+              onOfferUpdate={handleOfferUpdate} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
+      }
+    },
+    */
     
     {
       title: 'Lương theo giờ',
@@ -1583,6 +1848,16 @@ const RecruitmentManagement = () => {
               placeholder="Nhập mô tả chi tiết về vị trí công việc..."
             />
           </Form.Item>
+          
+          {/* 
+          <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
+            <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
+              <Select.Option value="FULL_TIME">Hợp đồng full-time</Select.Option>
+              <Select.Option value="PART_TIME">Hợp đồng có kỳ hạn</Select.Option>
+            </Select>
+          </Form.Item>
+          */}
+          
           <Form.Item name="contractType" hidden>
             <Input value="PART_TIME" />
           </Form.Item>
@@ -1652,8 +1927,6 @@ const RecruitmentManagement = () => {
                     endTime: endTime.format('YYYY-MM-DD HH:mm:ss'),
                     duration: endTime.diff(startTime, 'hour', true)
                   });
-                  
-                  // Ghi chú: Đã loại bỏ các validation phức tạp ở frontend
                   // Backend sẽ xử lý tất cả validation bao gồm:
                   // - Thời gian trong quá khứ
                   // - Cùng ngày
