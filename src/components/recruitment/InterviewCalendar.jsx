@@ -623,7 +623,11 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
              views={{
                timeGridWeek: {
                  buttonText: 'Tuần',
-                 titleFormat: { year: 'numeric', month: 'long' }
+                 titleFormat: { year: 'numeric', month: 'long' },
+                 columnHeaderFormat: { 
+                   weekday: 'long',
+                   day: 'numeric'
+                 }
                }
              }}
              editable={true}
@@ -648,7 +652,8 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
                hour12: false
              }}
              dayHeaderFormat={{
-               weekday: 'long'
+               weekday: 'long',
+               day: 'numeric'
              }}
              titleFormat={{
                year: 'numeric',
@@ -663,6 +668,10 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
              height="auto"
              slotLaneClassNames="time-slot"
              slotLabelClassNames="time-label"
+             // Cấu hình để hiển thị đúng cột thời gian
+             slotLabelPlacement="start"
+             // Đảm bảo responsive
+             aspectRatio={1.35}
            />
         </div>
 
