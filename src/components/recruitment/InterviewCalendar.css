@@ -1,0 +1,387 @@
+.interview-calendar {
+  padding: 20px;
+}
+
+.interview-calendar .ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+/* FullCalendar custom styles */
+.fc {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Hide time axis column completely */
+.fc-timegrid-axis {
+  display: none !important;
+}
+
+.fc-timegrid-axis-frame {
+  display: none !important;
+}
+
+.fc-timegrid-axis-cushion {
+  display: none !important;
+}
+
+/* Calendar toolbar */
+.calendar-toolbar {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 16px;
+}
+
+.calendar-toolbar .ant-btn {
+  border-radius: 4px;
+  font-weight: 500;
+  height: 32px;
+  padding: 0 12px;
+  margin: 0 4px;
+}
+
+.calendar-toolbar .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Day headers */
+.fc-col-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.fc-col-header-cell {
+  padding: 12px 8px;
+  font-weight: 600;
+  color: #595959;
+  border-right: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.fc-col-header-cell:last-child {
+  border-right: none;
+}
+
+.fc-col-header-cell-cushion {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+}
+
+/* Weekend day headers */
+.fc-day-sun .fc-col-header-cell-cushion,
+.fc-day-sat .fc-col-header-cell-cushion {
+  color: #ff4d4f;
+}
+
+/* Time slots */
+.fc-timegrid-slot {
+  height: 60px !important;
+  min-height: 60px !important;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.fc-timegrid-slot:hover {
+  background-color: #f0f8ff;
+}
+
+.fc-timegrid-slot:last-child {
+  border-bottom: none;
+}
+
+/* Slot lanes */
+.fc-timegrid-slot-lane {
+  height: 60px !important;
+  min-height: 60px !important;
+}
+
+/* Tất cả time slots đều có cùng style - không phân biệt giờ hành chính */
+.fc-timegrid-slot {
+  background-color: #ffffff;
+}
+
+/* Events */
+.fc-event {
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: none;
+  margin: 2px;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fc-event:active {
+  cursor: grabbing;
+}
+
+.fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.fc-event-title {
+  font-weight: 500;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.fc-event-time {
+  font-size: 10px;
+  opacity: 0.9;
+  line-height: 1;
+}
+
+/* Event colors based on status */
+.fc-event.status-scheduled {
+  background-color: #1890ff !important;
+  border-color: #1890ff !important;
+}
+
+.fc-event.status-pending {
+  background-color: #faad14 !important;
+  border-color: #faad14 !important;
+}
+
+.fc-event.status-completed,
+.fc-event.status-accepted {
+  background-color: #52c41a !important;
+  border-color: #52c41a !important;
+}
+
+.fc-event.status-rejected {
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+/* Drag and drop styles */
+.fc-event-dragging {
+  opacity: 0.8;
+  transform: rotate(5deg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.fc-event-resizing {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Selection highlight */
+.fc-highlight {
+  background-color: #e6f7ff !important;
+  border: 2px dashed #1890ff !important;
+}
+
+.fc-highlight:hover {
+  background-color: #bae7ff !important;
+}
+
+/* Today highlight */
+.fc-day-today {
+  background-color: #fff7e6;
+}
+
+.fc-day-today .fc-timegrid-slot {
+  background-color: #fff7e6 !important;
+}
+
+/* Modal styles */
+.interview-calendar .ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.interview-calendar .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.interview-calendar .ant-modal-close {
+  color: white;
+}
+
+.interview-calendar .ant-modal-close:hover {
+  color: #f0f0f0;
+}
+
+.interview-calendar .ant-form-item-label > label {
+  font-weight: 600;
+  color: #262626;
+}
+
+.interview-calendar .ant-select-selector {
+  border-radius: 6px;
+}
+
+.interview-calendar .ant-input {
+  border-radius: 6px;
+}
+
+.interview-calendar .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+  height: 36px;
+  padding: 0 16px;
+}
+
+.interview-calendar .ant-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.interview-calendar .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.interview-calendar .ant-btn-danger {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  border: none;
+}
+
+.interview-calendar .ant-btn-danger:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #e74c3c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+/* Legend styles */
+.interview-calendar .ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 4px 8px;
+  margin: 2px;
+}
+
+.interview-calendar .ant-typography {
+  margin-bottom: 0;
+}
+
+/* Container height fixes */
+.interview-calendar .fc {
+  height: auto !important;
+  min-height: 600px;
+}
+
+.interview-calendar .fc-view-harness {
+  height: auto !important;
+}
+
+.interview-calendar .fc-scroller {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.fc-timegrid {
+  height: auto !important;
+}
+
+.fc-timegrid-cols {
+  height: auto !important;
+}
+
+.fc-timegrid-col-frame {
+  height: auto !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .interview-calendar {
+    padding: 10px;
+  }
+  
+  .interview-calendar .ant-card {
+    margin: 0;
+  }
+  
+  .calendar-toolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .calendar-toolbar .ant-btn {
+    margin: 2px;
+  }
+  
+  .fc-col-header-cell {
+    padding: 8px 4px;
+  }
+  
+  .fc-col-header-cell-cushion {
+    font-size: 12px;
+  }
+  
+  .fc-timegrid-slot {
+    height: 50px !important;
+    min-height: 50px !important;
+  }
+  
+  .fc-event {
+    font-size: 10px;
+    padding: 2px 4px;
+    min-height: 20px;
+  }
+  
+  .fc-event-title {
+    display: none;
+  }
+  
+  .fc-event-time {
+    font-size: 9px;
+  }
+}
+
+/* Animation */
+.fc-event {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar */
+.interview-calendar ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.interview-calendar ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.interview-calendar ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.interview-calendar ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

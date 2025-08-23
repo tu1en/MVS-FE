@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
+import InterviewCalendar from '../../components/recruitment/InterviewCalendar';
 
 // Component cho cột Lương GROSS với input
 const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
@@ -744,18 +745,14 @@ const RecruitmentManagement = () => {
       } else if (status === 'REJECTED') {
         await axiosInstance.post(`/recruitment-applications/${id}/reject`);
         
-        // Cập nhật trạng thái lịch phỏng vấn thành REJECTED nếu có
-        // Tìm tất cả các lịch phỏng vấn của ứng viên này, không chỉ trong pendingInterviews
-        // mà cả trong interviews (để bắt cả trường hợp lịch đã COMPLETED)
+        // Xóa lịch phỏng vấn nếu có (thay vì chỉ cập nhật status)
+        // Tìm tất cả các lịch phỏng vấn của ứng viên này
         const allInterviews = [...interviews, ...pendingInterviews, ...offers];
         const interview = allInterviews.find(i => i.applicationId === id);
         
         if (interview) {
-          console.log('Updating interview status to REJECTED:', interview.id);
-          await axiosInstance.put(`/interview-schedules/${interview.id}/result`, { 
-            status: 'REJECTED', 
-            result: 'Ứng viên bị từ chối' 
-          });
+          console.log('Deleting interview after rejection:', interview.id);
+          await axiosInstance.delete(`/interview-schedules/${interview.id}`);
         }
       }
       message.success('Cập nhật trạng thái thành công!');
@@ -877,18 +874,22 @@ const RecruitmentManagement = () => {
 
                   const handleInterviewStatusChange = async (id, status, result) => {
                   try {
-                    await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
-                    
-                    // Nếu từ chối, cập nhật trạng thái đơn ứng tuyển thành REJECTED
+                    // Nếu từ chối, xóa lịch phỏng vấn và cập nhật trạng thái đơn ứng tuyển
                     if (status === 'REJECTED') {
                       // Tìm application ID từ interview
                       const interview = pendingInterviews.find(i => i.id === id);
                       if (interview && interview.applicationId) {
+                        // Xóa lịch phỏng vấn
+                        await axiosInstance.delete(`/interview-schedules/${id}`);
+                        // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
                         await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
+                        message.success('Đã từ chối ứng viên và xóa lịch phỏng vấn!');
                       }
+                    } else {
+                      // Các status khác (ACCEPTED, DONE) - chỉ cập nhật status
+                      await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+                      message.success('Cập nhật trạng thái thành công!');
                     }
-                    
-                    message.success('Cập nhật trạng thái thành công!');
 
                     // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
                     await Promise.all([
@@ -1102,6 +1103,29 @@ const RecruitmentManagement = () => {
       } else {
         message.error('Không thể duyệt ứng viên!');
       }
+    }
+  };
+
+  const handleRejectCandidateFromOffer = async (interviewId, applicationId) => {
+    try {
+      // Xóa lịch phỏng vấn
+      await axiosInstance.delete(`/interview-schedules/${interviewId}`);
+      
+      // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
+      await axiosInstance.post(`/recruitment-applications/${applicationId}/reject`);
+      
+      message.success('Đã từ chối ứng viên và xóa khỏi danh sách Offer!');
+      
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchOffers(),
+        fetchInterviews(),
+        fetchPendingInterviews(),
+        fetchApprovedApps(),
+        fetchApplications()
+      ]);
+    } catch (err) {
+      message.error('Không thể từ chối ứng viên!');
     }
   };
 
@@ -1709,6 +1733,16 @@ const RecruitmentManagement = () => {
             Duyệt ứng viên
           </Button>
           
+          <Button 
+            type="primary" 
+            size="small" 
+            danger
+            onClick={() => handleRejectCandidateFromOffer(record.id, record.applicationId)}
+            className="vietnamese-text"
+          >
+            ✗ Từ chối ứng viên
+          </Button>
+          
         </div>
       )
     }
@@ -1760,10 +1794,15 @@ const RecruitmentManagement = () => {
         </Tabs.TabPane>
         
         <Tabs.TabPane tab="Quản lý lịch" key="schedule">
-          <Table 
-            columns={scheduleColumns} 
-            dataSource={getFilteredApprovedApps().filter(app => shouldShowInSchedule(app.id))} 
-            rowKey="id" 
+          <InterviewCalendar 
+            selectedPlan={selectedPlan}
+            interviews={interviews}
+            approvedApplications={getFilteredApprovedApps()}
+            onDataRefresh={() => {
+              fetchApprovedApps();
+              fetchInterviews();
+              fetchPendingInterviews();
+            }}
           />
         </Tabs.TabPane>
         
