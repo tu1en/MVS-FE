@@ -25,6 +25,16 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
   const [scheduleForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const calendarRef = useRef(null);
+  
+  // Thêm state để ngăn chặn việc tạo lịch liên tục
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingApplicationIds, setSubmittingApplicationIds] = useState(new Set());
+  const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
+
+  // Thêm state để ngăn chặn việc cập nhật lịch liên tục
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingInterviewIds, setUpdatingInterviewIds] = useState(new Set());
+  const [lastUpdateTime, setLastUpdateTime] = useState(0);
 
   // Cleanup effect
   useEffect(() => {
@@ -37,6 +47,32 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       }
     };
   }, []);
+  
+  // Reset submission state khi modal đóng
+  useEffect(() => {
+    if (!showScheduleModal) {
+      setIsSubmitting(false);
+      setSubmittingApplicationIds(new Set());
+    }
+  }, [showScheduleModal]);
+
+  // Reset update state khi modal đóng
+  useEffect(() => {
+    if (!showEditModal) {
+      setIsUpdating(false);
+      setUpdatingInterviewIds(new Set());
+    }
+  }, [showEditModal]);
+
+  // Khởi tạo form khi editingInterview thay đổi
+  useEffect(() => {
+    if (editingInterview && showEditModal) {
+      editForm.setFieldsValue({
+        startTime: editingInterview.startTime ? dayjs(editingInterview.startTime).format('HH:00') : '',
+        endTime: editingInterview.endTime ? dayjs(editingInterview.endTime).format('HH:00') : ''
+      });
+    }
+  }, [editingInterview, showEditModal, editForm]);
 
   // Chuyển đổi interviews thành events cho calendar
   useEffect(() => {
@@ -91,10 +127,10 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
-      // Bỏ qua events có trạng thái "COMPLETED" (hoàn thành) - cho phép overlap
-      if (event.extendedProps?.interview?.status === 'COMPLETED') {
-        return false;
-      }
+             // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
+       if (event.extendedProps?.interview?.status === 'DONE') {
+         return false;
+       }
       
       return (
         (start < eventEnd && end > eventStart) ||
@@ -120,10 +156,11 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       const newStart = event.start;
       const newEnd = event.end || dayjs(newStart).add(1, 'hour').toDate();
       
-      // Không cho phép kéo thả lịch đã hoàn thành/đã chấp nhận
-      if (event.extendedProps?.interview?.status === 'COMPLETED' || 
-          event.extendedProps?.interview?.status === 'ACCEPTED') {
-        message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã chấp nhận!');
+      // Không cho phép kéo thả lịch đã hoàn thành/đã duyệt cuối cùng
+      if (event.extendedProps?.interview?.status === 'DONE' || 
+          event.extendedProps?.interview?.status === 'ACCEPTED' ||
+          event.extendedProps?.interview?.status === 'APPROVED') {
+        message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã duyệt!');
         dropInfo.revert();
         return;
       }
@@ -193,8 +230,8 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
           return false;
         }
         
-        // Bỏ qua events có trạng thái "COMPLETED" (hoàn thành) - cho phép overlap
-        if (e.extendedProps?.interview?.status === 'COMPLETED') {
+        // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
+        if (e.extendedProps?.interview?.status === 'DONE') {
           return false;
         }
         
@@ -297,10 +334,11 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       const newStart = event.start;
       const newEnd = event.end;
       
-      // Không cho phép resize lịch đã hoàn thành/đã chấp nhận
-      if (event.extendedProps?.interview?.status === 'COMPLETED' || 
-          event.extendedProps?.interview?.status === 'ACCEPTED') {
-        message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã chấp nhận!');
+      // Không cho phép resize lịch đã hoàn thành/đã duyệt cuối cùng
+      if (event.extendedProps?.interview?.status === 'DONE' || 
+          event.extendedProps?.interview?.status === 'ACCEPTED' ||
+          event.extendedProps?.interview?.status === 'APPROVED') {
+        message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã duyệt!');
         resizeInfo.revert();
         return;
       }
@@ -370,8 +408,8 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
           return false;
         }
         
-        // Bỏ qua events có trạng thái "COMPLETED" (hoàn thành) - cho phép overlap
-        if (e.extendedProps?.interview?.status === 'COMPLETED') {
+        // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
+        if (e.extendedProps?.interview?.status === 'DONE') {
           return false;
         }
         
@@ -469,14 +507,49 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
 
   // Xử lý khi click vào event để chỉnh sửa/xóa
   const handleEventClick = useCallback((clickInfo) => {
-    setEditingInterview(clickInfo.event.extendedProps.interview);
+    const interview = clickInfo.event.extendedProps.interview;
+    setEditingInterview(interview);
     setShowEditModal(true);
-  }, []);
+    
+    // Khởi tạo form với dữ liệu hiện tại
+    if (interview) {
+      editForm.setFieldsValue({
+        startTime: interview.startTime ? dayjs(interview.startTime).format('HH:00') : '',
+        endTime: interview.endTime ? dayjs(interview.endTime).format('HH:00') : ''
+      });
+    }
+  }, [editForm]);
 
   // Xử lý lên lịch mới
   const handleScheduleSubmit = async (values) => {
     try {
       const { applicationId } = values;
+      
+      // Kiểm tra xem ứng viên này có đang được xử lý không
+      if (submittingApplicationIds.has(applicationId)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần submit (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastSubmissionTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi tạo lịch tiếp theo!');
+        return;
+      }
+      
+      // Kiểm tra xem ứng viên này đã có lịch phỏng vấn chưa
+      const existingInterview = interviews.find(i => i.applicationId === applicationId);
+      if (existingInterview) {
+        message.warning('Ứng viên này đã có lịch phỏng vấn!');
+        return;
+      }
+      
+      // Đánh dấu ứng viên này đang được xử lý
+      setSubmittingApplicationIds(prev => new Set(prev).add(applicationId));
+      setIsSubmitting(true);
+      setLastSubmissionTime(now);
+      
       const startTime = dayjs(selectedSlot.start).format('YYYY-MM-DDTHH:mm:ss');
       const endTime = dayjs(selectedSlot.end).format('YYYY-MM-DDTHH:mm:ss');
 
@@ -499,27 +572,62 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       } else {
         message.error('Không thể lên lịch phỏng vấn!');
       }
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      const { applicationId } = values;
+      setSubmittingApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(applicationId);
+        return newSet;
+      });
+      setIsSubmitting(false);
     }
   };
 
   // Xử lý cập nhật lịch
       const handleEditSubmit = async (values) => {
       try {
+        console.log('handleEditSubmit called with values:', values);
+        console.log('editingInterview:', editingInterview);
+        
         // Kiểm tra trạng thái lịch trước khi cập nhật
+        // Chỉ không cho phép cập nhật khi đã hoàn thành hoặc đã duyệt cuối cùng
         if (editingInterview.status === 'DONE' || 
-            editingInterview.status === 'ACCEPTED') {
-          message.warning('Không thể cập nhật lịch phỏng vấn đã hoàn thành/đã chấp nhận!');
+            editingInterview.status === 'ACCEPTED' ||
+            editingInterview.status === 'APPROVED') {
+          message.warning('Không thể cập nhật lịch phỏng vấn đã hoàn thành/đã duyệt!');
           return;
         }
         
+        // Kiểm tra xem lịch phỏng vấn này có đang được cập nhật không
+        if (updatingInterviewIds.has(editingInterview.id)) {
+          message.warning('Lịch phỏng vấn này đang được cập nhật, vui lòng đợi một chút!');
+          return;
+        }
+        
+        // Kiểm tra thời gian giữa các lần cập nhật (debounce 2 giây)
+        const now = Date.now();
+        if (now - lastUpdateTime < 2000) {
+          message.warning('Vui lòng đợi 2 giây trước khi cập nhật tiếp theo!');
+          return;
+        }
+        
+        // Đánh dấu lịch phỏng vấn này đang được cập nhật
+        setUpdatingInterviewIds(prev => new Set(prev).add(editingInterview.id));
+        setIsUpdating(true);
+        setLastUpdateTime(now);
+        
         const { startTime, endTime } = values;
+        console.log('Form values - startTime:', startTime, 'endTime:', endTime);
         
         // Lấy ngày hiện tại từ lịch phỏng vấn đang chỉnh sửa
         const currentDate = dayjs(editingInterview.startTime).format('YYYY-MM-DD');
+        console.log('Current date from interview:', currentDate);
         
         // Tạo thời gian mới với ngày hiện tại và giờ mới (không có phút)
         const startTimeStr = `${currentDate}T${startTime}:00`;
         const endTimeStr = `${currentDate}T${endTime}:00`;
+        console.log('Generated time strings - startTimeStr:', startTimeStr, 'endTimeStr:', endTimeStr);
 
       await axiosInstance.put(`/interview-schedules/${editingInterview.id}`, null, {
         params: {
@@ -539,6 +647,14 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       } else {
         message.error('Không thể cập nhật lịch phỏng vấn!');
       }
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setUpdatingInterviewIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(editingInterview.id);
+        return newSet;
+      });
+      setIsUpdating(false);
     }
   };
 
@@ -546,9 +662,11 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       const handleDeleteInterview = async () => {
       try {
         // Kiểm tra trạng thái lịch trước khi xóa
-        if (editingInterview.status === 'COMPLETED' || 
-            editingInterview.status === 'ACCEPTED') {
-          message.warning('Không thể xóa lịch phỏng vấn đã hoàn thành/đã chấp nhận!');
+        // Chỉ không cho phép xóa khi đã hoàn thành hoặc đã duyệt cuối cùng
+        if (editingInterview.status === 'DONE' || 
+            editingInterview.status === 'ACCEPTED' ||
+            editingInterview.status === 'APPROVED') {
+          message.warning('Không thể xóa lịch phỏng vấn đã hoàn thành/đã duyệt!');
           return;
         }
         
@@ -567,8 +685,9 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
     // Chỉ hiển thị ứng viên chưa có lịch phỏng vấn và không bị từ chối
     const existingInterview = interviews.find(i => i.applicationId === app.id);
     const isRejected = app.status === 'REJECTED';
+    const isBeingProcessed = submittingApplicationIds.has(app.id);
     
-    return !existingInterview && !isRejected; // Chỉ hiển thị ứng viên chưa có lịch và không bị từ chối
+    return !existingInterview && !isRejected && !isBeingProcessed; // Chỉ hiển thị ứng viên chưa có lịch, không bị từ chối và không đang xử lý
   });
 
   // Custom button handlers
@@ -696,33 +815,53 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
             </Text>
           </Form.Item>
           
-          <Form.Item
-            name="applicationId"
-            label="Chọn ứng viên"
-            rules={[{ required: true, message: 'Vui lòng chọn ứng viên!' }]}
-          >
-            <Select placeholder="Chọn ứng viên để lên lịch">
-              {filteredApplications.map(app => (
-                <Option key={app.id} value={app.id}>
-                  {app.fullName} - {app.jobTitle}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+                     <Form.Item
+             name="applicationId"
+             label="Chọn ứng viên"
+             rules={[{ required: true, message: 'Vui lòng chọn ứng viên!' }]}
+           >
+             <Select 
+               placeholder="Chọn ứng viên để lên lịch"
+               disabled={isSubmitting}
+             >
+               {filteredApplications.map(app => {
+                 const isBeingProcessed = submittingApplicationIds.has(app.id);
+                 return (
+                   <Option 
+                     key={app.id} 
+                     value={app.id}
+                     disabled={isBeingProcessed}
+                   >
+                     {app.fullName} - {app.jobTitle}
+                     {isBeingProcessed && ' (Đang xử lý...)'}
+                   </Option>
+                 );
+               })}
+             </Select>
+           </Form.Item>
 
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                Lên lịch
-              </Button>
-              <Button onClick={() => {
-                setShowScheduleModal(false);
-                scheduleForm.resetFields();
-              }}>
-                Hủy
-              </Button>
-            </Space>
-          </Form.Item>
+                     <Form.Item>
+             <Space>
+               <Button 
+                 type="primary" 
+                 htmlType="submit" 
+                 icon={<PlusOutlined />}
+                 loading={isSubmitting}
+                 disabled={isSubmitting}
+               >
+                 {isSubmitting ? 'Đang xử lý...' : 'Lên lịch'}
+               </Button>
+               <Button 
+                 onClick={() => {
+                   setShowScheduleModal(false);
+                   scheduleForm.resetFields();
+                 }}
+                 disabled={isSubmitting}
+               >
+                 Hủy
+               </Button>
+             </Space>
+           </Form.Item>
         </Form>
       </Modal>
 
@@ -748,16 +887,18 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
             </Form.Item>
             
             <Form.Item label="Trạng thái">
-              <Text type={editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' ? 'danger' : 'default'}>
-                {editingInterview.status === 'COMPLETED' 
+              <Text type={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' ? 'danger' : 'default'}>
+                {editingInterview.status === 'DONE' 
                   ? 'Hoàn thành - Không thể chỉnh sửa' 
                   : editingInterview.status === 'ACCEPTED'
                     ? 'Đã chấp nhận - Không thể chỉnh sửa'
-                    : editingInterview.status === 'SCHEDULED' 
-                      ? 'Đã lên lịch' 
-                      : editingInterview.status === 'PENDING' 
-                        ? 'Chờ phỏng vấn' 
-                        : editingInterview.status || 'Không xác định'}
+                    : editingInterview.status === 'APPROVED'
+                      ? 'Đã duyệt - Không thể chỉnh sửa'
+                      : editingInterview.status === 'SCHEDULED' 
+                        ? 'Đã lên lịch' 
+                        : editingInterview.status === 'PENDING' 
+                          ? 'Chờ phỏng vấn' 
+                          : editingInterview.status || 'Không xác định'}
               </Text>
             </Form.Item>
 
@@ -765,62 +906,93 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
               name="startTime"
               label="Giờ bắt đầu"
               rules={[{ required: true, message: 'Vui lòng chọn giờ bắt đầu!' }]}
-              initialValue={editingInterview.startTime ? dayjs(editingInterview.startTime).format('HH:00') : ''}
             >
-              <input
-                type="time"
-                step="3600"
-                className="ant-input"
-                style={{ width: '100%', padding: '4px 11px' }}
-                disabled={editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED'}
-              />
+                             <Select
+                 placeholder="Chọn giờ bắt đầu"
+                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+               >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <Option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                    {`${i.toString().padStart(2, '0')}:00`}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item
               name="endTime"
               label="Giờ kết thúc"
-              rules={[{ required: true, message: 'Vui lòng chọn giờ kết thúc!' }]}
-              initialValue={editingInterview.endTime ? dayjs(editingInterview.endTime).format('HH:00') : ''}
+              rules={[
+                { required: true, message: 'Vui lòng chọn giờ kết thúc!' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const startTime = getFieldValue('startTime');
+                    if (!startTime || !value) {
+                      return Promise.resolve();
+                    }
+                    if (value <= startTime) {
+                      return Promise.reject(new Error('Giờ kết thúc phải sau giờ bắt đầu!'));
+                    }
+                    
+                    // Kiểm tra thời gian phỏng vấn không quá 4 tiếng
+                    const startHour = parseInt(startTime.split(':')[0]);
+                    const endHour = parseInt(value.split(':')[0]);
+                    const duration = endHour - startHour;
+                    if (duration > 4) {
+                      return Promise.reject(new Error('Thời gian phỏng vấn không được quá 4 tiếng!'));
+                    }
+                    
+                    return Promise.resolve();
+                  },
+                }),
+              ]}
             >
-              <input
-                type="time"
-                step="3600"
-                className="ant-input"
-                style={{ width: '100%', padding: '4px 11px' }}
-                disabled={editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED'}
-              />
+                             <Select
+                 placeholder="Chọn giờ kết thúc"
+                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+               >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <Option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                    {`${i.toString().padStart(2, '0')}:00`}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item>
               <Space>
-                <Button 
-                  type="primary" 
-                  htmlType="submit" 
-                  icon={<EditOutlined />}
-                  disabled={editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED'}
-                >
-                  Cập nhật
-                </Button>
+                                 <Button 
+                   type="primary" 
+                   htmlType="submit" 
+                   icon={<EditOutlined />}
+                   loading={isUpdating}
+                   disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                 >
+                   {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
+                 </Button>
                 <Popconfirm
                   title="Bạn có chắc chắn muốn xóa lịch phỏng vấn này?"
                   onConfirm={handleDeleteInterview}
                   okText="Có"
                   cancelText="Không"
                 >
-                  <Button 
-                    danger 
-                    icon={<DeleteOutlined />}
-                    disabled={editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED'}
-                  >
-                    Xóa
-                  </Button>
+                                     <Button 
+                     danger 
+                     icon={<DeleteOutlined />}
+                     disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                   >
+                     Xóa
+                   </Button>
                 </Popconfirm>
-                <Button onClick={() => {
-                  setShowEditModal(false);
-                  editForm.resetFields();
-                }}>
-                  Hủy
-                </Button>
+                                 <Button 
+                   onClick={() => {
+                     setShowEditModal(false);
+                     editForm.resetFields();
+                   }}
+                   disabled={isUpdating}
+                 >
+                   Hủy
+                 </Button>
               </Space>
             </Form.Item>
           </Form>

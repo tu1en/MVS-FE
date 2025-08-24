@@ -451,12 +451,24 @@ const RecruitmentManagement = () => {
   const [evaluatingInterview, setEvaluatingInterview] = useState(null);
   const [evaluationDraft, setEvaluationDraft] = useState('');
   const evaluationSaveTimerRef = useRef(null);
+  
+  // State để ngăn chặn việc click liên tục vào các nút Duyệt/Từ chối
+  const [processingApplicationIds, setProcessingApplicationIds] = useState(new Set());
+  const [lastStatusChangeTime, setLastStatusChangeTime] = useState(0);
 
   // Theo dõi thay đổi contractType trong form vị trí để cập nhật đơn vị tiền tệ linh hoạt
   const watchedContractType = Form.useWatch('contractType', positionForm);
 
   useEffect(() => {
     fetchPlans();
+  }, []);
+  
+  // Cleanup effect để reset state khi component unmount
+  useEffect(() => {
+    return () => {
+      setProcessingApplicationIds(new Set());
+      setLastStatusChangeTime(0);
+    };
   }, []);
 
   useEffect(() => {
@@ -740,6 +752,23 @@ const RecruitmentManagement = () => {
 
   const handleApplicationStatusChange = async (id, status) => {
     try {
+      // Kiểm tra xem ứng viên này có đang được xử lý không
+      if (processingApplicationIds.has(id)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần thay đổi status (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastStatusChangeTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi thay đổi trạng thái tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu ứng viên này đang được xử lý
+      setProcessingApplicationIds(prev => new Set(prev).add(id));
+      setLastStatusChangeTime(now);
+      
       if (status === 'APPROVED') {
         await axiosInstance.post(`/recruitment-applications/${id}/approve`);
       } else if (status === 'REJECTED') {
@@ -767,6 +796,13 @@ const RecruitmentManagement = () => {
       ]);
     } catch (err) {
       message.error('Không thể cập nhật trạng thái!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setProcessingApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -872,36 +908,60 @@ const RecruitmentManagement = () => {
     }
   };
 
-                  const handleInterviewStatusChange = async (id, status, result) => {
-                  try {
-                    // Nếu từ chối, xóa lịch phỏng vấn và cập nhật trạng thái đơn ứng tuyển
-                    if (status === 'REJECTED') {
-                      // Tìm application ID từ interview
-                      const interview = pendingInterviews.find(i => i.id === id);
-                      if (interview && interview.applicationId) {
-                        // Xóa lịch phỏng vấn
-                        await axiosInstance.delete(`/interview-schedules/${id}`);
-                        // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
-                        await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
-                        message.success('Đã từ chối ứng viên và xóa lịch phỏng vấn!');
-                      }
-                    } else {
-                      // Các status khác (ACCEPTED, DONE) - chỉ cập nhật status
-                      await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
-                      message.success('Cập nhật trạng thái thành công!');
-                    }
+                    const handleInterviewStatusChange = async (id, status, result) => {
+    try {
+      // Kiểm tra xem interview này có đang được xử lý không
+      if (processingApplicationIds.has(id)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần thay đổi status (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastStatusChangeTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi thay đổi trạng thái tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu interview này đang được xử lý
+      setProcessingApplicationIds(prev => new Set(prev).add(id));
+      setLastStatusChangeTime(now);
+      
+      // Nếu từ chối, xóa lịch phỏng vấn và cập nhật trạng thái đơn ứng tuyển
+      if (status === 'REJECTED') {
+        // Tìm application ID từ interview
+        const interview = pendingInterviews.find(i => i.id === id);
+        if (interview && interview.applicationId) {
+          // Xóa lịch phỏng vấn
+          await axiosInstance.delete(`/interview-schedules/${id}`);
+          // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
+          await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
+          message.success('Đã từ chối ứng viên và xóa lịch phỏng vấn!');
+        }
+      } else {
+        // Các status khác (ACCEPTED, DONE) - chỉ cập nhật status
+        await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+        message.success('Cập nhật trạng thái thành công!');
+      }
 
-                    // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
-                    await Promise.all([
-                      fetchPendingInterviews(),
-                      fetchInterviews(),
-                      fetchApprovedApps(),
-                      fetchOffers(),
-                      fetchApplications()
-                    ]);
-                  } catch (error) {
-                    message.error('Cập nhật trạng thái thất bại!');
-                  }
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchPendingInterviews(),
+        fetchInterviews(),
+        fetchApprovedApps(),
+        fetchOffers(),
+        fetchApplications()
+      ]);
+    } catch (error) {
+      message.error('Cập nhật trạng thái thất bại!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setProcessingApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
   };
 
   const handleOfferUpdate = async (id, offer) => {
@@ -1273,8 +1333,10 @@ const RecruitmentManagement = () => {
                 onClick={() => handleApplicationStatusChange(record.id, 'APPROVED')}
                 style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
                 className="vietnamese-text"
+                loading={processingApplicationIds.has(record.id)}
+                disabled={processingApplicationIds.has(record.id)}
               >
-                ✓ Duyệt
+                {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✓ Duyệt'}
               </Button>
               <Button 
                 type="primary" 
@@ -1282,8 +1344,10 @@ const RecruitmentManagement = () => {
                 danger
                 onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
                 className="vietnamese-text"
+                loading={processingApplicationIds.has(record.id)}
+                disabled={processingApplicationIds.has(record.id)}
               >
-                ✗ Từ chối
+                {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Từ chối'}
               </Button>
             </>
           )}
@@ -1436,8 +1500,10 @@ const RecruitmentManagement = () => {
               danger
               onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
               className="vietnamese-text"
+              loading={processingApplicationIds.has(record.id)}
+              disabled={processingApplicationIds.has(record.id)}
             >
-              ✗ Từ chối
+              {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Từ chối'}
             </Button>
           </div>
         );
@@ -1544,24 +1610,28 @@ const RecruitmentManagement = () => {
               📄 Xem CV
             </Button>
           )}
-          <Button 
-            type="primary" 
-            size="small" 
-            onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            className="vietnamese-text"
-          >
-            ✓ Đỗ
-          </Button>
-          <Button 
-            type="primary" 
-            size="small" 
-            danger
-            onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
-            className="vietnamese-text"
-          >
-            ✗ Trượt
-          </Button>
+                     <Button 
+             type="primary" 
+             size="small" 
+             onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
+             style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+             className="vietnamese-text"
+             loading={processingApplicationIds.has(record.id)}
+             disabled={processingApplicationIds.has(record.id)}
+           >
+             {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✓ Đỗ'}
+           </Button>
+           <Button 
+             type="primary" 
+             size="small" 
+             danger
+             onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
+             className="vietnamese-text"
+             loading={processingApplicationIds.has(record.id)}
+             disabled={processingApplicationIds.has(record.id)}
+           >
+             {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Trượt'}
+           </Button>
         </div>
       )
     }

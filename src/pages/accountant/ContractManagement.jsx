@@ -51,6 +51,8 @@ const ContractManagement = () => {
   // Bộ lọc trạng thái hợp đồng
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [completedContracts, setCompletedContracts] = useState(new Set());
+  // Ghi nhận các hợp đồng PENDING đã được ký (chờ hiệu lực) để khóa chỉnh sửa và ẩn nút ký
+  const [signedContracts, setSignedContracts] = useState(new Set());
 
   
 
@@ -58,16 +60,42 @@ const ContractManagement = () => {
   const parseToMoment = (value) => {
     if (!value) return null;
     if (moment.isMoment(value)) return value;
-    // Try strict known formats first
-    const formats = ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601];
-    const m = moment(value, formats, true);
-    if (m.isValid()) {
-      return m.isAfter(moment(), 'day') ? null : m;
+    
+    // Handle date string from backend (YYYY-MM-DD format)
+    if (typeof value === 'string') {
+      // First try the exact backend format
+      const backendMoment = moment(value, 'YYYY-MM-DD', true);
+      if (backendMoment.isValid()) {
+        return backendMoment;
+      }
+      
+      // Try other common formats
+      const formats = ['DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601];
+      const m = moment(value, formats, true);
+      if (m.isValid()) {
+        return m.isAfter(moment(), 'day') ? null : m;
+      }
     }
+    
     // Fallback loose parse
     const m2 = moment(value);
     if (!m2.isValid() || m2.isAfter(moment(), 'day')) return null;
     return m2;
+  };
+
+  // Normalize potential Dayjs/Date/string into a moment() instance
+  const toMomentDate = (value) => {
+    if (!value) return null;
+    if (moment.isMoment(value)) return value;
+    // Dayjs exposes native Date at .$d
+    if (value && value.$d instanceof Date) return moment(value.$d);
+    if (value instanceof Date) return moment(value);
+    if (typeof value === 'string') {
+      const m = moment(value, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD', moment.ISO_8601], true);
+      return m.isValid() ? m : moment(value);
+    }
+    // Fallback attempt
+    return moment(value);
   };
 
   // ===== Contract ID helpers =====
@@ -320,14 +348,68 @@ const ContractManagement = () => {
     setFilteredTeacherContracts(filterData(teacherContracts));
   };
 
-  // Hàm validate ngày sinh: không được ở tương lai
+  // Hàm validate ngày sinh: không được ở tương lai và phải đủ 18 tuổi
   const validateBirthDate = (_, value) => {
-    if (!value) {
-      return Promise.reject(new Error('Vui lòng chọn ngày sinh'));
+    const m = toMomentDate(value);
+    if (!m || !m.isValid()) {
+      return Promise.reject(new Error('Vui lòng chọn ngày sinh hợp lệ'));
     }
-    if (value.isAfter(moment(), 'day')) {
+    const today = moment().startOf('day');
+    if (m.isAfter(today, 'day')) {
       return Promise.reject(new Error('Ngày sinh không được ở tương lai!'));
     }
+
+    // Cách tính tuổi chắc chắn: ngày sinh + 18 năm phải <= hôm nay
+    const adultDate = m.clone().add(18, 'years');
+    const under18 = adultDate.isAfter(today, 'day');
+
+    console.log('Debug age validation:', {
+      inputValue: m.format('YYYY-MM-DD'),
+      currentDate: today.format('YYYY-MM-DD'),
+      adultDate: adultDate.format('YYYY-MM-DD'),
+      under18
+    });
+
+    if (under18) {
+      return Promise.reject(new Error('Người lao động phải đủ 18 tuổi trở lên!'));
+    }
+
+    return Promise.resolve();
+  };
+
+  // Không cho chọn ngày ở tương lai hoặc người dưới 18 tuổi
+  const disableInvalidBirthDates = (current) => {
+    if (!current) return false;
+    const todayEnd = moment().endOf('day');
+    const minAge18 = moment().subtract(18, 'years').startOf('day');
+    const c = moment(current?.$d || current); // hỗ trợ dayjs/moment
+    if (!c.isValid()) return true;
+    // Disable ngày trong tương lai hoặc ngày sinh làm cho người đó dưới 18 tuổi
+    return c.isAfter(todayEnd) || c.isAfter(minAge18, 'day');
+  };
+
+  // Hàm validate địa chỉ dùng chung cho cả tạo/chỉnh sửa
+  const validateAddress = (_, value) => {
+    const v = (value || '').trim();
+    if (!v) return Promise.reject(new Error('Vui lòng nhập địa chỉ!'));
+    if (v.length < 3) return Promise.reject(new Error('Địa chỉ tối thiểu 3 ký tự.'));
+    if (v.length > 255) return Promise.reject(new Error('Địa chỉ tối đa 255 ký tự.'));
+
+    // Chỉ cho phép: chữ, số, khoảng trắng, dấu phẩy, chấm, gạch ngang, "/"
+    const allowed = /^[a-zA-Z0-9À-ỹ\s,\.\-\/]+$/;
+    if (!allowed.test(v)) {
+      return Promise.reject(new Error('Địa chỉ chỉ được chứa chữ, số, khoảng trắng, dấu phẩy, chấm, gạch ngang và "/".'));
+    }
+
+    // Không chứa từ cấm
+    const banned = /\b(test|xxx)\b/i;
+    if (banned.test(v)) return Promise.reject(new Error('Địa chỉ không được chứa từ cấm (ví dụ: "test", "xxx").'));
+
+    // Chỉ cần có ít nhất 1 từ có độ dài >= 3 ký tự
+    if (!/[A-Za-zÀ-ỹ]{3,}/.test(v)) {
+      return Promise.reject(new Error('Địa chỉ phải có ít nhất 1 từ có độ dài từ 3 ký tự trở lên.'));
+    }
+
     return Promise.resolve();
   };
 
@@ -343,6 +425,11 @@ const ContractManagement = () => {
 
   // Mở modal chỉnh sửa và đổ dữ liệu hợp đồng
   const handleEditContract = (record) => {
+    // Nếu hợp đồng đã ký (PENDING đã ký chờ hiệu lực) thì không cho mở modal chỉnh sửa
+    if (signedContracts.has(record.id)) {
+      message.warning('Hợp đồng đã ký và đang chờ hiệu lực. Không thể chỉnh sửa.');
+      return;
+    }
     setEditingContract(record);
     setEditModalVisible(true);
     // Chỉ cho phép sửa lương theo giờ NGAY SAU KHI KÝ LẠI: status=ACTIVE và startDate = hôm nay
@@ -360,7 +447,7 @@ const ContractManagement = () => {
     editForm.setFieldsValue({
       contractId: record.contractId,
       fullName: record.fullName,
-      birthDate: parseToMoment(record.birthDate),
+      birthDate: null, // Để trắng như form tạo hợp đồng
       email: record.email,
       phoneNumber: record.phoneNumber,
       cccd: record.citizenId || record.cccd || '',
@@ -476,7 +563,7 @@ const ContractManagement = () => {
       next.add(id);
       return next;
     });
-    message.success('Đã đánh dấu hợp đồng là hoàn thành .');
+    message.success('Đã đánh dấu hợp đồng hoàn thành');
   };
 
   // Gia hạn hợp đồng (ký lại)
@@ -491,84 +578,115 @@ const ContractManagement = () => {
     }
   };
 
+  // Ký hợp đồng ở trạng thái PENDING -> ACTIVE
+  const handleSignContract = async (contractId) => {
+    try {
+      const res = await axiosInstance.put(`/contracts/${contractId}/sign`);
+      const data = res?.data || {};
+      const status = data?.status;
+      const start = data?.startDate ? moment(data.startDate).format('DD/MM/YYYY') : '01/09';
+      if (status === 'ACTIVE') {
+        message.success('Ký hợp đồng thành công! Hợp đồng đã được kích hoạt.');
+      } else {
+        message.success('Ký hợp đồng thành công!');
+        // Đánh dấu đã ký (chờ hiệu lực) để ẩn nút ký và khóa chỉnh sửa
+        setSignedContracts((prev) => {
+          const next = new Set(prev);
+          next.add(contractId);
+          return next;
+        });
+      }
+      fetchContracts();
+    } catch (error) {
+      console.error('Error signing contract:', error);
+      message.error('Không thể ký hợp đồng!');
+    }
+  };
+
   // Cấu hình cột cho bảng hợp đồng
   const contractColumns = [
     {
       title: 'ID Hợp đồng',
       dataIndex: 'contractId',
       key: 'contractId',
-      width: 220,
-      render: (text) => (
-        <strong style={{ color: '#1890ff' }}>{(text ?? '').toString()}</strong>
-      )
+      width: 180,
+      render: (text) => <strong>{text}</strong>
     },
     {
       title: 'Họ tên',
       dataIndex: 'fullName',
       key: 'fullName',
-      render: (text) => <strong>{text}</strong>
+      width: 200
     },
-
     {
       title: 'Email',
       dataIndex: 'email',
-      key: 'email'
+      key: 'email',
+      width: 220
     },
     {
-      title: 'Số điện thoại',
+      title: 'SĐT',
       dataIndex: 'phoneNumber',
-      key: 'phoneNumber'
+      key: 'phoneNumber',
+      width: 140
     },
     {
       title: 'Vị trí',
       dataIndex: 'position',
-      key: 'position'
-    },
-
-    {
-      title: 'Lương',
-      dataIndex: 'salary',
-      key: 'salary',
-      render: (salary) => salary ? `${salary.toLocaleString()} VNĐ` : 'Chưa xác định'
+      key: 'position',
+      width: 160
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
+      width: 140,
       render: (status) => {
-        let color = 'blue';
-        let text = status;
-        
-        switch(status) {
-          case 'ACTIVE':
-            color = 'green';
-            text = 'Còn hạn';
-            break;
-          case 'NEAR_EXPIRY':
-            color = 'orange';
-            text = 'Sắp hết hạn';
-            break;
-          case 'EXPIRED':
-            color = 'red';
-            text = 'Hết hạn';
-            break;
-          case 'PENDING':
-            color = 'geekblue';
-            text = 'Chưa có hiệu lực';
-            break;
-          default:
-            color = 'blue';
-            text = status;
-        }
-        
-        return <Tag color={color}>{text}</Tag>;
+        const color = status === 'ACTIVE'
+          ? 'green'
+          : status === 'NEAR_EXPIRY'
+          ? 'orange'
+          : status === 'EXPIRED'
+          ? 'red'
+          : 'default';
+        const label = status === 'ACTIVE'
+          ? 'Còn hạn'
+          : status === 'NEAR_EXPIRY'
+          ? 'Sắp hết hạn'
+          : status === 'EXPIRED'
+          ? 'Hết hạn'
+          : 'Chưa có hiệu lực';
+        return <Tag color={color}>{label}</Tag>;
       }
+    },
+    {
+      title: 'Bắt đầu',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      width: 130,
+      render: (d) => (d ? moment(d).format('DD/MM/YYYY') : '-')
+    },
+    {
+      title: 'Kết thúc',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      width: 130,
+      render: (d) => (d ? moment(d).format('DD/MM/YYYY') : '-')
+    },
+    {
+      title: 'Lương/giờ',
+      dataIndex: 'hourlySalary',
+      key: 'hourlySalary',
+      width: 140,
+      render: (v) => (v != null ? `${String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ` : '-')
     },
     {
       title: 'Thao tác',
       key: 'action',
+      fixed: 'right',
+      width: 150,
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="small">
           <Tooltip title="Xem hợp đồng PDF">
             <Button 
               icon={<FilePdfOutlined />} 
@@ -582,15 +700,18 @@ const ContractManagement = () => {
               icon={<EditOutlined />} 
               size="small" 
               onClick={() => handleEditContract(record)}
-              disabled={completedContracts.has(record.id)}
+              disabled={completedContracts.has(record.id) || signedContracts.has(record.id)}
               style={{
-                backgroundColor: completedContracts.has(record.id) ? '#d9d9d9' : undefined,
-                borderColor: completedContracts.has(record.id) ? '#d9d9d9' : undefined,
-                color: completedContracts.has(record.id) ? '#999' : undefined
+                backgroundColor: (completedContracts.has(record.id) || signedContracts.has(record.id)) ? '#d9d9d9' : undefined,
+                borderColor: (completedContracts.has(record.id) || signedContracts.has(record.id)) ? '#d9d9d9' : undefined,
+                color: (completedContracts.has(record.id) || signedContracts.has(record.id)) ? '#999' : undefined
               }}
               title={
-                completedContracts.has(record.id) ? 'Không thể chỉnh sửa hợp đồng đã hoàn thành' :
-                'Chỉnh sửa hợp đồng'
+                completedContracts.has(record.id)
+                  ? 'Không thể chỉnh sửa hợp đồng đã hoàn thành'
+                  : signedContracts.has(record.id)
+                    ? 'Không thể chỉnh sửa hợp đồng đã ký (chờ hiệu lực)'
+                    : 'Chỉnh sửa hợp đồng'
               }
             />
           </Tooltip>
@@ -606,6 +727,22 @@ const ContractManagement = () => {
                   icon={<CheckOutlined />} 
                   size="small" 
                   style={{ color: '#52c41a' }}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
+          {record.status === 'PENDING' && !completedContracts.has(record.id) && !signedContracts.has(record.id) && (
+            <Popconfirm
+              title={`Ký hợp đồng; có hiệu lực từ ${record.startDate ? moment(record.startDate).format('DD/MM/YYYY') : '01/09'}`}
+              onConfirm={() => handleSignContract(record.id)}
+              okText="Ký"
+              cancelText="Hủy"
+            >
+              <Tooltip title="Ký hợp đồng">
+                <Button 
+                  icon={<CheckOutlined />} 
+                  size="small" 
+                  style={{ color: '#722ed1' }}
                 />
               </Tooltip>
             </Popconfirm>
@@ -785,6 +922,7 @@ const ContractManagement = () => {
               style={{ width: '100%' }} 
               format="DD/MM/YYYY" 
               placeholder="Chọn ngày sinh" 
+              disabledDate={disableInvalidBirthDates}
             />
           </Form.Item>
 
@@ -816,8 +954,15 @@ const ContractManagement = () => {
             <Input placeholder="Nhập số CCCD (12 số)" maxLength={12} />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}>
-            <Input placeholder="Nhập địa chỉ" />
+          <Form.Item 
+            name="address" 
+            label="Địa chỉ" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập địa chỉ!' },
+              { validator: validateAddress }
+            ]}
+          > 
+            <Input placeholder="Nhập địa chỉ (VD: 123 Nguyễn Trãi)" maxLength={255} />
           </Form.Item>
 
           <Form.Item name="qualification" label="Trình độ chuyên môn" rules={[{ required: true, message: 'Vui lòng nhập trình độ chuyên môn!' }]}>
@@ -890,6 +1035,21 @@ const ContractManagement = () => {
           <Form.Item 
             name="hourlySalary" 
             label="Lương theo giờ"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (!canEditHourly) return Promise.resolve();
+                  if (value === undefined || value === null || value === '') {
+                    return Promise.reject(new Error('Vui lòng nhập lương theo giờ'));
+                  }
+                  const v = Number(value);
+                  if (Number.isNaN(v)) return Promise.reject(new Error('Lương theo giờ không hợp lệ'));
+                  if (v < 20000) return Promise.reject(new Error('Lương theo giờ tối thiểu là 20,000 VND'));
+                  if (v > 9999999) return Promise.reject(new Error('Lương theo giờ tối đa là 9,999,999 VND'));
+                  return Promise.resolve();
+                }
+              }
+            ]}
           >
             <InputNumber
               style={{ 
@@ -904,6 +1064,8 @@ const ContractManagement = () => {
               disabled={!canEditHourly}
               controls={false}
               precision={0}
+              min={20000}
+              max={9999999}
               inputMode="numeric"
               onKeyDown={(e) => {
                 // Chặn các phím không phải số, CHO PHÉP dấu phẩy "," để người dùng gõ phân tách
@@ -911,8 +1073,9 @@ const ContractManagement = () => {
                   e.preventDefault();
                 }
               }}
-              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' VNĐ' : ''}
               parser={value => value ? value.replace(/[^0-9]/g, '') : ''}
+              suffix="VNĐ"
             />
           </Form.Item>
 
@@ -978,7 +1141,13 @@ const ContractManagement = () => {
             <DatePicker 
               style={{ width: '100%' }} 
               format="DD/MM/YYYY" 
-              placeholder="Chọn ngày sinh" 
+              placeholder="Chọn ngày sinh"
+              disabledDate={disableInvalidBirthDates}
+              allowClear={true}
+              showToday={false}
+              inputReadOnly={false}
+              changeOnBlur={false}
+              open={undefined}
             />
           </Form.Item>
 
@@ -994,8 +1163,15 @@ const ContractManagement = () => {
             <Input placeholder="Nhập số CCCD (12 số)" maxLength={12} />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}>
-            <Input placeholder="Nhập địa chỉ" />
+          <Form.Item 
+            name="address" 
+            label="Địa chỉ" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập địa chỉ!' },
+              { validator: validateAddress }
+            ]}
+          > 
+            <Input placeholder="Nhập địa chỉ (VD: 123 Nguyễn Trãi)" maxLength={255} />
           </Form.Item>
 
           <Form.Item name="qualification" label="Trình độ chuyên môn" rules={[{ required: true, message: 'Vui lòng nhập trình độ chuyên môn!' }]}>
@@ -1069,8 +1245,9 @@ const ContractManagement = () => {
               placeholder="Lấy từ duyệt ứng viên"
               readOnly
               disabled
-              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-              parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+              formatter={value => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' VNĐ' : ''}
+              parser={value => value ? value.replace(/[^0-9]/g, '') : ''}
+              suffix="VNĐ"
             />
           </Form.Item>
 
