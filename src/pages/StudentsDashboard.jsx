@@ -1,5 +1,5 @@
-import { AreaChartOutlined, BookOutlined, CalendarOutlined, CheckCircleOutlined, FileTextOutlined, MessageOutlined, UserOutlined, VideoCameraOutlined } from "@ant-design/icons";
-import { App, Button, Card, Col, Progress, Row, Spin, Statistic, Typography } from "antd";
+import { AreaChartOutlined, BookOutlined, CalendarOutlined, UserOutlined } from "@ant-design/icons";
+import { App, Button, Card, Col, Progress, Row, Spin, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROLE } from "../constants/constants";
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
       <h1 className="text-3xl font-bold mb-8 text-center">Trang Học Sinh</h1>
       
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} className="mb-8">
+      {/* <Row gutter={[16, 16]} className="mb-8">
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
@@ -253,7 +253,7 @@ export default function StudentDashboard() {
             />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       {/* Widget "Khóa học của tôi" theo tài liệu hướng dẫn */}
       <Row gutter={[24, 24]} className="mb-8">
@@ -321,7 +321,7 @@ export default function StudentDashboard() {
           </Card>
         </Col>
         
-        <Col xs={24} lg={12}>
+        {/* <Col xs={24} lg={12}>
           <Card 
             title={
               <span className="flex items-center">
@@ -346,7 +346,9 @@ export default function StudentDashboard() {
               </div>
             </div>
           </Card>
-        </Col>
+        </Col> */}
+
+
       </Row>
 
       {/* Main Navigation Cards */}
@@ -367,7 +369,7 @@ export default function StudentDashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={8}>
+        {/* <Col xs={24} sm={12} lg={8}>
           <Card
             hoverable
             className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg"
@@ -381,7 +383,7 @@ export default function StudentDashboard() {
               </p>
             </div>
           </Card>
-        </Col>
+        </Col> */}
 
         <Col xs={24} sm={12} lg={8}>
           <Card

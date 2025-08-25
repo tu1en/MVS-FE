@@ -1,14 +1,14 @@
 import { App as AntApp } from "antd";
 import { useEffect } from "react";
 import {
-    Navigate,
-    Route,
-    BrowserRouter as Router,
-    Routes,
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
 } from "react-router-dom";
 import "./App.css";
 // import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
-import OnlineClassesPage from './pages/OnlineClassesPage.jsx';
+import ClassesPageOnline from './pages/OnlineClassesPage.jsx';
 import "./styles/vietnamese-fonts.css"; // Import Vietnamese fonts CSS
 
 // Layout & Core
@@ -130,7 +130,7 @@ import AccountantEditProfile from './pages/accountant/EditProfile.jsx';
 import ContractManagement from './pages/accountant/ContractManagement';
 import PayrollIssues from './pages/accountant/PayrollIssues.jsx';
 import PayrollManagement from './pages/accountant/PayrollManagement';
-import ShiftAttendanceReport from './pages/accountant/ShiftAttendanceReport.jsx';
+// import ShiftAttendanceReport from './pages/accountant/ShiftAttendanceReport.jsx';
 import MyPayroll from './pages/employee/MyPayroll.jsx';
 import AccountantEvidencePage from './pages/manager/AccountantEvidencePage.jsx';
 
@@ -247,6 +247,8 @@ const RootRedirect = () => {
 
     const userRoleName = user.role?.replace('ROLE_', '');
 
+    console.log('RootRedirect: Redirecting user with role', userRoleName);
+
     switch (userRoleName) {
         case "STUDENT": return <Navigate to="/student" replace />;
         case "TEACHER": return <Navigate to="/teacher" replace />;
@@ -312,7 +314,7 @@ function App() {
               <Route path="/teacher/explanation-request" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherExplanationRequest /></ProtectedRoute>} />
               <Route path="/teacher/course-management" element={<ProtectedRoute allowedRoles={["TEACHER"]}><TeacherCourseManagement /></ProtectedRoute>} />
 
-              <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><OnlineClassesPage /></ProtectedRoute>} />
+              <Route path="/teacher/online-classes" element={<ProtectedRoute allowedRoles={["TEACHER"]}><ClassesPageOnline /></ProtectedRoute>} />
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentsDashboard /></ProtectedRoute>} />
               {/* Self-service payroll route with role-specific prefixes */}
@@ -422,10 +424,10 @@ function App() {
               {/* Backward-compatible redirects */}
               <Route path="/accountant/explanation-status" element={<Navigate to="/accountant/attendance-explanations" replace />} />
               <Route path="/accountant/evidence-management" element={<Navigate to="/accountant/evidence" replace />} />
-              <Route 
+              {/* <Route 
                 path="/accountant/attendance-reports" 
                 element={<ProtectedRoute allowedRoles={["ACCOUNTANT"]}><ShiftAttendanceReport /></ProtectedRoute>} 
-              />
+              /> */}
 
 
               {/* Test Upload Page removed */}

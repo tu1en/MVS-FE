@@ -36,14 +36,60 @@ class SubmissionService {
    */
   static async submitAssignment(submissionData) {
     try {
-      const response = await apiClient.post('/submissions', submissionData);
+      // Validate submission data before sending
+      console.log('📤 Submitting assignment data:', submissionData);
+
+      // Ensure required fields
+      if (!submissionData.assignmentId) {
+        throw new Error('Assignment ID is required');
+      }
+
+      // Validate data types and limits
+      const validatedData = {
+        assignmentId: Number(submissionData.assignmentId),
+        comment: submissionData.comment || '',
+        richTextContent: submissionData.richTextContent || '',
+        attachments: submissionData.attachments || []
+      };
+
+      // Truncate if too long
+      if (validatedData.comment.length > 2000) {
+        validatedData.comment = validatedData.comment.substring(0, 2000);
+        console.warn('⚠️ Comment truncated to 2000 characters');
+      }
+
+      if (validatedData.richTextContent.length > 10000) {
+        validatedData.richTextContent = validatedData.richTextContent.substring(0, 10000);
+        console.warn('⚠️ Rich text content truncated to 10000 characters');
+      }
+
+      console.log('✅ Validated submission data:', validatedData);
+
+      const response = await apiClient.post('/submissions', validatedData);
       return response.data;
     } catch (error) {
-      console.error('Error submitting assignment:', error);
+      console.error('❌ Error submitting assignment:', error);
+      console.error('❌ Error response:', error.response?.data);
 
       // Handle specific business logic errors
       if (error.response?.status === 400) {
-        const errorMessage = error.response.data?.message || error.response.data;
+        const errorData = error.response.data;
+        const errorMessage = errorData?.message || errorData;
+
+        console.error('🔍 400 Error Details:', {
+          status: error.response.status,
+          data: errorData,
+          message: errorMessage
+        });
+
+        // Handle validation errors
+        if (errorData?.errors) {
+          const validationErrors = Object.values(errorData.errors).join(', ');
+          const friendlyError = new Error(`Dữ liệu không hợp lệ: ${validationErrors}`);
+          friendlyError.code = 'VALIDATION_ERROR';
+          friendlyError.originalError = error;
+          throw friendlyError;
+        }
 
         if (typeof errorMessage === 'string' && errorMessage.includes('Assignment deadline has passed')) {
           // Create a user-friendly error for deadline passed
@@ -60,6 +106,12 @@ class SubmissionService {
           friendlyError.originalError = error;
           throw friendlyError;
         }
+
+        // Generic 400 error
+        const friendlyError = new Error(`Lỗi dữ liệu: ${errorMessage || 'Dữ liệu gửi lên không hợp lệ'}`);
+        friendlyError.code = 'BAD_REQUEST';
+        friendlyError.originalError = error;
+        throw friendlyError;
       }
 
       throw error;

@@ -72,8 +72,8 @@ const PublicCourseDetail = () => {
       instructorName: baseNormalized.instructor,
       // Video intro
       introVideoUrl: d.introVideoUrl || d.videoUrl || null,
-      // Lessons
-      lessonCount: d.lessonCount || (Array.isArray(d.lessons) ? d.lessons.length : undefined),
+      // Lessons - prioritize classLessons from ClassDto
+      lessonCount: d.lessonCount || (Array.isArray(d.classLessons) ? d.classLessons.length : (Array.isArray(d.lessons) ? d.lessons.length : undefined)),
       // Ratings (nếu BE không có thì để undefined, không random)
       rating: d.averageRating || d.rating || baseNormalized.rating,
       totalRatings: d.totalRatings || d.reviewsCount
@@ -97,18 +97,8 @@ const PublicCourseDetail = () => {
       }
       const normalized = normalizeCourse(data);
       setCourse(normalized);
-      // Nếu là route lớp công khai /public/classes/:id hoặc chưa có số bài học, gọi thêm API lessons để bổ sung
-      try {
-        if (!normalized.lessonCount || normalized.lessonCount === 0) {
-          // Dùng endpoint public để tránh 403
-          const resLessons = await fetch(`${API_CONFIG.BASE_URL}/public/courses/by-class/${id}/lessons`);
-          if (resLessons.ok) {
-            const lessonPayload = await resLessons.json();
-            const lessons = Array.isArray(lessonPayload?.data) ? lessonPayload.data : (Array.isArray(lessonPayload) ? lessonPayload : []);
-            setCourse(prev => ({ ...prev, lessonCount: Array.isArray(lessons) ? lessons.length : prev.lessonCount }));
-          }
-        }
-      } catch (_) {}
+      // ✅ FIX: ClassDto already includes classLessons, no need for additional API call
+      // The lessonCount should already be populated from classLessons in the normalizeCourse function above
       setError(null);
     } catch (error) {
       console.error('Lỗi khi tải khóa học:', error);
@@ -182,7 +172,7 @@ const PublicCourseDetail = () => {
     "Tài liệu học tập đầy đủ", 
     "Bài tập thực hành",
     "Quiz và kiểm tra định kỳ",
-    "Hỗ trợ trực tuyến",
+    "Hỗ trợ học tập",
     "Chứng chỉ hoàn thành",
     "Cập nhật nội dung mới",
     "Học nhóm và thảo luận"
@@ -526,7 +516,7 @@ const PublicCourseDetail = () => {
                   )}
                   
                   {/* Message Input */}
-                  <div className="mb-6">
+                  {/* <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tin nhắn (tùy chọn)
                     </label>
@@ -541,7 +531,7 @@ const PublicCourseDetail = () => {
                     <p className="text-xs text-gray-500 mt-1">
                       {message.length}/500 ký tự
                     </p>
-                  </div>
+                  </div> */}
 
                   <div className="space-y-4 mb-6">
                     <button

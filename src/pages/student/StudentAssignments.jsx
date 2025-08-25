@@ -14,6 +14,7 @@ import {
 import {
     Button,
     Card,
+    Col,
     DatePicker,
     Descriptions,
     Divider,
@@ -22,6 +23,7 @@ import {
     Input,
     message,
     Modal,
+    Row,
     Select,
     Space,
     Spin,
@@ -79,6 +81,8 @@ const StudentAssignments = () => {
     try {
       setLoading(true);
       const data = await AssignmentService.getCurrentStudentAssignments();
+      console.log('📋 Fetched assignments:', data);
+      console.log('📋 First assignment:', data[0]);
       setAssignments(data);
       
       // Fetch submissions for each assignment
@@ -227,6 +231,9 @@ const StudentAssignments = () => {
   };
 
   const showAssignmentDetails = (assignment) => {
+    console.log('🔍 Selected assignment:', assignment);
+    console.log('🔍 fileAttachmentUrl:', assignment.fileAttachmentUrl);
+    console.log('🔍 attachments:', assignment.attachments);
     setSelectedAssignment(assignment);
     setModalVisible(true);
   };
@@ -696,15 +703,41 @@ const StudentAssignments = () => {
               {selectedAssignment.description || 'Không có mô tả'}
             </Paragraph>
             
-            {selectedAssignment.fileAttachmentUrl && (
+            {/* Show assignment attachments */}
+            {(selectedAssignment.fileAttachmentUrl || (selectedAssignment.attachments && selectedAssignment.attachments.length > 0)) && (
               <>
                 <Divider>Tài liệu đính kèm</Divider>
-                <Button 
-                  icon={<DownloadOutlined />}
-                  onClick={() => window.open(selectedAssignment.fileAttachmentUrl, '_blank')}
-                >
-                  Tải về đề bài
-                </Button>
+                <div>
+                  {selectedAssignment.fileAttachmentUrl && (
+                    <div style={{ marginBottom: 8 }}>
+                      <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(selectedAssignment.fileAttachmentUrl, '_blank')}
+                        style={{ marginRight: 8 }}
+                      >
+                        Tải về đề bài
+                      </Button>
+                    </div>
+                  )}
+                  {selectedAssignment.attachments && selectedAssignment.attachments.map((attachment, index) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <Button
+                        type="default"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(attachment.fileUrl, '_blank')}
+                        style={{ marginRight: 8 }}
+                      >
+                        {attachment.fileName || `Tài liệu ${index + 1}`}
+                      </Button>
+                      {attachment.fileSize && (
+                        <Text type="secondary" style={{ marginLeft: 8 }}>
+                          ({Math.round(attachment.fileSize / 1024)} KB)
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </div>

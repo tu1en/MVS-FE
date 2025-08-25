@@ -367,12 +367,12 @@ const PublicCourseDashboard = () => {
         {/* Help Section */}
         <div className="mt-16 text-center">
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-8 max-w-3xl mx-auto">
-            <h3 className="text-2xl font-bold text-blue-900 mb-4">
+            {/* <h3 className="text-2xl font-bold text-blue-900 mb-4">
               Cần hỗ trợ?
-            </h3>
+            </h3> */}
             <p className="text-blue-700 text-lg leading-relaxed">
-              Nếu bạn có thắc mắc về các khóa học hoặc cần hỗ trợ đăng ký, 
-              vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi.
+              {/* Nếu bạn có thắc mắc về các khóa học hoặc cần hỗ trợ đăng ký, 
+              vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi. */}
             </p>
           </div>
         </div>

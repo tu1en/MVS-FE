@@ -23,8 +23,55 @@ function StudentMessagesPage() {
   // Kích hoạt chế độ mobile khi nhỏ hơn 'lg' (~<992px) để dễ thấy hiệu ứng
   const isMobile = !screens.lg;
 
-  const formatDate = (iso) => {
-    try { return new Date(iso).toLocaleString('vi-VN'); } catch { return 'N/A'; }
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Không xác định';
+    
+    try {
+      let date;
+      
+      // Handle different date formats from backend
+      if (typeof dateString === 'string') {
+        // Handle various string formats
+        let isoString = dateString;
+        
+        // If it's already ISO format, use as is
+        if (dateString.includes('T')) {
+          isoString = dateString;
+        } else if (dateString.includes(' ')) {
+          // Replace space with 'T' for ISO format
+          isoString = dateString.replace(' ', 'T');
+        } else if (dateString.includes('-') && dateString.includes(':')) {
+          // Format like "2024-01-01 10:30:00"
+          isoString = dateString.replace(' ', 'T');
+        }
+        
+        date = new Date(isoString);
+      } else if (Array.isArray(dateString)) {
+        // Handle array format [year, month, day, hour, minute, second, nano]
+        if (dateString.length >= 3) {
+          date = new Date(dateString[0], dateString[1] - 1, dateString[2], 
+                         dateString[3] || 0, dateString[4] || 0, dateString[5] || 0);
+        } else {
+          date = new Date(dateString);
+        }
+      } else if (dateString && typeof dateString === 'object' && dateString.getTime) {
+        // Already a Date object
+        date = dateString;
+      } else {
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', dateString, 'type:', typeof dateString);
+        return 'Ngày không hợp lệ';
+      }
+      
+      return date.toLocaleString('vi-VN');
+    } catch (error) {
+      console.error('Error formatting date:', dateString, 'type:', typeof dateString, 'error:', error);
+      return 'Ngày không hợp lệ';
+    }
   };
 
   const normalizeTeacher = (raw) => {
@@ -45,19 +92,37 @@ function StudentMessagesPage() {
     if (!userId) return;
     setLoading(true);
     try {
+      console.log('Loading data for student:', userId);
+      
       const [clsRes, inboxRes] = await Promise.all([
-        apiClient.get('/classrooms/student/me').catch(() => null),
-        apiClient.get(`/student-messages/student/${userId}`).catch(() => ({ data: [] })),
+        apiClient.get('/classrooms/student/me').catch((err) => {
+          console.warn('Error fetching classrooms:', err);
+          return null;
+        }),
+        apiClient.get(`/student-messages/student/${userId}`).catch((err) => {
+          console.warn('Error fetching inbox messages:', err);
+          return { data: [] };
+        }),
       ]);
 
+      console.log('Classrooms response:', clsRes);
+      console.log('Inbox response:', inboxRes);
+
       const inbox = Array.isArray(inboxRes?.data) ? inboxRes.data : (inboxRes?.data?.data || []);
+      console.log('Processed inbox messages:', inbox);
       setMessages(inbox);
 
-      const sentRes = await apiClient.get(`/student-messages/by-sender/${userId}`).catch(() => ({ data: [] }));
+      const sentRes = await apiClient.get(`/student-messages/by-sender/${userId}`).catch((err) => {
+        console.warn('Error fetching sent messages:', err);
+        return { data: [] };
+      });
       const sent = Array.isArray(sentRes?.data) ? sentRes.data : (sentRes?.data?.data || []);
+      console.log('Processed sent messages:', sent);
       setSentMessages(sent);
 
       const classes = Array.isArray(clsRes?.data?.data) ? clsRes.data.data : (Array.isArray(clsRes?.data) ? clsRes.data : []);
+      console.log('Processed classes:', classes);
+      
       const fromClasses = (classes || []).map((c) => normalizeTeacher({
         id: c.teacherId || c.instructorId || c.teacher?.id,
         teacherName: c.teacherName || c.teacher?.fullName,
@@ -73,8 +138,11 @@ function StudentMessagesPage() {
       }).filter(Boolean);
 
       const list = uniqueById([...(fromClasses || []), ...(fromMessages || [])]);
+      console.log('Final teachers list:', list);
       setTeachers(list);
       if (!selectedTeacher && list.length) setSelectedTeacher(list[0]);
+    } catch (error) {
+      console.error('Error in loadData:', error);
     } finally {
       setLoading(false);
     }
@@ -85,9 +153,25 @@ function StudentMessagesPage() {
   const conversation = useMemo(() => {
     if (!selectedTeacher) return [];
     const all = [...(messages || []), ...(sentMessages || [])];
-    return all
-      .filter((m) => m.senderId === selectedTeacher.id || m.recipientId === selectedTeacher.id)
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const filtered = all.filter((m) => m.senderId === selectedTeacher.id || m.recipientId === selectedTeacher.id);
+    
+    // Sort with error handling for invalid dates
+    return filtered.sort((a, b) => {
+      try {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        
+        // Check if dates are valid
+        if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+        if (isNaN(dateA.getTime())) return 1; // Invalid dates go to end
+        if (isNaN(dateB.getTime())) return -1; // Invalid dates go to end
+        
+        return dateA - dateB;
+      } catch (error) {
+        console.warn('Error sorting conversation by date:', error);
+        return 0;
+      }
+    });
   }, [messages, sentMessages, selectedTeacher]);
 
   const sendMessage = async () => {

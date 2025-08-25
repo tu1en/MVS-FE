@@ -1,40 +1,36 @@
-import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  Table,
-  Button,
-  Tag,
-  Space,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  Select,
-  DatePicker,
-  Modal,
-  Spin,
-  Empty,
-  message,
-  Tooltip,
-  Descriptions,
-  Divider
-} from 'antd';
-import {
-  MoneyCollectOutlined,
-  FileTextOutlined,
+  CheckCircleOutlined,
   DownloadOutlined,
   EyeOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  CalendarOutlined,
+  FileTextOutlined,
+  MoneyCollectOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Divider,
+  Empty,
+  message,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Statistic,
+  Table,
+  Tag,
+  Typography
+} from 'antd';
 import moment from 'moment';
 import 'moment/locale/vi';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -121,13 +117,71 @@ const ParentBilling = () => {
     try {
       setDownloadingDoc(documentId);
       
-      const response = await api.get(`/parent/billing/download/${documentId}`, {
-        params: { type },
-        responseType: 'blob'
-      });
+      // Try different possible endpoints and approaches
+      let response;
+      let downloadUrl;
+      
+      try {
+        // First try the original endpoint with type parameter
+        response = await api.get(`/parent/billing/download/${documentId}`, {
+          params: { type },
+          responseType: 'blob'
+        });
+        downloadUrl = response.data;
+      } catch (firstError) {
+        console.log('First attempt failed, trying alternative endpoint...');
+        
+        try {
+          // Try alternative endpoint structure
+          response = await api.get(`/parent/billing/${documentId}/download`, {
+            params: { type },
+            responseType: 'blob'
+          });
+          downloadUrl = response.data;
+        } catch (secondError) {
+          console.log('Second attempt failed, trying without type parameter...');
+          
+          try {
+            // Try without type parameter
+            response = await api.get(`/parent/billing/${documentId}/download`, {
+              responseType: 'blob'
+            });
+            downloadUrl = response.data;
+          } catch (thirdError) {
+            // Try getting the download URL instead of blob
+            try {
+              const urlResponse = await api.get(`/parent/billing/${documentId}/download-url`);
+              if (urlResponse.data?.downloadUrl) {
+                // If we get a URL, download from that URL
+                const link = document.createElement('a');
+                link.href = urlResponse.data.downloadUrl;
+                link.setAttribute('download', filename || `${type}_${documentId}.pdf`);
+                link.setAttribute('target', '_blank');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                message.success('Tải xuống thành công');
+                return;
+              }
+            } catch (urlError) {
+              console.log('URL approach also failed');
+            }
+            
+            // If all attempts fail, throw the last error
+            throw thirdError;
+          }
+        }
+      }
+      
+      if (!downloadUrl) {
+        throw new Error('No data received from server');
+      }
       
       // Create blob link to download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([downloadUrl], { 
+        type: response.headers['content-type'] || 'application/pdf' 
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', filename || `${type}_${documentId}.pdf`);
@@ -139,7 +193,21 @@ const ParentBilling = () => {
       message.success('Tải xuống thành công');
     } catch (error) {
       console.error('Error downloading document:', error);
-      message.error('Không thể tải xuống tài liệu');
+      
+      // More specific error messages based on error type
+      if (error.response?.status === 404) {
+        message.error('Tài liệu không tồn tại');
+      } else if (error.response?.status === 403) {
+        message.error('Không có quyền tải xuống tài liệu này');
+      } else if (error.response?.status === 500) {
+        message.error('Lỗi server - vui lòng liên hệ admin để kiểm tra');
+      } else if (error.response?.status >= 500) {
+        message.error('Lỗi server, vui lòng thử lại sau');
+      } else if (error.message === 'No data received from server') {
+        message.error('Server không trả về dữ liệu, vui lòng thử lại');
+      } else {
+        message.error('Không thể tải xuống tài liệu. Vui lòng thử lại sau.');
+      }
     } finally {
       setDownloadingDoc(null);
     }
@@ -200,20 +268,7 @@ const ParentBilling = () => {
       key: 'issueDate',
       render: (date) => moment(date).format('DD/MM/YYYY')
     },
-    {
-      title: 'Hạn thanh toán',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date) => (
-        <Space>
-          <CalendarOutlined />
-          <Text>{moment(date).format('DD/MM/YYYY')}</Text>
-          {moment(date).isBefore(moment()) && (
-            <Tag color="red" size="small">Quá hạn</Tag>
-          )}
-        </Space>
-      )
-    },
+
     {
       title: 'Tổng tiền',
       dataIndex: 'totalAmount',
@@ -236,41 +291,41 @@ const ParentBilling = () => {
         </Tag>
       )
     },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Tải hóa đơn">
-            <Button
-              type="primary"
-              size="small"
-              icon={<DownloadOutlined />}
-              loading={downloadingDoc === record.id}
-              onClick={() => downloadDocument(
-                record.id, 
-                'invoice', 
-                `hoa_don_${record.invoiceNumber}.pdf`
-              )}
-            />
-          </Tooltip>
-          {record.status === 'PAID' && record.receiptId && (
-            <Tooltip title="Tải biên lai">
-              <Button
-                size="small"
-                icon={<FileTextOutlined />}
-                loading={downloadingDoc === record.receiptId}
-                onClick={() => downloadDocument(
-                  record.receiptId, 
-                  'receipt', 
-                  `bien_lai_${record.invoiceNumber}.pdf`
-                )}
-              />
-            </Tooltip>
-          )}
-        </Space>
-      )
-    }
+    // {
+    //   title: 'Thao tác',
+    //   key: 'actions',
+    //   render: (_, record) => (
+    //     <Space>
+    //       <Tooltip title="Tải hóa đơn">
+    //         <Button
+    //           type="primary"
+    //           size="small"
+    //           icon={<DownloadOutlined />}
+    //           loading={downloadingDoc === record.id}
+    //           onClick={() => downloadDocument(
+    //             record.id, 
+    //             'invoice', 
+    //             `hoa_don_${record.invoiceNumber}.pdf`
+    //           )}
+    //         />
+    //       </Tooltip>
+    //       {record.status === 'PAID' && record.receiptId && (
+    //         <Tooltip title="Tải biên lai">
+    //           <Button
+    //             size="small"
+    //             icon={<FileTextOutlined />}
+    //             loading={downloadingDoc === record.id}
+    //             onClick={() => downloadDocument(
+    //               record.receiptId, 
+    //             'receipt', 
+    //             `bien_lai_${record.invoiceNumber}.pdf`
+    //           )}
+    //         />
+    //       </Tooltip>
+    //     )}
+    //   </Space>
+    //   )
+    // }
   ];
 
   const paymentColumns = [
@@ -365,43 +420,40 @@ const ParentBilling = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
-          <Button
-            key="download"
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={() => downloadDocument(
-              selectedInvoice.id, 
-              'invoice', 
-              `hoa_don_${selectedInvoice.invoiceNumber}.pdf`
-            )}
-          >
-            Tải hóa đơn
-          </Button>,
+          // <Button
+          //   key="download"
+          //   type="primary"
+          //   icon={<DownloadOutlined />}
+          //   onClick={() => downloadDocument(
+          //     selectedInvoice.id, 
+          //     'invoice', 
+          //     `hoa_don_${selectedInvoice.invoiceNumber}.pdf`
+          //   )}
+          // >
+          //   Tải hóa đơn
+          // </Button>,
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Đóng
           </Button>
         ]}
         width={700}
       >
-        <Descriptions bordered column={2} size="small">
-          <Descriptions.Item label="Số hóa đơn" span={2}>
-            {selectedInvoice.invoiceNumber}
-          </Descriptions.Item>
-          <Descriptions.Item label="Ngày phát hành">
-            {moment(selectedInvoice.issueDate).format('DD/MM/YYYY')}
-          </Descriptions.Item>
-          <Descriptions.Item label="Hạn thanh toán">
-            {moment(selectedInvoice.dueDate).format('DD/MM/YYYY')}
-          </Descriptions.Item>
-          <Descriptions.Item label="Trạng thái">
-            <Tag color={getPaymentStatusColor(selectedInvoice.status)}>
-              {getPaymentStatusText(selectedInvoice.status)}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Tổng tiền">
-            <Text strong>{formatCurrency(selectedInvoice.totalAmount)}</Text>
-          </Descriptions.Item>
-        </Descriptions>
+                 <Descriptions bordered column={2} size="small">
+           <Descriptions.Item label="Số hóa đơn" span={2}>
+             {selectedInvoice.invoiceNumber}
+           </Descriptions.Item>
+           <Descriptions.Item label="Ngày phát hành">
+             {moment(selectedInvoice.issueDate).format('DD/MM/YYYY')}
+           </Descriptions.Item>
+           <Descriptions.Item label="Trạng thái">
+             <Tag color={selectedInvoice.status === 'PAID' ? 'success' : 'processing'}>
+               {selectedInvoice.status === 'PAID' ? 'Đã thanh toán' : 'Chờ thanh toán'}
+             </Tag>
+           </Descriptions.Item>
+           <Descriptions.Item label="Tổng tiền">
+             <Text strong>{formatCurrency(selectedInvoice.totalAmount)}</Text>
+           </Descriptions.Item>
+         </Descriptions>
 
         <Divider>Chi tiết các khoản</Divider>
         
@@ -525,7 +577,7 @@ const ParentBilling = () => {
       ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           {/* Summary Cards */}
-          {renderSummaryCards()}
+          {/* {renderSummaryCards()} */}
 
           {/* Invoices Table */}
           <Card 

@@ -365,11 +365,23 @@ const TakeAttendancePage = () => {
 
             setSubmitSuccess(true);
 
+            // Mark lecture as completed after successful attendance submission
+            if (actualLectureId && window.markLectureAsCompleted) {
+                try {
+                    await window.markLectureAsCompleted(actualLectureId);
+                    console.log('Marked lecture as completed');
+                } catch (markError) {
+                    console.warn('Failed to mark lecture as completed:', markError);
+                    // Don't fail the whole operation for this
+                }
+            }
+
             // Refresh status after successful submission
             await fetchAttendanceStatus();
 
             setTimeout(() => {
                 setSubmitSuccess(false);
+                // Không tự động chuyển hướng - để teacher ở lại trang
             }, 3000);
         } catch (err) {
             console.error('Lỗi khi gửi dữ liệu:', err);

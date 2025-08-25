@@ -63,18 +63,47 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
     console.log('📅 Created date groups:', Object.keys(organized));
 
     // Organize lectures into date groups
-    lecturesData.forEach(lecture => {
+    lecturesData.forEach((lecture, index) => {
+      console.log(`🔍 Processing lecture ${index + 1}/${lecturesData.length}:`, {
+        id: lecture.id,
+        title: lecture.title,
+        startTime: lecture.startTime,
+        lectureDate: lecture.lectureDate,
+        startTimeType: typeof lecture.startTime,
+        lectureDateType: typeof lecture.lectureDate
+      });
+
       let assigned = false;
-      
+
       // Try to match lecture to schedule by date
-      if (lecture.startTime || lecture.lectureDate) {
-        const lectureDate = new Date(lecture.startTime || lecture.lectureDate);
-        const lectureDateKey = lectureDate.toISOString().split('T')[0];
-        
-        if (organized[lectureDateKey]) {
-          organized[lectureDateKey].lectures.push(lecture);
-          assigned = true;
-          console.log(`✅ Lecture ${lecture.id} assigned to date: ${lectureDateKey}`);
+      const dateValue = lecture.startTime || lecture.lectureDate;
+      if (dateValue) {
+        try {
+          // Handle different date formats
+          let lectureDate;
+          if (Array.isArray(dateValue)) {
+            // Handle array format [year, month, day]
+            const [year, month, day] = dateValue;
+            lectureDate = new Date(year, month - 1, day); // month is 0-indexed
+          } else {
+            lectureDate = new Date(dateValue);
+          }
+
+          // Validate the date
+          if (isNaN(lectureDate.getTime())) {
+            console.warn(`⚠️ Invalid date for lecture ${lecture.id}:`, dateValue);
+            return; // Skip this lecture
+          }
+
+          const lectureDateKey = lectureDate.toISOString().split('T')[0];
+
+          if (organized[lectureDateKey]) {
+            organized[lectureDateKey].lectures.push(lecture);
+            assigned = true;
+            console.log(`✅ Lecture ${lecture.id} assigned to date: ${lectureDateKey}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Error processing date for lecture ${lecture.id}:`, error, dateValue);
         }
       }
       
@@ -243,32 +272,111 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
       </div>
     );
   };
+
+  // Function to mark lecture as started
+  const markLectureAsStarted = async (lectureId) => {
+    try {
+      // Call API to mark lecture as started
+      const response = await fetch(`/api/lectures/${lectureId}/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark lecture as started');
+      }
+
+      // Update local state to reflect the change
+      setLectures(prevLectures =>
+        prevLectures.map(lecture =>
+          lecture.id === lectureId
+            ? { ...lecture, status: 'IN_PROGRESS' }
+            : lecture
+        )
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error marking lecture as started:', error);
+      // Don't throw error, just log it - we still want to navigate
+      return false;
+    }
+  };
+
+  // Function to mark lecture as completed (called after attendance is taken)
+  const markLectureAsCompleted = async (lectureId) => {
+    try {
+      // Call API to mark lecture as completed
+      const response = await fetch(`/api/lectures/${lectureId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark lecture as completed');
+      }
+
+      // Update local state to reflect the change
+      setLectures(prevLectures =>
+        prevLectures.map(lecture =>
+          lecture.id === lectureId
+            ? { ...lecture, status: 'COMPLETED' }
+            : lecture
+        )
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error marking lecture as completed:', error);
+      return false;
+    }
+  };
+
+  // Expose the completion function globally so it can be called from attendance page
+  useEffect(() => {
+    window.markLectureAsCompleted = markLectureAsCompleted;
+    return () => {
+      delete window.markLectureAsCompleted;
+    };
+  }, [markLectureAsCompleted]);
+
   const handleStartLecture = (lecture) => {
     // Only allow starting lecture in teacher view
     if (isStudentView) return;
-    
+
     Modal.confirm({
-      title: 'Bắt đầu bài giảng',
-      content: `Bạn có muốn bắt đầu bài giảng "${lecture.title}" ngay bây giờ không? Hệ thống sẽ chuyển bạn đến phòng học trực tuyến.`,
-      okText: 'Bắt đầu',
+      title: 'Vào bài giảng',
+      content: `Bạn có muốn vào bài giảng "${lecture.title}" ngay bây giờ không? Hệ thống sẽ chuyển bạn đến phòng học.`,
+      okText: 'Vào học',
       okType: 'primary',
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          // Navigate to teacher online classes page
-          navigate('/teacher/online-classes');
-          
+          // Mark lecture as started
+          await markLectureAsStarted(lecture.id);
+
+          // Navigate to attendance page for this lecture
+          if (lecture.classroomId && lecture.id) {
+            navigate(`/teacher/attendance/take/${lecture.classroomId}/${lecture.id}`);
+          } else {
+            // Fallback to general attendance page
+            navigate('/teacher/attendance');
+          }
+
           // Show success message
-          message.success(`Đã bắt đầu bài giảng "${lecture.title}". Chuyển đến phòng học trực tuyến.`);
-          
+          message.success(`Đã vào bài giảng "${lecture.title}". Chuyển đến điểm danh.`);
+
           console.log('Starting lecture:', lecture);
-          
-          // Optional: You could call an API to mark lecture as started
-          // await markLectureAsStarted(lecture.id);
-          
+
         } catch (error) {
           console.error('Error starting lecture:', error);
-          message.error('Lỗi khi bắt đầu bài giảng: ' + error.message);
+          message.error('Lỗi khi vào bài giảng: ' + error.message);
         }
       },
       onCancel() {
@@ -383,7 +491,7 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
                   )}
                 </div>
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {lecture.type || 'ONLINE'}
+                  {lecture.type || ''}
                 </span>
               </div>
 
@@ -424,7 +532,7 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
               {/* Lecture Info */}
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                 {lecture.startTime && (
-                  <span>⏰ Bắt đầu: {lecture.startTime}</span>
+                  <span>⏰ Thời gian: {lecture.startTime}</span>
                 )}
                 {lecture.endTime && (
                   <span>⏱️ Kết thúc: {lecture.endTime}</span>
@@ -436,13 +544,55 @@ const LectureList = ({ courseId, courseName, isStudentView = false }) => {
 
               {/* Actions - Only show for teacher view */}
               {!isStudentView && (
-                <div className="mt-4 flex space-x-2">
-                  <button 
-                    onClick={() => handleStartLecture(lecture)}
-                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    Bắt đầu
-                  </button>
+                <div className="mt-4 flex space-x-2 items-center">
+                  {/* Status indicator */}
+                  <div className="flex items-center space-x-2">
+                    {lecture.status === 'COMPLETED' && (
+                      <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                        ✅ Đã hoàn thành
+                      </span>
+                    )}
+                    {lecture.status === 'IN_PROGRESS' && (
+                      <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
+                        🔄 Đang diễn ra
+                      </span>
+                    )}
+                    {(!lecture.status || lecture.status === 'PENDING') && (
+                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
+                        ⏳ Chưa bắt đầu
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action button */}
+                  {lecture.status === 'COMPLETED' ? (
+                    <button
+                      disabled
+                      className="px-3 py-1 text-sm bg-gray-300 text-gray-500 rounded cursor-not-allowed"
+                    >
+                      Đã hoàn thành
+                    </button>
+                  ) : lecture.status === 'IN_PROGRESS' ? (
+                    <button
+                      onClick={() => {
+                        if (lecture.classroomId && lecture.id) {
+                          navigate(`/teacher/attendance/take/${lecture.classroomId}/${lecture.id}`);
+                        } else {
+                          navigate('/teacher/attendance');
+                        }
+                      }}
+                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Tiếp tục điểm danh
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStartLecture(lecture)}
+                      className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      Vào học
+                    </button>
+                  )}
                 </div>
               )}
             </div>

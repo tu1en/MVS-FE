@@ -32,7 +32,6 @@ const fixEncoding = (text) => {
     { find: /L\?p/g, replace: 'Lớp' },
     { find: /H\?c/g, replace: 'Học' },
     { find: /Tr\?c/g, replace: 'Trực' },
-    { find: /Tuy\?n/g, replace: 'Tuyến' },
     { find: /Vi\?t/g, replace: 'Việt' },
 
     // Common Vietnamese words
@@ -140,11 +139,52 @@ const normalizeStudentData = (student) => {
 // Helper to safely format date
 const formatDate = (dateString) => {
   if (!dateString) return 'Không xác định';
+  
   try {
-    const date = new Date(dateString);
+    let date;
+    
+    // Handle different date formats from backend
+    if (typeof dateString === 'string') {
+      // Handle various string formats
+      let isoString = dateString;
+      
+      // If it's already ISO format, use as is
+      if (dateString.includes('T')) {
+        isoString = dateString;
+      } else if (dateString.includes(' ')) {
+        // Replace space with 'T' for ISO format
+        isoString = dateString.replace(' ', 'T');
+      } else if (dateString.includes('-') && dateString.includes(':')) {
+        // Format like "2024-01-01 10:30:00"
+        isoString = dateString.replace(' ', 'T');
+      }
+      
+      date = new Date(isoString);
+    } else if (Array.isArray(dateString)) {
+      // Handle array format [year, month, day, hour, minute, second, nano]
+      if (dateString.length >= 3) {
+        date = new Date(dateString[0], dateString[1] - 1, dateString[2], 
+                       dateString[3] || 0, dateString[4] || 0, dateString[5] || 0);
+      } else {
+        date = new Date(dateString);
+      }
+    } else if (dateString && typeof dateString === 'object' && dateString.getTime) {
+      // Already a Date object
+      date = dateString;
+    } else {
+      date = new Date(dateString);
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString, 'type:', typeof dateString);
+      return 'Ngày không hợp lệ';
+    }
+    
     return date.toLocaleString('vi-VN');
   } catch (error) {
-    return 'Không xác định';
+    console.error('Error formatting date:', dateString, 'type:', typeof dateString, 'error:', error);
+    return 'Ngày không hợp lệ';
   }
 };
 
@@ -209,7 +249,34 @@ const TeacherMessagesPage = () => {
     
     try {
       const conversationData = await api.GetConversation(teacherId, student.id);
-      setConversation(conversationData || []);
+      console.log('Raw conversation data:', conversationData);
+      
+      // Validate and clean conversation data
+      const cleanedConversation = (conversationData || []).map(msg => {
+        console.log('Processing message:', msg);
+        console.log('Message createdAt:', msg.createdAt, 'type:', typeof msg.createdAt);
+        
+        // Ensure createdAt is properly formatted
+        if (msg.createdAt) {
+          try {
+            // Test if the date can be parsed
+            const testDate = new Date(msg.createdAt);
+            if (isNaN(testDate.getTime())) {
+              console.warn('Invalid createdAt in message:', msg.createdAt);
+              // Set a fallback date
+              msg.createdAt = new Date().toISOString();
+            }
+          } catch (dateError) {
+            console.warn('Error parsing createdAt:', dateError);
+            // Set a fallback date
+            msg.createdAt = new Date().toISOString();
+          }
+        }
+        
+        return msg;
+      });
+      
+      setConversation(cleanedConversation);
     } catch (error) {
       console.error('Error fetching conversation:', error);
       message.error('Không thể tải cuộc trò chuyện.');
@@ -325,6 +392,20 @@ const TeacherMessagesPage = () => {
         dataSource={conversation}
         renderItem={(item) => {
           const isTeacher = item.senderId?.toString() === teacherId;
+          console.log('Rendering message item:', item);
+          console.log('Message createdAt:', item.createdAt, 'type:', typeof item.createdAt);
+          
+          // Additional safety check for createdAt
+          let displayDate = 'Ngày không xác định';
+          try {
+            if (item.createdAt) {
+              displayDate = formatDate(item.createdAt);
+            }
+          } catch (dateError) {
+            console.error('Error formatting date for display:', dateError);
+            displayDate = 'Ngày không xác định';
+          }
+          
           return (
             <List.Item style={{ justifyContent: isTeacher ? 'flex-end' : 'flex-start' }}>
               <Card
@@ -335,7 +416,7 @@ const TeacherMessagesPage = () => {
               >
                 <p>{item.content}</p>
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {formatDate(item.createdAt)}
+                  {displayDate}
                 </Text>
               </Card>
             </List.Item>
@@ -420,22 +501,24 @@ const TeacherMessagesPage = () => {
           actions={[
             selectedStudent && (
               <div style={{ padding: '0 24px' }}>
-                <Input.Group compact>
-                  <TextArea
-                    rows={1}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Nhập tin nhắn..."
-                    disabled={sending}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    onClick={handleSendMessage}
-                    loading={sending}
-                    disabled={!newMessage.trim()}
-                  />
-                </Input.Group>
+                                 <Input.Group compact>
+                   <TextArea
+                     rows={3}
+                     value={newMessage}
+                     onChange={(e) => setNewMessage(e.target.value)}
+                     placeholder="Nhập tin nhắn..."
+                     disabled={sending}
+                     style={{ minHeight: '80px' }}
+                   />
+                   <Button
+                     type="primary"
+                     icon={<SendOutlined />}
+                     onClick={handleSendMessage}
+                     loading={sending}
+                     disabled={!newMessage.trim()}
+                     style={{ height: '80px', marginLeft: '8px' }}
+                   />
+                 </Input.Group>
               </div>
             )
           ]}

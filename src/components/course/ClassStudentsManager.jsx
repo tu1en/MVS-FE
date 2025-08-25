@@ -152,6 +152,11 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
   };
 
   const handleAddStudents = async () => {
+    console.log('🔍 [DEBUG] Starting handleAddStudents');
+    console.log('🔍 [DEBUG] classId:', classId);
+    console.log('🔍 [DEBUG] className:', className);
+    console.log('🔍 [DEBUG] selectedStudents:', state.selectedStudents);
+
     if (state.selectedStudents.length === 0) {
       showNotification('Vui lòng chọn ít nhất một học viên', 'warning');
       return;
@@ -198,11 +203,16 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
 
     try {
       const studentsToEnroll = state.selectedStudents.filter(id => !conflicts[id]);
-      const enrollPromises = studentsToEnroll.map(studentId =>
-        classManagementService.enrollStudent(classId, studentId)
-      );
+      console.log('🔍 [DEBUG] studentsToEnroll:', studentsToEnroll);
 
-      await Promise.all(enrollPromises);
+      const enrollPromises = studentsToEnroll.map(studentId => {
+        console.log('🔍 [DEBUG] Enrolling student:', studentId, 'into classId:', classId);
+        return classManagementService.enrollStudent(classId, studentId);
+      });
+
+      console.log('🔍 [DEBUG] Starting enrollment API calls...');
+      const results = await Promise.all(enrollPromises);
+      console.log('🔍 [DEBUG] Enrollment results:', results);
 
       const addedCount = studentsToEnroll.length;
       const conflictCount = state.selectedStudents.length - addedCount;

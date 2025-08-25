@@ -1,12 +1,13 @@
-import { BookOutlined, CalendarOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
-import { Card, Col, Row, Statistic, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { message } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE } from '../constants/constants';
+import { useAuth } from '../context/AuthContext';
 import { managerService } from '../services/managerService';
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalCourses: 0,
@@ -14,34 +15,74 @@ export default function ManagerDashboard() {
     totalMessages: 0
   });
   const [loading, setLoading] = useState(false);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
-    const role = localStorage.getItem('role');
-    if (role !== ROLE.MANAGER) {
-      navigate('/');
+    // Wait for auth to complete
+    if (authLoading) {
+      console.log('ManagerDashboard: Waiting for auth to complete...');
+      return;
     }
+
+    // Check if user is authenticated and has correct role
+    if (!user) {
+      console.log('ManagerDashboard: No user found, redirecting to login');
+      navigate('/login');
+      return;
+    }
+
+    const userRole = user.role?.replace('ROLE_', '');
+    if (userRole !== ROLE.MANAGER) {
+      console.log('ManagerDashboard: Invalid role detected:', user.role, 'normalized:', userRole);
+      navigate('/');
+      return;
+    }
+
+    console.log('ManagerDashboard: Valid manager role detected, fetching stats...');
     fetchDashboardStats();
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchDashboardStats = async () => {
+    // Prevent multiple simultaneous calls
+    if (fetchingRef.current) {
+      console.log('ManagerDashboard: Already fetching stats, skipping...');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
+      console.log('ManagerDashboard: Fetching dashboard stats...');
       const data = await managerService.getDashboardStats();
       setStats(data);
+      console.log('ManagerDashboard: Stats loaded successfully');
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-      message.error('Không thể tải thống kê dashboard');
+      // Only show error if it's not a duplicate request error
+      if (!error.message?.includes('Duplicate dashboard request blocked')) {
+        message.error('Không thể tải thống kê dashboard');
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
+
+  // Show loading while auth is in progress
+  if (authLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Trang Quản Lý</h1>
       
       {/* Statistics Cards */}
-      <Row gutter={16} className="mb-8">
+      {/* <Row gutter={16} className="mb-8">
         <Col span={6}>
           <Card>
             <Statistic
@@ -82,7 +123,7 @@ export default function ManagerDashboard() {
             />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       {/* Management Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -196,7 +237,7 @@ export default function ManagerDashboard() {
           </button>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý tin nhắn</h2>
           <p className="text-gray-600">Quản lý tin nhắn và giao tiếp người dùng</p>
           <button 
@@ -205,9 +246,9 @@ export default function ManagerDashboard() {
           >
             Quản lý tin nhắn
           </button>
-        </div>
+        </div> */}
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quản lý tài khoản</h2>
           <p className="text-gray-600">Quản lý tài khoản người dùng trong hệ thống</p>
           <button 
@@ -216,7 +257,7 @@ export default function ManagerDashboard() {
           >
             Quản lý tài khoản
           </button>
-        </div>
+        </div> */}
         
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Thông tin cá nhân</h2>

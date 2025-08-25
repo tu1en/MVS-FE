@@ -92,17 +92,18 @@ const StudentSchedule = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen vietnamese-text">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Lịch học và Sự kiện</h1>
-        <div className="bg-white p-4 rounded-lg shadow-lg">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800 vietnamese-heading">Lịch học và Sự kiện</h1>
+        <div className="bg-white p-4 rounded-lg shadow-lg vietnamese-body">
             <Spin spinning={loading} tip="Đang tải dữ liệu lịch...">
-        <Calendar 
-                    onPanelChange={(date) => setCurrentDate(date)} 
+        <Calendar
+                    onPanelChange={(date) => setCurrentDate(date)}
                     cellRender={dateCellRender}
+                    className="vietnamese-text"
         />
                 {!loading && events.length === 0 && (
-                    <div className="py-10">
+                    <div className="py-10 vietnamese-body">
                         <Empty description="Không có lịch học hoặc sự kiện nào trong tháng này." />
                     </div>
                 )}

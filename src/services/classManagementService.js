@@ -196,9 +196,34 @@ const classManagementService = {
    * @returns {Promise<Object>} Enrollment result
    */
   enrollStudent: (classId, studentId) => {
-    // BE expects: POST /api/classrooms/{classId}/enrollments with body { studentId }
-    const url = `${API_CONFIG.ENDPOINTS.CLASSROOMS_BY_ID(classId)}/enrollments`;
-    return apiClient.post(url, { studentId });
+    // QUICK FIX: Map Class ID to Classroom ID
+    const classToClassroomMapping = {
+      1: 7,  // Toán Nâng cao 10-12 - Lớp 01
+      2: 8,  // Toán Nâng cao 10-12 - Lớp 02
+      3: 9,  // Toán Nâng cao 10-12 - Lớp 03
+      4: 10, // Vật lý Chuyên đề - Lớp 01
+      // Add more mappings as needed
+    };
+
+    const actualClassroomId = classToClassroomMapping[classId] || classId;
+
+    // BE expects: POST /api/classrooms/{classroomId}/enrollments with body { studentId }
+    const url = `${API_CONFIG.ENDPOINTS.CLASSROOMS_BY_ID(actualClassroomId)}/enrollments`;
+
+    console.log('🔍 [DEBUG] enrollStudent API call:');
+    console.log('🔍 [DEBUG] - Original classId:', classId);
+    console.log('🔍 [DEBUG] - Mapped classroomId:', actualClassroomId);
+    console.log('🔍 [DEBUG] - studentId:', studentId);
+    console.log('🔍 [DEBUG] - URL:', url);
+    console.log('🔍 [DEBUG] - Request body:', { studentId });
+
+    return apiClient.post(url, { studentId }).then(response => {
+      console.log('🔍 [DEBUG] enrollStudent response:', response);
+      return response;
+    }).catch(error => {
+      console.error('🔍 [DEBUG] enrollStudent error:', error);
+      throw error;
+    });
   },
 
   /**

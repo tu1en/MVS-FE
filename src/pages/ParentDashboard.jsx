@@ -1,9 +1,9 @@
-import { App, Card, Col, Row, Spin, Statistic, Typography } from "antd";
+import { BookOutlined, CalendarOutlined, MessageOutlined, TeamOutlined } from "@ant-design/icons";
+import { App, Card, Col, Row, Spin, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOutlined, CalendarOutlined, MessageOutlined, TeamOutlined } from "@ant-design/icons";
-import api from "../services/api";
 import { ROLE } from "../constants/constants";
+import api from "../services/api";
 
 const { Title, Text } = Typography;
 
@@ -99,7 +99,7 @@ export default function ParentDashboard() {
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-8 text-center">Trang Phụ Huynh</h1>
 
-      <Row gutter={[16, 16]} className="mb-8">
+      {/* <Row gutter={[16, 16]} className="mb-8">
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic title="Số con theo dõi" value={stats.childrenCount} prefix={<TeamOutlined />} />
@@ -120,7 +120,7 @@ export default function ParentDashboard() {
             <Statistic title="Khóa học đang học" value={stats.activeCourses} prefix={<BookOutlined />} />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       <Row gutter={[24, 24]}>
         <Col xs={24} sm={12} lg={6}>

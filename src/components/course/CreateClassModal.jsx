@@ -53,24 +53,42 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     lastTeacherQuery: null // Cache key cho teacher query
   });
 
-  // Tự tính ngày kết thúc dự kiến dựa vào số bài học và số buổi/tuần
-  const calculateAutoEndDate = (startDateStr, daysPerWeek, templateObj) => {
-    if (!startDateStr) return '';
+  // Tự tính ngày kết thúc dự kiến dựa vào số bài học và lịch học trong tuần
+  const calculateAutoEndDate = (startDateStr, selectedDays, templateObj) => {
+    if (!startDateStr || !selectedDays || selectedDays.length === 0) return '';
     try {
+      // Lấy số buổi học từ template
       const lessonsCount = (templateObj?.lessons?.length || 0) > 0
         ? templateObj.lessons.length
-        : (templateObj?.totalWeeks || 0) || 0;
+        : (templateObj?.totalWeeks || 0) * selectedDays.length || 16; // Default 16 buổi
+
       if (!lessonsCount) return '';
-      const sessionsPerWeek = Math.max(1, daysPerWeek || 0);
-      const weeksNeeded = Math.ceil(lessonsCount / sessionsPerWeek);
+
       const start = new Date(startDateStr);
-      const end = new Date(start);
-      end.setDate(start.getDate() + (weeksNeeded - 1) * 7);
-      const yyyy = end.getFullYear();
-      const mm = String(end.getMonth() + 1).padStart(2, '0');
-      const dd = String(end.getDate()).padStart(2, '0');
+      let currentDate = new Date(start);
+      let scheduledLessons = 0;
+
+      // Mapping ngày trong tuần: 0=CN, 1=T2, 2=T3, 3=T4, 4=T5, 5=T6, 6=T7
+      const dayMapping = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 0 }; // UI days to JS days
+      const targetDays = selectedDays.map(day => dayMapping[day]).filter(d => d !== undefined);
+
+      // Tìm ngày kết thúc bằng cách đếm các buổi học
+      while (scheduledLessons < lessonsCount) {
+        const dayOfWeek = currentDate.getDay();
+        if (targetDays.includes(dayOfWeek)) {
+          scheduledLessons++;
+        }
+        if (scheduledLessons < lessonsCount) {
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+
+      const yyyy = currentDate.getFullYear();
+      const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(currentDate.getDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     } catch (e) {
+      console.warn('Error calculating end date:', e);
       return '';
     }
   };
@@ -78,12 +96,12 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
   // Re-calc endDate khi startDate hoặc ngày trong tuần thay đổi
   useEffect(() => {
     if (!formData.startDate) return;
-    const autoEnd = calculateAutoEndDate(formData.startDate, formData.schedule.days.length, template);
+    const autoEnd = calculateAutoEndDate(formData.startDate, formData.schedule.days, template);
     if (autoEnd && autoEnd !== formData.endDate) {
       setFormData(prev => ({ ...prev, endDate: autoEnd }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.startDate, formData.schedule.days.length, template?.totalWeeks, template?.lessons?.length]);
+  }, [formData.startDate, formData.schedule.days, template?.totalWeeks, template?.lessons?.length]);
 
   // Handle schedule change
   const handleScheduleChange = (scheduleItems) => {
@@ -715,19 +733,18 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ngày kết thúc <span className="text-red-500">*</span>
+                      Ngày kết thúc <span className="text-gray-400"></span>
                     </label>
                     <input
                       type="date"
                       value={formData.endDate}
-                      onChange={(e) => handleFieldChange('endDate', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formData.validation.endDate ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                      title="Ngày kết thúc được tự động tính toán dựa trên ngày bắt đầu, số buổi học và lịch học trong tuần"
                     />
-                    {formData.validation.endDate && (
-                      <p className="mt-1 text-sm text-red-600">{formData.validation.endDate}</p>
-                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {/* 📅 Tự động tính dựa trên: ngày bắt đầu + số buổi học + lịch tuần */}
+                    </p>
                   </div>
                 </div>
 

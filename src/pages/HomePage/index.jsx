@@ -47,7 +47,7 @@ export default function HomePage() {
         <section className="py-16 text-center">
           <h2 className="text-3xl font-bold mb-6 text-white">Tại sao chọn chúng tôi?</h2>
           <p className="text-white max-w-2xl mx-auto text-lg">
-            Hệ thống học trực tuyến giúp bạn quản lý điểm, bài tập, điểm danh và báo cáo một cách hiện đại, nhanh chóng và minh bạch.
+            Hệ thống quản lý giáo dục giúp bạn quản lý điểm, bài tập, điểm danh và báo cáo một cách hiện đại, nhanh chóng và minh bạch.
           </p>
         </section>
         {/* Nút Đăng Ký Tuyển Dụng cho guest */}

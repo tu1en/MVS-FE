@@ -1,30 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Tabs, 
-  Table, 
-  Button, 
-  Space, 
-  message, 
-  Modal, 
-  Form, 
-  Input, 
-  Select, 
-  DatePicker, 
-  Tag,
-  Popconfirm,
-  Tooltip,
-  InputNumber
-} from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  UserOutlined,
-  FilePdfOutlined,
-  CheckOutlined
+import {
+    CheckOutlined,
+    EditOutlined,
+    FilePdfOutlined,
+    PlusOutlined,
+    UserOutlined
 } from '@ant-design/icons';
-import axiosInstance from '../../config/axiosInstance';
+import {
+    Button,
+    Card,
+    DatePicker,
+    Form,
+    Input,
+    InputNumber,
+    message,
+    Modal,
+    Popconfirm,
+    Select,
+    Space,
+    Table,
+    Tabs,
+    Tag,
+    Tooltip
+} from 'antd';
 import moment from 'moment';
+import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../config/axiosInstance';
 import './ContractManagement.css';
 
 import ContractPDFGenerator from '../../utils/ContractPDFGenerator';
@@ -234,7 +234,7 @@ const ContractManagement = () => {
         department: values.department || 'Phòng Giáo vụ',
         contractType: 'TEACHER',
         salary: finalSalary, // Main salary field for compatibility
-        workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
+        // workingHours: values.workingHours || 'ca sáng (7:30-9:30)',
         contractTerms: values.contractTerms || 'Điều khoản hợp đồng chuẩn',
         comments: values.comments || 'Hợp đồng được tạo từ ứng viên đã duyệt',
         // Chỉ giữ lương theo giờ
@@ -243,9 +243,9 @@ const ContractManagement = () => {
         subject: values.subject,
         classLevel: values.classLevel,
         // Lịch làm việc
-        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
-        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
-        workSchedule: values.workSchedule || '',
+        // workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
+        // workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
+        // workSchedule: values.workSchedule || '',
         salaryType: salaryType // Additional info for logging
       };
 
@@ -350,12 +350,12 @@ const ContractManagement = () => {
     const justRenewed = record?.status === 'ACTIVE' && start && start.isSame(moment(), 'day');
     setCanEditHourly(!!justRenewed);
 
-    const workShifts = Array.isArray(record.workShifts)
-      ? record.workShifts
-      : (record.workShifts ? record.workShifts.split(',').map(s => s.trim()).filter(Boolean) : []);
-    const workDays = Array.isArray(record.workDays)
-      ? record.workDays
-      : (record.workDays ? record.workDays.split(',').map(s => s.trim()).filter(Boolean) : []);
+    // const workShifts = Array.isArray(record.workShifts)
+    //   ? record.workShifts
+    //   : (record.workShifts ? record.workShifts.split(',').map(s => s.trim()).filter(Boolean) : []);
+    // const workDays = Array.isArray(record.workDays)
+    //   ? record.workDays
+    //   : (record.workDays ? record.workDays.split(',').map(s => s.trim()).filter(Boolean) : []);
 
     editForm.setFieldsValue({
       contractId: record.contractId,
@@ -368,9 +368,9 @@ const ContractManagement = () => {
       qualification: record.qualification || '',
       subject: record.subject || '',
       classLevel: record.classLevel || record.educationLevel || '',
-      workShifts,
-      workDays,
-      workSchedule: record.workSchedule || '',
+      // workShifts,
+      // workDays,
+      // workSchedule: record.workSchedule || '',
       position: record.position || '',
       hourlySalary: record.hourlySalary || undefined,
     });
@@ -400,9 +400,9 @@ const ContractManagement = () => {
         qualification: values.qualification,
         subject: values.subject,
         classLevel: values.classLevel,
-        workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
-        workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
-        workSchedule: values.workSchedule || ''
+        // workShifts: Array.isArray(values.workShifts) ? values.workShifts.join(',') : (values.workShifts || ''),
+        // workDays: Array.isArray(values.workDays) ? values.workDays.join(',') : (values.workDays || ''),
+        // workSchedule: values.workSchedule || ''
       };
 
       // Chỉ gửi hourlySalary nếu được phép (vừa ký lại xong)
@@ -451,13 +451,13 @@ const ContractManagement = () => {
             hourlySalary: offer.hourlySalary ?? candidateForm.getFieldValue('hourlySalary'),
             subject: offer.subject || candidateForm.getFieldValue('subject'),
             classLevel: offer.classLevel || candidateForm.getFieldValue('classLevel'),
-            workShifts: Array.isArray(offer.workShifts)
-              ? offer.workShifts
-              : (offer.workShifts ? offer.workShifts.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workShifts')),
-            workDays: Array.isArray(offer.workDays)
-              ? offer.workDays
-              : (offer.workDays ? offer.workDays.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workDays')),
-            workSchedule: offer.workSchedule || candidateForm.getFieldValue('workSchedule'),
+            // workShifts: Array.isArray(offer.workShifts)
+              // ? offer.workShifts
+              // : (offer.workShifts ? offer.workShifts.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workShifts')),
+            // workDays: Array.isArray(offer.workDays)
+            //   ? offer.workDays
+            //   : (offer.workDays ? offer.workDays.split(',').map(s => s.trim()).filter(Boolean) : candidateForm.getFieldValue('workDays')),
+            // workSchedule: offer.workSchedule || candidateForm.getFieldValue('workSchedule'),
           });
         } catch (e) {
           // Không có offer cụ thể cũng không sao
@@ -832,7 +832,7 @@ const ContractManagement = () => {
             <Input placeholder="Nhập lớp học" />
           </Form.Item>
 
-          <Form.Item 
+          {/* <Form.Item 
             name="workShifts" 
             label="Ca làm việc" 
             rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
@@ -846,9 +846,9 @@ const ContractManagement = () => {
                 { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
               ]}
             />
-          </Form.Item>
+          </Form.Item> */}
 
-          <Form.Item 
+          {/* <Form.Item 
             name="workDays" 
             label="Ngày trong tuần" 
             rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
@@ -866,14 +866,14 @@ const ContractManagement = () => {
                 { value: 'sunday', label: 'Chủ nhật' }
               ]}
             />
-          </Form.Item>
+          </Form.Item> */}
 
-          <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+          {/* <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
             <Input.TextArea 
               rows={3} 
               placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
             />
-          </Form.Item>
+          </Form.Item> */}
 
           <Form.Item name="position" label="Vị trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
             <Input 
@@ -1010,7 +1010,7 @@ const ContractManagement = () => {
             <Input placeholder="Nhập lớp học" />
           </Form.Item>
 
-          <Form.Item 
+          {/* <Form.Item 
             name="workShifts" 
             label="Ca làm việc" 
             rules={[{ required: true, message: 'Vui lòng chọn ca làm việc!' }]}
@@ -1024,9 +1024,9 @@ const ContractManagement = () => {
                 { value: 'evening', label: 'Ca tối (17:00 - 21:00)' }
               ]}
             />
-          </Form.Item>
+          </Form.Item> */}
 
-          <Form.Item 
+          {/* <Form.Item 
             name="workDays" 
             label="Ngày trong tuần" 
             rules={[{ required: true, message: 'Vui lòng chọn ngày làm việc!' }]}
@@ -1044,14 +1044,14 @@ const ContractManagement = () => {
                 { value: 'sunday', label: 'Chủ nhật' }
               ]}
             />
-          </Form.Item>
+          </Form.Item> */}
 
-          <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
+          {/* <Form.Item name="workSchedule" label="Thời gian làm việc chi tiết">
             <Input.TextArea 
               rows={3} 
               placeholder="Mô tả chi tiết thời gian làm việc (ví dụ: Thứ 2, 4, 6 - Ca sáng và chiều)"
             />
-          </Form.Item>
+          </Form.Item> */}
 
           <Form.Item name="position" label="Vị trí">
             <Input placeholder="Vị trí" readOnly style={{ backgroundColor: '#f5f5f5' }} />

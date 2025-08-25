@@ -1,19 +1,38 @@
 import { CalendarOutlined, CheckCircleOutlined, FileTextOutlined } from '@ant-design/icons';
-import { Badge, Button, Card, Empty, Spin, Typography, message } from 'antd';
+import { Badge, Button, Card, Empty, message, Select, Spin, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AssignmentService from '../../services/assignmentService';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 const AssignmentListTab = () => {
     const [assignments, setAssignments] = useState([]);
+    const [filteredAssignments, setFilteredAssignments] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [selectedClass, setSelectedClass] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const { courseId } = useParams();
     const navigate = useNavigate();
 
     console.log('AssignmentListTab rendered with courseId:', courseId);
+
+    // Fetch classes for filter
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                // Giả sử có API để lấy danh sách lớp của học sinh
+                // Nếu không có, bạn có thể hardcode hoặc lấy từ context
+                const response = await AssignmentService.getStudentClasses();
+                setClasses(response || []);
+            } catch (err) {
+                console.error('Error fetching classes:', err);
+            }
+        };
+        fetchClasses();
+    }, []);
 
     useEffect(() => {
         const fetchAssignments = async () => {
@@ -28,6 +47,7 @@ const AssignmentListTab = () => {
                 console.log('Is response array:', Array.isArray(response));
                 
                 setAssignments(response || []);
+                setFilteredAssignments(response || []);
                 setError(null);
             } catch (err) {
                 console.error('Assignment fetch error:', err);
@@ -43,6 +63,28 @@ const AssignmentListTab = () => {
             fetchAssignments();
         }
     }, [courseId]);
+
+    // Filter assignments when selectedClass changes
+    useEffect(() => {
+        if (selectedClass) {
+            const filtered = assignments.filter(assignment => 
+                assignment.classroomId === selectedClass || 
+                assignment.classroom?.id === selectedClass ||
+                assignment.classId === selectedClass
+            );
+            setFilteredAssignments(filtered);
+        } else {
+            setFilteredAssignments(assignments);
+        }
+    }, [selectedClass, assignments]);
+
+    const handleClassChange = (value) => {
+        setSelectedClass(value);
+    };
+
+    const clearFilter = () => {
+        setSelectedClass(null);
+    };
 
     const getAssignmentStatus = (dueDate) => {
         const now = new Date();
@@ -92,11 +134,80 @@ const AssignmentListTab = () => {
         );
     }
 
+    if (filteredAssignments.length === 0 && selectedClass && !isLoading) {
+        return (
+            <div>
+                <Title level={4}>Danh sách bài tập</Title>
+                <div className="flex justify-end mb-4">
+                    <Select
+                        defaultValue="Tất cả lớp"
+                        style={{ width: 120 }}
+                        onChange={handleClassChange}
+                        onClear={clearFilter}
+                    >
+                        <Option value="">Tất cả lớp</Option>
+                        {classes.map(classItem => (
+                            <Option key={classItem.id} value={classItem.id}>
+                                {classItem.name}
+                            </Option>
+                        ))}
+                    </Select>
+                </div>
+                <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="Không có bài tập nào trong lớp đã chọn"
+                />
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                    <Button 
+                        type="default" 
+                        onClick={clearFilter}
+                    >
+                        Xem tất cả bài tập
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             <Title level={4}>Danh sách bài tập</Title>
             
-            {assignments.map((assignment) => {
+            {filteredAssignments.length > 0 && (
+                <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm text-gray-500">
+                        {selectedClass 
+                            ? `Đang hiển thị bài tập của lớp đã chọn (${filteredAssignments.length} bài tập)`
+                            : `Tổng cộng ${assignments.length} bài tập`
+                        }
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Lọc theo lớp:</span>
+                        <Select
+                            placeholder="Chọn lớp"
+                            style={{ width: 150 }}
+                            value={selectedClass || undefined}
+                            onChange={handleClassChange}
+                            allowClear
+                            onClear={clearFilter}
+                        >
+                            <Option value="">Tất cả lớp</Option>
+                            {classes.map(classItem => (
+                                <Option key={classItem.id} value={classItem.id}>
+                                    {classItem.name}
+                                </Option>
+                            ))}
+                        </Select>
+                        {selectedClass && (
+                            <Button size="small" onClick={clearFilter}>
+                                Xóa bộ lọc
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {filteredAssignments.map((assignment) => {
                 const status = getAssignmentStatus(assignment.dueDate);
                 
                 return (
