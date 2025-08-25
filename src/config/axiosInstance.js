@@ -1,5 +1,6 @@
 import axios from 'axios';
 import API_CONFIG from './api-config';
+import { handle403Redirect, handle404Redirect } from '../utils/redirectUtils';
 
 // Create an Axios instance with default configurations
 const axiosInstance = axios.create({
@@ -45,27 +46,33 @@ axiosInstance.interceptors.response.use(
     } else if (error.response.status === 401) {
       // Unauthorized - token expired or invalid
       console.error('Authentication error (401):', error.response.data);
-      
+
       // Clear authentication data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('role');
       localStorage.removeItem('username');
-      
+
       // Redirect to login unless already there
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     } else if (error.response.status === 403) {
       console.error('Permission denied (403):', error.response.data);
-      // Handle forbidden errors
+
+      // Use utility function for consistent 403 handling
+      handle403Redirect();
     } else if (error.response.status === 404) {
       console.error('Resource not found (404):', error.response.data);
-      // Handle not found errors
+
+      // Use utility function for consistent 404 handling
+      handle404Redirect();
+
+      return Promise.reject(error); // Still reject to allow component-level handling if needed
     } else {
       console.error(`API error (${error.response.status}):`, error.response.data);
     }
-    
+
     return Promise.reject(error);
   }
 );
