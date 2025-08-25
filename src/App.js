@@ -25,6 +25,7 @@ import { useAuth } from './context/AuthContext.js'; // Import useAuth
 import AccountantDashboard from './pages/AccountantDashboard'; // Import AccountantDashboard
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminNotificationPage from './pages/AdminNotificationPage.jsx';
+import NotificationTestPage from './pages/Admin/NotificationTestPage.jsx';
 import AllStaffAttendanceLogs from './pages/manager/AllStaffAttendanceLogs.jsx';
 import DailyShiftAttendance from './pages/manager/DailyShiftAttendance.jsx';
 import ExplanationReports from './pages/manager/ExplanationReports.jsx';
@@ -362,6 +363,7 @@ function App() {
               <Route path="/admin/system-charts" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemChartsPage /></ProtectedRoute>} />
               <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><SystemSettingsPage /></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminNotificationPage /></ProtectedRoute>} />
+              <Route path="/admin/test-notifications" element={<ProtectedRoute allowedRoles={["ADMIN"]}><NotificationTestPage /></ProtectedRoute>} />
               <Route path="/admin/system-management" element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}><SystemManagement /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerDashboard /></ProtectedRoute>} />
 
