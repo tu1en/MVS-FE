@@ -31,7 +31,7 @@ import {
     Tag
 } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -334,12 +334,6 @@ const ExplanationReports = () => {
       render: (text) => text || 'Chưa có',
     },
     {
-      title: 'Phòng ban',
-      dataIndex: 'department',
-      key: 'department',
-      render: (text) => text || 'Chưa có',
-    },
-    {
       title: 'Thao tác',
       key: 'actions',
       render: (_, record) => (
@@ -504,7 +498,7 @@ const ExplanationReports = () => {
                 <SearchOutlined /> Tìm kiếm:
               </label>
               <Search
-                placeholder="Tìm theo tên, lý do hoặc phòng ban"
+                placeholder="Tìm theo tên hoặc lý do"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 style={{ width: '100%' }}
@@ -580,7 +574,6 @@ const ExplanationReports = () => {
                 <Card size="small" title="Thông tin người gửi">
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <div><strong>Tên:</strong> {selectedRecord.submitterName}</div>
-                    <div><strong>Phòng ban:</strong> {selectedRecord.department || 'Chưa có'}</div>
                     <div><strong>Ngày vắng mặt:</strong> {dayjs(selectedRecord.absenceDate).format('DD/MM/YYYY')}</div>
                     <div><strong>Ngày gửi:</strong> {
                       selectedRecord.submittedAt ? 

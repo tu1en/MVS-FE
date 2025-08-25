@@ -8,7 +8,6 @@ import {
   Input,
   InputNumber,
   Select,
-  DatePicker,
   Space,
   Typography,
   Row,
@@ -81,32 +80,51 @@ const InvoiceManagement = () => {
   const handleCreateInvoice = async (values) => {
     try {
       setLoading(true);
-      
+
+      // Validate invoice items
+      const validItems = invoiceItems.filter(item => item.description && item.unitPrice > 0);
+
+      if (validItems.length === 0) {
+        message.error('Vui lòng thêm ít nhất một khoản phí với đơn giá lớn hơn 0');
+        setLoading(false);
+        return;
+      }
+
+      // Calculate total amount
+      const totalAmount = validItems.reduce((total, item) => {
+        return total + (item.quantity * item.unitPrice);
+      }, 0);
+
+      if (totalAmount <= 0) {
+        message.error('Tổng tiền hóa đơn phải lớn hơn 0 VND');
+        setLoading(false);
+        return;
+      }
+
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       const invoiceData = {
         ...values,
-        issueDate: values.issueDate.format('YYYY-MM-DD'),
-        dueDate: values.dueDate.format('YYYY-MM-DD'),
-        items: invoiceItems.filter(item => item.description && item.unitPrice > 0),
+        // issueDate và dueDate sẽ được tự động set ở backend
+        items: validItems,
         status: 'PENDING'
       };
-      
+
       // Add invoice data as JSON
       formData.append('invoiceData', JSON.stringify(invoiceData));
-      
+
       // Add file if uploaded
       if (uploadedFile) {
         formData.append('invoiceFile', uploadedFile);
       }
-      
+
       await api.post('/manager/invoices', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       message.success('Tạo hóa đơn thành công');
       setCreateModalVisible(false);
       form.resetFields();
@@ -250,16 +268,10 @@ const InvoiceManagement = () => {
       key: 'studentName'
     },
     {
-      title: 'Ngày phát hành',
-      dataIndex: 'issueDate',
-      key: 'issueDate',
-      render: (date) => moment(date).format('DD/MM/YYYY')
-    },
-    {
-      title: 'Hạn thanh toán',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date) => moment(date).format('DD/MM/YYYY')
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => moment(date).format('DD/MM/YYYY HH:mm')
     },
     {
       title: 'Tổng tiền',
@@ -416,26 +428,7 @@ const InvoiceManagement = () => {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="issueDate"
-                label="Ngày phát hành"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày phát hành' }]}
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="dueDate"
-                label="Hạn thanh toán"
-                rules={[{ required: true, message: 'Vui lòng chọn hạn thanh toán' }]}
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-          </Row>
+          {/* Ngày phát hành và hạn thanh toán sẽ được tự động tạo ở backend */}
 
           <Form.Item
             name="note"

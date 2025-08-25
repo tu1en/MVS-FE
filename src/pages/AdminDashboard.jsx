@@ -40,9 +40,9 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-semibold mb-4">Quản lý thông báo</h2>
           <p className="text-gray-600">Tạo và quản lý thông báo hệ thống, lên lịch gửi thông báo</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/admin/test-notifications')}>
-          <h2 className="text-xl font-semibold mb-4">🧪 Test Thông Báo Tự Động</h2>
-          <p className="text-gray-600">Kiểm tra chức năng gửi thông báo tự động cho phụ huynh qua Zalo/SMS</p>
+        <div className="bg-white p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/admin/time-tracking')}>
+          <h2 className="text-xl font-semibold mb-4">Quản lý chấm công nhân viên</h2>
+          <p className="text-gray-600">Cấu hình và quản lý hệ thống chấm công cho nhân viên hành chính</p>
         </div>
       </div>
     </div>

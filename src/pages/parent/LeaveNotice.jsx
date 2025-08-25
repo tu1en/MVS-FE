@@ -1,40 +1,66 @@
 import {
-  CalendarOutlined,
-  ClockCircleOutlined,
-  EyeOutlined,
-  PlusOutlined,
-  UploadOutlined
+    CalendarOutlined,
+    ClockCircleOutlined,
+    EyeOutlined,
+    PlusOutlined,
+    UploadOutlined
 } from '@ant-design/icons';
 import {
-  Badge,
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Empty,
-  Form,
-  Input,
-  List,
-  message,
-  Modal,
-  Radio,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-  TimePicker,
-  Typography,
-  Upload
+    Badge,
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Empty,
+    Form,
+    Input,
+    List,
+    message,
+    Modal,
+    Radio,
+    Row,
+    Select,
+    Space,
+    Table,
+    Tag,
+    TimePicker,
+    Typography,
+    Upload
 } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ChildSwitcher from '../../components/parent/ChildSwitcher';
 import { parentAPI } from '../../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title, Text } = Typography;
+
+// Utility function to handle date parsing from backend
+const parseBackendDate = (dateValue) => {
+  console.log('parseBackendDate input:', dateValue, typeof dateValue);
+
+  if (!dateValue) return null;
+
+  // Handle array format from Java LocalDate [year, month, day]
+  if (Array.isArray(dateValue) && dateValue.length >= 3) {
+    const [year, month, day] = dateValue;
+    // Java month is 1-based, JavaScript month is 0-based
+    const jsDate = new Date(year, month - 1, day);
+    console.log('Parsed array date:', jsDate);
+    return dayjs(jsDate);
+  }
+
+  // Handle string format (ISO date)
+  if (typeof dateValue === 'string') {
+    console.log('Parsed string date:', dayjs(dateValue));
+    return dayjs(dateValue);
+  }
+
+  // Fallback
+  console.log('Fallback date parsing:', dayjs(dateValue));
+  return dayjs(dateValue);
+};
 
 /**
  * Leave Notice Component
@@ -558,7 +584,9 @@ const LeaveNotice = () => {
                         }
                         description={
                           <div>
-                            <Text strong>{notice.date}</Text>
+                            <Text strong>
+                              {parseBackendDate(notice.date)?.format('DD/MM/YYYY') || 'Invalid Date'}
+                            </Text>
                             {notice.arriveAt && <Text> - Đến lúc {notice.arriveAt}</Text>}
                             {notice.leaveAt && <Text> - Về lúc {notice.leaveAt}</Text>}
                             <br />
@@ -612,7 +640,9 @@ const LeaveNotice = () => {
               <Col span={12}>
                 <Text strong>Ngày:</Text>
                 <br />
-                <Text>{selectedNotice.date}</Text>
+                <Text>
+                  {parseBackendDate(selectedNotice.date)?.format('DD/MM/YYYY') || 'Invalid Date'}
+                </Text>
               </Col>
               <Col span={12}>
                 <Text strong>Trạng thái:</Text>

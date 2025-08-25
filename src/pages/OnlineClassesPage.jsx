@@ -43,10 +43,10 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 /**
- * OnlineClassesPage component for managing online class sessions with separate teacher and student views
- * @returns {JSX.Element} OnlineClassesPage component
+ * ClassesPage component for managing class sessions with separate teacher and student views
+ * @returns {JSX.Element} ClassesPage component
  */
-function OnlineClassesPage() {
+function ClassesPage() {
   const [loading, setLoading] = useState(true);
   const [classSessions, setClassSessions] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -64,11 +64,11 @@ function OnlineClassesPage() {
   const userRole = localStorage.getItem('role');
 
   // Debug logging for role detection
-  console.log('OnlineClassesPage - Role Debug:', { 
-    userId, 
-    userRole, 
+  console.log('ClassesPage - Role Debug:', {
+    userId,
+    userRole,
     roleFromStorage: localStorage.getItem('role'),
-    token: localStorage.getItem('token') 
+    token: localStorage.getItem('token')
   });
 
   // Mock data for testing
@@ -316,9 +316,9 @@ function OnlineClassesPage() {
   // Teacher view components
   const renderTeacherView = () => {
     return (
-      <div className="teacher-online-classes-view">
+      <div className="teacher-classes-view">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>Quản lý lớp học trực tuyến</Title>
+          <Title level={4} style={{ margin: 0 }}>Quản lý lớp học</Title>
           <Space>
             <Button 
               icon={calendarView ? <TeamOutlined /> : <CalendarOutlined />}
@@ -435,7 +435,7 @@ function OnlineClassesPage() {
                     icon={<VideoCameraOutlined />} 
                     onClick={() => handleJoinSession(session)}
                   >
-                    {isActive ? 'Tham gia ngay' : 'Bắt đầu buổi học'}
+                    {isActive ? 'Tham gia ngay' : 'Vào buổi học'}
                   </Button>
                 ) : isUpcoming ? (
                   <Button 
@@ -568,8 +568,8 @@ function OnlineClassesPage() {
     const activeCount = classSessions.filter(s => s.status === 'ACTIVE').length;
     
     return (
-      <div className="student-online-classes-view">
-        <Title level={4}>Lớp học trực tuyến</Title>
+      <div className="student-classes-view">
+        <Title level={4}>Lớp học</Title>
         
         {/* Quick stats */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -987,7 +987,7 @@ function OnlineClassesPage() {
   const renderMainContent = () => {
     // Don't render if no valid role or user ID
     if (!userId || !userRole || !token) {
-      console.warn('OnlineClassesPage: Missing required authentication data:', { userId, userRole, token: !!token });
+      console.warn('ClassesPage: Missing required authentication data:', { userId, userRole, token: !!token });
       return (
         <div className="text-center p-8">
           <h2>⚠️ Lỗi xác thực</h2>
@@ -1025,7 +1025,7 @@ function OnlineClassesPage() {
     }
     
     // If role is not recognized, show error
-    console.error('OnlineClassesPage: Unrecognized role:', userRole);
+    console.error('ClassesPage: Unrecognized role:', userRole);
     return (
       <div className="text-center p-8">
         <h2>⚠️ Vai trò không được hỗ trợ</h2>
@@ -1046,10 +1046,10 @@ function OnlineClassesPage() {
   }
 
   return (
-    <div className="online-classes-page">
+    <div className="classes-page">
       {/* Main content based on user role */}
       {renderMainContent()}
-      
+
       {/* Shared modals */}
       {renderSessionFormModal()}
       {renderJoinClassModal()}
@@ -1057,4 +1057,4 @@ function OnlineClassesPage() {
   );
 }
 
-export default OnlineClassesPage; 
+export default ClassesPage;

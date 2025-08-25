@@ -1,25 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Typography, 
-  Row, 
-  Col, 
-  Table, 
-  Tag,
-  Empty,
-  Statistic,
-  Progress,
-  Button,
-  Avatar,
-  Descriptions
-} from 'antd';
-import { 
-  UserOutlined, 
-  BookOutlined, 
-  CalendarOutlined,
-  TrophyOutlined,
-  FileTextOutlined
+import {
+    BookOutlined,
+    CalendarOutlined,
+    FileTextOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import {
+    Avatar,
+    Button,
+    Card,
+    Col,
+    Empty,
+    Row,
+    Table,
+    Tag,
+    Typography
+} from 'antd';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -67,28 +63,13 @@ const Children = () => {
         </div>
       ),
     },
-    {
-      title: 'Quan hệ',
-      dataIndex: 'relationType',
-      key: 'relationType',
-      render: (relationType) => {
-        const relationMap = {
-          FATHER: { text: 'Bố', color: 'blue' },
-          MOTHER: { text: 'Mẹ', color: 'pink' },
-          GUARDIAN: { text: 'Người giám hộ', color: 'green' },
-          OTHER: { text: 'Khác', color: 'gray' }
-        };
-        const relation = relationMap[relationType] || { text: relationType, color: 'default' };
-        return <Tag color={relation.color}>{relation.text}</Tag>;
-      },
-    },
+
     {
       title: 'Vai trò',
       key: 'role',
       render: (_, record) => (
         <div>
-          {record.isPrimary && <Tag color="gold">Phụ huynh chính</Tag>}
-          {record.legalGuardian && <Tag color="green">Người giám hộ hợp pháp</Tag>}
+          <Tag color="blue">Phụ huynh</Tag>
         </div>
       ),
     },
@@ -146,7 +127,7 @@ const Children = () => {
       ) : (
         <>
           {/* Summary Statistics */}
-          <Row gutter={[16, 16]} className="mb-6">
+          {/* <Row gutter={[16, 16]} className="mb-6">
             <Col xs={24} sm={8}>
               <Card>
                 <Statistic 
@@ -174,38 +155,17 @@ const Children = () => {
                 />
               </Card>
             </Col>
-          </Row>
+          </Row> */}
 
           {/* Children Table */}
-          <Card title="Danh sách con em">
-            <Table
-              columns={columns}
-              dataSource={children}
-              rowKey="id"
-              pagination={false}
-              expandable={{
-                expandedRowRender: (record) => (
-                  <div className="pl-4">
-                    <Descriptions size="small" column={2}>
-                      <Descriptions.Item label="Email">
-                        {record.student?.email || 'Chưa có email'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Điện thoại">
-                        {record.student?.phoneNumber || 'Chưa có số điện thoại'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Ngày bắt đầu">
-                        {record.startAt || 'Không xác định'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Trạng thái">
-                        <Tag color="green">Đang hoạt động</Tag>
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </div>
-                ),
-                rowExpandable: (record) => true,
-              }}
-            />
-          </Card>
+                     <Card title="Danh sách con em">
+             <Table
+               columns={columns}
+               dataSource={children}
+               rowKey="id"
+               pagination={false}
+             />
+           </Card>
 
           {/* Quick Actions */}
           <Row gutter={[16, 16]} className="mt-6">

@@ -44,6 +44,150 @@ dayjs.locale('vi');
 const TimetableView = () => {
   const { message } = App.useApp();
   
+  // CSS để ẩn phần năm trong Calendar
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Ẩn hoàn toàn phần năm trong Calendar - CSS mạnh hơn */
+      
+      /* Ẩn dropdown năm 2025 */
+      .ant-picker-header-view .ant-picker-year-panel,
+      .ant-picker-header-view .ant-picker-year-panel *,
+      .ant-picker-header-view .ant-picker-year-panel .ant-picker-header-view,
+      .ant-picker-header-view .ant-picker-year-panel .ant-picker-header-view * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+      }
+      
+      /* Ẩn nút "Năm" trong radio group */
+      .ant-radio-group.ant-picker-calendar-mode-switch .ant-radio-button-wrapper:nth-child(2),
+      .ant-radio-group.ant-picker-calendar-mode-switch .ant-radio-button-wrapper:last-child,
+      .ant-radio-group.ant-picker-calendar-mode-switch label:nth-child(2),
+      .ant-radio-group.ant-picker-calendar-mode-switch label:last-child {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+      }
+      
+      /* Ẩn theo title attribute */
+      .ant-picker-header-view button[title*="năm"],
+      .ant-picker-header-view button[title*="year"],
+      .ant-picker-header-view button[title="Năm"],
+      .ant-picker-header-view button[title="Year"],
+      .ant-radio-button-wrapper[title*="năm"],
+      .ant-radio-button-wrapper[title*="year"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+      }
+      
+      /* Ẩn theo text content */
+      .ant-picker-header-view button:contains("Năm"),
+      .ant-picker-header-view button:contains("Year"),
+      .ant-radio-button-wrapper:contains("Năm"),
+      .ant-radio-button-wrapper:contains("Year") {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+      }
+      
+      /* Ẩn tất cả các phần tử có thể chứa năm */
+      .ant-picker-header-view *[class*="year"],
+      .ant-picker-header-view *[class*="Year"],
+      .ant-picker-header-view *[aria-label*="năm"],
+      .ant-picker-header-view *[aria-label*="year"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // JavaScript để ẩn trực tiếp các phần tử năm
+    const hideYearElements = () => {
+      // Ẩn dropdown năm
+      const yearPanels = document.querySelectorAll('.ant-picker-year-panel');
+      yearPanels.forEach(panel => {
+        panel.style.display = 'none';
+        panel.style.visibility = 'hidden';
+        panel.style.opacity = '0';
+        panel.style.width = '0';
+        panel.style.height = '0';
+        panel.style.position = 'absolute';
+        panel.style.left = '-9999px';
+      });
+      
+      // Ẩn nút "Năm" trong radio group
+      const radioButtons = document.querySelectorAll('.ant-radio-button-wrapper');
+      radioButtons.forEach((button, index) => {
+        if (index === 1 || button.textContent?.includes('Năm') || button.textContent?.includes('Year')) {
+          button.style.display = 'none';
+          button.style.visibility = 'hidden';
+          button.style.opacity = '0';
+          button.style.width = '0';
+          button.style.height = '0';
+          button.style.position = 'absolute';
+          button.style.left = '-9999px';
+        }
+      });
+      
+      // Ẩn các button có title chứa "năm" hoặc "year"
+      const yearButtons = document.querySelectorAll('button[title*="năm"], button[title*="year"], button[title*="Năm"], button[title*="Year"]');
+      yearButtons.forEach(button => {
+        button.style.display = 'none';
+        button.style.visibility = 'hidden';
+        button.style.opacity = '0';
+        button.style.width = '0';
+        button.style.height = '0';
+        button.style.position = 'absolute';
+        button.style.left = '-9999px';
+      });
+    };
+    
+    // Chạy ngay lập tức
+    hideYearElements();
+    
+    // Chạy lại sau khi DOM đã render xong
+    setTimeout(hideYearElements, 100);
+    setTimeout(hideYearElements, 500);
+    setTimeout(hideYearElements, 1000);
+    
+    // Theo dõi DOM changes để ẩn các phần tử mới
+    const observer = new MutationObserver(hideYearElements);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+      observer.disconnect();
+    };
+  }, []);
+  
   // State management với loading control
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -337,7 +481,7 @@ const TimetableView = () => {
           <Col>
             <Space>
               <Title level={4}>
-                Tuần: {startOfWeek.format('DD/MM')} - {endOfWeek.format('DD/MM/YYYY')}
+                Tuần: {startOfWeek.format('DD/MM')} - {endOfWeek.format('DD/MM')}
               </Title>
               <Select
                 value={viewMode}
@@ -571,7 +715,7 @@ const TimetableView = () => {
             <Descriptions.Item label="Thời gian">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <ClockCircleOutlined style={{ marginRight: '8px' }} />
-                {dayjs(selectedEvent.startDatetime).format('DD/MM/YYYY HH:mm')} - {dayjs(selectedEvent.endDatetime).format('HH:mm')}
+                {dayjs(selectedEvent.startDatetime).format('DD/MM HH:mm')} - {dayjs(selectedEvent.endDatetime).format('HH:mm')}
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="Địa điểm">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
@@ -23,19 +23,20 @@ const CoursePreview = () => {
       const courseData = response.data;
       
       if (courseData) {
-        // Transform API data to match component expectations
+        // Use normalized course data for consistency
+        const normalized = normalizeCourseData(courseData);
         const transformedCourse = {
-          id: courseData.id,
-          title: courseData.title || courseData.name,
-          description: courseData.description,
-          instructor: courseData.instructor || courseData.teacherName || 'Đang cập nhật',
+          id: normalized.id,
+          title: normalized.name,
+          description: normalized.description,
+          instructor: normalized.instructor, // Now consistently uses COURSE_FALLBACKS.instructor
           instructorBio: courseData.instructorBio || '5+ năm kinh nghiệm giảng dạy',
           instructorAvatar: courseData.instructorAvatar || '/api/placeholder/100/100',
-          price: courseData.enrollment_fee || courseData.enrollmentFee || courseData.price || 0,
+          price: normalized.enrollmentFee,
           originalPrice: courseData.originalPrice,
-          duration: courseData.duration || `${courseData.total_weeks || 0} tuần`,
-          students: courseData.max_students_per_template || courseData.students || 0,
-          rating: courseData.rating || 4.5,
+          duration: normalized.duration, // Now consistently uses formatDuration()
+          students: normalized.maxStudents,
+          rating: normalized.rating,
           totalRatings: courseData.totalRatings || 50,
           level: courseData.level || 'Cơ bản',
           category: courseData.category || courseData.subject || 'Programming',

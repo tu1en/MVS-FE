@@ -25,7 +25,7 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
         }
 
         if (!data) {
-          setError('Không có buổi học trực tuyến nào đang diễn ra.');
+          setError('Không có buổi học nào đang diễn ra.');
           setLoading(false);
           return;
         }
@@ -89,7 +89,7 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-      <Spin size="large" tip="Đang chuẩn bị phòng học trực tuyến..." />
+      <Spin size="large" tip="Đang chuẩn bị phòng học..." />
     </div>
   );
   
@@ -124,8 +124,8 @@ const LivestreamRoom = ({ lectureId, isTeacher }) => {
           }}
           interfaceConfigOverwrite={{
             SHOW_JITSI_WATERMARK: false,
-            APP_NAME: 'Classroom Livestream',
-            NATIVE_APP_NAME: 'Classroom Livestream',
+            APP_NAME: 'Classroom Meeting',
+            NATIVE_APP_NAME: 'Classroom Meeting',
             DEFAULT_BACKGROUND: '#ffffff',
             DISABLE_VIDEO_BACKGROUND: true,
           }}

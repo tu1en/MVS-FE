@@ -1,28 +1,36 @@
 import {
-  BookOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-  FileTextOutlined,
-  UploadOutlined
+    BookOutlined,
+    CalendarOutlined,
+    CheckCircleOutlined,
+    ClockCircleOutlined,
+    DownloadOutlined,
+    ExclamationCircleOutlined,
+    FileTextOutlined,
+    FilterOutlined,
+    ReloadOutlined,
+    SearchOutlined,
+    UploadOutlined
 } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Descriptions,
-  Divider,
-  Empty,
-  Form,
-  Input,
-  message,
-  Modal,
-  Space,
-  Spin,
-  Table,
-  Tag,
-  Typography,
-  Upload
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Descriptions,
+    Divider,
+    Empty,
+    Form,
+    Input,
+    message,
+    Modal,
+    Row,
+    Select,
+    Space,
+    Spin,
+    Table,
+    Tag,
+    Typography,
+    Upload
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
@@ -34,6 +42,9 @@ import SubmissionService from '../../services/submissionService';
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Dragger } = Upload;
+const { Search } = Input;
+const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 /**
  * Student Assignments component - for viewing and submitting assignments
@@ -54,6 +65,14 @@ const StudentAssignments = () => {
   const [richTextContent, setRichTextContent] = useState('');
   const [form] = Form.useForm();
 
+  // Filter and search states
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [classroomFilter, setClassroomFilter] = useState('all');
+  const [dateRange, setDateRange] = useState(null);
+  const [sortField, setSortField] = useState('dueDate');
+  const [sortOrder, setSortOrder] = useState('asc');
+
   useEffect(() => {
     fetchAssignments();
   }, []);
@@ -62,6 +81,8 @@ const StudentAssignments = () => {
     try {
       setLoading(true);
       const data = await AssignmentService.getCurrentStudentAssignments();
+      console.log('📋 Fetched assignments:', data);
+      console.log('📋 First assignment:', data[0]);
       setAssignments(data);
       
       // Fetch submissions for each assignment
@@ -87,6 +108,95 @@ const StudentAssignments = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter and sort assignments
+  const filteredAndSortedAssignments = () => {
+    let filtered = assignments.filter(assignment => {
+      // Search filter
+      const matchesSearch = !searchText ||
+        assignment.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+        assignment.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+        assignment.classroomName?.toLowerCase().includes(searchText.toLowerCase());
+
+      // Status filter
+      let matchesStatus = true;
+      if (statusFilter !== 'all') {
+        const now = dayjs();
+        const dueDate = dayjs(assignment.dueDate);
+        const submission = submissions[assignment.id];
+        const hasActualSubmission = submission && (
+          submission.fileSubmissionUrl ||
+          submission.content ||
+          (submission.attachments && submission.attachments.length > 0)
+        );
+
+        switch (statusFilter) {
+          case 'submitted':
+            matchesStatus = hasActualSubmission;
+            break;
+          case 'pending':
+            matchesStatus = !hasActualSubmission && now.isBefore(dueDate);
+            break;
+          case 'overdue':
+            matchesStatus = !hasActualSubmission && now.isAfter(dueDate);
+            break;
+          default:
+            matchesStatus = true;
+        }
+      }
+
+      // Classroom filter
+      const matchesClassroom = classroomFilter === 'all' || assignment.classroomName === classroomFilter;
+
+      // Date range filter (due date)
+      const matchesDateRange = !dateRange ||
+        (dayjs(assignment.dueDate).isSameOrAfter(dateRange[0], 'day') &&
+         dayjs(assignment.dueDate).isSameOrBefore(dateRange[1], 'day'));
+
+      return matchesSearch && matchesStatus && matchesClassroom && matchesDateRange;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      if (sortField === 'dueDate' || sortField === 'createdAt') {
+        aValue = dayjs(aValue);
+        bValue = dayjs(bValue);
+        return sortOrder === 'asc' ? aValue.diff(bValue) : bValue.diff(aValue);
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  };
+
+  // Get unique classrooms for filter
+  const getUniqueClassrooms = () => {
+    const classrooms = assignments.map(assignment => assignment.classroomName).filter(Boolean);
+    return [...new Set(classrooms)];
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setSearchText('');
+    setStatusFilter('all');
+    setClassroomFilter('all');
+    setDateRange(null);
+    setSortField('dueDate');
+    setSortOrder('asc');
   };
 
   const getStatusTag = (assignment) => {
@@ -121,6 +231,9 @@ const StudentAssignments = () => {
   };
 
   const showAssignmentDetails = (assignment) => {
+    console.log('🔍 Selected assignment:', assignment);
+    console.log('🔍 fileAttachmentUrl:', assignment.fileAttachmentUrl);
+    console.log('🔍 attachments:', assignment.attachments);
     setSelectedAssignment(assignment);
     setModalVisible(true);
   };
@@ -239,8 +352,8 @@ const StudentAssignments = () => {
       dataIndex: 'title',
       key: 'title',
       render: (text, record) => (
-        <Button 
-          type="link" 
+        <Button
+          type="link"
           onClick={() => showAssignmentDetails(record)}
           style={{ padding: 0, height: 'auto' }}
         >
@@ -248,12 +361,16 @@ const StudentAssignments = () => {
           {text}
         </Button>
       ),
+      sorter: (a, b) => a.title.localeCompare(b.title),
+      sortDirections: ['ascend', 'descend']
     },
     {
       title: 'Khóa học',
       dataIndex: 'classroomName',
       key: 'classroomName',
       render: (text) => text || 'Chưa xác định',
+      sorter: (a, b) => (a.classroomName || '').localeCompare(b.classroomName || ''),
+      sortDirections: ['ascend', 'descend']
     },
     {
       title: 'Ngày giao',
@@ -264,6 +381,8 @@ const StudentAssignments = () => {
         const createdDate = dayjs(date);
         return createdDate.isValid() ? createdDate.format('DD/MM/YYYY') : 'Chưa có thông tin';
       },
+      sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
+      sortDirections: ['ascend', 'descend']
     },
     {
       title: 'Hạn nộp',
@@ -275,6 +394,8 @@ const StudentAssignments = () => {
           {dayjs(date).format('DD/MM/YYYY HH:mm')}
         </Space>
       ),
+      sorter: (a, b) => dayjs(a.dueDate).unix() - dayjs(b.dueDate).unix(),
+      sortDirections: ['ascend', 'descend']
     },
     {
       title: 'Điểm tối đa',
@@ -379,25 +500,140 @@ const StudentAssignments = () => {
 
       {assignments.length === 0 ? (
         <Card>
-          <Empty 
+          <Empty
             description="Chưa có bài tập nào"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
       ) : (
-        <Card>
-          <Table
-            columns={columns}
-            dataSource={assignments}
-            rowKey="id"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `Tổng ${total} bài tập`,
-            }}
-          />
-        </Card>
+        <>
+          {/* Filters */}
+          <Card style={{ marginBottom: '16px' }}>
+            <Row gutter={16}>
+              <Col span={6}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  <SearchOutlined /> Tìm kiếm:
+                </label>
+                <Search
+                  placeholder="Tìm theo tên bài tập, mô tả, lớp học..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  style={{ width: '100%' }}
+                  allowClear
+                />
+              </Col>
+              <Col span={4}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  <FilterOutlined /> Trạng thái:
+                </label>
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: '100%' }}
+                  placeholder="Chọn trạng thái"
+                >
+                  <Option value="all">Tất cả</Option>
+                  <Option value="pending">Chưa nộp</Option>
+                  <Option value="submitted">Đã nộp</Option>
+                  <Option value="overdue">Quá hạn</Option>
+                </Select>
+              </Col>
+              <Col span={4}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Lớp học:
+                </label>
+                <Select
+                  value={classroomFilter}
+                  onChange={setClassroomFilter}
+                  style={{ width: '100%' }}
+                  placeholder="Chọn lớp học"
+                >
+                  <Option value="all">Tất cả</Option>
+                  {getUniqueClassrooms().map(classroom => (
+                    <Option key={classroom} value={classroom}>{classroom}</Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col span={5}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  <CalendarOutlined /> Hạn nộp:
+                </label>
+                <RangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  format="DD/MM/YYYY"
+                  style={{ width: '100%' }}
+                  placeholder={['Từ ngày', 'Đến ngày']}
+                />
+              </Col>
+              <Col span={5}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Sắp xếp:
+                </label>
+                <Space style={{ width: '100%' }}>
+                  <Select
+                    value={sortField}
+                    onChange={setSortField}
+                    style={{ width: '140px' }}
+                  >
+                    <Option value="dueDate">Hạn nộp</Option>
+                    <Option value="createdAt">Ngày giao</Option>
+                    <Option value="title">Tên bài tập</Option>
+                    <Option value="classroomName">Lớp học</Option>
+                  </Select>
+                  <Select
+                    value={sortOrder}
+                    onChange={setSortOrder}
+                    style={{ width: '80px' }}
+                  >
+                    <Option value="asc">Tăng</Option>
+                    <Option value="desc">Giảm</Option>
+                  </Select>
+                </Space>
+              </Col>
+            </Row>
+            <Row style={{ marginTop: 16 }}>
+              <Col span={24} style={{ textAlign: 'right' }}>
+                <Space>
+                  <Button
+                    icon={<FilterOutlined />}
+                    onClick={handleResetFilters}
+                  >
+                    Đặt lại bộ lọc
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<ReloadOutlined />}
+                    onClick={fetchAssignments}
+                    loading={loading}
+                  >
+                    Làm mới
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Assignments Table */}
+          <Card>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Title level={4} style={{ margin: 0 }}>
+                Danh sách bài tập ({filteredAndSortedAssignments().length}/{assignments.length})
+              </Title>
+            </div>
+            <Table
+              columns={columns}
+              dataSource={filteredAndSortedAssignments()}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `Tổng ${total} bài tập`,
+              }}
+            />
+          </Card>
+        </>
       )}
 
       {/* Assignment Details Modal */}
@@ -467,15 +703,41 @@ const StudentAssignments = () => {
               {selectedAssignment.description || 'Không có mô tả'}
             </Paragraph>
             
-            {selectedAssignment.fileAttachmentUrl && (
+            {/* Show assignment attachments */}
+            {(selectedAssignment.fileAttachmentUrl || (selectedAssignment.attachments && selectedAssignment.attachments.length > 0)) && (
               <>
                 <Divider>Tài liệu đính kèm</Divider>
-                <Button 
-                  icon={<DownloadOutlined />}
-                  onClick={() => window.open(selectedAssignment.fileAttachmentUrl, '_blank')}
-                >
-                  Tải về đề bài
-                </Button>
+                <div>
+                  {selectedAssignment.fileAttachmentUrl && (
+                    <div style={{ marginBottom: 8 }}>
+                      <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(selectedAssignment.fileAttachmentUrl, '_blank')}
+                        style={{ marginRight: 8 }}
+                      >
+                        Tải về đề bài
+                      </Button>
+                    </div>
+                  )}
+                  {selectedAssignment.attachments && selectedAssignment.attachments.map((attachment, index) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <Button
+                        type="default"
+                        icon={<DownloadOutlined />}
+                        onClick={() => window.open(attachment.fileUrl, '_blank')}
+                        style={{ marginRight: 8 }}
+                      >
+                        {attachment.fileName || `Tài liệu ${index + 1}`}
+                      </Button>
+                      {attachment.fileSize && (
+                        <Text type="secondary" style={{ marginLeft: 8 }}>
+                          ({Math.round(attachment.fileSize / 1024)} KB)
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </div>

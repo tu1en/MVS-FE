@@ -219,16 +219,16 @@ const TeacherAttendanceStatus = () => {
       key: 'date',
       render: (date) => formatDateSafe(date),
     },
-    {
-      title: 'Ca làm',
-      dataIndex: 'shift',
-      key: 'shift',
-      render: (shift) => (
-        <Tag color='cyan'>
-          <ClockCircleOutlined /> {shift || 'Ca chính'}
-        </Tag>
-      ),
-    },
+    // {
+    //   title: 'Ca làm',
+    //   dataIndex: 'shift',
+    //   key: 'shift',
+    //   render: (shift) => (
+    //     <Tag color='cyan'>
+    //       <ClockCircleOutlined /> {shift || 'Ca chính'}
+    //     </Tag>
+    //   ),
+    // },
     {
       title: 'Giờ vào',
       dataIndex: 'checkIn',
@@ -325,7 +325,7 @@ const TeacherAttendanceStatus = () => {
                 placeholder="Chọn ngày"
               />
             </Col>
-            <Col span={8}>
+            {/* <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 <ClockCircleOutlined /> Ca làm:
               </label>
@@ -340,7 +340,7 @@ const TeacherAttendanceStatus = () => {
                 <Option value="afternoon">Ca chiều</Option>
                 <Option value="evening">Ca tối</Option>
               </Select>
-            </Col>
+            </Col> */}
             <Col span={8}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 <SearchOutlined /> Tìm kiếm:

@@ -119,27 +119,27 @@ const TeacherCoursesSimple = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Quản lý khóa học</h1>
-        {role !== 'TEACHER' && (
+        {/* {role !== 'TEACHER' && (
           <button 
             onClick={() => setShowCreateClassroomModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             Tạo lớp học mới
           </button>
-        )}
+        )} */}
       </div>
       
       {courses.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500 mb-4">Chưa có lớp học nào được phân công.</p>
-          {role !== 'TEACHER' && (
+          {/* {role !== 'TEACHER' && (
             <button 
               onClick={() => setShowCreateClassroomModal(true)}
               className="mt-3 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               Tạo lớp học mới
             </button>
-          )}
+          )} */}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -170,12 +170,12 @@ const TeacherCoursesSimple = () => {
                 >
                   Xem chi tiết
                 </button>
-                <button
+                {/* <button
                   onClick={() => navigate(`/teacher/courses/${course.id}/edit`)}
                   className="course-action-button success bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
                 >
                   Chỉnh sửa
-                </button>
+                </button> */}
                 <button
                   onClick={() => navigate(`/teacher/courses/${course.id}/assignments`)}
                   className="course-action-button secondary bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
@@ -229,14 +229,14 @@ const TeacherCoursesSimple = () => {
         </div>
       )}
 
-      {role !== 'TEACHER' && (
+      {/* {role !== 'TEACHER' && (
         <div className="mt-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-700 mb-2">Lưu ý về đề xuất khóa học</h3>
           <p className="text-blue-600">
             Giáo viên không thể trực tiếp tạo khóa học. Khi bạn đề xuất khóa học mới, vui lòng cung cấp thông tin về thời gian không thể dạy để nhà trường xem xét và sắp xếp lịch phù hợp.
           </p>
         </div>
-      )}
+      )} */}
       
       <ClassroomCreationModal
         visible={showCreateClassroomModal}

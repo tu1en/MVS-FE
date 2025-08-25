@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
 
@@ -152,6 +152,11 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
   };
 
   const handleAddStudents = async () => {
+    console.log('🔍 [DEBUG] Starting handleAddStudents');
+    console.log('🔍 [DEBUG] classId:', classId);
+    console.log('🔍 [DEBUG] className:', className);
+    console.log('🔍 [DEBUG] selectedStudents:', state.selectedStudents);
+
     if (state.selectedStudents.length === 0) {
       showNotification('Vui lòng chọn ít nhất một học viên', 'warning');
       return;
@@ -198,11 +203,16 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
 
     try {
       const studentsToEnroll = state.selectedStudents.filter(id => !conflicts[id]);
-      const enrollPromises = studentsToEnroll.map(studentId =>
-        classManagementService.enrollStudent(classId, studentId)
-      );
+      console.log('🔍 [DEBUG] studentsToEnroll:', studentsToEnroll);
 
-      await Promise.all(enrollPromises);
+      const enrollPromises = studentsToEnroll.map(studentId => {
+        console.log('🔍 [DEBUG] Enrolling student:', studentId, 'into classId:', classId);
+        return classManagementService.enrollStudent(classId, studentId);
+      });
+
+      console.log('🔍 [DEBUG] Starting enrollment API calls...');
+      const results = await Promise.all(enrollPromises);
+      console.log('🔍 [DEBUG] Enrollment results:', results);
 
       const addedCount = studentsToEnroll.length;
       const conflictCount = state.selectedStudents.length - addedCount;
@@ -299,18 +309,10 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[70vh]">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{state.students.length}</div>
-              <div className="text-sm text-blue-800">Học viên hiện tại</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{maxStudents - state.students.length}</div>
-              <div className="text-sm text-green-800">Chỗ trống</div>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-gray-600">{maxStudents}</div>
-              <div className="text-sm text-gray-800">Tối đa</div>
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-gray-600">30</div>
+              <div className="text-sm text-gray-800">Số học sinh tối đa</div>
             </div>
           </div>
 

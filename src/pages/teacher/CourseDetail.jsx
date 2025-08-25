@@ -152,7 +152,7 @@ const CourseDetail = () => {
           <button onClick={() => setActiveTab('lectures')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'lectures' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Bài giảng</button>
           <button onClick={() => setActiveTab('students')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'students' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Học viên</button>
           <Link to={`/teacher/courses/${courseId}/assignments`} onClick={() => setActiveTab('assignments')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'assignments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Bài tập</Link>
-          <button onClick={() => setActiveTab('exams')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'exams' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Exams</button>
+          <button onClick={() => setActiveTab('exams')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'exams' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Bài kiểm tra</button>
         </nav>
       </div>
 
@@ -161,14 +161,14 @@ const CourseDetail = () => {
         {activeTab === 'students' && <StudentListTab classroomId={parseInt(courseId)} />}
         {activeTab === 'exams' && <ExamManagementTab />}
       </div>
-
+{/* 
       <div className="mt-8 p-4 border rounded-lg shadow-sm">
         <h2 className="text-xl font-semibold mb-3">Upload New Material</h2>
         <div className="flex items-center">
           <input type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
           <button onClick={handleUploadMaterial} disabled={!selectedFile || isUploading} className="ml-4 px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-400">{isUploading ? 'Uploading...' : 'Upload'}</button>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

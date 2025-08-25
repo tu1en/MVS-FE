@@ -797,6 +797,28 @@ class AssignmentService {
       return [];
     }
   }
+
+  /**
+   * Get classes for current authenticated student
+   * @returns {Promise<Array>} Student's classes list
+   */
+  static async getStudentClasses() {
+    try {
+      const response = await apiClient.get('/student/classes');
+      
+      // Handle wrapped response
+      let data = response.data;
+      if (data && data.data) {
+        data = data.data;
+      }
+      
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching student classes:', error);
+      // Return empty array if API fails, so UI doesn't break
+      return [];
+    }
+  }
 }
 
 export default AssignmentService;

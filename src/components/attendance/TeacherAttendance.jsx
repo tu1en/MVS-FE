@@ -1,9 +1,10 @@
-import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { Button, Empty, Input, message, Modal, Spin, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import apiClient from '../../services/apiClient';
 import { safeDataSource } from '../../utils/tableUtils';
+import MakeupAttendanceRequestForm from './MakeupAttendanceRequestForm';
 
 // TeacherAttendance Component
 const TeacherAttendance = ({ onLogout, showMessageBox }) => {
@@ -15,6 +16,9 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
   const [sessions, setSessions] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [makeupRequestModalVisible, setMakeupRequestModalVisible] = useState(false);
+  const [selectedLectureForMakeup, setSelectedLectureForMakeup] = useState(null);
+  const [selectedClassroomForMakeup, setSelectedClassroomForMakeup] = useState(null);
   
   // --- Real API Functions ---
   
@@ -131,7 +135,14 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
         const end = dayjs(endTime);
         const now = dayjs();
         if (end.isValid() && now.diff(end, 'hour') > 24) {
-          message.error('Không thể điểm danh: đã quá 24 giờ kể từ khi kết thúc phiên.');
+          // Force makeup attendance request - no option to skip
+          Modal.info({
+            title: 'Bắt buộc tạo yêu cầu điểm danh bù',
+            content: 'Đã quá 24 giờ kể từ khi kết thúc phiên. Bạn phải tạo yêu cầu điểm danh bù để được manager xác nhận.',
+            okText: 'Tạo yêu cầu điểm danh bù',
+            icon: <ClockCircleOutlined style={{ color: '#ff7a00' }} />,
+            onOk: () => handleShowMakeupRequestForm()
+          });
           return;
         }
       }
@@ -194,6 +205,47 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  // Makeup attendance handlers
+  const handleShowMakeupRequestForm = () => {
+    if (!selectedSession) {
+      message.error('Không có phiên điểm danh được chọn');
+      return;
+    }
+
+    // Extract lecture and classroom info from session
+    const lecture = {
+      id: selectedSession.rawData?.lectureId || selectedSession.rawData?.lecture?.id,
+      title: selectedSession.name || selectedSession.rawData?.lecture?.title || 'N/A',
+      description: selectedSession.rawData?.lecture?.description,
+      schedule: selectedSession.rawData?.lecture?.schedule,
+      lectureDate: selectedSession.rawData?.lecture?.lectureDate
+    };
+
+    const classroom = {
+      id: selectedSession.classroomId,
+      name: selectedSession.classroomName
+    };
+
+    setSelectedLectureForMakeup(lecture);
+    setSelectedClassroomForMakeup(classroom);
+    setMakeupRequestModalVisible(true);
+  };
+
+  const handleMakeupRequestSuccess = () => {
+    setMakeupRequestModalVisible(false);
+    setSelectedLectureForMakeup(null);
+    setSelectedClassroomForMakeup(null);
+    message.success('Yêu cầu điểm danh bù đã được gửi thành công!');
+    // Optionally refresh sessions to show updated status
+    fetchSessions();
+  };
+
+  const handleMakeupRequestCancel = () => {
+    setMakeupRequestModalVisible(false);
+    setSelectedLectureForMakeup(null);
+    setSelectedClassroomForMakeup(null);
+  };
   
   const handleSelectSession = (session) => {
     if (locationNetworkPassed) {
@@ -240,16 +292,33 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Quản lý Điểm danh</h2>
-        <div className="flex gap-3"> 
-          <Button 
-            type="primary" 
+        <div className="flex gap-3">
+          <Button
+            type="primary"
             onClick={() => setCurrentPage('createSession')}
           >
             Tạo phiên điểm danh mới
           </Button>
+          <Button
+            type="default"
+            icon={<ClockCircleOutlined />}
+            onClick={handleShowMakeupRequestForm}
+            disabled={!selectedSession}
+          >
+            Tạo yêu cầu điểm danh bù
+          </Button>
           <Button onClick={onLogout}>Đăng xuất</Button>
         </div>
       </div>
+
+      {/* Hướng dẫn sử dụng */}
+      {!selectedSession && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-700">
+            💡 <strong>Hướng dẫn:</strong> Chọn một phiên điểm danh bên dưới để có thể tạo yêu cầu điểm danh bù.
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
@@ -486,6 +555,15 @@ const TeacherAttendance = ({ onLogout, showMessageBox }) => {
         <>
           {renderDashboard()}
           {renderSessionDetailsModal()}
+
+          {/* Makeup Attendance Request Form */}
+          <MakeupAttendanceRequestForm
+            visible={makeupRequestModalVisible}
+            onCancel={handleMakeupRequestCancel}
+            onSuccess={handleMakeupRequestSuccess}
+            lecture={selectedLectureForMakeup}
+            classroom={selectedClassroomForMakeup}
+          />
         </>
       );
   }

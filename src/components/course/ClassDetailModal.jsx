@@ -513,7 +513,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
     { key: 'materials', label: '📚 Tài liệu', icon: '', count: materials.length },
     { key: 'lectures', label: '🎓 Bài giảng', icon: '', count: lectures.length },
     { key: 'assignments', label: '📝 Bài tập', icon: '', count: assignments.length },
-    { key: 'students', label: '👥 Học viên', icon: '', count: classData.currentStudents || 0 }
+    { key: 'students', label: '👥 Học viên', icon: '', count: 30 }
   ];
 
   return (
@@ -597,7 +597,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Học viên:</span>
-                          <span className="font-medium">{classData.currentStudents || 0}/{classData.maxStudents || 30}</span>
+                          <span className="font-medium">Tối đa 30 học sinh</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Thời gian:</span>
@@ -628,8 +628,8 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                           <div className="text-yellow-700">Bài tập</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{classData.currentStudents || 0}</div>
-                          <div className="text-purple-700">Học viên</div>
+                          <div className="text-2xl font-bold text-purple-600">30</div>
+                          <div className="text-purple-700">Học sinh tối đa</div>
                         </div>
                       </div>
                     </div>

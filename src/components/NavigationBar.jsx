@@ -4,10 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { ROLE } from '../constants/constants';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api'; // Added import for api
 import { syncFromLocalStorage } from '../store/slices/authSlice';
 import { isUserLoggedIn, performLogout } from '../utils/authUtils';
-import { useAuth } from '../context/AuthContext';
 
 /**
  * NavigationBar component that provides sidebar navigation based on user role
@@ -216,8 +216,28 @@ function NavigationBar() {
         }
       ]
     }
+    // ,
+    // {
+    //   category: "Đăng ký",
+    //   items: [
+    //     { 
+    //       name: 'Yêu Cầu Đăng Ký',
+    //       path: '/request-list',
+    //       icon: '📋'
+    //     }
+    //   ]
+    // },
+    // {
+    //   category: "Tài chính",
+    //   items: [
+    //     { 
+    //       name: 'Quản Lý Hóa Đơn',
+    //       path: '/manager/invoices',
+    //       icon: '🧾'
+    //     }
+    //   ]
+    // }
   ];
-
   // Define navigation items for STUDENT - Updated with new routes
   const studentNavItems = [
     {
@@ -259,16 +279,22 @@ function NavigationBar() {
           path: '/student/grades-attendance', 
           icon: '📊'
         },
-        { 
-          name: 'Tài liệu', 
-          path: '/student/materials', 
-          icon: '📄'
-        },
+        // { 
+        //   name: 'Tài liệu', 
+        //   path: '/student/materials', 
+        //   icon: '📄'
+        // },
         { 
           name: 'Thông báo', 
           path: '/student/announcements', 
           icon: '📢'
         }
+        // ,
+        // { 
+        //   name: 'Quản Lý Hóa Đơn', 
+        //   path: '/manager/invoices',
+        //   icon: '🧾'
+        // }
       ]
     },
     {
@@ -288,12 +314,18 @@ function NavigationBar() {
           name: 'Tài Khoản',
           path: '/student/account',
           icon: '👤'
-        },
-        { 
-          name: 'Thành Tựu', 
-          path: '/student/accomplishments', 
-          icon: '🏆'
         }
+        // ,
+        // { 
+        //   name: 'Thành Tựu', 
+        //   path: '/student/accomplishments', 
+        //   icon: '🏆'
+        // },
+        // { 
+        //   name: 'Yêu Cầu Đăng Ký', 
+        //   path: '/request-list', 
+        //   icon: '📋'
+        // }
       ]
     }
   ];
@@ -304,7 +336,7 @@ function NavigationBar() {
       category: "Chính",
       items: [
         { 
-          name: 'Trang Chủ/Dashboard', 
+          name: 'Trang Chủ', 
           path: '/teacher', 
           icon: '🏠'
         }
@@ -364,7 +396,8 @@ function NavigationBar() {
     {
       category: "Lương",
       items: [
-        { name: 'Lương của tôi', path: '/teacher/my/payroll', icon: '💵' }
+        { name: 'Lương của tôi', path: '/teacher/my/payroll', icon: '💵' },
+        // { name: 'Quản Lý Hóa Đơn', path: '/manager/invoices', icon: '🧾' }
       ]
     },
     {
@@ -389,7 +422,13 @@ function NavigationBar() {
           name: 'Yêu Cầu Giải Trình',
           path: '/teacher/explanation-request',
           icon: '📝'
-        },
+        }
+        ,
+        // {
+        //   name: 'Quản Lý Yêu Cầu Đăng Ký',
+        //   path: '/request-list',
+        //   icon: '📋'
+        // },
 
       ].filter(Boolean)
     }
@@ -401,7 +440,7 @@ function NavigationBar() {
       category: "Chính",
       items: [
         { 
-          name: 'Trang Chủ/Dashboard', 
+          name: 'Trang Chủ', 
           path: '/manager', 
           icon: '🏠'
         }
@@ -417,7 +456,7 @@ function NavigationBar() {
       category: "Quản lý",
       items: [
         { 
-          name: 'Quản Lý Yêu Cầu', 
+          name: 'Quản Lý Yêu Cầu Đăng Ký', 
           path: '/request-list',
           icon: '📋'
         },
@@ -436,20 +475,30 @@ function NavigationBar() {
           path: '/manager/announcements',
           icon: '📢'
         },
-        { 
-          name: 'Quản Lý Giao Tiếp', 
-          path: '/manager/communications', 
-          icon: '💬'
-        },
+        // { 
+        //   name: 'Quản Lý Giao Tiếp', 
+        //   path: '/manager/communications', 
+        //   icon: '💬'
+        // },
         { 
           name: 'Quản Lý Tuyển Dụng',
           path: '/manager/recruitment',
           icon: '🧑‍💼'
         },
+        // { 
+        //   name: 'Báo cáo', 
+        //   path: '/manager/reports', 
+        //   icon: '📊'
+        // },
         { 
-          name: 'Báo cáo', 
-          path: '/manager/reports', 
-          icon: '📊'
+          name: 'Quản Lý Hóa Đơn', 
+          path: '/manager/invoices',
+          icon: '🧾'
+        },
+        { 
+          name: 'Quản Lý Khóa Học', 
+          path: '/manager/course-templates',
+          icon: '📚'
         }
       ]
     },
@@ -476,29 +525,39 @@ function NavigationBar() {
           path: '/manager/teacher-attendance-status',
           icon: '👨‍🏫'
         },
-        { 
-          name: 'Ca làm việc hàng ngày', 
+        {
+          name: 'Ca làm việc hàng ngày',
           path: '/manager/daily-shift-attendance',
           icon: '🕒'
-        }
-      ]
-    },
-    {
-      category: "Giao tiếp",
-      items: [
+        },
+                { 
+          name: 'Yêu cầu điểm danh bù',
+          path: '/manager/makeup-attendance',
+          icon: '🔄'
+        },
         { 
-          name: 'Tin Nhắn', 
-          path: '/manager/messages', 
-          icon: '💬'
+          name: 'Chấm công',
+          path: '/manager/attendance',
+          icon: '⏰'
         }
       ]
     },
-    {
-      category: "Lương",
-      items: [
-        { name: 'Lương của tôi', path: '/manager/my/payroll', icon: '💵' }
-      ]
-    },
+    // {
+    //   category: "Giao tiếp",
+    //   items: [
+    //     { 
+    //       name: 'Tin Nhắn', 
+    //       path: '/manager/messages', 
+    //       icon: '💬'
+    //     }
+    //   ]
+    // },
+    // {
+    //   category: "Lương",
+    //   items: [
+    //     { name: 'Lương của tôi', path: '/manager/my/payroll', icon: '💵' }
+    //   ]
+    // },
     {
       category: "Cá nhân",
       items: [
@@ -517,7 +576,7 @@ function NavigationBar() {
       category: "Chính",
       items: [
         { 
-          name: 'Trang Chủ/Dashboard', 
+          name: 'Trang Chủ', 
           path: '/admin', 
           icon: '🏠'
         }
@@ -540,6 +599,21 @@ function NavigationBar() {
         { 
           name: 'Quản Lý Khóa Học', 
           path: '/admin/courses', 
+          icon: '📚'
+        },
+        { 
+          name: 'Quản Lý Yêu Cầu Đăng Ký', 
+          path: '/request-list',
+          icon: '📋'
+        },
+        { 
+          name: 'Quản Lý Hóa Đơn', 
+          path: '/manager/invoices',
+          icon: '🧾'
+        },
+        { 
+          name: 'Quản Lý Khóa Học', 
+          path: '/manager/course-templates',
           icon: '📚'
         },
         { 
@@ -566,7 +640,7 @@ function NavigationBar() {
     {
       category: "Chính",
       items: [
-        { name: 'Trang Chủ/Dashboard', path: '/accountant', icon: '🏠' }
+        { name: 'Trang Chủ', path: '/accountant', icon: '🏠' }
       ]
     },
     {
@@ -603,6 +677,12 @@ function NavigationBar() {
       ]
     },
     {
+      category: "Hóa đơn",
+      items: [
+        { name: 'Quản Lý Hóa Đơn', path: '/manager/invoices', icon: '🧾' }
+      ]
+    },
+    {
       category: "Nghỉ phép",
       items: [
         { name: 'Quản Lý Nghỉ Phép', path: '/accountant/leave-requests', icon: '🏖️' },
@@ -622,7 +702,7 @@ function NavigationBar() {
     {
       category: "Chính",
       items: [
-        { name: 'Trang Chủ/Dashboard', path: '/parent', icon: '🏠' }
+        { name: 'Trang Chủ', path: '/parent', icon: '🏠' }
       ]
     },
     {
@@ -636,6 +716,19 @@ function NavigationBar() {
       items: [
         { name: 'Thông Báo', path: '/parent/announcements', icon: '📢' },
         { name: 'Tin Nhắn', path: '/parent/messages', icon: '💬' }
+      ]
+    },
+    {
+      category: "Tài chính",
+      items: [
+        { name: 'Quản Lý Hóa Đơn', path: '/manager/invoices', icon: '🧾' }
+      ]
+    },
+    {
+      category: "Cá nhân",
+      items: [
+        { name: 'Tài Khoản', path: '/parent/account', icon: '👤' },
+        { name: 'Yêu Cầu Đăng Ký', path: '/request-list', icon: '📋' }
       ]
     }
   ];
@@ -702,26 +795,23 @@ function NavigationBar() {
               Thao Tác Nhanh
             </h3>
             <div className="space-y-2">
-              {/* Chỉ cho phép giáo viên thao tác nhanh tạo lớp */}
+              {/* Chỉ cho phép giáo viên thao tác nhanh tạo lớp
               {userRole === ROLE.TEACHER && (
                 <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
                   <span className="mr-3 text-xl">➕</span>
                   <span>Tạo Lớp Mới</span>
                 </button>
-              )}
+              )
+              } */}
               {/* Ẩn Báo Cáo và Tạo Lớp Mới cho admin */}
-              <button 
+              <button
                 className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center"
                 onClick={() => navigate('/change-password')}
               >
                 <span className="mr-3 text-xl">🔑</span>
                 <span>Đổi Mật Khẩu</span>
               </button>
-              <button className="w-full text-left px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-light hover:text-primary transition-colors flex items-center">
-                <span className="mr-3 text-xl">⚙️</span>
-                <span>Cài Đặt</span>
-              </button>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-100 transition-colors flex items-center"
               >

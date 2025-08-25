@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import RecruitmentPlanManagement from './RecruitmentPlanManagement';
+import InterviewCalendar from '../../components/recruitment/InterviewCalendar';
 
 // Component cho cột Lương GROSS với input
 const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
@@ -35,19 +36,218 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
           placeholder="Nhập lương GROSS"
         />
         {grossSalary && (
-                      <Button 
-              size="small" 
-              type="primary"
-              onClick={() => onShowSalaryDetails(recordId, grossSalary)}
-              style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-            >
-              Chi Tiết
-            </Button>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => onShowSalaryDetails(recordId, grossSalary)}
+            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+          >
+            Chi Tiết
+          </Button>
         )}
       </div>
     </div>
   );
 };
+
+/*
+// Component cho cột Lương GROSS với input
+const GrossSalaryColumnOld = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails }) => {
+  const [grossSalary, setGrossSalary] = useState(offer);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setGrossSalary(offer);
+  }, [offer]);
+
+  const handleGrossChange = async (value) => {
+    if (value && value < 1000000) {
+      value = 1000000;
+    }
+    setGrossSalary(value);
+    await onOfferUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={grossSalary}
+          onChange={handleGrossChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương GROSS"
+        />
+        {grossSalary && (
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => onShowSalaryDetails(recordId, grossSalary)}
+            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
+          >
+            Chi Tiết
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Component cho cột Lương theo giờ (Part-time) 
+const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
+  const [inputHourlyRate, setInputHourlyRate] = useState(hourlyRate);
+
+  useEffect(() => {
+    setInputHourlyRate(hourlyRate);
+  }, [hourlyRate]);
+
+  const handleHourlyRateChange = async (value) => {
+    if (value && value < 100000) {
+      value = 100000;
+    }
+    setInputHourlyRate(value);
+    await onHourlyRateUpdate(recordId, value);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputHourlyRate}
+          onChange={handleHourlyRateChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={100000}
+          min={100000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương/giờ"
+        />
+        <Button 
+          size="small" 
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            handleHourlyRateChange(currentValue + 100000);
+          }}
+        >
+          +100k
+        </Button>
+        <Button 
+          size="small"
+          onClick={() => {
+            const currentValue = parseInt(inputHourlyRate) || 100000;
+            if (currentValue > 100000) {
+              handleHourlyRateChange(currentValue - 100000);
+            }
+          }}
+        >
+          -100k
+        </Button>
+      </div>
+      {inputHourlyRate && (
+        <div className="text-xs text-gray-500 vietnamese-text mt-1">
+          (Lương theo giờ: {inputHourlyRate.toLocaleString('vi-VN')} VNĐ/giờ)
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Component cho cột Lương NET với input 
+const NetSalaryColumnOld = ({ offer, recordId, contractType, numberOfDependents, onOfferUpdate }) => {
+  const [netSalary, setNetSalary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [inputNetSalary, setInputNetSalary] = useState(null);
+
+  useEffect(() => {
+    const calculateNetSalary = async () => {
+      if (!offer) {
+        // Nếu chưa có offer, cho phép nhập NET trước
+        setInputNetSalary(null);
+        setNetSalary(null);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get(`/interview-schedules/${recordId}/salary-calculation`, {
+          params: { numberOfDependents: contractType === 'FULL_TIME' ? numberOfDependents ?? 0 : 0 }
+        });
+        const calculatedNet = response.data.netSalary;
+        setNetSalary(calculatedNet);
+        setInputNetSalary(calculatedNet);
+      } catch (err) {
+        console.error('Error calculating net salary:', err);
+        // Fallback to estimation if API fails
+        const grossSalary = parseInt(offer);
+        const estimatedNet = grossSalary * 0.8;
+        setNetSalary(estimatedNet);
+        setInputNetSalary(estimatedNet);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    calculateNetSalary();
+  }, [offer, recordId, contractType, numberOfDependents]);
+
+  const handleNetChange = async (value) => {
+    if (!value) return;
+    
+    setInputNetSalary(value);
+    setLoading(true);
+    
+    try {
+      // Calculate GROSS from NET using backend
+      const response = await axiosInstance.post(`/interview-schedules/${recordId}/calculate-gross-from-net`, {
+        netSalary: value,
+        numberOfDependents: contractType === 'FULL_TIME' ? (numberOfDependents ?? 0) : 0
+      });
+      const calculatedGross = response.data.grossSalary;
+      await onOfferUpdate(recordId, calculatedGross);
+    } catch (err) {
+      console.error('Error calculating gross from net:', err);
+      // Fallback: estimate gross as net * 1.25
+      const estimatedGross = Math.round(value * 1.25);
+      await onOfferUpdate(recordId, estimatedGross);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <span className="vietnamese-text text-gray-400">Đang tính...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <InputNumber
+          value={inputNetSalary}
+          onChange={handleNetChange}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          step={1000000}
+          min={1000000}
+          style={{ width: '150px' }}
+          placeholder="Nhập lương NET"
+        />
+      </div>
+      {!offer && inputNetSalary && (
+        <div className="text-xs text-blue-500 vietnamese-text mt-1">
+          (Nhập NET trước - GROSS sẽ được tính tự động)
+        </div>
+      )}
+    </div>
+  );
+};
+*/
 
 // Component cho cột Lương theo giờ (Part-time)
 const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
@@ -192,7 +392,6 @@ const NetSalaryColumn = ({ offer, recordId, contractType, numberOfDependents, on
           placeholder="Nhập lương NET"
         />
       </div>
-      {/* Bỏ dòng hiển thị '(Tính toán chính xác từ GROSS: ...) ' theo yêu cầu */}
       {!offer && inputNetSalary && (
         <div className="text-xs text-blue-500 vietnamese-text mt-1">
           (Nhập NET trước - GROSS sẽ được tính tự động)
@@ -252,12 +451,24 @@ const RecruitmentManagement = () => {
   const [evaluatingInterview, setEvaluatingInterview] = useState(null);
   const [evaluationDraft, setEvaluationDraft] = useState('');
   const evaluationSaveTimerRef = useRef(null);
+  
+  // State để ngăn chặn việc click liên tục vào các nút Duyệt/Từ chối
+  const [processingApplicationIds, setProcessingApplicationIds] = useState(new Set());
+  const [lastStatusChangeTime, setLastStatusChangeTime] = useState(0);
 
   // Theo dõi thay đổi contractType trong form vị trí để cập nhật đơn vị tiền tệ linh hoạt
   const watchedContractType = Form.useWatch('contractType', positionForm);
 
   useEffect(() => {
     fetchPlans();
+  }, []);
+  
+  // Cleanup effect để reset state khi component unmount
+  useEffect(() => {
+    return () => {
+      setProcessingApplicationIds(new Set());
+      setLastStatusChangeTime(0);
+    };
   }, []);
 
   useEffect(() => {
@@ -541,23 +752,36 @@ const RecruitmentManagement = () => {
 
   const handleApplicationStatusChange = async (id, status) => {
     try {
+      // Kiểm tra xem ứng viên này có đang được xử lý không
+      if (processingApplicationIds.has(id)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần thay đổi status (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastStatusChangeTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi thay đổi trạng thái tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu ứng viên này đang được xử lý
+      setProcessingApplicationIds(prev => new Set(prev).add(id));
+      setLastStatusChangeTime(now);
+      
       if (status === 'APPROVED') {
         await axiosInstance.post(`/recruitment-applications/${id}/approve`);
       } else if (status === 'REJECTED') {
         await axiosInstance.post(`/recruitment-applications/${id}/reject`);
         
-        // Cập nhật trạng thái lịch phỏng vấn thành REJECTED nếu có
-        // Tìm tất cả các lịch phỏng vấn của ứng viên này, không chỉ trong pendingInterviews
-        // mà cả trong interviews (để bắt cả trường hợp lịch đã COMPLETED)
+        // Xóa lịch phỏng vấn nếu có (thay vì chỉ cập nhật status)
+        // Tìm tất cả các lịch phỏng vấn của ứng viên này
         const allInterviews = [...interviews, ...pendingInterviews, ...offers];
         const interview = allInterviews.find(i => i.applicationId === id);
         
         if (interview) {
-          console.log('Updating interview status to REJECTED:', interview.id);
-          await axiosInstance.put(`/interview-schedules/${interview.id}/result`, { 
-            status: 'REJECTED', 
-            result: 'Ứng viên bị từ chối' 
-          });
+          console.log('Deleting interview after rejection:', interview.id);
+          await axiosInstance.delete(`/interview-schedules/${interview.id}`);
         }
       }
       message.success('Cập nhật trạng thái thành công!');
@@ -572,6 +796,13 @@ const RecruitmentManagement = () => {
       ]);
     } catch (err) {
       message.error('Không thể cập nhật trạng thái!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setProcessingApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -677,32 +908,60 @@ const RecruitmentManagement = () => {
     }
   };
 
-                  const handleInterviewStatusChange = async (id, status, result) => {
-                  try {
-                    await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
-                    
-                    // Nếu từ chối, cập nhật trạng thái đơn ứng tuyển thành REJECTED
-                    if (status === 'REJECTED') {
-                      // Tìm application ID từ interview
-                      const interview = pendingInterviews.find(i => i.id === id);
-                      if (interview && interview.applicationId) {
-                        await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
-                      }
-                    }
-                    
-                    message.success('Cập nhật trạng thái thành công!');
+                    const handleInterviewStatusChange = async (id, status, result) => {
+    try {
+      // Kiểm tra xem interview này có đang được xử lý không
+      if (processingApplicationIds.has(id)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần thay đổi status (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastStatusChangeTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi thay đổi trạng thái tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu interview này đang được xử lý
+      setProcessingApplicationIds(prev => new Set(prev).add(id));
+      setLastStatusChangeTime(now);
+      
+      // Nếu từ chối, xóa lịch phỏng vấn và cập nhật trạng thái đơn ứng tuyển
+      if (status === 'REJECTED') {
+        // Tìm application ID từ interview
+        const interview = pendingInterviews.find(i => i.id === id);
+        if (interview && interview.applicationId) {
+          // Xóa lịch phỏng vấn
+          await axiosInstance.delete(`/interview-schedules/${id}`);
+          // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
+          await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
+          message.success('Đã từ chối ứng viên và xóa lịch phỏng vấn!');
+        }
+      } else {
+        // Các status khác (ACCEPTED, DONE) - chỉ cập nhật status
+        await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
+        message.success('Cập nhật trạng thái thành công!');
+      }
 
-                    // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
-                    await Promise.all([
-                      fetchPendingInterviews(),
-                      fetchInterviews(),
-                      fetchApprovedApps(),
-                      fetchOffers(),
-                      fetchApplications()
-                    ]);
-                  } catch (error) {
-                    message.error('Cập nhật trạng thái thất bại!');
-                  }
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchPendingInterviews(),
+        fetchInterviews(),
+        fetchApprovedApps(),
+        fetchOffers(),
+        fetchApplications()
+      ]);
+    } catch (error) {
+      message.error('Cập nhật trạng thái thất bại!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setProcessingApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
   };
 
   const handleOfferUpdate = async (id, offer) => {
@@ -907,6 +1166,29 @@ const RecruitmentManagement = () => {
     }
   };
 
+  const handleRejectCandidateFromOffer = async (interviewId, applicationId) => {
+    try {
+      // Xóa lịch phỏng vấn
+      await axiosInstance.delete(`/interview-schedules/${interviewId}`);
+      
+      // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
+      await axiosInstance.post(`/recruitment-applications/${applicationId}/reject`);
+      
+      message.success('Đã từ chối ứng viên và xóa khỏi danh sách Offer!');
+      
+      // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
+      await Promise.all([
+        fetchOffers(),
+        fetchInterviews(),
+        fetchPendingInterviews(),
+        fetchApprovedApps(),
+        fetchApplications()
+      ]);
+    } catch (err) {
+      message.error('Không thể từ chối ứng viên!');
+    }
+  };
+
   const handleShowSalaryDetails = async (interviewId, grossSalary) => {
     setLoadingSalaryDetails(true);
     try {
@@ -1051,8 +1333,10 @@ const RecruitmentManagement = () => {
                 onClick={() => handleApplicationStatusChange(record.id, 'APPROVED')}
                 style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
                 className="vietnamese-text"
+                loading={processingApplicationIds.has(record.id)}
+                disabled={processingApplicationIds.has(record.id)}
               >
-                ✓ Duyệt
+                {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✓ Duyệt'}
               </Button>
               <Button 
                 type="primary" 
@@ -1060,8 +1344,10 @@ const RecruitmentManagement = () => {
                 danger
                 onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
                 className="vietnamese-text"
+                loading={processingApplicationIds.has(record.id)}
+                disabled={processingApplicationIds.has(record.id)}
               >
-                ✗ Từ chối
+                {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Từ chối'}
               </Button>
             </>
           )}
@@ -1214,8 +1500,10 @@ const RecruitmentManagement = () => {
               danger
               onClick={() => handleApplicationStatusChange(record.id, 'REJECTED')}
               className="vietnamese-text"
+              loading={processingApplicationIds.has(record.id)}
+              disabled={processingApplicationIds.has(record.id)}
             >
-              ✗ Từ chối
+              {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Từ chối'}
             </Button>
           </div>
         );
@@ -1322,24 +1610,28 @@ const RecruitmentManagement = () => {
               📄 Xem CV
             </Button>
           )}
-          <Button 
-            type="primary" 
-            size="small" 
-            onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            className="vietnamese-text"
-          >
-            ✓ Đỗ
-          </Button>
-          <Button 
-            type="primary" 
-            size="small" 
-            danger
-            onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
-            className="vietnamese-text"
-          >
-            ✗ Trượt
-          </Button>
+                     <Button 
+             type="primary" 
+             size="small" 
+             onClick={() => handleInterviewStatusChange(record.id, 'ACCEPTED')}
+             style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+             className="vietnamese-text"
+             loading={processingApplicationIds.has(record.id)}
+             disabled={processingApplicationIds.has(record.id)}
+           >
+             {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✓ Đỗ'}
+           </Button>
+           <Button 
+             type="primary" 
+             size="small" 
+             danger
+             onClick={() => handleInterviewStatusChange(record.id, 'REJECTED')}
+             className="vietnamese-text"
+             loading={processingApplicationIds.has(record.id)}
+             disabled={processingApplicationIds.has(record.id)}
+           >
+             {processingApplicationIds.has(record.id) ? 'Đang xử lý...' : '✗ Trượt'}
+           </Button>
         </div>
       )
     }
@@ -1399,6 +1691,73 @@ const RecruitmentManagement = () => {
         </div>
       )
     },
+    /*
+    {
+      title: 'Lương GROSS',
+      dataIndex: 'offer',
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <GrossSalaryColumnOld 
+              offer={text} 
+              recordId={record.id} 
+              onOfferUpdate={handleOfferUpdate} 
+              onShowSalaryDetails={handleShowSalaryDetails} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      title: 'Lương NET',
+      dataIndex: 'offer',
+      render: (text, record) => {
+        if (record.contractType === 'PART_TIME') {
+          return <span className="vietnamese-text text-gray-500">-</span>;
+        }
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <NetSalaryColumnOld 
+              offer={text} 
+              recordId={record.id} 
+              contractType={record.contractType}
+              numberOfDependents={dependentsByInterview[record.id] || 0}
+              onOfferUpdate={handleOfferUpdate} 
+            />
+            {record.contractType === 'FULL_TIME' && (
+              <Select
+                size="small"
+                value={dependentsByInterview[record.id] || 0}
+                onChange={(v) => handleDependentsChange(record.id, v)}
+                style={{ width: 140 }}
+                className="vietnamese-text"
+              >
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <Select.Option key={i} value={i}>{`Phụ thuộc: ${i}`}</Select.Option>
+                ))}
+              </Select>
+            )}
+          </div>
+        );
+      }
+    },
+    */
     
     {
       title: 'Lương theo giờ',
@@ -1442,6 +1801,16 @@ const RecruitmentManagement = () => {
             className="vietnamese-text"
           >
             Duyệt ứng viên
+          </Button>
+          
+          <Button 
+            type="primary" 
+            size="small" 
+            danger
+            onClick={() => handleRejectCandidateFromOffer(record.id, record.applicationId)}
+            className="vietnamese-text"
+          >
+            ✗ Từ chối ứng viên
           </Button>
           
         </div>
@@ -1495,10 +1864,15 @@ const RecruitmentManagement = () => {
         </Tabs.TabPane>
         
         <Tabs.TabPane tab="Quản lý lịch" key="schedule">
-          <Table 
-            columns={scheduleColumns} 
-            dataSource={getFilteredApprovedApps().filter(app => shouldShowInSchedule(app.id))} 
-            rowKey="id" 
+          <InterviewCalendar 
+            selectedPlan={selectedPlan}
+            interviews={interviews}
+            approvedApplications={getFilteredApprovedApps()}
+            onDataRefresh={() => {
+              fetchApprovedApps();
+              fetchInterviews();
+              fetchPendingInterviews();
+            }}
           />
         </Tabs.TabPane>
         
@@ -1583,6 +1957,16 @@ const RecruitmentManagement = () => {
               placeholder="Nhập mô tả chi tiết về vị trí công việc..."
             />
           </Form.Item>
+          
+          {/* 
+          <Form.Item name="contractType" label="Kiểu hợp đồng" rules={[{ required: true, message: 'Vui lòng chọn kiểu hợp đồng' }]}>
+            <Select className="vietnamese-text" placeholder="Chọn kiểu hợp đồng">
+              <Select.Option value="FULL_TIME">Hợp đồng full-time</Select.Option>
+              <Select.Option value="PART_TIME">Hợp đồng có kỳ hạn</Select.Option>
+            </Select>
+          </Form.Item>
+          */}
+          
           <Form.Item name="contractType" hidden>
             <Input value="PART_TIME" />
           </Form.Item>
@@ -1652,8 +2036,6 @@ const RecruitmentManagement = () => {
                     endTime: endTime.format('YYYY-MM-DD HH:mm:ss'),
                     duration: endTime.diff(startTime, 'hour', true)
                   });
-                  
-                  // Ghi chú: Đã loại bỏ các validation phức tạp ở frontend
                   // Backend sẽ xử lý tất cả validation bao gồm:
                   // - Thời gian trong quá khứ
                   // - Cùng ngày

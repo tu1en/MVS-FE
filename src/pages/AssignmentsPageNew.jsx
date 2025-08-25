@@ -67,6 +67,10 @@ function AssignmentsPageNew() {
   const [grades, setGrades] = useState({});
   const [richTextContent, setRichTextContent] = useState('');
   const [assignmentFileList, setAssignmentFileList] = useState([]);
+  
+  // ✅ NEW: Filter state for classroom
+  const [selectedClassroom, setSelectedClassroom] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Load grades from localStorage when component mounts or selected assignment changes
   useEffect(() => {
@@ -106,15 +110,31 @@ function AssignmentsPageNew() {
     }
   }, [userId, userRole]); // Rerun when user info changes
 
+  // ✅ NEW: Ensure classrooms are loaded for filtering
+  useEffect(() => {
+    if (userId && userRole === 'TEACHER' && !courseId) {
+      fetchTeacherClassrooms();
+    }
+  }, [userId, userRole, courseId]);
+
   const fetchTeacherClassrooms = async () => {
     try {
+      console.log('🔍 Fetching teacher classrooms...');
       const response = await ClassroomService.getClassroomsByCurrentTeacher();
-      console.log('Fetched teacher classrooms:', response);
+      console.log('📊 Raw API response:', response);
+      console.log('📊 Response data:', response.data);
+      console.log('📊 Response data length:', response.data?.length);
+
       setTeacherClassrooms(response);
       // Extract the data array from the response
-      setClassrooms(response.data || []);
+      const classroomsData = response.data || [];
+      setClassrooms(classroomsData);
+
+      console.log('✅ Set classrooms:', classroomsData);
+      console.log('✅ Total classrooms loaded:', classroomsData.length);
     } catch (error) {
-      console.error('Error fetching teacher classrooms:', error);
+      console.error('❌ Error fetching teacher classrooms:', error);
+      console.error('❌ Error details:', error.response?.data);
       // Không dùng mock data – giữ rỗng để UI thể hiện đúng trạng thái
       setTeacherClassrooms([]);
       setClassrooms([]);
@@ -958,9 +978,36 @@ function AssignmentsPageNew() {
     });
   };
 
+  // ✅ NEW: Filter assignments by classroom and search term
+  const getFilteredAssignments = (assignments) => {
+    let filtered = [...assignments];
+    
+    // Filter by classroom
+    if (selectedClassroom) {
+      filtered = filtered.filter(assignment => 
+        assignment.classroomId === selectedClassroom || 
+        assignment.classroom?.id === selectedClassroom
+      );
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(assignment => 
+        assignment.title?.toLowerCase().includes(searchLower) ||
+        assignment.description?.toLowerCase().includes(searchLower) ||
+        assignment.classroom?.name?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filtered;
+  };
+
   // Teacher view components
   const renderTeacherDashboard = () => {
     const allAssignments = [...upcomingAssignments, ...pastAssignments];
+    const filteredAssignments = getFilteredAssignments(allAssignments);
+    
     return (
       <div className="teacher-dashboard">
         <div className="header-actions" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -985,30 +1032,83 @@ function AssignmentsPageNew() {
           </Space>
         </div>
         
+        {/* ✅ NEW: Search and Filter Section */}
+        <div style={{ marginBottom: 16, padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <div style={{ minWidth: '250px' }}>
+              <Input
+                placeholder="🔍 Tìm kiếm bài tập..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                prefix={<FileTextOutlined />}
+                allowClear
+              />
+            </div>
+            
+            {/* Classroom Filter */}
+            <div style={{ minWidth: '200px' }}>
+              <Select
+                placeholder="Tất cả lớp học"
+                value={selectedClassroom}
+                onChange={setSelectedClassroom}
+                allowClear
+                style={{ width: '100%' }}
+              >
+                {classrooms.map(classroom => (
+                  <Option key={classroom.id} value={classroom.id}>
+                    {classroom.name}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+            
+            {/* Clear Filters Button */}
+            {(searchTerm || selectedClassroom) && (
+              <Button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedClassroom('');
+                }}
+                size="small"
+              >
+                🗑️ Xóa bộ lọc
+              </Button>
+            )}
+          </div>
+          
+          {/* Results Summary */}
+          <div style={{ marginTop: '12px', fontSize: '14px', color: '#666' }}>
+            Hiển thị {filteredAssignments.length} trong tổng số {allAssignments.length} bài tập
+            {searchTerm && ` (tìm kiếm: "${searchTerm}")`}
+            {selectedClassroom && ` (lớp: ${classrooms.find(c => c.id === selectedClassroom)?.name})`}
+          </div>
+        </div>
+        
         <Tabs 
           defaultActiveKey="all"
           items={[
             {
               key: 'all',
               label: 'Tất cả bài tập',
-              children: renderTeacherAssignmentsList(allAssignments)
+              children: renderTeacherAssignmentsList(filteredAssignments)
             },
             {
               key: 'needGrading',
-              label: `Cần chấm điểm (${getAssignmentsNeedingGrading(allAssignments).length})`,
-              children: renderTeacherAssignmentsList(getAssignmentsNeedingGrading(allAssignments))
+              label: `Cần chấm điểm (${getAssignmentsNeedingGrading(filteredAssignments).length})`,
+              children: renderTeacherAssignmentsList(getAssignmentsNeedingGrading(filteredAssignments))
             },
             {
               key: 'upcoming',
               label: 'Sắp đến hạn',
-              children: renderTeacherAssignmentsList(allAssignments.filter(assignment => 
+              children: renderTeacherAssignmentsList(filteredAssignments.filter(assignment => 
                 dayjs(assignment?.dueDate).isAfter(dayjs())
               ))
             },
             {
               key: 'past',
               label: 'Đã hết hạn',
-              children: renderTeacherAssignmentsList(allAssignments.filter(assignment => 
+              children: renderTeacherAssignmentsList(filteredAssignments.filter(assignment => 
                 dayjs(assignment?.dueDate).isBefore(dayjs())
               ))
             }
@@ -1030,6 +1130,19 @@ function AssignmentsPageNew() {
             <strong>{text}</strong>
           </Space>
         ),
+      },
+      {
+        title: 'Lớp học',
+        dataIndex: 'classroomName',
+        key: 'classroomName',
+        render: (classroomName, record) => {
+          if (!classroomName && !record.classroomId) return 'N/A';
+          return (
+            <Tag color="blue">
+              {classroomName || 'Lớp chưa xác định'}
+            </Tag>
+          );
+        },
       },
       {
         title: 'Mô tả',

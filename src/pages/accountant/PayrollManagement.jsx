@@ -1,36 +1,46 @@
 import {
-    CalculatorOutlined,
-    CalendarOutlined,
-    DollarOutlined,
-    EyeOutlined,
-    FileExcelOutlined,
-    TeamOutlined
+  CalculatorOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  EyeOutlined,
+  FileExcelOutlined,
+  FilterOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import {
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Input,
-    message,
-    Modal,
-    Progress,
-    Row,
-    Select,
-    Space,
-    Statistic,
-    Table,
-    Tag,
-    Tooltip
+  Badge,
+  Button,
+  Card,
+  Col,
+  Collapse,
+  DatePicker,
+  Divider,
+  Input,
+  message,
+  Modal,
+  Progress,
+  Row,
+  Select,
+  Slider,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip,
+  Typography
 } from 'antd';
 import axios from 'axios';
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import SalaryCalculationDetailsModal from '../../components/SalaryCalculationDetailsModal';
 import PayrollService from '../../services/payrollService';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
+const { Text, Title } = Typography;
+const { Panel } = Collapse;
 
 // Sample data generator for development (following DataLoader pattern)
 const getSamplePayrollData = (selectedPeriod) => {
@@ -43,13 +53,14 @@ const getSamplePayrollData = (selectedPeriod) => {
     {
       id: `GV001_${period}`,
       userId: 'GV001',
-      fullName: 'Nguyễn Văn An',
+      fullName: 'Lê Quý Thịnh',
       email: 'an.nguyen@school.edu.vn',
       department: 'Giảng dạy',
       contractType: 'TEACHER',
       baseSalary: 8000000,
-      teachingHours: 120, // Giờ dạy
-      totalWorkingHours: 183, // Tổng giờ làm
+      totalTeachingHours: 120, // Giờ dạy
+      totalTeachingSlots: 80, // Số tiết dạy (120 giờ / 1.5 = 80 tiết)
+      totalWorkingHours: 183, // Tổng giờ làm (bao gồm giờ dạy + giờ làm việc khác)
       weekendWorkingHours: 24,
       weekdayWorkingHours: 159,
       hourlyRate: 50000,
@@ -76,8 +87,9 @@ const getSamplePayrollData = (selectedPeriod) => {
       department: 'Giảng dạy',
       contractType: 'TEACHER',
       baseSalary: 7500000,
-      teachingHours: 148, // Giờ dạy
-      totalWorkingHours: 175, // Tổng giờ làm
+      totalTeachingHours: 148, // Giờ dạy
+      totalTeachingSlots: 98.7, // Số tiết dạy (148 giờ / 1.5 = 98.7 tiết)
+      totalWorkingHours: 175, // Tổng giờ làm (bao gồm giờ dạy + giờ làm việc khác)
       weekendWorkingHours: 16,
       weekdayWorkingHours: 159,
       hourlyRate: 45000,
@@ -97,30 +109,31 @@ const getSamplePayrollData = (selectedPeriod) => {
       payPeriodEnd: endOfMonth
     },
     {
-      id: `NV003_${period}`,
-      userId: 'NV003',
-      fullName: 'Lê Văn Cường',
-      email: 'cuong.le@school.edu.vn',
-      department: 'Hành chính',
-      contractType: 'STAFF',
-      baseSalary: 6000000,
-      teachingHours: 0, // Nhân viên hành chính không có giờ dạy
-      totalWorkingHours: 176, // Tổng giờ làm
-      weekendWorkingHours: 0,
-      weekdayWorkingHours: 176,
-      hourlyRate: 0,
-      personalIncomeTax: 420000,
-      employeeInsurance: 480000,
-      deductions: 900000,
-      grossPay: 6000000,
-      totalSalary: 5100000,
-      weekendPay: 0,
-      calculationMethod: 'MONTHLY',
-      standardMonthlyHours: 176,
+      id: `GV003_${period}`,
+      userId: 'GV003',
+      fullName: 'Phạm Minh Đức',
+      email: 'duc.pham@school.edu.vn',
+      department: 'Giảng dạy',
+      contractType: 'TEACHER',
+      baseSalary: 7200000,
+      totalTeachingHours: 96, // Giờ dạy
+      totalTeachingSlots: 64, // Số tiết dạy (96 giờ / 1.5 = 64 tiết)
+      totalWorkingHours: 160, // Tổng giờ làm
+      weekendWorkingHours: 12,
+      weekdayWorkingHours: 148,
+      hourlyRate: 48000,
+      personalIncomeTax: 460800,
+      employeeInsurance: 576000,
+      deductions: 1036800,
+      grossPay: 4608000,
+      totalSalary: 3571200,
+      weekendPay: 576000,
+      calculationMethod: 'HOURLY',
+      standardMonthlyHours: 160,
       totalWorkingDays: 22,
-      actualWorkingDays: 22,
-      status: 'PROCESSED',
-      processedDate: new Date().toISOString().split('T')[0],
+      actualWorkingDays: 20,
+      status: 'PENDING',
+      processedDate: null,
       payPeriodStart: startOfMonth,
       payPeriodEnd: endOfMonth
     }
@@ -142,7 +155,16 @@ const PayrollManagement = () => {
   const [salaryDetailsModalVisible, setSalaryDetailsModalVisible] = useState(false);
   const [selectedPayrollId, setSelectedPayrollId] = useState(null);
   const [searchText, setSearchText] = useState('');
-  const [roleFilter, setRoleFilter] = useState('ALL'); // ALL | TEACHER | STAFF
+  const [roleFilter, setRoleFilter] = useState('TEACHER'); // ALL | TEACHER | STAFF - Mặc định chỉ hiển thị giáo viên
+  
+  // New advanced filters
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [salaryRange, setSalaryRange] = useState([0, 50000000]);
+  const [hoursRange, setHoursRange] = useState([0, 200]);
+  const [sortField, setSortField] = useState('fullName');
+  const [sortOrder, setSortOrder] = useState('ascend');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Helper functions
   const getDepartmentFromStaff = (staffId) => {
@@ -226,7 +248,7 @@ const PayrollManagement = () => {
         totalWorkingDays: Number(record.totalWorkingDays ?? (standardMonthlyHours ? standardMonthlyHours / 8 : actualWorkingDays)),
         actualWorkingDays,
         topCVResult: record.topCVResult || null,
-        shiftSummary: record.shiftSummary || '',
+        // shiftSummary: record.shiftSummary || '',
         status: 'PROCESSED', // New system generates processed payroll
         processedDate: new Date().toISOString().split('T')[0],
         payPeriodStart: startOfMonth,
@@ -417,24 +439,165 @@ const PayrollManagement = () => {
     return value.toLocaleString() + ' VNĐ';
   };
 
+  // Get unique departments for filter
+  const getUniqueDepartments = () => {
+    const departments = [...new Set(payrollData.map(item => item.department))];
+    return departments.filter(Boolean);
+  };
+
+  // Get unique statuses for filter
+  const getUniqueStatuses = () => {
+    const statuses = [...new Set(payrollData.map(item => item.status))];
+    return statuses.filter(Boolean);
+  };
+
+  // Get salary statistics for range slider
+  const getSalaryStats = () => {
+    if (payrollData.length === 0) return { min: 0, max: 50000000 };
+    const salaries = payrollData.map(item => {
+      if (item.contractType === 'TEACHER') {
+        return (item.hourlySalary || 0) * (item.totalTeachingHours || 0);
+      }
+      return item.totalSalary || 0;
+    }).filter(salary => salary > 0);
+    
+    return {
+      min: Math.min(...salaries),
+      max: Math.max(...salaries)
+    };
+  };
+
+  // Get hours statistics for range slider
+  const getHoursStats = () => {
+    if (payrollData.length === 0) return { min: 0, max: 200 };
+    const hours = payrollData.map(item => {
+      if (item.contractType === 'TEACHER') {
+        return item.totalTeachingHours || 0;
+      }
+      return item.actualWorkingHours || 0;
+    }).filter(hours => hours > 0);
+    
+    return {
+      min: Math.min(...hours),
+      max: Math.max(...hours)
+    };
+  };
+
+  // Apply all filters and sorting
+  const getFilteredAndSortedData = () => {
+    let filtered = payrollData.filter((row) => {
+      // Role filter
+      if (roleFilter !== 'ALL' && (row.contractType || '').toUpperCase() !== roleFilter) return false;
+      
+      // Department filter
+      if (departmentFilter !== 'ALL' && row.department !== departmentFilter) return false;
+      
+      // Status filter
+      if (statusFilter !== 'ALL' && row.status !== statusFilter) return false;
+      
+      // Salary range filter
+      const salary = row.contractType === 'TEACHER' 
+        ? (row.hourlySalary || 0) * (row.totalTeachingHours || 0)
+        : (row.totalSalary || 0);
+      if (salary < salaryRange[0] || salary > salaryRange[1]) return false;
+      
+      // Hours range filter
+      const hours = row.contractType === 'TEACHER' 
+        ? (row.totalTeachingHours || 0)
+        : (row.actualWorkingHours || 0);
+      if (hours < hoursRange[0] || hours > hoursRange[1]) return false;
+      
+      // Search filter
+      const q = (searchText || '').trim().toLowerCase();
+      if (!q) return true;
+      const idStr = String(row.userId || '');
+      return (
+        idStr.includes(q) ||
+        (row.fullName || '').toLowerCase().includes(q) ||
+        (row.email || '').toLowerCase().includes(q)
+      );
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case 'fullName':
+          aValue = (a.fullName || '').toLowerCase();
+          bValue = (b.fullName || '').toLowerCase();
+          break;
+        case 'totalSalary':
+          aValue = a.contractType === 'TEACHER' 
+            ? (a.hourlySalary || 0) * (a.totalTeachingHours || 0)
+            : (a.totalSalary || 0);
+          bValue = b.contractType === 'TEACHER' 
+            ? (b.hourlySalary || 0) * (b.totalTeachingHours || 0)
+            : (b.totalSalary || 0);
+          break;
+        case 'totalTeachingHours':
+        case 'actualWorkingHours':
+          aValue = a[sortField] || 0;
+          bValue = b[sortField] || 0;
+          break;
+        case 'department':
+          aValue = (a.department || '').toLowerCase();
+          bValue = (b.department || '').toLowerCase();
+          break;
+        default:
+          aValue = a[sortField] || '';
+          bValue = b[sortField] || '';
+      }
+      
+      if (sortOrder === 'ascend') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchText('');
+    setRoleFilter('ALL');
+    setDepartmentFilter('ALL');
+    setStatusFilter('ALL');
+    setSalaryRange([0, 50000000]);
+    setHoursRange([0, 200]);
+    setSortField('fullName');
+    setSortOrder('ascend');
+  };
+
   const columns = [
     {
       title: 'Mã NV',
       dataIndex: 'userId',
       key: 'userId',
       width: 100,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
     },
     {
       title: 'Họ và tên',
       dataIndex: 'fullName',
       key: 'fullName',
       width: 200,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
+      render: (name) => <Text strong>{name}</Text>,
     },
     {
       title: 'Phòng ban',
       dataIndex: 'department',
       key: 'department',
       width: 150,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
+      filters: getUniqueDepartments().map(dept => ({ text: dept, value: dept })),
+      onFilter: (value, record) => record.department === value,
     },
     {
       title: 'Loại hợp đồng',
@@ -466,53 +629,57 @@ const PayrollManagement = () => {
       dataIndex: 'totalTeachingHours',
       key: 'totalTeachingHours',
       width: 100,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
       render: (value, record) => {
         if (value && value > 0) {
-          return `${parseFloat(value).toFixed(1)}h`;
+          return <Badge count={parseFloat(value).toFixed(1)} style={{ backgroundColor: '#52c41a' }} />;
         }
-        return <span style={{ color: '#999' }}>Chưa có dữ liệu</span>;
+        return <span style={{ color: '#999' }}>0h</span>;
       },
     },
     {
-      title: 'Tổng giờ làm',
-      dataIndex: 'actualWorkingHours',
-      key: 'actualWorkingHours',
+      title: 'Số tiết dạy',
+      dataIndex: 'totalTeachingSlots',
+      key: 'totalTeachingSlots',
+      width: 120,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
       render: (value, record) => {
-        // Giáo viên: giờ làm = 0, Nhân viên: hiển thị giờ làm thực tế
-        if (record.contractType === 'TEACHER') {
-          return <span style={{ color: '#999' }}>0</span>;
+        // Hiển thị teaching slots từ backend hoặc tính từ teaching hours
+        let slots = value;
+        if (!slots && record.totalTeachingHours) {
+          // Nếu không có slots từ backend, tính từ hours (1 slot = 1.5 giờ)
+          slots = parseFloat(record.totalTeachingHours) / 1.5;
         }
-        return value ? `${value} giờ` : 'Chưa có dữ liệu';
-      }
+
+        if (slots && slots > 0) {
+          return (
+            <div>
+              <Badge count={parseFloat(slots).toFixed(1)} style={{ backgroundColor: '#1890ff' }} />
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                tiết (1.5h/tiết)
+              </div>
+            </div>
+          );
+        }
+        return <span style={{ color: '#999' }}>0 tiết</span>;
+      },
     },
-    // Ẩn cột Tổng lương (Gross)
     // {
-    //   title: 'Tổng lương',
-    //   dataIndex: 'proratedGrossSalary',
-    //   key: 'proratedGrossSalary',
+    //   title: 'Tổng giờ làm',
+    //   dataIndex: 'actualWorkingHours',
+    //   key: 'actualWorkingHours',
+    //   sorter: true,
+    //   sortDirections: ['ascend', 'descend'],
     //   render: (value, record) => {
-    //     if (record.contractType === 'TEACHER') {
-    //       // Giáo viên: lương theo giờ nhân số giờ dạy
-    //       const hourlySalary = record.hourlySalary || 0;
-    //       const teachingHours = record.totalTeachingHours || 0;
-    //       const calculatedSalary = hourlySalary * teachingHours;
-    //       return calculatedSalary > 0 ? formatCurrency(calculatedSalary) : 'Chưa có dữ liệu';
-    //     }
-    //     // Nhân viên: hiển thị lương thực tế
-    //     return value ? formatCurrency(value) : 'Chưa có dữ liệu';
-    //   }
-    // },
-    // Ẩn cột Gross (tạm tính)
-    // {
-    //   title: 'Gross (tạm tính)',
-    //   dataIndex: 'netSalary',
-    //   key: 'netSalary',
-    //   render: (value, record) => {
-    //     // Ẩn cột này cho giáo viên
     //     if (record.contractType === 'TEACHER') {
     //       return <span style={{ color: '#999' }}>-</span>;
     //     }
-    //     return value ? formatCurrency(value) : 'Chưa có dữ liệu';
+    //     if (value && value > 0) {
+    //       return <Badge count={`${value}h`} style={{ backgroundColor: '#1890ff' }} />;
+    //     }
+    //     return <span style={{ color: '#999' }}>0h</span>;
     //   }
     // },
     {
@@ -520,25 +687,77 @@ const PayrollManagement = () => {
       dataIndex: 'topCVResult',
       key: 'personalIncomeTax',
       render: (value, record) => {
-        // Ẩn cột này cho giáo viên
-        if (record.contractType === 'TEACHER') {
-          return <span style={{ color: '#999' }}>-</span>;
+        // Debug log để kiểm tra dữ liệu
+        console.log('🔍 Thuế TNCN record:', record);
+        console.log('🔍 topCVResult:', value);
+        
+        // Kiểm tra nếu có dữ liệu thuế từ topCVResult
+        let pit = value?.personalIncomeTax;
+        
+        // Nếu không có từ topCVResult, thử lấy từ record trực tiếp
+        if (!pit) {
+          pit = record.personalIncomeTax;
         }
-        const pit = value?.personalIncomeTax;
-        return pit ? formatCurrency(pit) : 'Chưa có dữ liệu';
+        
+        // Tính lương thô để xác định mức thuế
+        let grossSalary = 0;
+        if (record.contractType === 'TEACHER') {
+          grossSalary = (record.hourlySalary || 0) * (record.totalTeachingHours || 0);
+        } else {
+          grossSalary = record.proratedGrossSalary || record.grossPay || record.baseSalary || 0;
+        }
+        
+        if (pit && pit > 0) {
+          return (
+            <div>
+              <div>{formatCurrency(pit)}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>
+                {grossSalary >= 2000000 ? 'Trừ 10% (≥2M)' : 'Trừ 10% (<2M)'}
+              </div>
+            </div>
+          );
+        }
+        
+        // Nếu không có thuế nhưng có lương thô, tính thuế ước tính
+        if (grossSalary > 0 && grossSalary >= 2000000) {
+          const estimatedTax = Math.round(grossSalary * 0.1);
+          return (
+            <div>
+              <div style={{ color: '#ffa500' }}>Ước tính: {formatCurrency(estimatedTax)}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>
+                Trừ 10% (≥2M) - Ước tính
+              </div>
+            </div>
+          );
+        }
+        
+        // Nếu không có thuế và lương < 2M, hiển thị 0 VNĐ
+        return <span style={{ color: '#999' }}>0 VNĐ</span>;
       }
     },
     {
-      title: 'BH NLĐ',
-      dataIndex: 'topCVResult',
-      key: 'employeeInsurance',
+      title: 'Thực nhận',
+      dataIndex: 'totalSalary',
+      key: 'netSalary',
+      width: 150,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
       render: (value, record) => {
-        // Ẩn cột này cho giáo viên
         if (record.contractType === 'TEACHER') {
-          return <span style={{ color: '#999' }}>-</span>;
+          const hourlySalary = record.hourlySalary || 0;
+          const teachingHours = record.totalTeachingHours || 0;
+          const calculatedSalary = hourlySalary * teachingHours;
+          return calculatedSalary > 0 ? (
+            <Text strong style={{ color: '#52c41a' }}>
+              {formatCurrency(calculatedSalary)}
+            </Text>
+          ) : 'Chưa có dữ liệu';
         }
-        const si = value?.socialInsuranceEmployee;
-        return si ? formatCurrency(si) : 'Chưa có dữ liệu';
+        return value ? (
+          <Text strong style={{ color: '#52c41a' }}>
+            {formatCurrency(value)}
+          </Text>
+        ) : 'Chưa có dữ liệu';
       }
     },
     {
@@ -546,22 +765,69 @@ const PayrollManagement = () => {
       dataIndex: 'topCVResult',
       key: 'deductions',
       render: (value, record) => {
-        // Ẩn cột này cho giáo viên
-        if (record.contractType === 'TEACHER') {
-          return <span style={{ color: '#999' }}>-</span>;
+        // Debug log để kiểm tra dữ liệu
+        console.log('🔍 Khấu trừ record:', record);
+        console.log('🔍 topCVResult deductions:', value);
+        
+        // Lấy thuế TNCN
+        let pit = value?.personalIncomeTax;
+        if (!pit) {
+          pit = record.personalIncomeTax;
         }
-        const pit = value?.personalIncomeTax || 0;
-        const si = value?.socialInsuranceEmployee || 0;
-        const total = pit + si;
-        return total > 0 ? formatCurrency(total) : 'Chưa có dữ liệu';
+        
+        // Lấy bảo hiểm
+        let si = value?.socialInsuranceEmployee;
+        if (!si) {
+          si = record.employeeInsurance || record.socialInsuranceEmployee;
+        }
+        
+        const total = (pit || 0) + (si || 0);
+        
+        if (total > 0) {
+          return (
+            <Text type="danger">
+              {formatCurrency(total)}
+            </Text>
+          );
+        }
+        
+        // Nếu không có khấu trừ nhưng có lương thô, tính khấu trừ ước tính
+        let grossSalary = 0;
+        if (record.contractType === 'TEACHER') {
+          grossSalary = (record.hourlySalary || 0) * (record.totalTeachingHours || 0);
+        } else {
+          grossSalary = record.proratedGrossSalary || record.grossPay || record.baseSalary || 0;
+        }
+        
+        if (grossSalary > 0 && grossSalary >= 2000000) {
+          const estimatedTax = Math.round(grossSalary * 0.1);
+          const estimatedSI = Math.round(grossSalary * 0.08); // Ước tính bảo hiểm 8%
+          const estimatedTotal = estimatedTax + estimatedSI;
+          
+          return (
+            <div>
+              <div style={{ color: '#ffa500' }}>Ước tính: {formatCurrency(estimatedTotal)}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>
+                Thuế + BH ước tính
+              </div>
+            </div>
+          );
+        }
+        
+        // Nếu không có khấu trừ và lương < 2M, hiển thị 0 VNĐ
+        return <span style={{ color: '#999' }}>0 VNĐ</span>;
       }
     },
-
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       width: 120,
+      filters: getUniqueStatuses().map(status => ({ 
+        text: status === 'PROCESSED' ? 'Đã xử lý' : status === 'PAID' ? 'Đã trả lương' : 'Chờ xử lý', 
+        value: status 
+      })),
+      onFilter: (value, record) => record.status === value,
       render: (status) => {
         let color = 'orange';
         let text = 'Chờ xử lý';
@@ -585,6 +851,7 @@ const PayrollManagement = () => {
       title: 'Thao tác',
       key: 'action',
       width: 250,
+      fixed: 'right',
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Xem chi tiết tính lương">
@@ -615,18 +882,9 @@ const PayrollManagement = () => {
               </Button>
             </Tooltip>
           )}
-          {record.status === 'PROCESSED' && (
-            <Tooltip title="Đánh dấu đã trả">
-              <Button 
-                type="primary"
-                size="small"
-                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-                onClick={() => handleMarkAsPaid(record.id)}
-              >
-                Đã trả
-              </Button>
-            </Tooltip>
-          )}
+
+
+
           <Tooltip title="Gửi xác nhận cho nhân viên">
             <Button
               size="small"
@@ -640,12 +898,14 @@ const PayrollManagement = () => {
     },
   ];
 
+  const filteredData = getFilteredAndSortedData();
+
   return (
     <div style={{ padding: 24 }}>
       <Card>
         <div style={{ marginBottom: 24 }}>
-          <h2>Quản lý Bảng lương</h2>
-          <p>Tạo và quản lý bảng lương dựa trên điểm danh và giờ dạy</p>
+          <Title level={2}>Quản lý Bảng lương</Title>
+          <Text type="secondary">Tạo và quản lý bảng lương dựa trên điểm danh và giờ dạy</Text>
         </div>
 
         {/* Statistics */}
@@ -693,6 +953,140 @@ const PayrollManagement = () => {
           </Col>
         </Row>
 
+        {/* Advanced Filters */}
+        <Collapse 
+          ghost 
+          style={{ marginBottom: 16 }}
+          activeKey={showAdvancedFilters ? ['1'] : []}
+        >
+          <Panel 
+            header={
+              <Space>
+                <FilterOutlined />
+                <Text strong>Bộ lọc nâng cao</Text>
+                <Badge count={[
+                  roleFilter !== 'ALL' ? 1 : 0,
+                  departmentFilter !== 'ALL' ? 1 : 0,
+                  statusFilter !== 'ALL' ? 1 : 0,
+                  salaryRange[0] > 0 || salaryRange[1] < 50000000 ? 1 : 0,
+                  hoursRange[0] > 0 || hoursRange[1] < 200 ? 1 : 0
+                ].reduce((a, b) => a + b, 0)} />
+              </Space>
+            } 
+            key="1"
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} md={6}>
+                <Text strong>Loại nhân viên:</Text>
+                <Select
+                  value={roleFilter}
+                  style={{ width: '100%', marginTop: 8 }}
+                  onChange={(val) => setRoleFilter(val)}
+                >
+                  <Option value="ALL">Tất cả (GV + NV)</Option>
+                  <Option value="TEACHER">GIÁO VIÊN</Option>
+                  <Option value="STAFF">Nhân viên</Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Text strong>Phòng ban:</Text>
+                <Select
+                  value={departmentFilter}
+                  style={{ width: '100%', marginTop: 8 }}
+                  onChange={(val) => setDepartmentFilter(val)}
+                >
+                  <Option value="ALL">Tất cả phòng ban</Option>
+                  {getUniqueDepartments().map(dept => (
+                    <Option key={dept} value={dept}>{dept}</Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Text strong>Trạng thái:</Text>
+                <Select
+                  value={statusFilter}
+                  style={{ width: '100%', marginTop: 8 }}
+                  onChange={(val) => setStatusFilter(val)}
+                >
+                  <Option value="ALL">Tất cả trạng thái</Option>
+                  {getUniqueStatuses().map(status => (
+                    <Option key={status} value={status}>
+                      {status === 'PROCESSED' ? 'Đã xử lý' : status === 'PAID' ? 'Đã trả lương' : 'Chờ xử lý'}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Text strong>Sắp xếp theo:</Text>
+                <Select
+                  value={sortField}
+                  style={{ width: '100%', marginTop: 8 }}
+                  onChange={(val) => setSortField(val)}
+                >
+                  <Option value="fullName">Tên nhân viên</Option>
+                  <Option value="totalSalary">Lương thực nhận</Option>
+                  <Option value="totalTeachingHours">Giờ dạy</Option>
+                  <Option value="actualWorkingHours">Giờ làm việc</Option>
+                  <Option value="department">Phòng ban</Option>
+                </Select>
+              </Col>
+            </Row>
+            
+            <Divider />
+            
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <Text strong>Khoảng lương (VNĐ):</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Slider
+                    range
+                    min={getSalaryStats().min}
+                    max={getSalaryStats().max}
+                    value={salaryRange}
+                    onChange={setSalaryRange}
+                    tipFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <Text type="secondary">
+                      {`${(salaryRange[0] / 1000000).toFixed(1)}M - ${(salaryRange[1] / 1000000).toFixed(1)}M VNĐ`}
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Khoảng giờ làm:</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Slider
+                    range
+                    min={getHoursStats().min}
+                    max={getHoursStats().max}
+                    value={hoursRange}
+                    onChange={setHoursRange}
+                    tipFormatter={(value) => `${value}h`}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <Text type="secondary">
+                      {`${hoursRange[0]}h - ${hoursRange[1]}h`}
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+            
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={resetFilters}
+                type="default"
+              >
+                Đặt lại bộ lọc
+              </Button>
+            </div>
+          </Panel>
+        </Collapse>
+
         {/* Controls */}
         <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 12]}>
           <Col flex="auto">
@@ -711,16 +1105,15 @@ const PayrollManagement = () => {
                 style={{ width: 320 }}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
+                prefix={<SearchOutlined />}
               />
-              <Select
-                value={roleFilter}
-                style={{ width: 180 }}
-                onChange={(val) => setRoleFilter(val)}
+              <Button
+                type={showAdvancedFilters ? 'primary' : 'default'}
+                icon={<FilterOutlined />}
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               >
-                <Option value="ALL">Tất cả (GV + NV)</Option>
-                <Option value="TEACHER">GIÁO VIÊN</Option>
-                <Option value="STAFF">Nhân viên</Option>
-              </Select>
+                {showAdvancedFilters ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
+              </Button>
             </Space>
           </Col>
           <Col>
@@ -747,12 +1140,18 @@ const PayrollManagement = () => {
         {/* Progress */}
         <Row style={{ marginBottom: 16 }}>
           <Col span={24}>
-            <span>Tiến độ xử lý: </span>
-            <Progress
-              percent={statistics.totalEmployees > 0 ? Math.round((statistics.processedCount / statistics.totalEmployees) * 100) : 0}
-              status={statistics.processedCount === statistics.totalEmployees ? 'success' : 'active'}
-              showInfo={true}
-            />
+            <Space>
+              <Text>Tiến độ xử lý:</Text>
+              <Progress
+                percent={statistics.totalEmployees > 0 ? Math.round((statistics.processedCount / statistics.totalEmployees) * 100) : 0}
+                status={statistics.processedCount === statistics.totalEmployees ? 'success' : 'active'}
+                showInfo={true}
+                style={{ flex: 1 }}
+              />
+              <Text type="secondary">
+                {filteredData.length} / {payrollData.length} nhân viên
+              </Text>
+            </Space>
           </Col>
         </Row>
 
@@ -764,31 +1163,41 @@ const PayrollManagement = () => {
           </div>
         )}
 
+        {/* Message when no filtered results */}
+        {payrollData.length > 0 && filteredData.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+            <h3>Không tìm thấy kết quả phù hợp</h3>
+            <p>Vui lòng thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+            <Button onClick={resetFilters}>Đặt lại bộ lọc</Button>
+          </div>
+        )}
+
         {/* Table */}
         <Table
           columns={columns}
-          dataSource={payrollData.filter((row) => {
-            // Role filter
-            if (roleFilter !== 'ALL' && (row.contractType || '').toUpperCase() !== roleFilter) return false;
-            // Search filter
-            const q = (searchText || '').trim().toLowerCase();
-            if (!q) return true;
-            const idStr = String(row.userId || '');
-            return (
-              idStr.includes(q) ||
-              (row.fullName || '').toLowerCase().includes(q) ||
-              (row.email || '').toLowerCase().includes(q)
-            );
-          })}
+          dataSource={filteredData}
           loading={loading}
           rowKey="id"
           pagination={{
-            pageSize: 10,
+            pageSize: 15,
             showSizeChanger: true,
+            showQuickJumper: true,
             showTotal: (total, range) => 
               `${range[0]}-${range[1]} của ${total} nhân viên`,
           }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1400 }}
+          onChange={(pagination, filters, sorter) => {
+            if (sorter.field) {
+              setSortField(sorter.field);
+              setSortOrder(sorter.order);
+            }
+          }}
+          rowClassName={(record, index) => {
+            if (record.contractType === 'TEACHER') {
+              return 'teacher-row';
+            }
+            return index % 2 === 0 ? 'even-row' : 'odd-row';
+          }}
         />
       </Card>
 
@@ -815,6 +1224,7 @@ const PayrollManagement = () => {
                 <strong>Kỳ lương:</strong> {selectedEmployee.payPeriodStart} - {selectedEmployee.payPeriodEnd}
               </Col>
               <Col span={12}>
+                {/* Tổng giờ làm: Bao gồm giờ dạy + giờ làm việc khác (họp, chuẩn bị bài giảng, chấm bài, v.v.) */}
                 <strong>Tổng giờ làm:</strong> {selectedEmployee.totalWorkingHours ? parseFloat(selectedEmployee.totalWorkingHours).toFixed(1) : 0}h
               </Col>
               <Col span={12}>
@@ -856,12 +1266,51 @@ const PayrollManagement = () => {
             </Row>
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={12}>
-                <strong>Khấu trừ:</strong> {selectedEmployee.deductions?.toLocaleString()} VNĐ
+                <Tooltip title="Thuế thu nhập cá nhân: Trừ 10% từ lương thô nếu ≥2M VNĐ, trừ 10% nếu <2M VNĐ">
+                  <strong>Thuế TNCN:</strong> 
+                  {selectedEmployee.topCVResult?.personalIncomeTax ? (
+                    <div>
+                      <span style={{ color: '#ff4d4f' }}>
+                        {selectedEmployee.topCVResult.personalIncomeTax.toLocaleString()} VNĐ
+                      </span>
+                      <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                        {(() => {
+                          const grossSalary = selectedEmployee.proratedGrossSalary || selectedEmployee.grossPay || 0;
+                          return grossSalary >= 2000000 ? 'Trừ 10% (≥2M VNĐ)' : 'Trừ 10% (<2M VNĐ)';
+                        })()}
+                      </div>
+                    </div>
+                  ) : (
+                    '0 VNĐ'
+                  )}
+                </Tooltip>
               </Col>
               <Col span={12}>
                 <strong style={{ color: '#52c41a' }}>Tổng lương:</strong> 
                 <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
                   {' '}{selectedEmployee.totalSalary?.toLocaleString()} VNĐ
+                </span>
+              </Col>
+            </Row>
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={12}>
+                <strong>Tổng khấu trừ:</strong> 
+                <span style={{ color: '#ff4d4f' }}>
+                  {(() => {
+                    const pit = selectedEmployee.topCVResult?.personalIncomeTax || 0;
+                    const si = selectedEmployee.topCVResult?.socialInsuranceEmployee || 0;
+                    const total = pit + si;
+                    return total > 0 ? `${total.toLocaleString()} VNĐ` : '0 VNĐ';
+                  })()}
+                </span>
+              </Col>
+              <Col span={12}>
+                <strong>Bảo hiểm:</strong> 
+                <span style={{ color: '#ff4d4f' }}>
+                  {selectedEmployee.topCVResult?.socialInsuranceEmployee ? 
+                    `${selectedEmployee.topCVResult.socialInsuranceEmployee.toLocaleString()} VNĐ` : 
+                    '0 VNĐ'
+                  }
                 </span>
               </Col>
             </Row>
@@ -876,6 +1325,35 @@ const PayrollManagement = () => {
         payrollId={selectedPayrollId}
         employeeRecord={selectedEmployee}
       />
+
+      <style jsx>{`
+        .teacher-row {
+          background-color: #f0f8ff !important;
+        }
+        .even-row {
+          background-color: #fafafa;
+        }
+        .odd-row {
+          background-color: #ffffff;
+        }
+        .ant-table-thead > tr > th {
+          background-color: #f5f5f5;
+          font-weight: 600;
+        }
+        .ant-collapse-header {
+          font-weight: 600;
+        }
+        .ant-slider-track {
+          background-color: #1890ff;
+        }
+        .ant-slider-handle {
+          border-color: #1890ff;
+        }
+        .ant-badge-count {
+          font-size: 12px;
+          font-weight: 600;
+        }
+      `}</style>
     </div>
   );
 };

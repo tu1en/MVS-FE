@@ -1,5 +1,5 @@
 import { UserOutlined } from '@ant-design/icons';
-import { Avatar, Card, Col, Row, Select, Tag, Typography } from 'antd';
+import { Avatar, Card, Col, Row, Select, Typography } from 'antd';
 import React from 'react';
 
 const { Option } = Select;
@@ -63,79 +63,10 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
           </div>
         </Col>
 
-        {selectedChild ? (
-          <Col xs={24} sm={12} md={16}>
-            <Row gutter={[16, 8]} align="middle">
-              <Col xs={24} md={12}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar 
-                    size="large" 
-                    icon={<UserOutlined />} 
-                    src={selectedChild.avatar}
-                    style={{ 
-                      marginRight: '12px',
-                      border: '2px solid rgba(255,255,255,0.3)'
-                    }}
-                  />
-                  <div>
-                    <Text style={{ 
-                      color: 'white', 
-                      fontSize: '18px', 
-                      fontWeight: 'bold',
-                      display: 'block'
-                    }}>
-                      {selectedChild.name || selectedChild.fullName || selectedChild.studentName || `Học sinh ${selectedChild.id}`}
-                    </Text>
-                    <Tag 
-                      color="rgba(255,255,255,0.2)" 
-                      style={{ 
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        borderRadius: '12px'
-                      }}
-                    >
-                      {selectedChild.relationDisplayName || selectedChild.relationType || 'Chưa xác định'}
-                    </Tag>
-                  </div>
-                </div>
-              </Col>
 
-              <Col xs={24} md={12}>
-                <div style={{ color: 'rgba(255,255,255,0.9)' }}>
-                  <Text style={{ 
-                    color: 'rgba(255,255,255,0.8)', 
-                    fontSize: '12px',
-                    display: 'block'
-                  }}>
-                    Quan hệ:
-                  </Text>
-                  <Text style={{ 
-                    color: 'white', 
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}>
-                    {selectedChild.relationDisplayName || selectedChild.relationType || 'Chưa xác định'}
-                  </Text>
-                </div>
-              </Col>
-            </Row>
-          </Col>
-        ) : (
-          <Col xs={24} sm={12} md={16}>
-            <div style={{ color: 'rgba(255,255,255,0.9)' }}>
-              <Text style={{ 
-                color: 'rgba(255,255,255,0.8)', 
-                fontSize: '12px',
-                display: 'block'
-              }}>
-                Vui lòng chọn con em để xem thông tin
-              </Text>
-            </div>
-          </Col>
-        )}
       </Row>
 
-      <Row style={{ marginTop: '12px' }}>
+      {/* <Row style={{ marginTop: '12px' }}>
         <Col span={24}>
           <div style={{ 
             display: 'flex', 
@@ -153,7 +84,7 @@ const ChildSwitcher = ({ children, selectedChildId, onChildChange }) => {
             </Text>
           </div>
         </Col>
-      </Row>
+      </Row> */}
     </Card>
   );
 };

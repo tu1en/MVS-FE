@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { normalizeCourseData } from '../../constants/displayConstants';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
 import { formatVietnameseText } from '../../utils/viTextUtils';
@@ -8,6 +9,11 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
+  
+  // ✅ NEW: Search and sort state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('className');
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // Load classes on mount and when refresh is triggered
   useEffect(() => {
@@ -28,16 +34,39 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
       console.log('🔄 Loading classes...');
       const response = await classManagementService.getAllClasses();
       const classesData = response.data?.data || response.data || [];
-      
+
       console.log('✅ Classes loaded:', classesData);
-      
+
       // Debug: Log first class structure if exists
       if (classesData.length > 0) {
         console.log('🔍 First class structure:', Object.keys(classesData[0]));
         console.log('🔍 First class full data:', classesData[0]);
+
+        // ✅ FIX: Normalize data for consistency with PublicCourseDetail
+        const normalizedFirst = normalizeCourseData(classesData[0]);
+        console.log('🔧 Normalized first class:', normalizedFirst);
+        console.log('🔧 Teacher from normalized:', normalizedFirst.teacherName);
+        console.log('🔧 Duration from normalized:', normalizedFirst.duration);
+        console.log('🔧 ClassLessons length:', classesData[0].classLessons?.length || 0);
       }
-      
-      setClasses(Array.isArray(classesData) ? classesData : []);
+
+      // ✅ FIX: Apply normalization to all classes for consistent data structure
+      const normalizedClasses = Array.isArray(classesData)
+        ? classesData.map(classItem => ({
+            ...classItem,
+            // Add normalized fields for consistency
+            lessonCount: classItem.classLessons?.length || 0,
+            normalized: normalizeCourseData(classItem)
+          }))
+        : [];
+
+      console.log('🔧 Normalized classes with lesson counts:', normalizedClasses.map(c => ({
+        id: c.id,
+        className: c.className,
+        lessonCount: c.lessonCount
+      })));
+
+      setClasses(normalizedClasses);
     } catch (error) {
       console.error('❌ Error loading classes:', error);
       setError(error.message || 'Lỗi khi tải danh sách lớp học');
@@ -112,6 +141,77 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
     return normalizeStatusKey(c.status) === activeFilter;
   });
 
+  // ✅ NEW: Enhanced filtering with search and additional filters
+  const enhancedFilteredClasses = filteredClasses.filter((c) => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const className = (c.className || c.class_name || '').toLowerCase();
+      const teacherName = (c.normalized?.teacherName || c.teacherName || c.teacher_name || '').toLowerCase();
+      const roomName = (c.roomName || c.room_name || '').toLowerCase();
+      const templateName = (c.courseTemplateName || c.template_name || '').toLowerCase();
+      const subject = (c.subject || '').toLowerCase();
+      
+      if (!className.includes(searchLower) && 
+          !teacherName.includes(searchLower) && 
+          !roomName.includes(searchLower) && 
+          !templateName.includes(searchLower) && 
+          !subject.includes(searchLower)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // ✅ NEW: Sorting logic
+  const sortedClasses = [...enhancedFilteredClasses].sort((a, b) => {
+    let aValue, bValue;
+
+    switch (sortBy) {
+      case 'className':
+        aValue = (a.className || a.class_name || '').toLowerCase();
+        bValue = (b.className || b.class_name || '').toLowerCase();
+        break;
+      case 'teacherName':
+        aValue = (a.normalized?.teacherName || a.teacherName || a.teacher_name || '').toLowerCase();
+        bValue = (b.normalized?.teacherName || b.teacherName || b.teacher_name || '').toLowerCase();
+        break;
+      case 'roomName':
+        aValue = (a.roomName || a.room_name || '').toLowerCase();
+        bValue = (b.roomName || b.room_name || '').toLowerCase();
+        break;
+      case 'startDate':
+        aValue = new Date(a.startDate || 0);
+        bValue = new Date(b.startDate || 0);
+        break;
+      case 'currentStudents':
+        aValue = a.currentStudents || 0;
+        bValue = b.currentStudents || 0;
+        break;
+      case 'createdAt':
+        aValue = new Date(a.createdAt || 0);
+        bValue = new Date(b.createdAt || 0);
+        break;
+      default:
+        aValue = (a.className || a.class_name || '').toLowerCase();
+        bValue = (b.className || b.class_name || '').toLowerCase();
+    }
+
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  // ✅ NEW: Utility functions
+  const clearAllFilters = () => {
+    setSearchTerm('');
+  };
+
+  const hasActiveFilters = searchTerm;
+
   // Các lớp đang hoạt động nhưng chưa public (để đồng bộ Online)
   const activeNotPublic = classes.filter(
     (c) => normalizeStatusKey(c.status) === 'ACTIVE' && !Boolean(c.isPublic)
@@ -124,7 +224,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
         showNotification('Không có lớp Đang hoạt động cần đồng bộ', 'info');
         return;
       }
-      showNotification(`Đang đồng bộ ${targets.length} lớp lên Online...`, 'info');
+      showNotification(`Đang đồng bộ ${targets.length} lớp lên Công khai...`, 'info');
 
       const results = await Promise.allSettled(
         targets.map((c) =>
@@ -229,17 +329,17 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
     <div className="bg-white border border-gray-200 rounded-lg vietnamese-text crisp-text">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900 vietnamese-heading">
-          Danh sách Lớp học ({filteredClasses.length}/{classes.length})
+          Danh sách Lớp học ({sortedClasses.length}/{classes.length})
         </h3>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => bulkSyncOnline(6)}
             className="text-white bg-green-600 hover:bg-green-700 text-sm flex items-center px-3 py-1.5 rounded button-vietnamese disabled:opacity-50"
             disabled={activeNotPublic.length === 0}
-            title="Đồng bộ tối đa 6 lớp đang hoạt động lên Online (isPublic=true)"
+            title="Đồng bộ tối đa 6 lớp đang hoạt động lên Công khai (isPublic=true)"
           >
             <span className="mr-1">🌐</span>
-            Đồng bộ Online ({Math.min(6, activeNotPublic.length)})
+            Đồng bộ Công khai ({Math.min(6, activeNotPublic.length)})
           </button>
           <button 
             onClick={loadClasses}
@@ -281,9 +381,71 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
         </div>
       </div>
 
+      {/* ✅ NEW: Search and Sort Section */}
+      <div className="px-6 pt-4 border-t border-gray-100">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Search Input */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm kiếm lớp học, giáo viên, phòng học..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-400">🔍</span>
+            </div>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            >
+              <option value="className">Tên lớp học</option>
+              <option value="teacherName">Tên giáo viên</option>
+              <option value="roomName">Phòng học</option>
+              <option value="startDate">Ngày bắt đầu</option>
+              <option value="currentStudents">Số học viên</option>
+              <option value="createdAt">Ngày tạo</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className={`px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm ${
+                sortOrder === 'asc' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50'
+              }`}
+              title={`Sắp xếp ${sortOrder === 'asc' ? 'tăng dần' : 'giảm dần'}`}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+        </div>
+
+        {/* Clear Filters Button */}
+        {hasActiveFilters && (
+          <div className="flex justify-center mb-4">
+            <button
+              onClick={clearAllFilters}
+              className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              🗑️ Xóa bộ lọc
+            </button>
+          </div>
+        )}
+
+        {/* Results Summary */}
+        <div className="text-center text-sm text-gray-600 mb-4">
+          Hiển thị {sortedClasses.length} trong tổng số {classes.length} lớp học
+          {searchTerm && ` (tìm kiếm: "${searchTerm}")`}
+        </div>
+      </div>
+
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredClasses.map((classItem) => {
+          {sortedClasses.map((classItem) => {
             const statusInfo = getStatusDisplay(classItem.status);
             
             return (
@@ -309,7 +471,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
                   <div className="flex justify-between">
                     <span className="text-gray-600 vietnamese-text">Giáo viên:</span>
                     <span className="font-medium vietnamese-text crisp-text fix-vietnamese-diacritics">
-                      {formatVietnameseText(classItem.teacherName || classItem.teacher_name || 'N/A')}
+                      {formatVietnameseText(classItem.normalized?.teacherName || classItem.teacherName || classItem.teacher_name || 'N/A')}
                     </span>
                   </div>
                   
@@ -323,7 +485,7 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
                   <div className="flex justify-between">
                     <span className="text-gray-600 vietnamese-text">Học viên:</span>
                     <span className="font-medium vietnamese-text">
-                      {classItem.currentStudents || 0}/{classItem.maxStudents || 0}
+                      {classItem.currentStudents || "Tối đa 30 học sinh"}/{classItem.maxStudents || "Tối đa 30 học sinh"}
                     </span>
                   </div>
                   
@@ -331,6 +493,20 @@ const ClassList = ({ onRefreshTrigger, onClassDetail, onClassEdit, onReschedule,
                     <span className="text-gray-600 vietnamese-text">Thời gian:</span>
                     <span className="font-medium text-xs vietnamese-text">
                       {formatDate(classItem.startDate)} → {formatDate(classItem.endDate)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 vietnamese-text">Thời lượng:</span>
+                    <span className="font-medium vietnamese-text">
+                      {classItem.normalized?.duration || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 vietnamese-text">Số bài học:</span>
+                    <span className="font-medium vietnamese-text">
+                      {classItem.lessonCount || 0} bài
                     </span>
                   </div>
                 </div>

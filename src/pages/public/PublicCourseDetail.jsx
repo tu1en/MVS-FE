@@ -1,20 +1,21 @@
 import {
-  Award,
-  BookOpen,
-  CheckCircle,
-  Clock,
-  Heart,
-  MessageCircle,
-  RefreshCw,
-  Share2,
-  User,
-  Users
+    Award,
+    BookOpen,
+    CheckCircle,
+    Clock,
+    Heart,
+    MessageCircle,
+    RefreshCw,
+    Share2,
+    User,
+    Users
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CourseDescription from '../../components/course/CourseDescription';
 import YouTubeEmbed from '../../components/ui/YouTubeEmbed';
 import API_CONFIG from '../../config/api-config';
+import { normalizeCourseData } from '../../constants/displayConstants';
 import { useAuth } from '../../context/AuthContext';
 import courseService from '../../services/courseService';
 
@@ -42,6 +43,11 @@ const PublicCourseDetail = () => {
 
   const normalizeCourse = (raw) => {
     const d = raw?.data ?? raw;
+
+    // Use the standardized normalization function for consistency
+    const baseNormalized = normalizeCourseData(d);
+
+    // Add specific fields needed for this component
     const startDate = d.startDate || d.start_date || d.start_time || d.start || null;
     const endDate = d.endDate || d.end_date || d.end_time || d.end || null;
     let totalWeeks = d.totalWeeks || d.total_weeks || d.weeks || d.durationWeeks || null;
@@ -53,31 +59,23 @@ const PublicCourseDetail = () => {
         totalWeeks = Math.max(1, Math.ceil(diffDays / 7));
       } catch (_) { /* noop */ }
     }
+
     return {
-      id: d.id,
-      // Names & description
-      name: d.name || d.className || d.courseTemplateName || d.templateName || d.title,
+      ...baseNormalized,
+      // Override with component-specific fields
       className: d.className,
-      description: d.description || d.courseTemplateDescription || d.templateDescription || d.overview || '',
-      subject: d.subject || d.subjectName || d.courseTemplateName,
-      // Dates
       startDate,
       endDate,
       totalWeeks,
-      // Capacity
-      currentStudents: d.currentStudents || d.currentEnrollment || d.enrolled || d.students || 0,
-      maxStudents: d.maxStudents || d.maxStudentsPerTemplate || d.capacity || d.max_students || 0,
-      // Tuition/public
-      tuitionFee: d.tuitionFee || d.enrollmentFee || d.enrollment_fee || d.fee,
-      isPublic: d.isPublic === true || d.public === true,
-      // Teacher
-      teacherName: d.teacherName || d.instructorName || d.teacher_name || d.teacher?.fullName || null,
+      // Teacher - now consistently uses COURSE_FALLBACKS.instructor
+      teacherName: baseNormalized.instructor,
+      instructorName: baseNormalized.instructor,
       // Video intro
-      introVideoUrl: d.introVideoUrl || null,
-      // Lessons
-      lessonCount: d.lessonCount || (Array.isArray(d.lessons) ? d.lessons.length : undefined),
+      introVideoUrl: d.introVideoUrl || d.videoUrl || null,
+      // Lessons - prioritize classLessons from ClassDto
+      lessonCount: d.lessonCount || (Array.isArray(d.classLessons) ? d.classLessons.length : (Array.isArray(d.lessons) ? d.lessons.length : undefined)),
       // Ratings (nếu BE không có thì để undefined, không random)
-      rating: d.averageRating || d.rating,
+      rating: d.averageRating || d.rating || baseNormalized.rating,
       totalRatings: d.totalRatings || d.reviewsCount
     };
   };
@@ -99,17 +97,8 @@ const PublicCourseDetail = () => {
       }
       const normalized = normalizeCourse(data);
       setCourse(normalized);
-      // Nếu là route lớp công khai /public/classes/:id hoặc chưa có số bài học, gọi thêm API lessons để bổ sung
-      try {
-        if (!normalized.lessonCount || normalized.lessonCount === 0) {
-          const resLessons = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CLASSES_LESSONS(id)}`);
-          if (resLessons.ok) {
-            const lessonPayload = await resLessons.json();
-            const lessons = Array.isArray(lessonPayload?.data) ? lessonPayload.data : (Array.isArray(lessonPayload) ? lessonPayload : []);
-            setCourse(prev => ({ ...prev, lessonCount: Array.isArray(lessons) ? lessons.length : prev.lessonCount }));
-          }
-        }
-      } catch (_) {}
+      // ✅ FIX: ClassDto already includes classLessons, no need for additional API call
+      // The lessonCount should already be populated from classLessons in the normalizeCourse function above
       setError(null);
     } catch (error) {
       console.error('Lỗi khi tải khóa học:', error);
@@ -183,7 +172,7 @@ const PublicCourseDetail = () => {
     "Tài liệu học tập đầy đủ", 
     "Bài tập thực hành",
     "Quiz và kiểm tra định kỳ",
-    "Hỗ trợ trực tuyến",
+    "Hỗ trợ học tập",
     "Chứng chỉ hoàn thành",
     "Cập nhật nội dung mới",
     "Học nhóm và thảo luận"
@@ -353,7 +342,7 @@ const PublicCourseDetail = () => {
                         {/* Ẩn đánh giá trên header */}
                         <div className="flex items-center gap-1 text-gray-600">
                           <Users className="w-4 h-4" />
-                          <span>{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''} học viên</span>
+                          <span>Tối đa 30 học sinh</span>
                         </div>
                         {stats.duration && (
                           <div className="flex items-center gap-1 text-gray-600">
@@ -393,8 +382,8 @@ const PublicCourseDetail = () => {
                     <div className="text-sm text-gray-600">Thời lượng</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{stats.students}{stats.maxStudents ? `/${stats.maxStudents}` : ''}</div>
-                    <div className="text-sm text-gray-600">Học viên</div>
+                    <div className="text-2xl font-bold text-purple-600">30</div>
+                    <div className="text-sm text-gray-600">Học sinh tối đa</div>
                   </div>
                   {/* Ẩn ô đánh giá trong quick stats */}
                 </div>
@@ -527,7 +516,7 @@ const PublicCourseDetail = () => {
                   )}
                   
                   {/* Message Input */}
-                  <div className="mb-6">
+                  {/* <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tin nhắn (tùy chọn)
                     </label>
@@ -542,7 +531,7 @@ const PublicCourseDetail = () => {
                     <p className="text-xs text-gray-500 mt-1">
                       {message.length}/500 ký tự
                     </p>
-                  </div>
+                  </div> */}
 
                   <div className="space-y-4 mb-6">
                     <button
@@ -567,11 +556,9 @@ const PublicCourseDetail = () => {
                       <p className="text-sm text-gray-600 mb-2">
                         Nhấn nút để chuyển đến Messenger và hoàn tất đăng ký.
                       </p>
-                      {stats.maxStudents ? (
-                        <p className="text-xs text-gray-500">
-                          Chỗ còn lại: {Math.max(0, stats.maxStudents - (stats.students || 0))} / {stats.maxStudents}
-                        </p>
-                      ) : null}
+                      <p className="text-xs text-gray-500">
+                        Tối đa 30 học sinh
+                      </p>
                     </div>
                   </div>
 

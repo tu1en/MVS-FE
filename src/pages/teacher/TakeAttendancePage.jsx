@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import API_CONFIG from '../../config/api-config';
 import { useAuth } from '../../context/AuthContext';
+import makeupAttendanceService from '../../services/makeupAttendanceService';
 import { teacherAttendanceService } from '../../services/teacherAttendanceService';
 
 const TakeAttendancePage = () => {
@@ -18,6 +19,10 @@ const TakeAttendancePage = () => {
     const [debugInfo, setDebugInfo] = useState(null);
     const [actualLectureId, setActualLectureId] = useState(null);
     const [lectures, setLectures] = useState([]);
+    const [attendanceStatus, setAttendanceStatus] = useState(null);
+    const [isMakeupMode, setIsMakeupMode] = useState(false);
+    const [showMakeupRequestForm, setShowMakeupRequestForm] = useState(false);
+    const [makeupReason, setMakeupReason] = useState('');
     const fetchAttempted = useRef(false);
 
     // Kiểm tra xác thực
@@ -210,6 +215,26 @@ const TakeAttendancePage = () => {
         }
     }, [classroomId, urlLectureId]);
 
+    // Fetch attendance status
+    const fetchAttendanceStatus = useCallback(async () => {
+        if (!actualLectureId || !classroomId) return;
+
+        try {
+            console.log(`Fetching attendance status for lecture ${actualLectureId} in classroom ${classroomId}`);
+            const status = await teacherAttendanceService.getAttendanceStatus(actualLectureId, classroomId);
+            console.log('Attendance status:', status);
+            setAttendanceStatus(status);
+
+            // Auto-enable makeup mode if needed
+            if (status.overallStatus === 'MAKEUP_APPROVED') {
+                setIsMakeupMode(true);
+            }
+        } catch (error) {
+            console.error('Error fetching attendance status:', error);
+            // Don't set error here as it's not critical
+        }
+    }, [actualLectureId, classroomId]);
+
     const fetchAttendanceData = useCallback(async () => {
         // Tránh gọi API nhiều lần
         if (fetchAttempted.current) return;
@@ -283,6 +308,9 @@ const TakeAttendancePage = () => {
         if (actualLectureId) {
             // Reset the fetch attempted flag when IDs change
             fetchAttempted.current = false;
+
+            // Fetch both attendance status and data
+            fetchAttendanceStatus();
             fetchAttendanceData();
 
             // Cleanup function to prevent state updates if component unmounts
@@ -290,7 +318,7 @@ const TakeAttendancePage = () => {
                 fetchAttempted.current = true; // Ngăn cập nhật state khi rời trang
             };
         }
-    }, [fetchAttendanceData, actualLectureId]);
+    }, [fetchAttendanceData, fetchAttendanceStatus, actualLectureId]);
 
     const handleStatusChange = (studentId, newStatus) => {
         setStudents(prevStudents =>
@@ -323,15 +351,43 @@ const TakeAttendancePage = () => {
         try {
             console.log('Gửi dữ liệu điểm danh:', attendanceData);
             await teacherAttendanceService.submitAttendance(attendanceData);
+
+            // If this was makeup attendance, mark the request as completed
+            if (isMakeupMode && attendanceStatus?.makeupRequestId) {
+                try {
+                    await makeupAttendanceService.markRequestAsCompleted(attendanceStatus.makeupRequestId);
+                    console.log('Marked makeup request as completed');
+                } catch (markError) {
+                    console.warn('Failed to mark makeup request as completed:', markError);
+                    // Don't fail the whole operation for this
+                }
+            }
+
             setSubmitSuccess(true);
+
+            // Mark lecture as completed after successful attendance submission
+            if (actualLectureId && window.markLectureAsCompleted) {
+                try {
+                    await window.markLectureAsCompleted(actualLectureId);
+                    console.log('Marked lecture as completed');
+                } catch (markError) {
+                    console.warn('Failed to mark lecture as completed:', markError);
+                    // Don't fail the whole operation for this
+                }
+            }
+
+            // Refresh status after successful submission
+            await fetchAttendanceStatus();
+
             setTimeout(() => {
                 setSubmitSuccess(false);
-            }, 2000);
+                // Không tự động chuyển hướng - để teacher ở lại trang
+            }, 3000);
         } catch (err) {
             console.error('Lỗi khi gửi dữ liệu:', err);
             console.error('Cấu hình lỗi:', err.config);
             console.error('Phản hồi lỗi:', err.response);
-            
+
             // Check if it's a time validation error
             if (err.response && err.response.data && err.response.data.message) {
                 const errorMessage = err.response.data.message;
@@ -348,9 +404,61 @@ const TakeAttendancePage = () => {
         }
     };
 
+    // Handle makeup attendance request creation
+    const handleCreateMakeupRequest = async () => {
+        const trimmedReason = makeupReason.trim();
+
+        if (!trimmedReason) {
+            setError('Vui lòng nhập lý do điểm danh bù');
+            return;
+        }
+
+        if (trimmedReason.length < 10) {
+            setError('Lý do điểm danh bù phải có ít nhất 10 ký tự (không tính khoảng trắng)');
+            return;
+        }
+
+        if (trimmedReason.length > 2000) {
+            setError('Lý do điểm danh bù không được vượt quá 2000 ký tự');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            await makeupAttendanceService.createRequest({
+                lectureId: parseInt(actualLectureId, 10),
+                classroomId: parseInt(classroomId, 10),
+                reason: trimmedReason
+            });
+
+            setShowMakeupRequestForm(false);
+            setMakeupReason('');
+            setSubmitSuccess(true);
+
+            // Refresh status
+            await fetchAttendanceStatus();
+
+            setTimeout(() => {
+                setSubmitSuccess(false);
+            }, 3000);
+        } catch (error) {
+            console.error('Error creating makeup request:', error);
+            setError(`Không thể tạo yêu cầu điểm danh bù: ${error.response?.data?.message || error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle retaking attendance (overwrite existing)
+    const handleRetakeAttendance = () => {
+        setIsMakeupMode(false);
+        // Continue with normal attendance flow
+    };
+
     // Làm mới thủ công
     const handleRefresh = () => {
         fetchAttempted.current = false; // Reset the flag to allow a new fetch
+        fetchAttendanceStatus();
         fetchAttendanceData();
     };
 
@@ -445,16 +553,139 @@ const TakeAttendancePage = () => {
                 </div>
             )}
 
-            {/* Time window warning */}
-            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative mb-4" role="alert">
-                <div className="flex items-center">
-                    <span className="text-lg mr-2">⏰</span>
-                    <div>
-                        <strong className="font-bold">Lưu ý về thời gian điểm danh:</strong>
-                        <span className="block sm:inline"> Chỉ có thể điểm danh trong vòng 24 giờ trước và sau buổi học.</span>
+            {/* Attendance Status Indicator */}
+            {attendanceStatus && (
+                <div className={`px-4 py-3 rounded relative mb-4 ${
+                    attendanceStatus.overallStatus === 'ALREADY_TAKEN' ? 'bg-yellow-50 border border-yellow-200 text-yellow-800' :
+                    attendanceStatus.overallStatus === 'MAKEUP_APPROVED' ? 'bg-green-50 border border-green-200 text-green-800' :
+                    attendanceStatus.overallStatus === 'CAN_TAKE_NORMAL' ? 'bg-blue-50 border border-blue-200 text-blue-800' :
+                    attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' ? 'bg-orange-50 border border-orange-200 text-orange-800' :
+                    attendanceStatus.overallStatus === 'TOO_EARLY' ? 'bg-gray-50 border border-gray-200 text-gray-800' :
+                    'bg-red-50 border border-red-200 text-red-800'
+                }`} role="alert">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <span className="text-lg mr-2">
+                                {attendanceStatus.overallStatus === 'ALREADY_TAKEN' ? '✅' :
+                                 attendanceStatus.overallStatus === 'MAKEUP_APPROVED' ? '🔄' :
+                                 attendanceStatus.overallStatus === 'CAN_TAKE_NORMAL' ? '⏰' :
+                                 attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' ? '⚠️' :
+                                 attendanceStatus.overallStatus === 'TOO_EARLY' ? '⏳' : '❌'}
+                            </span>
+                            <div>
+                                <strong className="font-bold">
+                                    {attendanceStatus.overallStatus === 'ALREADY_TAKEN' ? 'Đã điểm danh' :
+                                     attendanceStatus.overallStatus === 'MAKEUP_APPROVED' ? 'Điểm danh bù đã được phê duyệt' :
+                                     attendanceStatus.overallStatus === 'CAN_TAKE_NORMAL' ? 'Có thể điểm danh bình thường' :
+                                     attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' ? 'Cần tạo yêu cầu điểm danh bù' :
+                                     attendanceStatus.overallStatus === 'TOO_EARLY' ? 'Chưa đến thời gian điểm danh' : 'Đã hết thời gian điểm danh'}
+                                </strong>
+                                <div className="text-sm mt-1">
+                                    {attendanceStatus.overallStatus === 'ALREADY_TAKEN' &&
+                                        `Đã có ${attendanceStatus.existingRecordsCount} bản ghi điểm danh. Bạn có muốn điểm danh lại không?`}
+                                    {attendanceStatus.overallStatus === 'MAKEUP_APPROVED' &&
+                                        `Yêu cầu điểm danh bù đã được phê duyệt. Lý do: ${attendanceStatus.makeupRequestReason}`}
+                                    {attendanceStatus.overallStatus === 'CAN_TAKE_NORMAL' &&
+                                        'Bạn có thể thực hiện điểm danh bình thường trong khung thời gian cho phép.'}
+                                    {attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' &&
+                                        'Đã quá thời gian điểm danh bình thường. Bạn cần tạo yêu cầu điểm danh bù để được manager phê duyệt.'}
+                                    {attendanceStatus.overallStatus === 'TOO_EARLY' &&
+                                        'Chưa đến thời gian có thể điểm danh. Vui lòng quay lại sau.'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action buttons based on status */}
+                        <div className="flex gap-2">
+                            {attendanceStatus.overallStatus === 'ALREADY_TAKEN' && (
+                                <button
+                                    onClick={handleRetakeAttendance}
+                                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+                                >
+                                    Điểm danh lại
+                                </button>
+                            )}
+                            {attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' && attendanceStatus.canCreateMakeupRequest && (
+                                <button
+                                    onClick={() => setShowMakeupRequestForm(true)}
+                                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm"
+                                >
+                                    Tạo yêu cầu điểm danh bù
+                                </button>
+                            )}
+                            {attendanceStatus.overallStatus === 'MAKEUP_APPROVED' && (
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="makeupMode"
+                                        checked={isMakeupMode}
+                                        onChange={(e) => setIsMakeupMode(e.target.checked)}
+                                        className="mr-2"
+                                    />
+                                    <label htmlFor="makeupMode" className="text-sm">Điểm danh bù</label>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* Makeup Request Form Modal */}
+            {showMakeupRequestForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                        <h3 className="text-lg font-bold mb-4">Tạo yêu cầu điểm danh bù</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">
+                                Lý do điểm danh bù: <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={makeupReason}
+                                onChange={(e) => setMakeupReason(e.target.value)}
+                                className="w-full p-2 border rounded-md"
+                                rows="4"
+                                placeholder="Vui lòng nhập lý do cần điểm danh bù (tối thiểu 10 ký tự)..."
+                                maxLength={2000}
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>Tối thiểu 10 ký tự (không tính khoảng trắng)</span>
+                                <span>{makeupReason.trim().length}/2000</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => {
+                                    setShowMakeupRequestForm(false);
+                                    setMakeupReason('');
+                                }}
+                                className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-50"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleCreateMakeupRequest}
+                                disabled={isSubmitting || !makeupReason.trim() || makeupReason.trim().length < 10}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+                            >
+                                {isSubmitting ? 'Đang tạo...' : 'Tạo yêu cầu'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Time window warning - only show if no specific status */}
+            {!attendanceStatus && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative mb-4" role="alert">
+                    <div className="flex items-center">
+                        <span className="text-lg mr-2">⏰</span>
+                        <div>
+                            <strong className="font-bold">Lưu ý về thời gian điểm danh:</strong>
+                            <span className="block sm:inline"> Chỉ có thể điểm danh trong vòng 24 giờ trước và sau buổi học.</span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit}>
                 <div className="overflow-x-auto">
@@ -507,14 +738,34 @@ const TakeAttendancePage = () => {
                     </table>
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-6 flex items-center gap-4">
                     <button
                         type="submit"
-                        disabled={isSubmitting || students.length === 0}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400"
+                        disabled={isSubmitting || students.length === 0 ||
+                                 (attendanceStatus?.overallStatus === 'NEEDS_MAKEUP_REQUEST' && !isMakeupMode) ||
+                                 attendanceStatus?.overallStatus === 'TOO_EARLY' ||
+                                 attendanceStatus?.overallStatus === 'TIME_EXPIRED'}
+                        className={`font-bold py-2 px-4 rounded disabled:bg-gray-400 ${
+                            isMakeupMode ? 'bg-green-500 hover:bg-green-700' : 'bg-blue-500 hover:bg-blue-700'
+                        } text-white`}
                     >
-                        {isSubmitting ? 'Đang lưu...' : 'Lưu điểm danh'}
+                        {isSubmitting ? 'Đang lưu...' :
+                         isMakeupMode ? 'Lưu điểm danh bù' :
+                         attendanceStatus?.overallStatus === 'ALREADY_TAKEN' ? 'Cập nhật điểm danh' :
+                         'Lưu điểm danh'}
                     </button>
+
+                    {isMakeupMode && (
+                        <div className="flex items-center text-green-600">
+                            <span className="text-sm">🔄 Đang thực hiện điểm danh bù</span>
+                        </div>
+                    )}
+
+                    {attendanceStatus?.overallStatus === 'ALREADY_TAKEN' && !isMakeupMode && (
+                        <div className="flex items-center text-yellow-600">
+                            <span className="text-sm">⚠️ Điểm danh này sẽ ghi đè lên dữ liệu cũ</span>
+                        </div>
+                    )}
                 </div>
             </form>
         </div>

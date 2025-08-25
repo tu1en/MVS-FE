@@ -421,7 +421,7 @@ const TAAttendanceModule = () => {
                   onClick={startAttendanceSession}
                   block={isMobile}
                 >
-                  Bắt đầu điểm danh
+                  Mở điểm danh
                 </Button>
               ) : (
                 <>

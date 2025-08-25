@@ -156,7 +156,7 @@ const LectureDetailModal = ({ visible, lecture, classData, onCancel, onUpdate })
       'file': 'Upload File',
       'text': 'Text Input',
       'url': 'URL/Link',
-      'quiz': 'Quiz Online'
+      'quiz': 'Trắc nghiệm'
     };
     return types[type] || type;
   };
@@ -379,7 +379,7 @@ const LectureDetailModal = ({ visible, lecture, classData, onCancel, onUpdate })
                           <option value="file">📎 Upload File</option>
                           <option value="text">📝 Text Input</option>
                           <option value="url">🔗 URL/Link</option>
-                          <option value="quiz">❓ Quiz Online</option>
+                          <option value="quiz">❓ Trắc nghiệm</option>
                         </select>
                       </div>
                     </div>

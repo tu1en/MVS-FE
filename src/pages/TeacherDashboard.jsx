@@ -1,5 +1,5 @@
-import { BookOutlined, CalendarOutlined, CheckCircleOutlined, EditOutlined, FileTextOutlined, MessageOutlined, TeamOutlined } from '@ant-design/icons';
-import { App, Card, Col, Row, Spin, Statistic } from 'antd';
+import { BookOutlined, CalendarOutlined, CheckCircleOutlined, FileTextOutlined, MessageOutlined, TeamOutlined } from '@ant-design/icons';
+import { App, Card, Col, Row, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -127,7 +127,7 @@ export default function TeacherDashboard() {
       <h1 className="text-3xl font-bold mb-8 text-center">Trang Giáo Viên</h1>
       
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} className="mb-8">
+      {/* <Row gutter={[16, 16]} className="mb-8">
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
@@ -169,7 +169,7 @@ export default function TeacherDashboard() {
             />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       {/* Main Navigation Cards */}
       <Row gutter={[24, 24]}>

@@ -1,30 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Typography, 
-  List, 
-  Space, 
-  Tag, 
-  Alert, 
-  Spin,
-  Modal,
-  Divider,
-  Badge,
-  Empty,
-  message
-} from 'antd';
-import { 
-  CalendarOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
-  EyeOutlined,
-  UserOutlined
+import {
+    CalendarOutlined,
+    ClockCircleOutlined,
+    EyeOutlined,
+    UserOutlined
 } from '@ant-design/icons';
+import {
+    Badge,
+    Card,
+    Col,
+    Divider,
+    Empty,
+    List,
+    message,
+    Modal,
+    Row,
+    Space,
+    Spin,
+    Tag,
+    Typography
+} from 'antd';
+import moment from 'moment';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import moment from 'moment';
 
 const { Title, Text } = Typography;
 
@@ -98,6 +96,22 @@ const TeacherLeaveNotices = () => {
       console.error('Error formatting createdAt:', error);
       return 'Chưa xác định';
     }
+  };
+
+  // Helper function to format date (handles both array and string)
+  const formatDate = (dateValue) => {
+    if (!dateValue) return 'Invalid Date';
+
+    // Handle array format from Java LocalDate [year, month, day]
+    if (Array.isArray(dateValue) && dateValue.length >= 3) {
+      const [year, month, day] = dateValue;
+      // Java month is 1-based, JavaScript month is 0-based
+      const jsDate = new Date(year, month - 1, day);
+      return moment(jsDate).format('DD/MM/YYYY');
+    }
+
+    // Handle string format
+    return moment(dateValue).format('DD/MM/YYYY');
   };
 
   const getLeaveTypeColor = (type) => {
@@ -301,7 +315,7 @@ const TeacherLeaveNotices = () => {
                       <div>
                         <div style={{ marginBottom: '4px' }}>
                           <CalendarOutlined style={{ marginRight: '4px' }} />
-                          <Text strong>{moment(notice.date).format('DD/MM/YYYY')}</Text>
+                          <Text strong>{formatDate(notice.date)}</Text>
                           {notice.arriveAt && (
                             <Text> - Đến lúc {notice.arriveAt}</Text>
                           )}
@@ -369,7 +383,7 @@ const TeacherLeaveNotices = () => {
               <Col span={12}>
                 <Text strong>Ngày:</Text>
                 <br />
-                <Text>{moment(selectedNotice.date).format('DD/MM/YYYY')}</Text>
+                <Text>{formatDate(selectedNotice.date)}</Text>
               </Col>
               <Col span={12}>
                 <Text strong>Trạng thái:</Text>

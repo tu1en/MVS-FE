@@ -377,64 +377,9 @@ const CourseManagementSystem = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* ✅ FIX: Enhanced Header with real WebSocket connection status */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <div className="text-3xl mr-4">🎓</div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  
-                </h1>
-                <p className="text-gray-500 text-sm">
-                  {/* Real-time WebSocket integration với full data notifications */}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* ✅ FIX: Real-time connection status */}
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${connectionInfo.color}`}></div>
-                <span className="text-xs text-gray-500">
-                  {connectionInfo.icon} {connectionInfo.text}
-                </span>
-                {isConnected && (
-                  <span className="text-xs text-green-600 font-medium">
-                    Real-time ✓
-                  </span>
-                )}
-              </div>
-              
-              {/* Notifications counter */}
-              {notifications.length > 0 && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-500">
-                    📨 {notifications.length} notifications
-                  </span>
-                  <button
-                    onClick={clearNotifications}
-                    className="text-xs text-blue-500 hover:text-blue-700"
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
-              
-              {/* User profile */}
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  👤
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium">Manager</div>
-                  <div className="text-xs text-gray-500">WebSocket Admin</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  { /* REMOVE THIS HEADER
+   ''
+    */}
 
       {/* ✅ FIX: Development debug panel for WebSocket notifications */}
       {process.env.NODE_ENV === 'development' && notifications.length > 0 && (

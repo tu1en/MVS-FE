@@ -65,12 +65,29 @@ apiClient.interceptors.request.use(
       'classrooms'
     ];
 
+    // For dashboard stats, implement proper deduplication
+    const dashboardEndpoints = [
+      'dashboard/stats',
+      'dashboard-stats'
+    ];
+
     const shouldSkipDeduplication = noDuplicateEndpoints.some(endpoint =>
+      config.url && config.url.includes(endpoint)
+    );
+
+    const isDashboardRequest = dashboardEndpoints.some(endpoint =>
       config.url && config.url.includes(endpoint)
     );
 
     if (shouldSkipDeduplication) {
       return config;
+    }
+
+    // For dashboard requests, implement stricter deduplication
+    if (isDashboardRequest && pendingRequests.has(requestKey) && config.method === 'get') {
+      console.log(`Blocking duplicate dashboard request for ${requestKey}`);
+      // Return a rejected promise to prevent the duplicate request
+      return Promise.reject(new Error('Duplicate dashboard request blocked'));
     }
 
     // For other GET requests, check if we have a pending request with the same key

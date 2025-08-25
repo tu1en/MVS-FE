@@ -40,17 +40,17 @@ const ExamManagementTab = () => {
     return (
         <div className="p-4">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Exam Management</h2>
+                <h2 className="text-xl font-bold">Bài kiểm tra</h2>
                 <button
                     onClick={() => setIsModalOpen(true)}
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 >
-                    Create New Exam
+                    Thêm bài kiểm tra
                 </button>
             </div>
             <div className="mt-4">
                 {exams.length === 0 ? (
-                    <p>No exams have been created for this course yet.</p>
+                    <p>Khóa học này chưa có bài kiểm tra</p>
                 ) : (
                     <ul>
                         {exams.map(exam => (

@@ -1,12 +1,12 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import courseService from '../../services/courseService';
 import {
-  debounce,
-  downloadFile,
-  getStatusBadge,
-  showConfirmDialog,
-  showNotification
+    debounce,
+    downloadFile,
+    getStatusBadge,
+    showConfirmDialog,
+    showNotification
 } from '../../utils/courseManagementUtils';
 import CourseDescription from './CourseDescription';
 
@@ -349,7 +349,7 @@ const CourseTemplateManager = forwardRef(({
                       📚 {template.lessonCount || 0} bài học
                     </span>
                     <span className="bg-orange-100 text-orange-800 text-sm px-3 py-1 rounded-full">
-                      👥 Tối đa {template.maxStudentsPerTemplate || '40'} học viên
+                      👥 Tối đa 30 học sinh
                     </span>
                   </div>
                 </div>

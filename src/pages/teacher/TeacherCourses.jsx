@@ -1,14 +1,13 @@
 import {
-    BookOutlined,
-    CalendarOutlined,
-    EditOutlined,
-    EyeOutlined,
-    FileTextOutlined,
-    UsergroupAddOutlined,
-    UserOutlined
+  BookOutlined,
+  CalendarOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  UsergroupAddOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import { Alert, Avatar, Button, Card, Col, Pagination, Row, Spin, Statistic, Tag, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axiosInstance from '../../config/axiosInstance';
 import { usePagination } from '../../hooks/usePagination';
 
@@ -143,14 +142,14 @@ const TeacherCourses = () => {
                   >
                     Xem chi tiết
                   </Button>,
-                  <Button
-                    type="default"
-                    icon={<EditOutlined />}
-                    className="course-action-button success"
-                    style={{ flex: 1, margin: '0 4px', backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
-                  >
-                    Chỉnh sửa
-                  </Button>,
+                  // <Button
+                  //   type="default"
+                  //   icon={<EditOutlined />}
+                  //   className="course-action-button success"
+                  //   style={{ flex: 1, margin: '0 4px', backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+                  // >
+                  //   Chỉnh sửa
+                  // </Button>,
                   <Button
                     type="default"
                     icon={<FileTextOutlined />}

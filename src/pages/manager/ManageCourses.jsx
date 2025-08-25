@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Form, Input, message, Modal, Row, Select, Space, Statistic, Table, Tag, Tabs } from 'antd';
+import { Button, Card, Col, Form, Input, message, Modal, Row, Select, Space, Statistic, Table, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import { managerCourseService } from '../../services/managerCourseService';
 import { safeDataSource } from '../../utils/tableUtils';
@@ -88,8 +88,9 @@ const ManageCourses = () => {
     },
     {
       title: 'Giáo Viên',
-      dataIndex: 'teacherName',
-      key: 'teacherName',
+      dataIndex: 'instructorName',
+      key: 'instructorName',
+      render: (instructorName) => instructorName || 'Đang cập nhật'
     },
     {
       title: 'Giá',
@@ -99,9 +100,9 @@ const ManageCourses = () => {
     },
     {
       title: 'Thời lượng',
-      dataIndex: 'duration',
-      key: 'duration',
-      render: (duration) => `${duration || 0} giờ`
+      dataIndex: 'totalWeeks',
+      key: 'totalWeeks',
+      render: (totalWeeks) => totalWeeks ? `${totalWeeks} tuần` : 'Đang cập nhật'
     },
     {
       title: 'Thao Tác',
