@@ -15,8 +15,11 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
   }, [offer]);
 
   const handleGrossChange = async (value) => {
-    if (value && value < 1000000) {
-      value = 1000000;
+    if (value && value < 20000) {
+      value = 20000;
+    }
+    if (value && value > 10000000) {
+      value = 10000000;
     }
     setGrossSalary(value);
     await onOfferUpdate(recordId, value);
@@ -30,8 +33,8 @@ const GrossSalaryColumn = ({ offer, recordId, onOfferUpdate, onShowSalaryDetails
           onChange={handleGrossChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={1000000}
-          min={1000000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương GROSS"
         />
@@ -61,8 +64,11 @@ const GrossSalaryColumnOld = ({ offer, recordId, onOfferUpdate, onShowSalaryDeta
   }, [offer]);
 
   const handleGrossChange = async (value) => {
-    if (value && value < 1000000) {
-      value = 1000000;
+    if (value && value < 20000) {
+      value = 20000;
+    }
+    if (value && value > 10000000) {
+      value = 10000000;
     }
     setGrossSalary(value);
     await onOfferUpdate(recordId, value);
@@ -76,8 +82,8 @@ const GrossSalaryColumnOld = ({ offer, recordId, onOfferUpdate, onShowSalaryDeta
           onChange={handleGrossChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={1000000}
-          min={1000000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương GROSS"
         />
@@ -105,8 +111,11 @@ const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
   }, [hourlyRate]);
 
   const handleHourlyRateChange = async (value) => {
-    if (value && value < 100000) {
-      value = 100000;
+    if (value && value < 20000) {
+      value = 20000;
+    }
+    if (value && value > 10000000) {
+      value = 10000000;
     }
     setInputHourlyRate(value);
     await onHourlyRateUpdate(recordId, value);
@@ -120,30 +129,30 @@ const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
           onChange={handleHourlyRateChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={100000}
-          min={100000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương/giờ"
         />
         <Button 
           size="small" 
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 100000;
-            handleHourlyRateChange(currentValue + 100000);
+            const currentValue = parseInt(inputHourlyRate) || 20000;
+            handleHourlyRateChange(currentValue + 20000);
           }}
         >
-          +100k
+          +20k
         </Button>
         <Button 
           size="small"
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 100000;
-            if (currentValue > 100000) {
-              handleHourlyRateChange(currentValue - 100000);
+            const currentValue = parseInt(inputHourlyRate) || 20000;
+            if (currentValue > 20000) {
+              handleHourlyRateChange(currentValue - 20000);
             }
           }}
         >
-          -100k
+          -20k
         </Button>
       </div>
       {inputHourlyRate && (
@@ -233,8 +242,8 @@ const NetSalaryColumnOld = ({ offer, recordId, contractType, numberOfDependents,
           onChange={handleNetChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={1000000}
-          min={1000000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương NET"
         />
@@ -258,8 +267,11 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
   }, [hourlyRate]);
 
   const handleHourlyRateChange = async (value) => {
-    if (value && value < 100000) {
-      value = 100000;
+    if (value && value < 20000) {
+      value = 20000;
+    }
+    if (value && value > 10000000) {
+      value = 10000000;
     }
     setInputHourlyRate(value);
     await onHourlyRateUpdate(recordId, value);
@@ -273,30 +285,30 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
           onChange={handleHourlyRateChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={100000}
-          min={100000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương/giờ"
         />
         <Button 
           size="small" 
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 100000;
-            handleHourlyRateChange(currentValue + 100000);
+            const currentValue = parseInt(inputHourlyRate) || 20000;
+            handleHourlyRateChange(currentValue + 20000);
           }}
         >
-          +100k
+          +20k
         </Button>
         <Button 
           size="small"
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 100000;
-            if (currentValue > 100000) {
-              handleHourlyRateChange(currentValue - 100000);
+            const currentValue = parseInt(inputHourlyRate) || 20000;
+            if (currentValue > 20000) {
+              handleHourlyRateChange(currentValue - 20000);
             }
           }}
         >
-          -100k
+          -20k
         </Button>
       </div>
       {inputHourlyRate && (
@@ -386,8 +398,8 @@ const NetSalaryColumn = ({ offer, recordId, contractType, numberOfDependents, on
           onChange={handleNetChange}
           formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
           parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          step={1000000}
-          min={1000000}
+          step={20000}
+          min={20000} max={10000000}
           style={{ width: '150px' }}
           placeholder="Nhập lương NET"
         />
@@ -989,10 +1001,13 @@ const RecruitmentManagement = () => {
 
   const handleOfferUpdate = async (id, offer) => {
     try {
-      // Đảm bảo giá trị tối thiểu là 1 triệu
+      // Đảm bảo giá trị tối thiểu là 20k và tối đa 10 triệu
       let validOffer = offer;
-      if (offer && offer < 1000000) {
-        validOffer = 1000000;
+      if (offer && offer < 20000) {
+        validOffer = 20000;
+      }
+      if (offer && offer > 10000000) {
+        validOffer = 10000000;
       }
       await axiosInstance.put(`/interview-schedules/${id}/offer`, { offer: validOffer });
       message.success('Cập nhật offer thành công!');
@@ -1004,10 +1019,13 @@ const RecruitmentManagement = () => {
 
   const handleHourlyRateUpdate = async (id, hourlyRate) => {
     try {
-      // Đảm bảo giá trị tối thiểu là 100k
+      // Đảm bảo giá trị tối thiểu là 20k và tối đa 10 triệu
       let validHourlyRate = hourlyRate;
-      if (hourlyRate && hourlyRate < 100000) {
-        validHourlyRate = 100000;
+      if (hourlyRate && hourlyRate < 20000) {
+        validHourlyRate = 20000;
+      }
+      if (hourlyRate && hourlyRate > 10000000) {
+        validHourlyRate = 10000000;
       }
       await axiosInstance.put(`/interview-schedules/${id}/hourly-rate`, { hourlyRate: validHourlyRate });
       message.success('Cập nhật lương theo giờ thành công!');
@@ -1108,7 +1126,7 @@ const RecruitmentManagement = () => {
       setLastOfferSendTime(now);
       
       if (contractType === 'PART_TIME') {
-        if (!hourlyRate || hourlyRate < 100000) {
+        if (!hourlyRate || hourlyRate < 20000) {
           message.warning('Vui lòng nhập lương theo giờ trước khi gửi lại!');
           return;
         }
@@ -2230,13 +2248,13 @@ const RecruitmentManagement = () => {
                 style={{ width: '200px' }}
                 formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                step={1000000}
-                min={1000000}
+                step={20000}
+                min={20000} max={10000000}
                 placeholder="Nhập offer..."
                 className="vietnamese-text"
                 onChange={(value) => {
-                  if (value && value < 1000000) {
-                    offerForm.setFieldsValue({ offer: 1000000 });
+                  if (value && value < 20000) {
+                    offerForm.setFieldsValue({ offer: 20000 });
                   }
                 }}
               />
@@ -2244,22 +2262,22 @@ const RecruitmentManagement = () => {
                 <Button 
                   size="small"
                   onClick={() => {
-                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 1000000;
-                    offerForm.setFieldsValue({ offer: currentValue + 1000000 });
+                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 20000;
+                    offerForm.setFieldsValue({ offer: currentValue + 20000 });
                   }}
                 >
-                  +1 triệu
+                  +20k
                 </Button>
                 <Button 
                   size="small"
                   onClick={() => {
-                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 1000000;
-                    if (currentValue > 1000000) {
-                      offerForm.setFieldsValue({ offer: currentValue - 1000000 });
+                    const currentValue = parseInt(offerForm.getFieldValue('offer')) || 20000;
+                    if (currentValue > 20000) {
+                      offerForm.setFieldsValue({ offer: currentValue - 20000 });
                     }
                   }}
                 >
-                  -1 triệu
+                  -20k
                 </Button>
               </div>
             </div>
