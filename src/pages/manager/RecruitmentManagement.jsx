@@ -456,6 +456,12 @@ const RecruitmentManagement = () => {
   const [processingApplicationIds, setProcessingApplicationIds] = useState(new Set());
   const [lastStatusChangeTime, setLastStatusChangeTime] = useState(0);
 
+  // State để ngăn chặn việc gửi offer và từ chối ứng viên liên tục
+  const [sendingOfferIds, setSendingOfferIds] = useState(new Set());
+  const [rejectingCandidateIds, setRejectingCandidateIds] = useState(new Set());
+  const [lastOfferSendTime, setLastOfferSendTime] = useState(0);
+  const [lastRejectTime, setLastRejectTime] = useState(0);
+
   // Theo dõi thay đổi contractType trong form vị trí để cập nhật đơn vị tiền tệ linh hoạt
   const watchedContractType = Form.useWatch('contractType', positionForm);
 
@@ -468,6 +474,8 @@ const RecruitmentManagement = () => {
     return () => {
       setProcessingApplicationIds(new Set());
       setLastStatusChangeTime(0);
+      setSendingOfferIds(new Set());
+      setRejectingCandidateIds(new Set());
     };
   }, []);
 
@@ -782,6 +790,11 @@ const RecruitmentManagement = () => {
         if (interview) {
           console.log('Deleting interview after rejection:', interview.id);
           await axiosInstance.delete(`/interview-schedules/${interview.id}`);
+          
+          // Cập nhật state local ngay lập tức để ẩn lịch phỏng vấn đã xóa khỏi tất cả các tab
+          setInterviews(prev => prev.filter(i => i.id !== interview.id));
+          setPendingInterviews(prev => prev.filter(i => i.id !== interview.id));
+          setOffers(prev => prev.filter(i => i.id !== interview.id));
         }
       }
       message.success('Cập nhật trạng thái thành công!');
@@ -937,11 +950,21 @@ const RecruitmentManagement = () => {
           // Cập nhật trạng thái đơn ứng tuyển thành REJECTED
           await axiosInstance.post(`/recruitment-applications/${interview.applicationId}/reject`);
           message.success('Đã từ chối ứng viên và xóa lịch phỏng vấn!');
+          
+          // Cập nhật state local ngay lập tức để ẩn ứng viên đã từ chối khỏi tất cả các tab
+          setPendingInterviews(prev => prev.filter(interview => interview.id !== id));
+          setInterviews(prev => prev.filter(interview => interview.id !== id));
+          setOffers(prev => prev.filter(offer => offer.id !== id));
         }
       } else {
         // Các status khác (ACCEPTED, DONE) - chỉ cập nhật status
         await axiosInstance.put(`/interview-schedules/${id}/result`, { status, result });
         message.success('Cập nhật trạng thái thành công!');
+        
+        // Nếu là ACCEPTED hoặc DONE, cũng cần ẩn khỏi "Quản lý lịch"
+        if (status === 'ACCEPTED' || status === 'DONE') {
+          setInterviews(prev => prev.filter(interview => interview.id !== id));
+        }
       }
 
       // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
@@ -1030,7 +1053,7 @@ const RecruitmentManagement = () => {
   };
 
   const handleEvaluationChange = (e) => {
-    const value = (e?.target?.value ?? '').slice(0, 200);
+    const value = (e?.target?.value ?? '').slice(0, 500);
     setEvaluationDraft(value);
     evaluationForm.setFieldsValue({ evaluation: value });
 
@@ -1067,6 +1090,23 @@ const RecruitmentManagement = () => {
 
   const handleResendOffer = async (interviewId, offer, hourlyRate, contractType) => {
     try {
+      // Kiểm tra xem interview này có đang được xử lý không
+      if (sendingOfferIds.has(interviewId)) {
+        message.warning('Offer này đang được gửi, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần gửi offer (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastOfferSendTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi gửi offer tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu interview này đang được xử lý
+      setSendingOfferIds(prev => new Set(prev).add(interviewId));
+      setLastOfferSendTime(now);
+      
       if (contractType === 'PART_TIME') {
         if (!hourlyRate || hourlyRate < 100000) {
           message.warning('Vui lòng nhập lương theo giờ trước khi gửi lại!');
@@ -1098,6 +1138,13 @@ const RecruitmentManagement = () => {
     } catch (err) {
       console.error('Error resending offer:', err);
       message.error('Không thể gửi offer email!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setSendingOfferIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(interviewId);
+        return newSet;
+      });
     }
   };
 
@@ -1125,6 +1172,21 @@ const RecruitmentManagement = () => {
 
   const handleApproveCandidate = async (id) => {
     try {
+      // Tìm thông tin interview để kiểm tra lương theo giờ
+      const interview = offers.find(i => i.id === id);
+      if (!interview) {
+        message.error('Không tìm thấy thông tin ứng viên!');
+        return;
+      }
+
+      // Kiểm tra nếu là PART_TIME thì phải có lương theo giờ
+      if (interview.contractType === 'PART_TIME') {
+        if (!interview.hourlyRate || interview.hourlyRate < 23800) {
+          message.error('Vui lòng nhập lương theo giờ (tối thiểu 23,800 VNĐ/giờ) trước khi duyệt ứng viên!');
+          return;
+        }
+      }
+
       // Kiểm tra tài khoản và hợp đồng
       const response = await axiosInstance.get(`/interview-schedules/${id}/check-account`);
       const { hasAccount, hasContract } = response.data;
@@ -1146,8 +1208,10 @@ const RecruitmentManagement = () => {
 
       message.success('Đã duyệt ứng viên thành công!');
       
-      // Cập nhật state local ngay lập tức để ẩn ứng viên đã duyệt khỏi "Phỏng vấn chờ"
+      // Cập nhật state local ngay lập tức để ẩn ứng viên đã duyệt khỏi tất cả các tab
       setPendingInterviews(prev => prev.filter(interview => interview.id !== id));
+      setInterviews(prev => prev.filter(interview => interview.id !== id));
+      setOffers(prev => prev.filter(offer => offer.id !== id));
       
       // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
       await Promise.all([
@@ -1168,6 +1232,23 @@ const RecruitmentManagement = () => {
 
   const handleRejectCandidateFromOffer = async (interviewId, applicationId) => {
     try {
+      // Kiểm tra xem ứng viên này có đang được xử lý không
+      if (rejectingCandidateIds.has(interviewId)) {
+        message.warning('Ứng viên này đang được xử lý, vui lòng đợi một chút!');
+        return;
+      }
+      
+      // Kiểm tra thời gian giữa các lần từ chối (debounce 2 giây)
+      const now = Date.now();
+      if (now - lastRejectTime < 2000) {
+        message.warning('Vui lòng đợi 2 giây trước khi từ chối ứng viên tiếp theo!');
+        return;
+      }
+      
+      // Đánh dấu ứng viên này đang được xử lý
+      setRejectingCandidateIds(prev => new Set(prev).add(interviewId));
+      setLastRejectTime(now);
+      
       // Xóa lịch phỏng vấn
       await axiosInstance.delete(`/interview-schedules/${interviewId}`);
       
@@ -1175,6 +1256,11 @@ const RecruitmentManagement = () => {
       await axiosInstance.post(`/recruitment-applications/${applicationId}/reject`);
       
       message.success('Đã từ chối ứng viên và xóa khỏi danh sách Offer!');
+      
+      // Cập nhật state local ngay lập tức để ẩn ứng viên đã từ chối khỏi tất cả các tab
+      setOffers(prev => prev.filter(offer => offer.id !== interviewId));
+      setInterviews(prev => prev.filter(interview => interview.id !== interviewId));
+      setPendingInterviews(prev => prev.filter(interview => interview.id !== interviewId));
       
       // Refresh tất cả dữ liệu để đảm bảo tính nhất quán
       await Promise.all([
@@ -1186,6 +1272,13 @@ const RecruitmentManagement = () => {
       ]);
     } catch (err) {
       message.error('Không thể từ chối ứng viên!');
+    } finally {
+      // Luôn luôn reset state sau khi xử lý xong
+      setRejectingCandidateIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(interviewId);
+        return newSet;
+      });
     }
   };
 
@@ -1790,8 +1883,10 @@ const RecruitmentManagement = () => {
             onClick={() => handleResendOffer(record.id, record.offer, record.hourlyRate, record.contractType)}
             className="vietnamese-text"
             style={{ backgroundColor: '#1890ff', borderColor: '#1890ff' }}
+            loading={sendingOfferIds.has(record.id)}
+            disabled={sendingOfferIds.has(record.id)}
           >
-            Gửi mail Offer
+            {sendingOfferIds.has(record.id) ? 'Đang gửi...' : 'Gửi mail Offer'}
           </Button>
           <Button 
             type="primary" 
@@ -1809,8 +1904,10 @@ const RecruitmentManagement = () => {
             danger
             onClick={() => handleRejectCandidateFromOffer(record.id, record.applicationId)}
             className="vietnamese-text"
+            loading={rejectingCandidateIds.has(record.id)}
+            disabled={rejectingCandidateIds.has(record.id)}
           >
-            ✗ Từ chối ứng viên
+            {rejectingCandidateIds.has(record.id) ? 'Đang xử lý...' : '✗ Từ chối ứng viên'}
           </Button>
           
         </div>
@@ -1906,14 +2003,14 @@ const RecruitmentManagement = () => {
           <Form.Item
             name="evaluation"
             label="Đánh giá"
-            rules={[{ max: 200, message: 'Đánh giá tối đa 200 ký tự!' }]}
+            rules={[{ max: 500, message: 'Đánh giá tối đa 500 ký tự!' }]}
           >
             <Input.TextArea
               value={evaluationDraft}
               onChange={handleEvaluationChange}
-              maxLength={200}
+              maxLength={500}
               rows={6}
-              placeholder="Nhập đánh giá (tối đa 200 ký tự)..."
+              placeholder="Nhập đánh giá (tối đa 500 ký tự)..."
               className="vietnamese-text"
             />
           </Form.Item>
