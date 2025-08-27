@@ -59,8 +59,63 @@ const classManagementService = {
    * @param {number} classData.createdBy - Creator user ID
    * @returns {Promise<Object>} Created class
    */
-  createClass: (classData) => {
-    return apiClient.post(API_CONFIG.ENDPOINTS.CLASSES_CREATE, classData);
+  createClass: async (classData) => {
+    console.log('🔍 [SERVICE] createClass called with data:', classData);
+    console.log('🔍 [SERVICE] API endpoint:', API_CONFIG.ENDPOINTS.CLASSES_CREATE);
+
+    try {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.CLASSES_CREATE, classData);
+      console.log('✅ [SERVICE] createClass response:', response);
+      console.log('✅ [SERVICE] Created class ID:', response.data?.data?.id || response.data?.id);
+
+      // Log để kiểm tra sync process
+      if (response.data?.data?.id || response.data?.id) {
+        const classId = response.data?.data?.id || response.data?.id;
+        console.log('🔄 [SERVICE] Class created with ID:', classId);
+        console.log('🔄 [SERVICE] Backend should auto-sync this class to classroom system');
+
+        // Thêm delay nhỏ để backend có thời gian sync
+        setTimeout(() => {
+          console.log('🔍 [SERVICE] Checking if classroom was created for class:', classId);
+        }, 2000);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('❌ [SERVICE] createClass error:', error);
+      console.error('❌ [SERVICE] Error response:', error.response);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if classroom exists for a class
+   * @param {string} className - Class name to check
+   * @returns {Promise<Object>} Classroom info or null
+   */
+  checkClassroomForClass: async (className) => {
+    console.log('🔍 [SERVICE] Checking classroom for class:', className);
+
+    try {
+      const response = await apiClient.get('/classrooms');
+      const classrooms = response.data?.data || response.data || [];
+
+      const matchingClassroom = classrooms.find(classroom =>
+        classroom.name === className
+      );
+
+      if (matchingClassroom) {
+        console.log('✅ [SERVICE] Found classroom for class:', className, matchingClassroom);
+        return matchingClassroom;
+      } else {
+        console.log('❌ [SERVICE] No classroom found for class:', className);
+        console.log('🔍 [SERVICE] Available classrooms:', classrooms.map(c => c.name));
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ [SERVICE] Error checking classroom:', error);
+      return null;
+    }
   },
 
   /**
@@ -185,8 +240,50 @@ const classManagementService = {
    * @param {number} id - Class ID
    * @returns {Promise<Array>} Array of students
    */
-  getClassStudents: (id) => {
-    return apiClient.get(API_CONFIG.ENDPOINTS.CLASS_STUDENTS(id));
+  getClassStudents: async (classId) => {
+    console.log('🔍 [SERVICE] getClassStudents called for classId:', classId);
+
+    // Dynamic mapping: Find classroom by class name (same logic as enrollStudent)
+    let actualClassroomId = classId; // fallback
+
+    try {
+      // Get class details to find its name
+      const classResponse = await apiClient.get(`/classes/${classId}`);
+      const className = classResponse.data?.data?.className;
+      console.log('🔍 [SERVICE] Class name:', className);
+
+      if (className) {
+        // Find classroom with matching name
+        const classroomsResponse = await apiClient.get('/classrooms');
+        const classrooms = classroomsResponse.data?.data || classroomsResponse.data || [];
+
+        const matchingClassroom = classrooms.find(
+          classroom => classroom.name === className
+        );
+
+        if (matchingClassroom) {
+          actualClassroomId = matchingClassroom.id;
+          console.log('✅ [SERVICE] Found matching classroom:', actualClassroomId, 'for class:', className);
+        } else {
+          console.warn('⚠️ [SERVICE] No classroom found for class:', className, '- using classId as fallback');
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [SERVICE] Error finding classroom mapping:', error.message);
+    }
+
+    const endpoint = `/classrooms/${actualClassroomId}/students`;
+    console.log('🔍 [SERVICE] Final API endpoint:', endpoint);
+
+    try {
+      const response = await apiClient.get(endpoint);
+      console.log('✅ [SERVICE] getClassStudents response:', response);
+      console.log('✅ [SERVICE] Students data:', response.data);
+      return response;
+    } catch (error) {
+      console.error('❌ [SERVICE] getClassStudents error:', error);
+      throw error;
+    }
   },
 
   /**
@@ -195,17 +292,39 @@ const classManagementService = {
    * @param {number} studentId - Student ID
    * @returns {Promise<Object>} Enrollment result
    */
-  enrollStudent: (classId, studentId) => {
-    // QUICK FIX: Map Class ID to Classroom ID
-    const classToClassroomMapping = {
-      1: 7,  // Toán Nâng cao 10-12 - Lớp 01
-      2: 8,  // Toán Nâng cao 10-12 - Lớp 02
-      3: 9,  // Toán Nâng cao 10-12 - Lớp 03
-      4: 10, // Vật lý Chuyên đề - Lớp 01
-      // Add more mappings as needed
-    };
+  enrollStudent: async (classId, studentId) => {
+    // Dynamic mapping: Find classroom by class name
+    let actualClassroomId = classId; // fallback
 
-    const actualClassroomId = classToClassroomMapping[classId] || classId;
+    try {
+      // Get class details to find its name
+      const classResponse = await apiClient.get(`/classes/${classId}`);
+      const className = classResponse.data?.data?.className;
+
+      if (className) {
+        // Find classroom with matching name
+        const classroomsResponse = await apiClient.get('/classrooms');
+        console.log('🔍 [DEBUG] Classrooms API response:', classroomsResponse.data);
+
+        const classrooms = classroomsResponse.data?.data || classroomsResponse.data || [];
+        console.log('🔍 [DEBUG] Available classrooms:', classrooms);
+        console.log('🔍 [DEBUG] Looking for classroom with name:', className);
+
+        const matchingClassroom = classrooms.find(
+          classroom => classroom.name === className
+        );
+
+        if (matchingClassroom) {
+          actualClassroomId = matchingClassroom.id;
+          console.log('✅ [DEBUG] Found matching classroom:', matchingClassroom.id, 'for class:', className);
+        } else {
+          console.warn('⚠️ [DEBUG] No classroom found for class:', className, '- using classId as fallback');
+          console.log('🔍 [DEBUG] Classroom names available:', classrooms.map(c => c.name));
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [DEBUG] Error finding classroom mapping:', error.message);
+    }
 
     // BE expects: POST /api/classrooms/{classroomId}/enrollments with body { studentId }
     const url = `${API_CONFIG.ENDPOINTS.CLASSROOMS_BY_ID(actualClassroomId)}/enrollments`;

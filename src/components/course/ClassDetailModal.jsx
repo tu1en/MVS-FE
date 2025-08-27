@@ -139,12 +139,45 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
         setMaterials([]);
       }
 
-      // ===== REST OF THE CODE (lectures, lessons) REMAINS THE SAME =====
-      
-      // Load real lectures from API
+      // ===== FIXED: Find corresponding Classroom ID for lectures =====
+
+      // First, find the corresponding classroom for this class
+      let classroomId = null;
       try {
-        console.log('🔄 Fetching lectures from:', `http://localhost:8088/api/lectures/classroom/${classData.id}`);
-        const lecturesResponse = await fetch(`http://localhost:8088/api/lectures/classroom/${classData.id}`, {
+        console.log('🔍 Finding classroom for class:', classData.className);
+        const classroomsResponse = await fetch('http://localhost:8088/api/classrooms', {
+          method: 'GET',
+          headers: headers
+        });
+
+        if (classroomsResponse.ok) {
+          const classroomsData = await classroomsResponse.json();
+          const classrooms = classroomsData.data || classroomsData;
+
+          // Find classroom with matching name
+          const matchingClassroom = classrooms.find(classroom =>
+            classroom.name === classData.className
+          );
+
+          if (matchingClassroom) {
+            classroomId = matchingClassroom.id;
+            console.log('✅ Found matching classroom ID:', classroomId);
+          } else {
+            console.warn('⚠️ No matching classroom found for class:', classData.className);
+            // Fallback: try using class ID directly
+            classroomId = classData.id;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error finding classroom:', error);
+        // Fallback: try using class ID directly
+        classroomId = classData.id;
+      }
+
+      // Load real lectures from API using correct classroom ID
+      try {
+        console.log('🔄 Fetching lectures from:', `http://localhost:8088/api/lectures/classroom/${classroomId}`);
+        const lecturesResponse = await fetch(`http://localhost:8088/api/lectures/classroom/${classroomId}`, {
           method: 'GET',
           headers: headers
         });
@@ -271,11 +304,18 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
       'draft': { text: 'Bản nháp', color: 'bg-gray-100 text-gray-800' }
     };
     
-    const badge = badges[status] || { text: status || 'Không xác định', color: 'bg-gray-100 text-gray-800' };
-    
+    const badge = badges[status];
+
+    // Ẩn badge nếu không có status hợp lệ
+    if (!badge && (!status || status.trim() === '')) {
+      return null;
+    }
+
+    const finalBadge = badge || { text: status, color: 'bg-gray-100 text-gray-800' };
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
-        {badge.text}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${finalBadge.color}`}>
+        {finalBadge.text}
       </span>
     );
   };
@@ -824,7 +864,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                               </div>
                               
                               {/* Main Actions */}
-                              <button 
+                              {/* <button
                                 onClick={() => {
                                   setSelectedLecture(lecture);
                                   setShowLectureDetailModal(true);
@@ -832,7 +872,7 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                                 className="text-blue-500 hover:text-blue-700 text-sm font-medium px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
                               >
                                 📚 Chi tiết
-                              </button>
+                              </button> */}
                               
                               <button 
                                 onClick={() => handleEditLecture(lecture)}
@@ -857,6 +897,38 @@ const ClassDetailModal = ({ visible, classData, onCancel }) => {
                       <div className="text-4xl mb-2">🎓</div>
                       <p>Chưa có bài giảng nào</p>
                       <p className="text-sm text-gray-400 mt-2">Mỗi bài học sẽ tự động có 1 bài giảng tương ứng</p>
+
+                      {/* Manual sync button */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            console.log('🔄 Manual sync triggered for class:', classData.id);
+                            const token = localStorage.getItem('token');
+                            const response = await fetch(`http://localhost:8088/api/classes/${classData.id}/sync-to-classroom`, {
+                              method: 'PUT',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              }
+                            });
+
+                            if (response.ok) {
+                              console.log('✅ Sync successful, reloading lectures...');
+                              // Reload lectures after sync
+                              setTimeout(() => {
+                                window.location.reload();
+                              }, 1000);
+                            } else {
+                              console.error('❌ Sync failed:', response.status);
+                            }
+                          } catch (error) {
+                            console.error('❌ Sync error:', error);
+                          }
+                        }}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                      >
+                        🔄 Sync Bài giảng
+                      </button>
                     </div>
                   )}
                 </div>

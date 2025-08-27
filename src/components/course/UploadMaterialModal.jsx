@@ -27,7 +27,36 @@ const UploadMaterialModal = ({ visible, classData, onCancel, onSuccess }) => {
     setLoadingLectures(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8088/api/lectures/classroom/${classData.id}`, {
+
+      // First, find the corresponding classroom for this class
+      let classroomId = classData.id; // fallback
+      try {
+        const classroomsResponse = await fetch('http://localhost:8088/api/classrooms', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (classroomsResponse.ok) {
+          const classroomsData = await classroomsResponse.json();
+          const classrooms = classroomsData.data || classroomsData;
+
+          // Find classroom with matching name
+          const matchingClassroom = classrooms.find(classroom =>
+            classroom.name === classData.className
+          );
+
+          if (matchingClassroom) {
+            classroomId = matchingClassroom.id;
+            console.log('✅ Found matching classroom ID for lectures:', classroomId);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not find matching classroom, using class ID:', error);
+      }
+
+      const response = await fetch(`http://localhost:8088/api/lectures/classroom/${classroomId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

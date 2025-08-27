@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import classManagementService from '../../services/classManagementService';
 import { showNotification } from '../../utils/courseManagementUtils';
+import ConfirmationModal from '../common/ConfirmationModal';
+import { useConfirmation } from '../../hooks/useConfirmation';
 
 const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose }) => {
   const [state, setState] = useState({
@@ -19,6 +21,9 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
     classSchedule: null
   });
 
+  // Use confirmation hook
+  const confirmation = useConfirmation();
+
   useEffect(() => {
     if (classId) {
       loadClassStudents();
@@ -28,17 +33,23 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
   }, [classId]);
 
   const loadClassStudents = async () => {
+    console.log('🔍 [LOAD-STUDENTS] Loading students for classId:', classId);
     setState(prev => ({ ...prev, loading: { ...prev.loading, students: true } }));
     try {
       const response = await classManagementService.getClassStudents(classId);
+      console.log('🔍 [LOAD-STUDENTS] API response:', response);
+
       const students = response.data?.data || response.data || [];
+      console.log('🔍 [LOAD-STUDENTS] Parsed students:', students);
+      console.log('🔍 [LOAD-STUDENTS] Students count:', students.length);
+
       setState(prev => ({
         ...prev,
         students: Array.isArray(students) ? students : [],
         loading: { ...prev.loading, students: false }
       }));
     } catch (error) {
-      console.error('Error loading class students:', error);
+      console.error('❌ [LOAD-STUDENTS] Error loading class students:', error);
       showNotification('Lỗi tải danh sách học viên: ' + error.message, 'error');
       setState(prev => ({
         ...prev,
@@ -178,34 +189,44 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
         const student = state.allStudents.find(s => s.id.toString() === id);
         return student?.fullName || student?.name || `ID: ${id}`;
       });
-      
-      const confirmed = window.confirm(
-        `Phát hiện ${conflictStudents.length} học viên có xung đột lịch học:\n` +
-        `${conflictNames.join(', ')}\n\n` +
-        `Bạn có muốn tiếp tục thêm các học viên không có xung đột?`
-      );
-      
-      if (!confirmed) {
-        return;
-      }
-      
-      // Chỉ thêm học viên không có xung đột
-      const studentsToAdd = state.selectedStudents.filter(id => !conflicts[id]);
-      if (studentsToAdd.length === 0) {
-        showNotification('Tất cả học viên đã chọn đều có xung đột lịch học', 'warning');
-        return;
-      }
-      
-      setState(prev => ({ ...prev, selectedStudents: studentsToAdd }));
+
+      // Sử dụng confirmation modal thay vì window.confirm
+      confirmation.showConfirmation({
+        title: "⚠️ Phát hiện xung đột lịch học",
+        message: `Phát hiện ${conflictStudents.length} học viên có xung đột lịch học:\n${conflictNames.join(', ')}\n\nBạn có muốn tiếp tục thêm các học viên không có xung đột?`,
+        confirmText: "Tiếp tục thêm",
+        cancelText: "Hủy",
+        type: "warning",
+        icon: "⚠️",
+        onConfirm: () => {
+          // Chỉ thêm học viên không có xung đột
+          const studentsToAdd = state.selectedStudents.filter(id => !conflicts[id]);
+          if (studentsToAdd.length === 0) {
+            showNotification('Tất cả học viên đã chọn đều có xung đột lịch học', 'warning');
+            return;
+          }
+
+          setState(prev => ({ ...prev, selectedStudents: studentsToAdd }));
+          // Tiếp tục với enrollment process
+          performEnrollment(studentsToAdd, conflicts);
+        }
+      });
+      return; // Dừng execution ở đây, chờ user confirm
     }
 
+    // Nếu không có xung đột, thực hiện enrollment trực tiếp
+    performEnrollment(state.selectedStudents, conflicts);
+  };
+
+  // Tách enrollment logic thành function riêng
+  const performEnrollment = async (studentsToEnroll, conflicts = {}) => {
     setState(prev => ({ ...prev, loading: { ...prev.loading, enrolling: true } }));
 
     try {
-      const studentsToEnroll = state.selectedStudents.filter(id => !conflicts[id]);
-      console.log('🔍 [DEBUG] studentsToEnroll:', studentsToEnroll);
+      const finalStudentsToEnroll = studentsToEnroll.filter(id => !conflicts[id]);
+      console.log('🔍 [DEBUG] studentsToEnroll:', finalStudentsToEnroll);
 
-      const enrollPromises = studentsToEnroll.map(studentId => {
+      const enrollPromises = finalStudentsToEnroll.map(studentId => {
         console.log('🔍 [DEBUG] Enrolling student:', studentId, 'into classId:', classId);
         return classManagementService.enrollStudent(classId, studentId);
       });
@@ -214,16 +235,16 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
       const results = await Promise.all(enrollPromises);
       console.log('🔍 [DEBUG] Enrollment results:', results);
 
-      const addedCount = studentsToEnroll.length;
+      const addedCount = finalStudentsToEnroll.length;
       const conflictCount = state.selectedStudents.length - addedCount;
-      
+
       let message = `Đã thêm ${addedCount} học viên vào lớp thành công!`;
       if (conflictCount > 0) {
         message += ` (${conflictCount} học viên bị loại do xung đột lịch)`;
       }
-      
+
       showNotification(message, 'success');
-      
+
       // Reload data and close modal
       setState(prev => ({
         ...prev,
@@ -232,7 +253,7 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
         scheduleConflicts: {},
         loading: { ...prev.loading, enrolling: false }
       }));
-      
+
       loadClassStudents();
     } catch (error) {
       console.error('Error enrolling students:', error);
@@ -242,27 +263,29 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
   };
 
   const handleRemoveStudent = async (studentId, studentName) => {
-    if (!confirm(`Bạn có chắc muốn xóa học viên "${studentName}" khỏi lớp?`)) {
-      return;
-    }
+    confirmation.confirmRemove(
+      studentName,
+      async () => {
+        try {
+          // API để xóa học viên khỏi lớp
+          // BE expects DELETE /api/classrooms/{classId}/students/{studentId}
+          await fetch(`http://localhost:8088/api/classrooms/${classId}/students/${studentId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-    try {
-      // API để xóa học viên khỏi lớp
-      // BE expects DELETE /api/classrooms/{classId}/students/{studentId}
-      await fetch(`http://localhost:8088/api/classrooms/${classId}/students/${studentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+          showNotification(`Đã xóa học viên "${studentName}" khỏi lớp`, 'success');
+          loadClassStudents();
+        } catch (error) {
+          console.error('Error removing student:', error);
+          showNotification('Lỗi xóa học viên: ' + error.message, 'error');
+          throw error; // Re-throw để confirmation hook xử lý
         }
-      });
-
-      showNotification(`Đã xóa học viên "${studentName}" khỏi lớp`, 'success');
-      loadClassStudents();
-    } catch (error) {
-      console.error('Error removing student:', error);
-      showNotification('Lỗi xóa học viên: ' + error.message, 'error');
-    }
+      }
+    );
   };
 
   const handleStudentSelect = async (studentId) => {
@@ -502,6 +525,20 @@ const ClassStudentsManager = ({ classId, className, maxStudents = 30, onClose })
             </div>
           </div>
         )}
+
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={confirmation.isOpen}
+          onClose={confirmation.hideConfirmation}
+          onConfirm={confirmation.handleConfirm}
+          title={confirmation.config.title}
+          message={confirmation.config.message}
+          confirmText={confirmation.config.confirmText}
+          cancelText={confirmation.config.cancelText}
+          type={confirmation.config.type}
+          icon={confirmation.config.icon}
+          loading={confirmation.loading}
+        />
       </div>
     </div>
   );

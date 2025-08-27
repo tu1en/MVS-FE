@@ -1,35 +1,35 @@
 import {
-  CalculatorOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  EyeOutlined,
-  FileExcelOutlined,
-  FilterOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TeamOutlined
+    CalculatorOutlined,
+    CalendarOutlined,
+    DollarOutlined,
+    EyeOutlined,
+    FileExcelOutlined,
+    FilterOutlined,
+    ReloadOutlined,
+    SearchOutlined,
+    TeamOutlined
 } from '@ant-design/icons';
 import {
-  Badge,
-  Button,
-  Card,
-  Col,
-  Collapse,
-  DatePicker,
-  Divider,
-  Input,
-  message,
-  Modal,
-  Progress,
-  Row,
-  Select,
-  Slider,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip,
-  Typography
+    Badge,
+    Button,
+    Card,
+    Col,
+    Collapse,
+    DatePicker,
+    Divider,
+    Input,
+    message,
+    Modal,
+    Progress,
+    Row,
+    Select,
+    Slider,
+    Space,
+    Statistic,
+    Table,
+    Tag,
+    Tooltip,
+    Typography
 } from 'antd';
 import axios from 'axios';
 import moment from 'moment';
@@ -577,16 +577,12 @@ const PayrollManagement = () => {
       dataIndex: 'userId',
       key: 'userId',
       width: 100,
-      sorter: true,
-      sortDirections: ['ascend', 'descend'],
     },
     {
       title: 'Họ và tên',
       dataIndex: 'fullName',
       key: 'fullName',
       width: 200,
-      sorter: true,
-      sortDirections: ['ascend', 'descend'],
       render: (name) => <Text strong>{name}</Text>,
     },
     {
@@ -594,8 +590,6 @@ const PayrollManagement = () => {
       dataIndex: 'department',
       key: 'department',
       width: 150,
-      sorter: true,
-      sortDirections: ['ascend', 'descend'],
       filters: getUniqueDepartments().map(dept => ({ text: dept, value: dept })),
       onFilter: (value, record) => record.department === value,
     },
@@ -622,6 +616,8 @@ const PayrollManagement = () => {
       dataIndex: 'hourlyRate',
       key: 'hourlyRate',
       width: 150,
+      sorter: true,
+      sortDirections: ['ascend', 'descend'],
       render: (rate, record) => record.calculationMethod === 'HOURLY' ? `${Number(rate || 0).toLocaleString()} VNĐ/giờ` : 'N/A',
     },
     {
@@ -740,8 +736,6 @@ const PayrollManagement = () => {
       dataIndex: 'totalSalary',
       key: 'netSalary',
       width: 150,
-      sorter: true,
-      sortDirections: ['ascend', 'descend'],
       render: (value, record) => {
         if (record.contractType === 'TEACHER') {
           const hourlySalary = record.hourlySalary || 0;
@@ -1352,6 +1346,42 @@ const PayrollManagement = () => {
         .ant-badge-count {
           font-size: 12px;
           font-weight: 600;
+        }
+        
+        /* Bỏ background color xanh dương nhạt của dòng được chọn */
+        .ant-table-tbody > tr.ant-table-row-selected > td {
+          background-color: transparent !important;
+        }
+        .ant-table-tbody > tr.ant-table-row-selected:hover > td {
+          background-color: #f5f5f5 !important;
+        }
+        
+        /* Bỏ background color xanh dương nhạt khi hover */
+        .ant-table-tbody > tr:hover > td {
+          background-color: #f5f5f5 !important;
+        }
+        
+        /* Đảm bảo không có background color xanh dương nhạt */
+        .ant-table-tbody > tr > td {
+          background-color: transparent !important;
+        }
+        
+        /* Bỏ tất cả background color xanh dương nhạt từ Ant Design */
+        .ant-table-tbody > tr.ant-table-row-selected {
+          background-color: transparent !important;
+        }
+        
+        /* Bỏ background color khi focus */
+        .ant-table-tbody > tr:focus-within > td {
+          background-color: transparent !important;
+        }
+        
+        /* Đảm bảo các dòng có background trắng hoặc xám nhạt */
+        .ant-table-tbody > tr:nth-child(even) > td {
+          background-color: #fafafa !important;
+        }
+        .ant-table-tbody > tr:nth-child(odd) > td {
+          background-color: #ffffff !important;
         }
       `}</style>
     </div>

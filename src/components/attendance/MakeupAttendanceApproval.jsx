@@ -314,7 +314,7 @@ const MakeupAttendanceApproval = () => {
       </Title>
 
       {/* Statistics Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      {/* <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card>
             <Statistic
@@ -345,7 +345,7 @@ const MakeupAttendanceApproval = () => {
             />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       {/* Filters */}
       <Card style={{ marginBottom: '16px' }}>

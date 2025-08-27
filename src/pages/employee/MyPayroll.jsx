@@ -19,7 +19,7 @@ const MyPayroll = () => {
   // Helper function to format payroll period
   const formatPayrollPeriod = (payrollPeriod) => {
     if (!payrollPeriod) return null;
-    
+
     try {
       // Handle different formats: "2025-08", "20258", etc.
       if (typeof payrollPeriod === 'string') {
@@ -39,6 +39,22 @@ const MyPayroll = () => {
       console.warn('Error formatting payroll period:', payrollPeriod, error);
       return payrollPeriod;
     }
+  };
+
+  // Helper function to convert contract type to Vietnamese
+  const formatContractType = (contractType) => {
+    if (!contractType) return 'Chưa xác định';
+
+    const typeMap = {
+      'TEACHER': 'Giáo viên',
+      'MANAGER': 'Quản lý',
+      'ADMIN': 'Quản trị viên',
+      'STUDENT': 'Học sinh',
+      'STAFF': 'Nhân viên',
+      'ACCOUNTANT': 'Kế toán'
+    };
+
+    return typeMap[contractType.toUpperCase()] || contractType;
   };
 
   const load = async () => {
@@ -112,14 +128,14 @@ const MyPayroll = () => {
           <Card title="Thông tin tổng hợp">
             <Row gutter={16}>
               <Col span={8}><Statistic title="Số tiết dạy" value={Number(data.actualWorkingDays || 0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" tiết" /></Col>
-              <Col span={8}><Statistic title="Giờ dạy (Backend)" value={Number(data.actualWorkingHours || 0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" giờ" /></Col>
-              <Col span={8}><Statistic title="Giờ dạy (Tính lại)" valueStyle={{ color: '#52c41a' }} value={Number(data.actualWorkingDays || 0) * 1.5} formatter={(v)=>Number(v).toLocaleString()} suffix=" giờ" /></Col>
+              <Col span={8}><Statistic title="Giờ dạy" value={Number(data.actualWorkingHours || 0)} formatter={(v)=>Number(v).toLocaleString()} suffix=" giờ" /></Col>
+              {/* <Col span={8}><Statistic title="Giờ dạy (Tính lại)" valueStyle={{ color: '#52c41a' }} value={Number(data.actualWorkingDays || 0) * 1.5} formatter={(v)=>Number(v).toLocaleString()} suffix=" giờ" /></Col> */}
             </Row>
           </Card>
 
           <Card title="Chi tiết">
             <Descriptions column={2} bordered>
-              <Descriptions.Item label="Loại HĐ">{data.contractType || data.contract?.type || 'Chưa xác định'}</Descriptions.Item>
+              <Descriptions.Item label="Loại HĐ">{formatContractType(data.contractType || data.contract?.type)}</Descriptions.Item>
               <Descriptions.Item label="Kỳ lương">{formatPayrollPeriod(data.payrollPeriod) || period.format('MM/YYYY')}</Descriptions.Item>
               <Descriptions.Item label="Số tiết chuẩn">{data.totalWorkingDays || 0}</Descriptions.Item>
               <Descriptions.Item label="Số tiết thực tế">{data.actualWorkingDays || 0}</Descriptions.Item>
@@ -130,31 +146,15 @@ const MyPayroll = () => {
             
             {/* Debug section to show raw data */}
             <Divider />
-            <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', color: '#666' }}>🔍 Debug - Dữ liệu thô từ Backend:</h4>
-              <div style={{ fontSize: '12px', color: '#666' }}>
-                <div>actualWorkingDays: {data.actualWorkingDays || 'null'}</div>
-                <div>actualWorkingHours: {data.actualWorkingHours || 'null'}</div>
-                <div>weekdayWorkingHours: {data.weekdayWorkingHours || 'null'}</div>
-                <div>weekendWorkingHours: {data.weekendWorkingHours || 'null'}</div>
-                <div>totalWorkingDays: {data.totalWorkingDays || 'null'}</div>
-                <div>standardMonthlyHours: {data.standardMonthlyHours || 'null'}</div>
-              </div>
-              
-              {/* Note about the data issue */}
-              <div style={{ marginTop: '12px', padding: '8px', background: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px' }}>
-                <strong>⚠️ Vấn đề dữ liệu:</strong><br/>
-                Backend trả về: {data.actualWorkingDays || 0} tiết = {data.actualWorkingHours || 0} giờ<br/>
-                <strong>Logic đúng:</strong> {data.actualWorkingDays || 0} tiết × 1.5 = {(data.actualWorkingDays || 0) * 1.5} giờ<br/>
-                <em>Có vẻ backend đang tính sai đơn vị hoặc logic</em>
-              </div>
-            </div>
-            
-            <Divider />
+      {/* 
+      
+      */}
             {/* <Alert type="info" message="Số liệu tính theo TopCV từ hợp đồng và chấm công giảng dạy" /> */}
           </Card>
         </Space>
-      ) : (
+      
+    
+    ) : (
         <Alert type="warning" message="Không có dữ liệu kỳ lương" />
       )}
 

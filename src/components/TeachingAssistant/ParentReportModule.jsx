@@ -149,7 +149,7 @@ const ParentReportModule = () => {
           email: 'a@student.com', 
           studentCode: 'SV001',
           parentName: 'Trần Văn B',
-          parentPhone: '0901234567',
+          parentPhone: '0971335989',
           parentEmail: 'parent1@email.com'
         },
         { 

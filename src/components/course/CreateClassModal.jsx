@@ -53,9 +53,65 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     lastTeacherQuery: null // Cache key cho teacher query
   });
 
+  // Validate xem ngày bắt đầu có hợp lý với lịch học không
+  const validateStartDateWithScheduleDays = (startDate, selectedDays) => {
+    if (!startDate || !selectedDays.length) return { isValid: true };
+
+    const start = new Date(startDate);
+    const startDayOfWeek = start.getDay(); // 0=CN, 1=T2, 2=T3, ...
+
+    // Mapping từ UI days sang JS days
+    const dayMapping = {
+      'monday': 1, 'tuesday': 2, 'wednesday': 3,
+      'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0
+    };
+
+    const targetDays = selectedDays.map(day => dayMapping[day]).filter(d => d !== undefined);
+    const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
+    // Nếu ngày bắt đầu trùng với một trong các ngày học → OK
+    if (targetDays.includes(startDayOfWeek)) {
+      return { isValid: true };
+    }
+
+    // Nếu không trùng, tính xem buổi học đầu tiên sẽ diễn ra khi nào
+    let currentDate = new Date(start);
+    let daysToFirstLesson = 0;
+    const maxDaysToCheck = 7; // Chỉ tìm trong vòng 1 tuần
+
+    while (daysToFirstLesson < maxDaysToCheck) {
+      const dayOfWeek = currentDate.getDay();
+      if (targetDays.includes(dayOfWeek)) {
+        // Tìm thấy ngày học đầu tiên
+        const firstLessonDate = currentDate.toLocaleDateString('vi-VN');
+        return {
+          isValid: true,
+          isWarning: true,
+          message: `Ngày bắt đầu (${dayNames[startDayOfWeek]}) không trùng với lịch học. Buổi học đầu tiên sẽ diễn ra vào ${dayNames[dayOfWeek]} (${firstLessonDate}).`
+        };
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+      daysToFirstLesson++;
+    }
+
+    // Nếu không tìm thấy ngày học nào trong 1 tuần → Lỗi
+    return {
+      isValid: false,
+      message: `Không thể xác định buổi học đầu tiên. Vui lòng kiểm tra lại lịch học đã chọn.`
+    };
+  };
+
   // Tự tính ngày kết thúc dự kiến dựa vào số bài học và lịch học trong tuần
   const calculateAutoEndDate = (startDateStr, selectedDays, templateObj) => {
     if (!startDateStr || !selectedDays || selectedDays.length === 0) return '';
+
+    // Validate trước khi tính toán để tránh infinite loop
+    const validation = validateStartDateWithScheduleDays(startDateStr, selectedDays);
+    if (!validation.isValid) {
+      console.warn('Start date validation failed:', validation.message);
+      return '';
+    }
+
     try {
       // Lấy số buổi học từ template
       const lessonsCount = (templateObj?.lessons?.length || 0) > 0
@@ -69,11 +125,18 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
       let scheduledLessons = 0;
 
       // Mapping ngày trong tuần: 0=CN, 1=T2, 2=T3, 3=T4, 4=T5, 5=T6, 6=T7
-      const dayMapping = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 0 }; // UI days to JS days
+      const dayMapping = {
+        'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0
+      };
       const targetDays = selectedDays.map(day => dayMapping[day]).filter(d => d !== undefined);
 
+      // Thêm safety check để tránh infinite loop
+      let maxIterations = 365; // Tối đa 1 năm
+      let iterations = 0;
+
       // Tìm ngày kết thúc bằng cách đếm các buổi học
-      while (scheduledLessons < lessonsCount) {
+      while (scheduledLessons < lessonsCount && iterations < maxIterations) {
         const dayOfWeek = currentDate.getDay();
         if (targetDays.includes(dayOfWeek)) {
           scheduledLessons++;
@@ -81,6 +144,12 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
         if (scheduledLessons < lessonsCount) {
           currentDate.setDate(currentDate.getDate() + 1);
         }
+        iterations++;
+      }
+
+      if (iterations >= maxIterations) {
+        console.warn('Max iterations reached in calculateAutoEndDate');
+        return '';
       }
 
       const yyyy = currentDate.getFullYear();
@@ -93,9 +162,24 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     }
   };
 
+  // State để lưu validation message và type
+  const [scheduleValidation, setScheduleValidation] = useState({ message: '', type: '' });
+
   // Re-calc endDate khi startDate hoặc ngày trong tuần thay đổi
   useEffect(() => {
     if (!formData.startDate) return;
+
+    // Kiểm tra validation trước
+    const validation = validateStartDateWithScheduleDays(formData.startDate, formData.schedule.days);
+    if (!validation.isValid) {
+      setScheduleValidation({ message: validation.message, type: 'error' });
+      return;
+    } else if (validation.isWarning) {
+      setScheduleValidation({ message: validation.message, type: 'warning' });
+    } else {
+      setScheduleValidation({ message: '', type: '' });
+    }
+
     const autoEnd = calculateAutoEndDate(formData.startDate, formData.schedule.days, template);
     if (autoEnd && autoEnd !== formData.endDate) {
       setFormData(prev => ({ ...prev, endDate: autoEnd }));
@@ -115,7 +199,16 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
   // Navigation between steps
   const goToStep = (step) => {
+    console.log('🔄 [DEBUG] goToStep called:', step);
     setState(prev => ({ ...prev, activeStep: step }));
+
+    // Trigger immediate teacher loading when going to step 3
+    if (step === 3 && visible) {
+      console.log('🔄 [DEBUG] Triggering immediate teacher load for step 3');
+      setTimeout(() => {
+        loadAvailableTeachers();
+      }, 100); // Small delay to ensure state is updated
+    }
   };
 
   // Debounced conflict check
@@ -155,13 +248,22 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
   // Kiểm tra điều kiện đủ để sinh/lọc lịch — khai báo sớm để tránh TDZ
   const isScheduleReady = useCallback(() => {
-    return (
+    const ready = (
       formData.startDate &&
       formData.endDate &&
       formData.schedule?.days?.length > 0 &&
       formData.schedule?.startTime &&
       formData.schedule?.endTime
     );
+    console.log('🔍 [DEBUG] isScheduleReady check:', {
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      days: formData.schedule?.days,
+      startTime: formData.schedule?.startTime,
+      endTime: formData.schedule?.endTime,
+      result: ready
+    });
+    return ready;
   }, [formData.startDate, formData.endDate, formData.schedule]);
 
   // Tạo danh sách tiết học tự động dựa trên lịch tuần ở bước 1
@@ -237,7 +339,18 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
   // Tải giáo viên khả dụng theo lịch và môn với caching
   const loadAvailableTeachers = async () => {
+    console.log('🔍 [DEBUG] loadAvailableTeachers called');
+    console.log('🔍 [DEBUG] isScheduleReady():', isScheduleReady());
+    console.log('🔍 [DEBUG] formData:', {
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      schedule: formData.schedule,
+      educationLevel: formData.educationLevel
+    });
+    console.log('🔍 [DEBUG] template:', template);
+
     if (!isScheduleReady()) {
+      console.log('❌ [DEBUG] Schedule not ready, clearing teachers');
       setState(prev => ({ ...prev, teachers: [] }));
       setFormData(prev => ({ ...prev, teacherId: null }));
       return;
@@ -290,8 +403,23 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
         startDate: formData.startDate,
         endDate: formData.endDate
       };
+
+      console.log('📤 [DEBUG] Sending teacher filter request:');
+      console.log('📤 [DEBUG] Raw template subject:', template.subject || template?.name);
+      console.log('📤 [DEBUG] Normalized subject:', payload.subject);
+      console.log('📤 [DEBUG] Education level:', payload.educationLevel);
+      console.log('📤 [DEBUG] Schedule JSON:', payload.schedule);
+      console.log('📤 [DEBUG] Date range:', payload.startDate, 'to', payload.endDate);
+      console.log('📤 [DEBUG] Full payload:', payload);
+
       const response = await classManagementService.getAvailableTeachers(payload);
       const teachersData = response.data?.data || response.data || [];
+
+      console.log('📥 [DEBUG] Teacher filter response:');
+      console.log('📥 [DEBUG] Raw response:', response);
+      console.log('📥 [DEBUG] Teachers data:', teachersData);
+      console.log('📥 [DEBUG] Teachers count:', Array.isArray(teachersData) ? teachersData.length : 'Not array');
+
       setState(prev => ({
         ...prev,
         teachers: Array.isArray(teachersData) ? teachersData : [],
@@ -302,7 +430,12 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
         setFormData(prev => ({ ...prev, teacherId: null }));
       }
     } catch (error) {
-      console.error('Error loading available teachers:', error);
+      console.error('❌ [DEBUG] Error loading available teachers:', error);
+      console.error('❌ [DEBUG] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       setState(prev => ({
         ...prev,
         teachers: [],
@@ -312,14 +445,15 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
     }
   };
 
-  // Debounced teacher loading - chỉ tải khi user ngừng thay đổi trong 2 giây
+  // Debounced teacher loading - giảm delay để responsive hơn
   const debouncedTeacherLoad = useCallback(
     debounce(() => {
       if (!visible) return;
       if (state.activeStep === 3 || state.activeStep === 1) {
+        console.log('🔄 [DEBUG] Debounced teacher load triggered');
         loadAvailableTeachers();
       }
-    }, 2000), // Tăng delay lên 2 giây để tránh gọi liên tục
+    }, 500), // Giảm delay xuống 500ms để responsive hơn
     []
   );
 
@@ -405,9 +539,14 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
   // Handle form submission
   const handleSubmit = async () => {
-    // Validate form 
+    console.log('🔍 [CREATE-CLASS] Starting class creation process');
+    console.log('🔍 [CREATE-CLASS] Template:', template);
+    console.log('🔍 [CREATE-CLASS] Form data:', formData);
+
+    // Validate form
     const validation = validateClassForm(formData);
     if (Object.keys(validation).length > 0) {
+      console.log('❌ [CREATE-CLASS] Validation failed:', validation);
       setFormData(prev => ({ ...prev, validation }));
       showNotification('Vui lòng kiểm tra lại thông tin', 'warning');
       return;
@@ -415,11 +554,15 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
 
     // Check conflicts and confirm if needed
     if (state.conflicts.length > 0) {
+      console.log('⚠️ [CREATE-CLASS] Schedule conflicts detected:', state.conflicts);
       const confirmed = await showConfirmDialog(
         'Phát hiện xung đột lịch học',
         `Có ${state.conflicts.length} xung đột lịch được phát hiện. Bạn có muốn tiếp tục tạo lớp học?`
       );
-      if (!confirmed) return;
+      if (!confirmed) {
+        console.log('❌ [CREATE-CLASS] User cancelled due to conflicts');
+        return;
+      }
     }
 
     setState(prev => ({ ...prev, loading: { ...prev.loading, submit: true } }));
@@ -441,19 +584,43 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
         createdBy: getCurrentUserId()
       };
 
+      console.log('📤 [CREATE-CLASS] Sending class data to backend:', classData);
+      console.log('📤 [CREATE-CLASS] API endpoint: createClass');
+
       const response = await classManagementService.createClass(classData);
-      
+
+      console.log('✅ [CREATE-CLASS] Backend response:', response);
+      console.log('✅ [CREATE-CLASS] Created class data:', response.data);
+
+      // Check if classroom was created after a delay
+      setTimeout(async () => {
+        console.log('🔍 [CREATE-CLASS] Checking if classroom was created...');
+        try {
+          const classroom = await classManagementService.checkClassroomForClass(formData.className);
+          if (classroom) {
+            console.log('✅ [CREATE-CLASS] Classroom sync successful:', classroom);
+          } else {
+            console.log('⚠️ [CREATE-CLASS] Classroom not found - sync may have failed');
+          }
+        } catch (error) {
+          console.error('❌ [CREATE-CLASS] Error checking classroom:', error);
+        }
+      }, 3000);
+
       showNotification(`Tạo lớp học "${formData.className}" thành công!`, 'success');
-      
+
       // Reset form and close modal
       handleReset();
       onSuccess(response.data);
-      
+
     } catch (error) {
-      console.error('Create class error:', error);
+      console.error('❌ [CREATE-CLASS] Error creating class:', error);
+      console.error('❌ [CREATE-CLASS] Error response:', error.response);
+      console.error('❌ [CREATE-CLASS] Error message:', error.message);
       showNotification('Lỗi tạo lớp học: ' + (error.response?.data?.message || error.message), 'error');
     } finally {
       setState(prev => ({ ...prev, loading: { ...prev.loading, submit: false } }));
+      console.log('🔄 [CREATE-CLASS] Class creation process completed');
     }
   };
 
@@ -769,6 +936,28 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                   {formData.validation.scheduleDays && (
                     <p className="mt-1 text-sm text-red-600">{formData.validation.scheduleDays}</p>
                   )}
+                  {scheduleValidation.message && (
+                    <div className={`mt-2 p-3 rounded-md ${
+                      scheduleValidation.type === 'error'
+                        ? 'bg-red-50 border border-red-200'
+                        : 'bg-yellow-50 border border-yellow-200'
+                    }`}>
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <span className={scheduleValidation.type === 'error' ? 'text-red-400' : 'text-yellow-400'}>
+                            {scheduleValidation.type === 'error' ? '❌' : '⚠️'}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <p className={`text-sm ${
+                            scheduleValidation.type === 'error' ? 'text-red-800' : 'text-yellow-800'
+                          }`}>
+                            {scheduleValidation.message}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Time Range */}
@@ -833,7 +1022,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                   Cài đặt nâng cao
                 </h4>
                 <div className="space-y-3">
-                  <label className="flex items-center">
+                {/*   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={formData.settings.allowLateEnrollment}
@@ -851,7 +1040,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                       className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm">Yêu cầu duyệt khi đăng ký</span>
-                  </label>
+                  </label> */}
 
                   <label className="flex items-center">
                     <input
@@ -869,7 +1058,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
             {/* Sidebar - Template Info & Preview */}
             <div className="space-y-6">
               {/* Template Information */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    {/*           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-900 mb-3 flex items-center">
                   <span className="mr-2">📚</span>
                   Template: {template.name}
@@ -888,7 +1077,7 @@ const CreateClassModal = ({ visible, template, onCancel, onSuccess }) => {
                     <span className="font-medium">{template.subject || 'N/A'}</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Schedule Preview */}
               {(formData.schedule.days.length > 0 && formData.schedule.startTime && formData.schedule.endTime) && (

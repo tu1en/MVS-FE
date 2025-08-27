@@ -16,7 +16,8 @@ import {
   Tooltip,
   Empty,
   Modal,
-  Divider
+  Divider,
+  Radio
 } from 'antd';
 import {
   CalendarOutlined,
@@ -27,7 +28,9 @@ import {
   InfoCircleOutlined,
   ReloadOutlined,
   LeftOutlined,
-  RightOutlined
+  RightOutlined,
+  AppstoreOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -52,9 +55,10 @@ const ParentSchedule = () => {
   const [selectedChild, setSelectedChild] = useState(null);
   const [scheduleData, setScheduleData] = useState([]);
   const [examData, setExamData] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(moment().startOf('day'));
+  const [selectedDate, setSelectedDate] = useState(moment());
   const [eventDetailVisible, setEventDetailVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [viewMode, setViewMode] = useState('month'); // 'month' or 'week'
 
   useEffect(() => {
     loadChildren();
@@ -65,7 +69,7 @@ const ParentSchedule = () => {
       loadScheduleData();
       loadExamData();
     }
-  }, [selectedChild, selectedDate]);
+  }, [selectedChild, selectedDate, viewMode]);
 
   const loadChildren = async () => {
     try {
@@ -88,15 +92,21 @@ const ParentSchedule = () => {
 
     try {
       setLoading(true);
-      
-      // Get schedule for the selected month
-      const startOfMonth = selectedDate.clone().startOf('month');
-      const endOfMonth = selectedDate.clone().endOf('month');
-      
+
+      // Get schedule for the selected period (month or week)
+      let startDate, endDate;
+      if (viewMode === 'week') {
+        startDate = selectedDate.clone().startOf('week');
+        endDate = selectedDate.clone().endOf('week');
+      } else {
+        startDate = selectedDate.clone().startOf('month');
+        endDate = selectedDate.clone().endOf('month');
+      }
+
       const response = await api.get(`/parent/children/${selectedChild.studentId}/schedule`, {
         params: {
-          startDate: startOfMonth.format('YYYY-MM-DD'),
-          endDate: endOfMonth.format('YYYY-MM-DD')
+          startDate: startDate.format('YYYY-MM-DD'),
+          endDate: endDate.format('YYYY-MM-DD')
         }
       });
       setScheduleData(response.data || []);
@@ -112,16 +122,23 @@ const ParentSchedule = () => {
     if (!selectedChild) return;
 
     try {
-      const startOfMonth = selectedDate.clone().startOf('month');
-      const endOfMonth = selectedDate.clone().endOf('month');
-      
+      // Get exam data for the selected period (month or week)
+      let startDate, endDate;
+      if (viewMode === 'week') {
+        startDate = selectedDate.clone().startOf('week');
+        endDate = selectedDate.clone().endOf('week');
+      } else {
+        startDate = selectedDate.clone().startOf('month');
+        endDate = selectedDate.clone().endOf('month');
+      }
+
       const response = await api.get(`/parent/children/${selectedChild.studentId}/exams`, {
         params: {
-          startDate: startOfMonth.format('YYYY-MM-DD'),
-          endDate: endOfMonth.format('YYYY-MM-DD')
+          startDate: startDate.format('YYYY-MM-DD'),
+          endDate: endDate.format('YYYY-MM-DD')
         }
       });
-      
+
       setExamData(response.data || []);
     } catch (error) {
       console.error('Error loading exam data:', error);
@@ -198,6 +215,7 @@ const ParentSchedule = () => {
 
 
   const onPanelChange = (value, mode) => {
+    // Chỉ cho phép thay đổi ngày, không cho phép thay đổi mode
     setSelectedDate(value);
   };
 
@@ -210,15 +228,136 @@ const ParentSchedule = () => {
     }
   };
 
+  // Render week view
+  const renderWeekView = () => {
+    const startOfWeek = selectedDate.clone().startOf('week');
+    const weekDays = [];
+
+    for (let i = 0; i < 7; i++) {
+      const day = startOfWeek.clone().add(i, 'days');
+      const dayEvents = getEventsForDate(day);
+      const isToday = day.isSame(moment(), 'day');
+      const isSelected = day.isSame(selectedDate, 'day');
+
+      weekDays.push({
+        date: day,
+        events: dayEvents,
+        isToday,
+        isSelected
+      });
+    }
+
+    return (
+      <div style={{ padding: '16px' }}>
+        {/* Week header */}
+        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+          <Text strong style={{ fontSize: '14px', color: '#666' }}>
+            {startOfWeek.format('DD/MM')} - {startOfWeek.clone().add(6, 'days').format('DD/MM/YYYY')}
+          </Text>
+        </div>
+
+        <Row gutter={[4, 4]}>
+          {weekDays.map((dayData, index) => (
+            <Col key={index} xs={24} sm={12} md={8} lg={24/7} style={{ minHeight: '300px' }}>
+              <div
+                style={{
+                  border: dayData.isToday ? '2px solid #1890ff' :
+                          dayData.isSelected ? '2px solid #52c41a' : '1px solid #d9d9d9',
+                  borderRadius: '6px',
+                  backgroundColor: dayData.isToday ? '#f0f8ff' :
+                                  dayData.isSelected ? '#f6ffed' : '#fff',
+                  height: '100%',
+                  minHeight: '280px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => setSelectedDate(dayData.date)}
+              >
+                {/* Day header */}
+                <div
+                  style={{
+                    padding: '8px',
+                    borderBottom: '1px solid #f0f0f0',
+                    textAlign: 'center',
+                    backgroundColor: dayData.isToday ? '#e6f7ff' :
+                                    dayData.isSelected ? '#f0f9ff' : '#fafafa'
+                  }}
+                >
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {dayData.date.format('ddd')}
+                  </div>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: dayData.isToday || dayData.isSelected ? 'bold' : 'normal',
+                    color: dayData.isToday ? '#1890ff' :
+                           dayData.isSelected ? '#52c41a' : '#000'
+                  }}>
+                    {dayData.date.format('DD')}
+                  </div>
+                </div>
+
+                {/* Events */}
+                <div style={{ padding: '4px', height: 'calc(100% - 60px)', overflow: 'hidden' }}>
+                  {dayData.events.slice(0, 4).map((event, eventIndex) => (
+                    <div
+                      key={eventIndex}
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 4px',
+                        margin: '2px 0',
+                        borderRadius: '3px',
+                        backgroundColor: getEventTypeColor(event) === 'red' ? '#ffebee' :
+                                       getEventTypeColor(event) === 'blue' ? '#e3f2fd' : '#f3e5f5',
+                        color: getEventTypeColor(event) === 'red' ? '#c62828' :
+                               getEventTypeColor(event) === 'blue' ? '#1565c0' : '#7b1fa2',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Ngăn click bubble lên day container
+                        setSelectedEvent(event);
+                        setEventDetailVisible(true);
+                      }}
+                    >
+                      {getEventTypeIcon(event)} {event.title || event.subject || event.examName}
+                    </div>
+                  ))}
+                  {dayData.events.length > 4 && (
+                    <div style={{ fontSize: '9px', color: '#666', textAlign: 'center', marginTop: '4px' }}>
+                      +{dayData.events.length - 4} khác
+                    </div>
+                  )}
+                  {dayData.events.length === 0 && (
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#ccc',
+                      textAlign: 'center',
+                      marginTop: '20px',
+                      fontStyle: 'italic'
+                    }}>
+                      Không có lịch
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </div>
+    );
+  };
+
   const renderTodaySchedule = () => {
     const todayEvents = getEventsForDate(moment());
     const selectedDateEvents = getEventsForDate(selectedDate);
     const isToday = selectedDate.isSame(moment(), 'day');
     const displayEvents = isToday ? todayEvents : selectedDateEvents;
-    
+
     if (displayEvents.length === 0) {
       return (
-        <Empty 
+        <Empty
           description={isToday ? "Không có lịch học hôm nay" : `Không có lịch học ngày ${selectedDate.format('DD/MM/YYYY')}`}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
@@ -242,7 +381,7 @@ const ParentSchedule = () => {
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
-                  backgroundColor: getEventTypeColor(event) === 'red' ? '#ffcdd2' : 
+                  backgroundColor: getEventTypeColor(event) === 'red' ? '#ffcdd2' :
                                   getEventTypeColor(event) === 'blue' ? '#bbdefb' : '#e1bee7',
                   display: 'flex',
                   alignItems: 'center',
@@ -444,40 +583,59 @@ const ParentSchedule = () => {
         <Row gutter={[16, 16]}>
           {/* Calendar */}
           <Col xs={24} lg={16}>
-            <Card 
+            <Card
               title={
                 <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                   <span>{`Lịch học của ${selectedChild.student?.fullName}`}</span>
                   <Space>
-                    <Button 
+                    {/* View Mode Toggle */}
+                    <Radio.Group
+                      value={viewMode}
+                      onChange={(e) => setViewMode(e.target.value)}
+                      size="small"
+                      style={{ marginRight: '8px' }}
+                    >
+                      <Radio.Button value="month">
+                        <AppstoreOutlined /> Tháng
+                      </Radio.Button>
+                      <Radio.Button value="week">
+                        <UnorderedListOutlined /> Tuần
+                      </Radio.Button>
+                    </Radio.Group>
+
+                    <Button
                       size="small"
                       icon={<LeftOutlined />}
                       onClick={() => {
-                        const prevMonth = selectedDate.clone().subtract(1, 'month');
-                        setSelectedDate(prevMonth);
+                        const prev = viewMode === 'week'
+                          ? selectedDate.clone().subtract(1, 'week')
+                          : selectedDate.clone().subtract(1, 'month');
+                        setSelectedDate(prev);
                       }}
                     >
-                      Tháng trước
+                      {viewMode === 'week' ? 'Tuần trước' : 'Tháng trước'}
                     </Button>
-                    <Button 
+                    <Button
                       size="small"
                       type="primary"
                       onClick={() => {
-                        const today = moment().startOf('day');
+                        const today = moment();
                         setSelectedDate(today);
                       }}
                     >
                       Hôm nay
                     </Button>
-                    <Button 
+                    <Button
                       size="small"
                       icon={<RightOutlined />}
                       onClick={() => {
-                        const nextMonth = selectedDate.clone().add(1, 'month');
-                        setSelectedDate(nextMonth);
+                        const next = viewMode === 'week'
+                          ? selectedDate.clone().add(1, 'week')
+                          : selectedDate.clone().add(1, 'month');
+                        setSelectedDate(next);
                       }}
                     >
-                      Tháng sau
+                      {viewMode === 'week' ? 'Tuần sau' : 'Tháng sau'}
                     </Button>
                   </Space>
                 </Space>
@@ -486,17 +644,32 @@ const ParentSchedule = () => {
             >
               <div style={{ marginBottom: '12px', textAlign: 'center' }}>
                 <Text strong style={{ fontSize: '16px' }}>
-                  {selectedDate.format('MMMM YYYY')}
+                  {viewMode === 'week'
+                    ? `Tuần ${selectedDate.clone().startOf('week').format('DD/MM')} - ${selectedDate.clone().endOf('week').format('DD/MM/YYYY')}`
+                    : `Tháng ${selectedDate.format('MM/YYYY')}`
+                  }
                 </Text>
               </div>
-              <Calendar
-                dateCellRender={dateCellRender}
-                onPanelChange={onPanelChange}
-                onSelect={onSelect}
-                value={selectedDate}
-                mode="month"
-                style={{ minHeight: '400px' }}
-              />
+
+              {viewMode === 'month' ? (
+                <div>
+                  <Calendar
+                    dateCellRender={dateCellRender}
+                    onPanelChange={(value) => {
+                      setSelectedDate(value);
+                    }}
+                    onSelect={onSelect}
+                    value={selectedDate}
+                    mode="month"
+                    validRange={[moment().subtract(2, 'years'), moment().add(2, 'years')]}
+                    headerRender={() => null}
+                    disabledDate={false}
+                    style={{ minHeight: '400px' }}
+                  />
+                </div>
+              ) : (
+                renderWeekView()
+              )}
             </Card>
           </Col>
 
@@ -524,17 +697,20 @@ const ParentSchedule = () => {
             </Card>
 
             {/* Quick Stats */}
-            <Card 
-              title="Thống kê tuần này"
+            <Card
+              title={`Thống kê ${viewMode === 'week' ? 'tuần này' : 'tháng này'}`}
               style={{ marginTop: '16px' }}
             >
               <Row gutter={[8, 8]}>
                 <Col span={12}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
-                      {scheduleData.filter(event => 
-                        moment(event.date).isSame(moment(), 'week')
-                      ).length}
+                      {scheduleData.filter(event => {
+                        const eventDate = moment(event.date);
+                        return viewMode === 'week'
+                          ? eventDate.isSame(selectedDate, 'week')
+                          : eventDate.isSame(selectedDate, 'month');
+                      }).length}
                     </div>
                     <div style={{ fontSize: '12px', color: '#666' }}>Tiết học</div>
                   </div>
@@ -542,9 +718,12 @@ const ParentSchedule = () => {
                 <Col span={12}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f5222d' }}>
-                      {examData.filter(exam => 
-                        moment(exam.examDate).isSame(moment(), 'week')
-                      ).length}
+                      {examData.filter(exam => {
+                        const examDate = moment(exam.examDate);
+                        return viewMode === 'week'
+                          ? examDate.isSame(selectedDate, 'week')
+                          : examDate.isSame(selectedDate, 'month');
+                      }).length}
                     </div>
                     <div style={{ fontSize: '12px', color: '#666' }}>Kiểm tra</div>
                   </div>

@@ -3,7 +3,7 @@
  */
 const API_CONFIG = {
   // Base URL for API requests - using proxy in development
-  BASE_URL: "http://localhost:8888/api",
+  BASE_URL: "http://localhost:8088/api",
 
   // Endpoints configuration
   ENDPOINTS: {

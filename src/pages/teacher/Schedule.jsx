@@ -75,6 +75,49 @@ const TeacherSchedule = () => {
             console.log(`🔍 Debug schedule - ID: ${schedule.id}, Date: ${scheduleDate}, StartDatetime: ${schedule.startDatetime}, Title: ${schedule.title}`);
           }
         });
+
+        // 🔍 DEBUG: Check for overlapping schedules
+        console.log('🔍 [SCHEDULE-DEBUG] Checking for overlapping schedules...');
+        const conflicts = [];
+        for (let i = 0; i < formattedSchedules.length; i++) {
+          for (let j = i + 1; j < formattedSchedules.length; j++) {
+            const schedule1 = formattedSchedules[i];
+            const schedule2 = formattedSchedules[j];
+
+            const start1 = dayjs(schedule1.startDatetime);
+            const end1 = dayjs(schedule1.endDatetime);
+            const start2 = dayjs(schedule2.startDatetime);
+            const end2 = dayjs(schedule2.endDatetime);
+
+            // Check if schedules overlap
+            if (start1.isBefore(end2) && start2.isBefore(end1)) {
+              conflicts.push({
+                schedule1: {
+                  id: schedule1.id,
+                  title: schedule1.title,
+                  time: `${start1.format('YYYY-MM-DD HH:mm')} - ${end1.format('HH:mm')}`
+                },
+                schedule2: {
+                  id: schedule2.id,
+                  title: schedule2.title,
+                  time: `${start2.format('YYYY-MM-DD HH:mm')} - ${end2.format('HH:mm')}`
+                }
+              });
+            }
+          }
+        }
+
+        if (conflicts.length > 0) {
+          console.error('❌ [SCHEDULE-CONFLICT] Found overlapping schedules:', conflicts);
+          conflicts.forEach((conflict, index) => {
+            console.error(`❌ Conflict ${index + 1}:`);
+            console.error(`   Schedule 1: ${conflict.schedule1.title} (${conflict.schedule1.time})`);
+            console.error(`   Schedule 2: ${conflict.schedule2.title} (${conflict.schedule2.time})`);
+          });
+        } else {
+          console.log('✅ [SCHEDULE-DEBUG] No overlapping schedules found');
+        }
+
         setSchedules(formattedSchedules);
       } else {
         console.error('Expected array but got:', typeof response.data);

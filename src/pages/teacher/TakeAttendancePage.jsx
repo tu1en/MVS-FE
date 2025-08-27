@@ -500,7 +500,7 @@ const TakeAttendancePage = () => {
             </h2>
             
             {/* Debug info để kiểm tra */}
-            <div className="bg-gray-100 p-3 rounded mb-4">
+            {/* <div className="bg-gray-100 p-3 rounded mb-4">
                 <details>
                     <summary className="cursor-pointer font-bold">Debug Info (Click để mở)</summary>
                     <div className="mt-2 text-sm">
@@ -531,7 +531,7 @@ const TakeAttendancePage = () => {
                         </ul>
                     </div>
                 </details>
-            </div>
+            </div> */}
             
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -605,7 +605,7 @@ const TakeAttendancePage = () => {
                                     Điểm danh lại
                                 </button>
                             )}
-                            {attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' && attendanceStatus.canCreateMakeupRequest && (
+                            {attendanceStatus.overallStatus === 'NEEDS_MAKEUP_REQUEST' && (
                                 <button
                                     onClick={() => setShowMakeupRequestForm(true)}
                                     className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm"
