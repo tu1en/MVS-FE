@@ -1199,8 +1199,8 @@ const RecruitmentManagement = () => {
 
       // Kiểm tra nếu là PART_TIME thì phải có lương theo giờ
       if (interview.contractType === 'PART_TIME') {
-        if (!interview.hourlyRate || interview.hourlyRate < 23800) {
-          message.error('Vui lòng nhập lương theo giờ (tối thiểu 23,800 VNĐ/giờ) trước khi duyệt ứng viên!');
+        if (!interview.hourlyRate || interview.hourlyRate < 20000) {
+          message.error('Vui lòng nhập lương theo giờ (tối thiểu 20,000 VNĐ/giờ) trước khi duyệt ứng viên!');
           return;
         }
       }
