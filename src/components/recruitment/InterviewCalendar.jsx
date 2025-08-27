@@ -76,8 +76,10 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
 
   // Chuyển đổi interviews thành events cho calendar
   useEffect(() => {
-    // Lọc bỏ các lịch phỏng vấn có status REJECTED (không hiển thị trên calendar)
-    const validInterviews = interviews.filter(interview => interview.status !== 'REJECTED');
+    // Ẩn hoàn toàn các lịch đã duyệt/đã chấp nhận/đã hoàn thành và bị từ chối khỏi calendar
+    const validInterviews = interviews.filter(interview => 
+      !['REJECTED', 'APPROVED', 'ACCEPTED', 'DONE', 'COMPLETED'].includes(interview.status)
+    );
     
     const calendarEvents = validInterviews.map(interview => ({
       id: interview.id,
@@ -106,6 +108,8 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
         return '#faad14';
       case 'DONE':
         return '#52c41a';
+      case 'COMPLETED':
+        return '#52c41a';
       case 'ACCEPTED':
         return '#722ed1';
       case 'REJECTED':
@@ -127,10 +131,11 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
-             // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
-       if (event.extendedProps?.interview?.status === 'DONE') {
-         return false;
-       }
+      // Bỏ qua events đã duyệt/đã chấp nhận/đã hoàn thành/đã từ chối - cho phép overlap
+      const st = event.extendedProps?.interview?.status;
+      if (st && ['DONE', 'COMPLETED', 'ACCEPTED', 'APPROVED', 'REJECTED'].includes(st)) {
+        return false;
+      }
       
       return (
         (start < eventEnd && end > eventStart) ||
@@ -158,6 +163,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       
       // Không cho phép kéo thả lịch đã hoàn thành/đã duyệt cuối cùng
       if (event.extendedProps?.interview?.status === 'DONE' || 
+          event.extendedProps?.interview?.status === 'COMPLETED' ||
           event.extendedProps?.interview?.status === 'ACCEPTED' ||
           event.extendedProps?.interview?.status === 'APPROVED') {
         message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã duyệt!');
@@ -230,8 +236,9 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
           return false;
         }
         
-        // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
-        if (e.extendedProps?.interview?.status === 'DONE') {
+        // Bỏ qua events đã duyệt/đã chấp nhận/đã hoàn thành/đã từ chối - cho phép overlap
+        const st = e.extendedProps?.interview?.status;
+        if (st && ['DONE', 'COMPLETED', 'ACCEPTED', 'APPROVED', 'REJECTED'].includes(st)) {
           return false;
         }
         
@@ -336,6 +343,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       
       // Không cho phép resize lịch đã hoàn thành/đã duyệt cuối cùng
       if (event.extendedProps?.interview?.status === 'DONE' || 
+          event.extendedProps?.interview?.status === 'COMPLETED' ||
           event.extendedProps?.interview?.status === 'ACCEPTED' ||
           event.extendedProps?.interview?.status === 'APPROVED') {
         message.warning('Không thể thay đổi lịch phỏng vấn đã hoàn thành/đã duyệt!');
@@ -408,8 +416,9 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
           return false;
         }
         
-        // Bỏ qua events có trạng thái "DONE" (hoàn thành) - cho phép overlap
-        if (e.extendedProps?.interview?.status === 'DONE') {
+        // Bỏ qua events đã duyệt/đã chấp nhận/đã hoàn thành/đã từ chối - cho phép overlap
+        const st = e.extendedProps?.interview?.status;
+        if (st && ['DONE', 'COMPLETED', 'ACCEPTED', 'APPROVED', 'REJECTED'].includes(st)) {
           return false;
         }
         
@@ -541,8 +550,12 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
       // Kiểm tra xem ứng viên này đã có lịch phỏng vấn chưa
       const existingInterview = interviews.find(i => i.applicationId === applicationId);
       if (existingInterview) {
-        message.warning('Ứng viên này đã có lịch phỏng vấn!');
-        return;
+        const st = existingInterview.status;
+        const isFinal = ['DONE', 'ACCEPTED', 'APPROVED', 'REJECTED'].includes(st);
+        if (!isFinal) {
+          message.warning('Ứng viên này đã có lịch phỏng vấn!');
+          return;
+        }
       }
       
       // Đánh dấu ứng viên này đang được xử lý
@@ -593,6 +606,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
         // Kiểm tra trạng thái lịch trước khi cập nhật
         // Chỉ không cho phép cập nhật khi đã hoàn thành hoặc đã duyệt cuối cùng
         if (editingInterview.status === 'DONE' || 
+            editingInterview.status === 'COMPLETED' ||
             editingInterview.status === 'ACCEPTED' ||
             editingInterview.status === 'APPROVED') {
           message.warning('Không thể cập nhật lịch phỏng vấn đã hoàn thành/đã duyệt!');
@@ -664,6 +678,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
         // Kiểm tra trạng thái lịch trước khi xóa
         // Chỉ không cho phép xóa khi đã hoàn thành hoặc đã duyệt cuối cùng
         if (editingInterview.status === 'DONE' || 
+            editingInterview.status === 'COMPLETED' ||
             editingInterview.status === 'ACCEPTED' ||
             editingInterview.status === 'APPROVED') {
           message.warning('Không thể xóa lịch phỏng vấn đã hoàn thành/đã duyệt!');
@@ -887,18 +902,20 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
             </Form.Item>
             
             <Form.Item label="Trạng thái">
-              <Text type={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' ? 'danger' : 'default'}>
+              <Text type={editingInterview.status === 'DONE' || editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' ? 'danger' : 'default'}>
                 {editingInterview.status === 'DONE' 
-                  ? 'Hoàn thành - Không thể chỉnh sửa' 
-                  : editingInterview.status === 'ACCEPTED'
-                    ? 'Đã chấp nhận - Không thể chỉnh sửa'
-                    : editingInterview.status === 'APPROVED'
-                      ? 'Đã duyệt - Không thể chỉnh sửa'
-                      : editingInterview.status === 'SCHEDULED' 
-                        ? 'Đã lên lịch' 
-                        : editingInterview.status === 'PENDING' 
-                          ? 'Chờ phỏng vấn' 
-                          : editingInterview.status || 'Không xác định'}
+                  ? 'Hoàn thành' 
+                  : editingInterview.status === 'COMPLETED'
+                    ? 'Hoàn thành'
+                    : editingInterview.status === 'ACCEPTED'
+                      ? 'Đã chấp nhận'
+                      : editingInterview.status === 'APPROVED'
+                        ? 'Đã duyệt'
+                        : editingInterview.status === 'SCHEDULED' 
+                          ? 'Đã lên lịch' 
+                          : editingInterview.status === 'PENDING' 
+                            ? 'Chờ phỏng vấn' 
+                            : editingInterview.status || 'Không xác định'}
               </Text>
             </Form.Item>
 
@@ -909,7 +926,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
             >
                              <Select
                  placeholder="Chọn giờ bắt đầu"
-                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
                >
                 {Array.from({ length: 24 }, (_, i) => (
                   <Option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
@@ -949,7 +966,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
             >
                              <Select
                  placeholder="Chọn giờ kết thúc"
-                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                 disabled={editingInterview.status === 'DONE' || editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
                >
                 {Array.from({ length: 24 }, (_, i) => (
                   <Option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
@@ -966,7 +983,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
                    htmlType="submit" 
                    icon={<EditOutlined />}
                    loading={isUpdating}
-                   disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                   disabled={editingInterview.status === 'DONE' || editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
                  >
                    {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
                  </Button>
@@ -979,7 +996,7 @@ const InterviewCalendar = ({ selectedPlan, interviews, approvedApplications, onD
                                      <Button 
                      danger 
                      icon={<DeleteOutlined />}
-                     disabled={editingInterview.status === 'DONE' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
+                     disabled={editingInterview.status === 'DONE' || editingInterview.status === 'COMPLETED' || editingInterview.status === 'ACCEPTED' || editingInterview.status === 'APPROVED' || isUpdating}
                    >
                      Xóa
                    </Button>
