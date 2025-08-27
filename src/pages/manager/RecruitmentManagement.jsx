@@ -111,10 +111,16 @@ const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
   }, [hourlyRate]);
 
   const handleHourlyRateChange = async (value) => {
-    if (value && value < 20000) {
+    // Nếu value là null, undefined hoặc rỗng, tự động set về 20000
+    if (!value || value === '') {
       value = 20000;
     }
-    if (value && value > 10000000) {
+    // Nếu value < 20000, tự động set về 20000
+    if (value < 20000) {
+      value = 20000;
+    }
+    // Nếu value > 10000000, tự động set về 10000000
+    if (value > 10000000) {
       value = 10000000;
     }
     setInputHourlyRate(value);
@@ -137,7 +143,7 @@ const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
         <Button 
           size="small" 
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 20000;
+            const currentValue = inputHourlyRate || 20000;
             handleHourlyRateChange(currentValue + 20000);
           }}
         >
@@ -146,7 +152,7 @@ const HourlyRateColumnOld = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
         <Button 
           size="small"
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 20000;
+            const currentValue = inputHourlyRate || 20000;
             if (currentValue > 20000) {
               handleHourlyRateChange(currentValue - 20000);
             }
@@ -267,10 +273,16 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
   }, [hourlyRate]);
 
   const handleHourlyRateChange = async (value) => {
-    if (value && value < 20000) {
+    // Nếu value là null, undefined hoặc rỗng, tự động set về 20000
+    if (!value || value === '') {
       value = 20000;
     }
-    if (value && value > 10000000) {
+    // Nếu value < 20000, tự động set về 20000
+    if (value < 20000) {
+      value = 20000;
+    }
+    // Nếu value > 10000000, tự động set về 10000000
+    if (value > 10000000) {
       value = 10000000;
     }
     setInputHourlyRate(value);
@@ -293,7 +305,7 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
         <Button 
           size="small" 
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 20000;
+            const currentValue = inputHourlyRate || 20000;
             handleHourlyRateChange(currentValue + 20000);
           }}
         >
@@ -302,7 +314,7 @@ const HourlyRateColumn = ({ hourlyRate, recordId, onHourlyRateUpdate }) => {
         <Button 
           size="small"
           onClick={() => {
-            const currentValue = parseInt(inputHourlyRate) || 20000;
+            const currentValue = inputHourlyRate || 20000;
             if (currentValue > 20000) {
               handleHourlyRateChange(currentValue - 20000);
             }
