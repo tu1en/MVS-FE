@@ -2085,9 +2085,28 @@ const RecruitmentManagement = () => {
           <Form.Item name="contractType" hidden>
             <Input value="PART_TIME" />
           </Form.Item>
-          <Form.Item name="salaryRange" label="Mức lương" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
-            <Input 
-              className="vietnamese-text" 
+          <Form.Item
+            name="salaryRange"
+            label="Mức lương"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mức lương' },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const numValue = parseInt(value.toString().replace(/[^0-9]/g, ''));
+                  if (isNaN(numValue) || numValue < 20000) {
+                    return Promise.reject(new Error('Mức lương tối thiểu là 20,000 VNĐ'));
+                  }
+                  if (numValue > 10000000) {
+                    return Promise.reject(new Error('Mức lương tối đa là 10,000,000 VNĐ'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <Input
+              className="vietnamese-text"
               maxLength={50}
               onChange={(e) => {
                 const onlyDigits = e.target.value.replace(/[^0-9]/g, '').slice(0, 50);
