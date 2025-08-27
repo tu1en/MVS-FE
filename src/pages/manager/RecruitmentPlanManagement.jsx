@@ -45,10 +45,10 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
   const handleDeletePlan = async (id) => {
     try {
       await axiosInstance.delete(`/recruitment-plans/${id}`);
-      message.success('Xóa kế hoạch thành công!');
+      message.success('Đã xóa kế hoạch cùng tất cả dữ liệu liên quan thành công!');
       fetchPlans();
     } catch (err) {
-      const detail = err.response?.data || 'Kế hoạch đã bắt đầu, không thể xoá.';
+      const detail = err.response?.data || 'Không thể xóa kế hoạch!';
       message.error(typeof detail === 'string' ? detail : 'Không thể xóa kế hoạch!');
     }
   };
@@ -197,9 +197,11 @@ const RecruitmentPlanManagement = ({ onPlanSelect }) => {
           </Button>
           <Popconfirm
             title="Bạn có chắc muốn xóa kế hoạch này?"
+            description="Hành động này sẽ xóa kế hoạch cùng tất cả vị trí tuyển dụng, đơn ứng tuyển và lịch phỏng vấn liên quan. Không thể hoàn tác!"
             onConfirm={() => handleDeletePlan(record.id)}
-            okText="Có"
-            cancelText="Không"
+            okText="Xóa tất cả"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
           >
             <Button type="link" danger className="vietnamese-text">
               Xóa
