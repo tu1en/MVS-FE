@@ -284,7 +284,7 @@ const ContractManagement = () => {
       });
 
       await axiosInstance.post('/contracts', contractData);
-      message.success(`Tạo hợp đồng thành công cho ${values.fullName} với lương ${salaryType}!`);
+      message.success(`Tạo hợp đồng thành công cho ${values.fullName} !`);
       setCandidateModalVisible(false);
       candidateForm.resetFields();
       setSelectedCandidate(null);

@@ -151,8 +151,7 @@ const AccountList = () => {
             case 'ROLE_ACCOUNTANT': return 'Kế toán viên';
             case 'ADMIN':
             case 'ROLE_ADMIN': return 'Quản trị viên';
-            case 'PARENT':
-            case 'ROLE_PARENT': return 'Phụ huynh';
+            
             default: return role;
         }
     };
@@ -215,6 +214,10 @@ const AccountList = () => {
                 if (role === 'USER') {
                     role = '';
                 }
+                // 3) Ẩn vai trò TEACHING_ASSISTANT khỏi giao diện (không hiển thị cũng không cho chọn)
+                if (role === 'TEACHING_ASSISTANT') {
+                    role = '';
+                }
                 
                 // Nếu là admin (dòng đầu tiên), chỉ hiển thị label, không cho đổi
                 if (index === 0 && (role === 'ADMIN' || role === 'ROLE_ADMIN')) {
@@ -268,6 +271,17 @@ const AccountList = () => {
         },
     ];
 
+    // Ẩn tài khoản có vai trò Trợ giảng (TEACHING_ASSISTANT)
+    const isTeachingAssistant = (u) => {
+        if (u?.roleId === 6 || u?.roleId === '6') return true;
+        if (Array.isArray(u?.roles) && u.roles.length > 0) {
+            let r = u.roles[0];
+            if (typeof r === 'string' && r.startsWith('ROLE_')) r = r.replace('ROLE_', '');
+            return r === 'TEACHING_ASSISTANT';
+        }
+        return false;
+    };
+
     return (
         <div className="min-h-screen px-6 py-10 bg-gray-50">
             <div className="max-w-7xl mx-auto">
@@ -282,14 +296,16 @@ const AccountList = () => {
                             onSearch={handleSearch}
                             style={{ width: 200 }}
                         />
-                        <Button type="primary" onClick={showCreateModal}>
-                            Thêm người dùng mới
-                        </Button>
+                        {false && (
+                            <Button type="primary" onClick={showCreateModal}>
+                                Thêm người dùng mới
+                            </Button>
+                        )}
                     </div>
 
                     <Table
                         columns={columns}
-                        dataSource={users}
+                        dataSource={users.filter(u => !isTeachingAssistant(u))}
                         rowKey="id"
                         pagination={pagination}
                         loading={loading}
